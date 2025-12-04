@@ -75,6 +75,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [messageError, setMessageError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
+  const [collabRequestLoading, setCollabRequestLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -151,11 +154,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
 
     const loadCollabs = async () => {
-      // Reuse collab threads where uživatel je owner
+      // Vlákna, kde je profil jako participant
       const { data, error } = await supabase
         .from('collab_threads')
-        .select('id, title, status, result_audio_url, result_cover_url')
-        .eq('created_by', profileId)
+        .select('id, title, status, result_audio_url, result_cover_url, collab_participants!inner(user_id)')
+        .eq('collab_participants.user_id', profileId)
         .order('updated_at', { ascending: false })
         .limit(10);
       if (error) {
@@ -184,6 +187,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const { data } = await supabase.auth.getSession();
       const uid = data.session?.user?.id;
       setIsLoggedIn(!!uid);
+      setCurrentUserId(uid ?? null);
       if (uid && uid === profileId) {
         router.push('/profile');
       }
@@ -195,6 +199,72 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     loadProjects();
     loadCollabs();
   }, [profileId, supabase, router]);
+
+  const handleRequestCollab = async () => {
+    setCollabRequestError(null);
+    if (!isLoggedIn || !currentUserId) {
+      setCollabRequestError('Musíš být přihlášen.');
+      return;
+    }
+    try {
+      setCollabRequestLoading(true);
+      const threadTitle =
+        profile?.display_name?.trim()
+          ? `Spolupráce s ${profile.display_name}`
+          : 'Nová spolupráce';
+      const { data: thread, error: threadErr } = await supabase
+        .from('collab_threads')
+        .insert({
+          title: threadTitle,
+          created_by: currentUserId,
+          status: 'active',
+        })
+        .select('id')
+        .single();
+      if (threadErr || !thread) throw threadErr || new Error('Vlákno nevytvořeno');
+
+      const participants = [
+        { thread_id: thread.id, user_id: currentUserId, role: 'owner' },
+        { thread_id: thread.id, user_id: profileId, role: 'guest' },
+      ];
+      const { error: partErr } = await supabase.from('collab_participants').insert(participants);
+      if (partErr) throw partErr;
+
+      await supabase
+        .from('collab_messages')
+        .insert({ thread_id: thread.id, user_id: currentUserId, body: 'Ahoj, rád bych spolupracoval.' });
+
+      await new Promise((res) => setTimeout(res, 300)); // krátký wait
+      // reload collabs
+      const { data, error } = await supabase
+        .from('collab_threads')
+        .select('id, title, status, result_audio_url, result_cover_url, collab_participants!inner(user_id)')
+        .eq('collab_participants.user_id', profileId)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      if (!error && data) {
+        const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          bpm: null,
+          mood: c.status,
+          audio_url: c.result_audio_url,
+          cover_url: c.result_cover_url,
+          partners: [],
+        }));
+        setCollabs(mapped);
+      }
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba při zakládání spolupráce:', err);
+      setCollabRequestError('Nepodařilo se založit spolupráci: ' + message);
+    } finally {
+      setCollabRequestLoading(false);
+    }
+  };
 
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
@@ -671,7 +741,26 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </div>
           )}
           {collabs.length === 0 ? (
-            <p className="text-sm text-[var(--mpc-muted)]">Žádné spolupráce k zobrazení.</p>
+            <div className="space-y-3 text-sm text-[var(--mpc-muted)]">
+              <p>Žádné spolupráce k zobrazení.</p>
+              {isLoggedIn && currentUserId !== profileId && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleRequestCollab}
+                    disabled={collabRequestLoading}
+                    className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                  >
+                    {collabRequestLoading ? 'Zakládám…' : 'Požádat o spolupráci'}
+                  </button>
+                  {collabRequestError && (
+                    <div className="rounded-md border border-red-700/40 bg-red-900/20 px-3 py-2 text-xs text-red-100">
+                      {collabRequestError}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="space-y-3">
               {collabs.map((col) => (
