@@ -48,7 +48,6 @@ export default function ArtistsPage() {
         const { data, error } = await supabase
           .from('profiles')
           .select('id, display_name')
-          .order('created_at', { ascending: false })
           .limit(50);
         if (error || !data || data.length === 0) {
           setArtists(fallbackArtists);
