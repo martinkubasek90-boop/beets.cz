@@ -47,7 +47,7 @@ export default function ArtistsPage() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, city')
+          .select('id, display_name')
           .order('created_at', { ascending: false })
           .limit(50);
         if (error || !data || data.length === 0) {
@@ -59,7 +59,7 @@ export default function ArtistsPage() {
           name: p.display_name || 'Bez jména',
           initials: getInitials(p.display_name || '??'),
           followers: (idx + 1) * 1200 + 500,
-          city: p.city || '',
+          city: '',
         }));
         setArtists(mapped);
       } catch (err) {
