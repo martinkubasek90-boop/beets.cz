@@ -1024,10 +1024,10 @@ export default function Home() {
               Umělci
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
             </Link>
-            <a className="relative py-1 hover:text-white" href="#collabs">
+            <Link className="relative py-1 hover:text-white" href="/collabs">
               Spolupráce
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
-            </a>
+            </Link>
           </nav>
           <div className="flex items-center gap-3 text-right">
             <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-[var(--mpc-muted)]">
