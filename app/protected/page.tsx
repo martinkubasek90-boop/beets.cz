@@ -15,9 +15,8 @@ export default async function ProfilePage() {
 
   const initialBeats: BeatRow[] = [];
 
-  return <ProfileClient email={email} initialBeats={initialBeats} />;
+  return <ProfileClient />;
 }
-
 
 
 
