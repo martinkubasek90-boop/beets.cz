@@ -1042,20 +1042,18 @@ export default function Home() {
               {t('hero.title', 'Beets.cz')}
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)]">
-              {t('hero.subtitle', 'Platforma pro beatmakery a rapery. Nahrávej instrumentály, sdílej akapely, domlouvej spolupráce. Bez reklam a nesmyslů, jen hudba.')}
+              {t(
+                'hero.subtitle',
+                'Platforma pro beatmakery. Nahrávej, sdílej akapely, domlouvej spolupráce. Bez reklam a nesmyslů, jen hudba.'
+              )}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
-              <button className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)]">
-                {t('hero.producers', 'Pro producenty – nahrát beat')}
-              </button>
-              <button className="rounded-full border border-white/20 bg-white/5 px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.16em] text-white hover:border-[var(--mpc-accent)]">
-                {t('hero.rappers', 'Pro rapery – nahrát akapelu')}
-              </button>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-[var(--mpc-muted)]">
-              <span>🇨🇿 CZ / SK only</span>
-              <span>🎛 Kurátorovaná komunita</span>
-              <span>🚀 Beta 2025</span>
+              <Link
+                href="/komunita"
+                className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-6 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
+              >
+                Více o komunitě
+              </Link>
             </div>
           </div>
         </section>
