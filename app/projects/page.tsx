@@ -440,7 +440,7 @@ export default function ProjectsPage() {
                       {!hasAccess ? (
                         <div className="space-y-2 text-center text-sm text-[var(--mpc-muted)]">
                           <p>Projekt je uzamčený.</p>
-                          {mode !== 'public' && userId && (
+                          {userId && (
                             <RequestAccessRow
                               projectId={project.id}
                               status={myRequests[project.id]}
