@@ -60,7 +60,7 @@ export default function ArtistsPage() {
           initials: getInitials(p.display_name || '??'),
           followers: (idx + 1) * 1200 + 500,
           city: '',
-          avatar_url: p.avatar_url || null,,
+          avatar_url: p.avatar_url || null,
         }));
         setArtists(mapped);
       } catch (err) {
