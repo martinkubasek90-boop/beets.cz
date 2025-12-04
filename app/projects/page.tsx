@@ -429,34 +429,55 @@ export default function ProjectsPage() {
               key={project.id}
               className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
             >
-                {(() => {
-                  const mode: 'public' | 'request' | 'private' =
-                    project.access_mode ?? 'public';
-                  const isOwner = userId && project.user_id === userId;
-                  const hasGrant = myGrants.has(project.id);
-                  const hasAccess = mode === 'public' || Boolean(isOwner) || hasGrant;
-                  const tracks =
-                    hasAccess && project.tracks_json && project.tracks_json.length > 0
-                      ? project.tracks_json
-                      : hasAccess && project.project_url
-                        ? [{ name: project.title || 'Ukázka projektu', url: project.project_url }]
-                        : [];
-                  return (
-                    <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                      {!hasAccess ? (
-                        <div className="space-y-2 text-center text-sm text-[var(--mpc-muted)]">
-                          <p>Projekt je uzamčený.</p>
-                          {userId && (
-                            <RequestAccessRow
-                              projectId={project.id}
-                              status={myRequests[project.id]}
-                              onRequest={() => void requestAccess(project.id)}
-                              loading={requesting[project.id]}
-                            />
-                          )}
-                          {!userId && <p className="text-[11px]">Přihlas se, pokud chceš požádat o přístup.</p>}
-                        </div>
-                      ) : (
+              {(() => {
+                const mode: 'public' | 'request' | 'private' = project.access_mode ?? 'public';
+                const isOwner = userId && project.user_id === userId;
+                const hasGrant = myGrants.has(project.id);
+                const hasAccess = mode === 'public' || Boolean(isOwner) || hasGrant;
+                const requiresRequest = mode === 'request' && !isOwner && !hasGrant;
+                const tracks =
+                  hasAccess && project.tracks_json && project.tracks_json.length > 0
+                    ? project.tracks_json
+                    : hasAccess && project.project_url
+                      ? [{ name: project.title || 'Ukázka projektu', url: project.project_url }]
+                      : [];
+                return (
+                  <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+                    {!hasAccess ? (
+                      <div className="space-y-2 text-center text-sm text-[var(--mpc-muted)]">
+                        <p>Projekt je uzamčený.</p>
+                        {userId && requiresRequest && (
+                          <RequestAccessRow
+                            projectId={project.id}
+                            status={myRequests[project.id]}
+                            onRequest={() => void requestAccess(project.id)}
+                            loading={requesting[project.id]}
+                          />
+                        )}
+                        {!userId && requiresRequest && (
+                          <div className="space-y-2">
+                            <button
+                              onClick={() =>
+                                alert('O přístup mohou požádat jen přihlášení uživatelé s profilem. Přihlas se nebo si založ účet.')
+                              }
+                              className="w-full rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-white"
+                            >
+                              Požádat o přístup
+                            </button>
+                            <p className="text-[11px]">
+                              Nemáš účet?{' '}
+                              <Link href="/auth/sign-up" className="text-[var(--mpc-accent)] underline">
+                                Registruj se
+                              </Link>
+                              , a pak klikni na „Požádat o přístup“.
+                            </p>
+                          </div>
+                        )}
+                        {!requiresRequest && !userId && (
+                          <p className="text-[11px]">Přihlas se, pokud chceš požádat o přístup.</p>
+                        )}
+                      </div>
+                    ) : (
                         <div
                           className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
                           style={
