@@ -1,4 +1,12 @@
-import ProfileClient, { BeatRow } from '../../components/profile-client';
+import ProfileClient from '../../components/profile-client';
+
+type BeatRow = {
+  title: string;
+  bpm?: number | null;
+  mood?: string | null;
+  audio_url?: string | null;
+  cover_url?: string | null;
+};
 
 export default async function ProfilePage() {
   // Pro teď klidně nech svůj e-mail natvrdo,
@@ -9,7 +17,6 @@ export default async function ProfilePage() {
 
   return <ProfileClient email={email} initialBeats={initialBeats} />;
 }
-
 
 
 
