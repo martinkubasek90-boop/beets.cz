@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { createClient } from '../../lib/supabase/client';
 
 type ArtistCard = {
-  id: number;
+  id: string | number;
   name: string;
   initials: string;
-  followers: number;
+  followers?: number;
   city?: string;
 };
 
-const artists: ArtistCard[] = [
+const fallbackArtists: ArtistCard[] = [
   { id: 1, name: 'Northside', initials: 'NS', followers: 88400, city: 'Praha' },
   { id: 2, name: 'No Bad Vibes', initials: 'NB', followers: 21000, city: 'Brno' },
   { id: 3, name: 'Cay Caleb', initials: 'CC', followers: 22000, city: 'Ostrava' },
@@ -20,6 +22,9 @@ const artists: ArtistCard[] = [
 ];
 
 export default function ArtistsPage() {
+  const supabase = createClient();
+  const [artists, setArtists] = useState<ArtistCard[]>([]);
+
   const gradients = [
     'from-emerald-600 to-emerald-900',
     'from-amber-400 to-orange-600',
@@ -28,6 +33,44 @@ export default function ArtistsPage() {
     'from-rose-500 to-rose-800',
     'from-sky-500 to-sky-900',
   ];
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? '';
+    const second = parts[1]?.[0] ?? parts[0]?.[1] ?? '';
+    return (first + second).toUpperCase();
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, city')
+          .order('created_at', { ascending: false })
+          .limit(50);
+        if (error || !data || data.length === 0) {
+          setArtists(fallbackArtists);
+          return;
+        }
+        const mapped: ArtistCard[] = data.map((p: any, idx: number) => ({
+          id: p.id,
+          name: p.display_name || 'Bez jména',
+          initials: getInitials(p.display_name || '??'),
+          followers: (idx + 1) * 1200 + 500,
+          city: p.city || '',
+        }));
+        setArtists(mapped);
+      } catch (err) {
+        console.error('Chyba při načítání umělců:', err);
+        setArtists(fallbackArtists);
+      }
+    };
+    void load();
+  }, [supabase]);
+
+  const list = artists.length ? artists : fallbackArtists;
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
@@ -46,7 +89,7 @@ export default function ArtistsPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {artists.map((artist, idx) => (
+          {list.map((artist, idx) => (
             <div
               key={artist.id}
               className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_16px_32px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
@@ -61,7 +104,7 @@ export default function ArtistsPage() {
               <div className="space-y-1">
                 <p className="text-base font-semibold">{artist.name}</p>
                 <p className="text-[12px] text-[var(--mpc-muted,#8a8a8a)]">
-                  👥 {artist.followers.toLocaleString('cs-CZ')} followers
+                  👥 {artist.followers?.toLocaleString('cs-CZ') || 'Profil'}
                   {artist.city ? ` · ${artist.city}` : ''}
                 </p>
               </div>

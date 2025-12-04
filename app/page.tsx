@@ -18,7 +18,7 @@ type Beat = {
 };
 
 type Artist = {
-  id: number;
+  id: number | string;
   name: string;
   initials: string;
   beatsCount: number;
@@ -211,6 +211,7 @@ export default function Home() {
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
+  const [artists, setArtists] = useState<Artist[]>(dummyArtists);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -226,8 +227,46 @@ export default function Home() {
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const rafRef = useRef<number | null>(null);
 
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? '';
+    const second = parts[1]?.[0] ?? parts[0]?.[1] ?? '';
+    return (first + second).toUpperCase();
+  };
+
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
+  }, []);
+
+  useEffect(() => {
+    const loadArtists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, city')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (error || !data || data.length === 0) {
+          setArtists(dummyArtists);
+          return;
+        }
+
+        const mapped: Artist[] = data.map((p: any, idx: number) => ({
+          id: p.id,
+          name: p.display_name || 'Bez jména',
+          initials: getInitials(p.display_name || '??'),
+          beatsCount: idx + 1,
+          city: p.city || '',
+        }));
+        setArtists(mapped);
+      } catch (err) {
+        console.error('Chyba při načítání umělců:', err);
+        setArtists(dummyArtists);
+      }
+    };
+    void loadArtists();
   }, []);
 
   useEffect(() => {
@@ -1508,8 +1547,11 @@ export default function Home() {
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, idx) => {
-              const artist = dummyArtists[(artistIndex + idx) % dummyArtists.length];
-              const followers = `${(artist.beatsCount * 3200 + 1500).toLocaleString('cs-CZ')} followers`;
+              const list = artists.length ? artists : dummyArtists;
+              const artist = list[(artistIndex + idx) % list.length];
+              const followers = artist.beatsCount
+                ? `${(artist.beatsCount * 3200 + 1500).toLocaleString('cs-CZ')} followers`
+                : 'Profil';
               const colors = [
                 'from-emerald-600 to-emerald-900',
                 'from-amber-400 to-orange-600',
@@ -1542,13 +1584,19 @@ export default function Home() {
           </div>
           <div className="mt-3 flex items-center justify-center gap-3">
             <button
-              onClick={() => setArtistIndex((prev) => (prev - 1 + dummyArtists.length) % dummyArtists.length)}
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev - 1 + list.length) % list.length);
+              }}
               className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
             >
               ←
             </button>
             <button
-              onClick={() => setArtistIndex((prev) => (prev + 1) % dummyArtists.length)}
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev + 1) % list.length);
+              }}
               className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
             >
               →
