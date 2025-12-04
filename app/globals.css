@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark base + oranžová/zelena paleta */
+  --mpc-deck: #050505;
+  --mpc-panel: rgba(15, 16, 20, 0.7);
+  --mpc-dark: rgba(255, 255, 255, 0.16);
+  --mpc-light: #f5f5f7;
+  --mpc-muted: #a0a3af;
+  --mpc-accent: #f37433;      /* oranžová primární (CTA) */
+  --mpc-accent-2: #00563f;    /* zelená sekundární */
+  --mpc-accent-soft: #fac55a; /* teplý soft accent */
+}
+
+body {
+  @apply antialiased;
+  margin: 0;
+  background: radial-gradient(140% 140% at 20% 20%, rgba(0, 86, 63, 0.18), transparent 40%),
+    radial-gradient(120% 120% at 80% 10%, rgba(91, 157, 255, 0.12), transparent 35%),
+    linear-gradient(145deg, #0a0f17 0%, #0c1c23 50%, #0b221d 100%);
+  color: var(--mpc-light);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
+    'Segoe UI', sans-serif;
+}
