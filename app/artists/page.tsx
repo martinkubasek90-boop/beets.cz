@@ -10,6 +10,7 @@ type ArtistCard = {
   initials: string;
   followers?: number;
   city?: string;
+  avatar_url?: string | null;
 };
 
 const fallbackArtists: ArtistCard[] = [
@@ -47,7 +48,7 @@ export default function ArtistsPage() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name')
+          .select('id, display_name, avatar_url')
           .limit(50);
         if (error || !data || data.length === 0) {
           setArtists(fallbackArtists);
@@ -59,6 +60,7 @@ export default function ArtistsPage() {
           initials: getInitials(p.display_name || '??'),
           followers: (idx + 1) * 1200 + 500,
           city: '',
+          avatar_url: p.avatar_url || null,,
         }));
         setArtists(mapped);
       } catch (err) {
@@ -96,9 +98,14 @@ export default function ArtistsPage() {
               <div
                 className={`relative h-28 w-28 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradients[idx % gradients.length]} shadow-[0_10px_24px_rgba(0,0,0,0.35)]`}
               >
-                <div className="absolute inset-0 grid place-items-center text-2xl font-black text-white">
-                  {artist.initials}
-                </div>
+                {artist.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center text-2xl font-black text-white">
+                    {artist.initials}
+                  </div>
+                )}
               </div>
               <div className="space-y-1">
                 <p className="text-base font-semibold">{artist.name}</p>
