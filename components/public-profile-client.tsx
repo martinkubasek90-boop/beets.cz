@@ -151,11 +151,12 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
 
     const loadCollabs = async () => {
+      // Reuse collab threads where uživatel je owner
       const { data, error } = await supabase
-        .from('collabs')
-        .select('id, title, bpm, mood, audio_url, cover_url, partner_a_name, partner_b_name')
-        .eq('user_id', profileId)
-        .order('id', { ascending: false })
+        .from('collab_threads')
+        .select('id, title, status, result_audio_url, result_cover_url')
+        .eq('created_by', profileId)
+        .order('updated_at', { ascending: false })
         .limit(10);
       if (error) {
         const message =
@@ -169,11 +170,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
         id: c.id,
         title: c.title,
-        bpm: c.bpm,
-        mood: c.mood,
-        audio_url: c.audio_url,
-        cover_url: c.cover_url,
-        partners: [c.partner_a_name, c.partner_b_name].filter(Boolean),
+        bpm: null,
+        mood: c.status,
+        audio_url: c.result_audio_url,
+        cover_url: c.result_cover_url,
+        partners: [],
       }));
       setCollabs(mapped);
       setCollabsError(null);
