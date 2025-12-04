@@ -202,7 +202,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const handleRequestCollab = async () => {
     setCollabRequestError(null);
-    if (!isLoggedIn || !currentUserId) {
+    const { data: userData, error: userErr } = await supabase.auth.getUser();
+    const uid = userData?.user?.id || currentUserId;
+    if (userErr || !uid) {
       setCollabRequestError('Musíš být přihlášen.');
       return;
     }
@@ -216,7 +218,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .from('collab_threads')
         .insert({
           title: threadTitle,
-          created_by: currentUserId,
+          created_by: uid,
           status: 'active',
         })
         .select('id')
@@ -224,7 +226,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       if (threadErr || !thread) throw threadErr || new Error('Vlákno nevytvořeno');
 
       const participants = [
-        { thread_id: thread.id, user_id: currentUserId, role: 'owner' },
+        { thread_id: thread.id, user_id: uid, role: 'owner' },
         { thread_id: thread.id, user_id: profileId, role: 'guest' },
       ];
       const { error: partErr } = await supabase.from('collab_participants').insert(participants);
@@ -232,7 +234,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
       await supabase
         .from('collab_messages')
-        .insert({ thread_id: thread.id, user_id: currentUserId, body: 'Ahoj, rád bych spolupracoval.' });
+        .insert({ thread_id: thread.id, user_id: uid, body: 'Ahoj, rád bych spolupracoval.' });
 
       await new Promise((res) => setTimeout(res, 300)); // krátký wait
       // reload collabs
