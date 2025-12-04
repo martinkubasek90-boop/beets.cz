@@ -294,7 +294,8 @@ export default function Home() {
         try {
           const { data: d1, error: err1 } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name')
+            .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode')
+            .eq('access_mode', 'public')
             .order('id', { ascending: false })
             .limit(4);
           if (err1) throw err1;
@@ -304,7 +305,8 @@ export default function Home() {
           console.warn('Fallback načítání projektů bez author_name:', innerErr);
             const { data: d2, error: err2 } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json')
+            .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode')
+            .eq('access_mode', 'public')
             .order('id', { ascending: false })
             .limit(4);
           if (err2) throw err2;

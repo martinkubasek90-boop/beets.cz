@@ -154,6 +154,7 @@ export default function ProjectsPage() {
           const { data, error: projErr } = await supabase
             .from('projects')
             .select('id, title, description, cover_url, user_id, project_url, tracks_json, tracks, author_name, access_mode')
+            .eq('access_mode', 'public')
             .order('id', { ascending: false });
           if (projErr) throw projErr;
           mapped = (data as any[]) ?? [];
@@ -163,7 +164,8 @@ export default function ProjectsPage() {
             console.warn('Fallback select projects bez tracks_json/author_name:', innerErr);
             const { data, error: projErr } = await supabase
               .from('projects')
-              .select('id, title, description, cover_url, user_id, project_url, tracks')
+              .select('id, title, description, cover_url, user_id, project_url, tracks, access_mode')
+              .eq('access_mode', 'public')
               .order('id', { ascending: false });
             if (projErr) throw projErr;
             mapped = (data as any[]) ?? [];
@@ -171,7 +173,8 @@ export default function ProjectsPage() {
             console.warn('Minimal fallback select projects:', innerErr2);
             const { data, error: projErr } = await supabase
               .from('projects')
-              .select('id, title, description, cover_url, user_id, project_url')
+              .select('id, title, description, cover_url, user_id, project_url, access_mode')
+              .eq('access_mode', 'public')
               .order('id', { ascending: false });
             if (projErr) throw projErr;
             mapped = (data as any[]) ?? [];
