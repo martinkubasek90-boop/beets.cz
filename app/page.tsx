@@ -244,8 +244,7 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, city')
-          .order('created_at', { ascending: false })
+          .select('id, display_name, avatar_url')
           .limit(20);
 
         if (error || !data || data.length === 0) {
@@ -258,7 +257,8 @@ export default function Home() {
           name: p.display_name || 'Bez jména',
           initials: getInitials(p.display_name || '??'),
           beatsCount: idx + 1,
-          city: p.city || '',
+          city: '',
+          avatar_url: p.avatar_url || null,
         }));
         setArtists(mapped);
       } catch (err) {
@@ -1570,9 +1570,13 @@ export default function Home() {
                   <div
                     className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
                   >
-                    <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
-                      {artist.initials}
-                    </div>
+                    {artist.avatar_url ? (
+                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
+                        {artist.initials}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1 text-center w-full">
                     <p className="text-sm font-semibold text-white">{artist.name}</p>
