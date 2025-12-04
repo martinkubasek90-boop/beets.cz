@@ -582,8 +582,8 @@ export default function ProfileClient() {
       try {
         const { data, error } = await supabase
           .from('collab_threads')
-          .select('id, title, status, updated_at, collab_participants!inner(user_id)')
-          .eq('collab_participants.user_id', userId)
+          .select('id, title, status, updated_at, collab_participants(user_id)')
+          .or(`created_by.eq.${userId},collab_participants.user_id.eq.${userId}`)
           .order('updated_at', { ascending: false });
         if (error) throw error;
         const mapped =
@@ -2667,7 +2667,7 @@ export default function ProfileClient() {
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
               <button
                 onClick={() => toggleSection('beatUpload')}
-                className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
+                className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
               >
                 {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
               </button>
