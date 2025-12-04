@@ -579,6 +579,11 @@ export default function ProfileClient() {
     const loadCollabThreads = async () => {
       setCollabThreadsLoading(true);
       setCollabThreadsError(null);
+      if (!userId) {
+        setCollabThreads([]);
+        setCollabThreadsLoading(false);
+        return;
+      }
       try {
         const { data, error } = await supabase
           .from('collab_threads')
