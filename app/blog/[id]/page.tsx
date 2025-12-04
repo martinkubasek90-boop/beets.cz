@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { supabase } from '../../../lib/supabaseClient';
 import type { Lang } from '../../../lib/i18n';
 import { unstable_noStore as noStore } from 'next/cache';
+import { Suspense } from 'react';
 
 type BlogPost = {
   id: number;
@@ -68,6 +69,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function BlogDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-white">Načítám článek…</div>}>
+      <PostContent id={id} />
+    </Suspense>
+  );
+}
+
+async function PostContent({ id }: { id: string }) {
   const post = await getPost(id);
   if (!post) return notFound();
 
