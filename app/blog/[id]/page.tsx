@@ -1,12 +1,10 @@
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
-
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { supabase } from '../../../lib/supabaseClient';
 import type { Lang } from '../../../lib/i18n';
+import { unstable_noStore as noStore } from 'next/cache';
 
 type BlogPost = {
   id: number;
@@ -41,6 +39,7 @@ function normalizeEmbedUrl(url?: string | null) {
 }
 
 async function getPost(id: string) {
+  noStore();
   const { data, error } = await supabase
     .from('posts')
     .select('id, title, title_en, excerpt, excerpt_en, body, body_en, author, date, cover_url, embed_url')
