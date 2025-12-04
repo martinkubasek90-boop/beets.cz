@@ -965,10 +965,10 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-lg bg-[conic-gradient(from_90deg,var(--mpc-accent),var(--mpc-accent-2),var(--mpc-accent))] text-xs font-black text-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
-              M
+              B
             </div>
             <div className="leading-tight">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Czech Beat Library</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Beet komunita</p>
               <p className="text-sm font-bold uppercase tracking-[0.08em] text-white">Beets.cz</p>
             </div>
           </div>
