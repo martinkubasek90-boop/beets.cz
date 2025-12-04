@@ -1027,15 +1027,16 @@ export default function Home() {
       <main className="mx-auto flex max-w-6xl flex-col items-center px-4 text-center">
         {/* HERO */}
         <section
-          className="relative grid w-full grid-cols-1 gap-6 items-center overflow-hidden rounded-2xl border border-white/15 px-4 py-10 shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
+          className="relative grid w-full grid-cols-1 items-center gap-6 overflow-hidden rounded-2xl border border-white/15 px-4 py-10 shadow-[0_16px_40px_rgba(0,0,0,0.35)]"
           style={{
-            backgroundImage: 'url("/mpc-hero.jpg")',
+            backgroundImage:
+              'linear-gradient(125deg, rgba(0,0,0,0.82), rgba(0,0,0,0.7)), url("/mpc-hero.jpg")',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
           }}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.15),rgba(0,0,0,0.25))]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_85%,rgba(243,116,51,0.28),rgba(243,116,51,0)_40%)]" />
           <div className="relative flex flex-col items-center gap-4 text-center">
             <h1 className="font-['Space_Grotesk'] text-[clamp(2rem,3vw+1rem,3.4rem)] font-black uppercase leading-tight tracking-[0.08em] text-white">
               {t('hero.title', 'Beets.cz')}
