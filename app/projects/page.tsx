@@ -424,7 +424,8 @@ export default function ProjectsPage() {
               className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
             >
                 {(() => {
-                  const mode = project.access_mode || 'public';
+                  const mode: 'public' | 'request' | 'private' =
+                    project.access_mode ?? 'public';
                   const isOwner = userId && project.user_id === userId;
                   const hasGrant = myGrants.has(project.id);
                   const hasAccess = mode === 'public' || Boolean(isOwner) || hasGrant;
