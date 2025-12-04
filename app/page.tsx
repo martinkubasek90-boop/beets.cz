@@ -297,7 +297,7 @@ export default function Home() {
             .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode')
             .eq('access_mode', 'public')
             .order('id', { ascending: false })
-            .limit(4);
+            .limit(2);
           if (err1) throw err1;
           data = d1 as any[] | null;
         } catch (innerErr) {
@@ -308,7 +308,7 @@ export default function Home() {
             .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode')
             .eq('access_mode', 'public')
             .order('id', { ascending: false })
-            .limit(4);
+            .limit(2);
           if (err2) throw err2;
           data = d2 as any[] | null;
         }
@@ -375,16 +375,16 @@ export default function Home() {
               author_name: p.author_name || fromProfile,
             };
           });
-          setProjects(withNames as Project[]);
+          setProjects((withNames as Project[]).slice(0, 2));
           setProjectsError(null);
         } else {
-          setProjects(dummyProjects);
+          setProjects(dummyProjects.slice(0, 2));
           setProjectsError(null);
         }
       } catch (err) {
         console.error('Neočekávaná chyba při načítání projektů:', err);
         setProjectsError('Neočekávaná chyba při načítání projektů. Zobrazuji demo data.');
-        setProjects(dummyProjects);
+        setProjects(dummyProjects.slice(0, 2));
       }
     };
 

@@ -154,8 +154,8 @@ export default function ProjectsPage() {
           const { data, error: projErr } = await supabase
             .from('projects')
             .select('id, title, description, cover_url, user_id, project_url, tracks_json, tracks, author_name, access_mode')
-            .eq('access_mode', 'public')
-            .order('id', { ascending: false });
+            .order('id', { ascending: false })
+            .limit(12);
           if (projErr) throw projErr;
           mapped = (data as any[]) ?? [];
         } catch (innerErr) {
@@ -165,8 +165,8 @@ export default function ProjectsPage() {
             const { data, error: projErr } = await supabase
               .from('projects')
               .select('id, title, description, cover_url, user_id, project_url, tracks, access_mode')
-              .eq('access_mode', 'public')
-              .order('id', { ascending: false });
+              .order('id', { ascending: false })
+              .limit(12);
             if (projErr) throw projErr;
             mapped = (data as any[]) ?? [];
           } catch (innerErr2) {
@@ -174,8 +174,8 @@ export default function ProjectsPage() {
             const { data, error: projErr } = await supabase
               .from('projects')
               .select('id, title, description, cover_url, user_id, project_url, access_mode')
-              .eq('access_mode', 'public')
-              .order('id', { ascending: false });
+              .order('id', { ascending: false })
+              .limit(12);
             if (projErr) throw projErr;
             mapped = (data as any[]) ?? [];
           }
@@ -313,7 +313,10 @@ export default function ProjectsPage() {
           author_name: p.user_id ? profileNames[p.user_id] || p.author_name || null : p.author_name || null,
         }));
 
-        setProjects(withNames as Project[]);
+        const visible = withNames.filter(
+          (p: any) => !p.access_mode || p.access_mode === 'public' || p.access_mode === 'request'
+        );
+        setProjects(visible as Project[]);
         setError(null);
       } catch (err: any) {
         console.error('Chyba načítání projektů:', err);
