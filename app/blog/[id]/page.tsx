@@ -52,18 +52,9 @@ async function getPost(id: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  const post = await getPost(id);
-  if (!post) {
-    return { title: 'Článek nenalezen | News from Beats' };
-  }
   return {
-    title: post.title,
-    description: post.excerpt,
-    openGraph: {
-      title: post.title,
-      description: post.excerpt,
-      images: post.cover_url ? [post.cover_url] : undefined,
-    },
+    title: `News | ${id}`,
+    description: 'News from Beats',
   };
 }
 
