@@ -590,7 +590,8 @@ export default function ProfileClient() {
         const { data, error } = await supabase
           .from('collab_threads')
           .select('id, title, status, updated_at, collab_participants(user_id)')
-          .or(`created_by.eq.${userId},collab_participants.user_id.eq.${userId}`)
+          // UUID s pomlčkami musí být v OR řetězci uzavřené v uvozovkách, jinak PostgREST parsuje pomlčky jako minus.
+          .or(`created_by.eq."${userId}",collab_participants.user_id.eq."${userId}"`)
           .order('updated_at', { ascending: false });
         if (error) throw error;
         const mapped =
