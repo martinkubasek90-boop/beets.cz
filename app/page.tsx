@@ -1008,7 +1008,7 @@ export default function Home() {
               B
             </div>
             <div className="leading-tight">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Beet komunita</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Beat komunita</p>
               <p className="text-sm font-bold uppercase tracking-[0.08em] text-white">Beets.cz</p>
             </div>
           </div>
