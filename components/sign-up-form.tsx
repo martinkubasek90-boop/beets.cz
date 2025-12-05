@@ -51,7 +51,6 @@ export function SignUpForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password, persona }),
-        body: JSON.stringify({ email, password, persona }),
       });
 
       const data = await response.json();
@@ -63,7 +62,6 @@ export function SignUpForm({
       setEmail("");
       setPassword("");
       setRepeatPassword("");
-      setPersona("");
       setPersona("");
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {

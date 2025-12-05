@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 
