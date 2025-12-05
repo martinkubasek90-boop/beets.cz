@@ -8,17 +8,20 @@ async function ErrorContent({
 }) {
   const params = await searchParams;
 
+  const raw = params?.error || "";
+  let message = raw;
+  if (!raw) {
+    message = "Došlo k neznámé chybě.";
+  } else if (raw.toLowerCase().includes("no token hash")) {
+    message = "Odkaz je neplatný nebo už byl použit. Zkus se přihlásit.";
+  }
+
   return (
     <>
-      {params?.error ? (
-        <p className="text-sm text-muted-foreground">
-          Code error: {params.error}
-        </p>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          An unspecified error occurred.
-        </p>
-      )}
+      <p className="text-sm text-muted-foreground">{message}</p>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Pokud problém přetrvává, otevři nový potvrzovací odkaz nebo se vrať na přihlášení.
+      </p>
     </>
   );
 }
@@ -35,13 +38,16 @@ export default function Page({
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Sorry, something went wrong.
+                Omlouváme se, něco se pokazilo.
               </CardTitle>
             </CardHeader>
             <CardContent>
               <Suspense>
                 <ErrorContent searchParams={searchParams} />
               </Suspense>
+              <div className="mt-4 text-sm text-muted-foreground">
+                <a href="/auth/login" className="underline">Přejít na přihlášení</a>
+              </div>
             </CardContent>
           </Card>
         </div>

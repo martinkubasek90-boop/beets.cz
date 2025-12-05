@@ -40,7 +40,15 @@ export function LoginForm({
       if (error) throw error;
       router.push("/profile");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Došlo k chybě");
+      if (error instanceof Error) {
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          setError("Profil ještě není ověřen. Otevři potvrzovací e-mail a klikni na odkaz.");
+        } else {
+          setError(error.message);
+        }
+      } else {
+        setError("Došlo k chybě");
+      }
     } finally {
       setIsLoading(false);
     }
