@@ -1880,9 +1880,10 @@ export default function ProfileClient() {
                             const { data: signed } = await supabase.storage
                               .from('projects')
                               .createSignedUrl(tr.path, 60 * 60 * 24 * 7);
+                            const fallbackUrl = tr.url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${tr.path}`;
                             finalTracks.push({
                               name: tr.name.trim() || tr.path.split('/').pop() || 'Track',
-                              url: signed?.signedUrl || tr.url || '',
+                              url: signed?.signedUrl || fallbackUrl,
                               path: tr.path,
                             });
                           } else if (tr.url) {
@@ -1988,16 +1989,23 @@ export default function ProfileClient() {
                             setEditingProject(project);
                             setProjectEditTitle(project.title || '');
                             setProjectEditDescription(project.description || '');
-                        const tracks = Array.isArray(project.tracks_json)
-                          ? project.tracks_json.map((t: any) => ({
-                              name: t.name || '',
-                              url: t.url || '',
-                              path: t.path || null,
-                            }))
-                          : [];
-                        setProjectEditTracks(
-                          tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                        );
+                            const tracks = Array.isArray(project.tracks_json)
+                              ? project.tracks_json.map((t: any) => {
+                                  const path = t.path || null;
+                                  const urlFallback =
+                                    path && (!t.url || t.url.startsWith('http') === false)
+                                      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                      : '';
+                                  return {
+                                    name: t.name || '',
+                                    url: t.url || urlFallback,
+                                    path,
+                                  };
+                                })
+                              : [];
+                            setProjectEditTracks(
+                              tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                            );
                           }}
                           className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                         >

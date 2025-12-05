@@ -145,6 +145,11 @@ export default function ProjectsPage() {
       return data?.signedUrl || '';
     };
 
+    const publicUrlFromPath = (path?: string | null) => {
+      if (!path) return '';
+      return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`;
+    };
+
     const load = async () => {
       try {
         setLoading(true);
@@ -273,11 +278,16 @@ export default function ProjectsPage() {
                   const pathToUse = t.path || null;
                   if (pathToUse) {
                     const signed = await resolveSignedUrl(pathToUse);
-                    return { ...t, url: signed, path: pathToUse };
+                    const fallback = t.url || publicUrlFromPath(pathToUse);
+                    return { ...t, url: signed || fallback, path: pathToUse };
                   }
                 }
                 if (!hasAccess) {
                   return { ...t, url: '' };
+                }
+                // fallback: pokud máme path ale chybí url, slož public URL
+                if (t.path && !t.url) {
+                  return { ...t, url: publicUrlFromPath(t.path), path: t.path };
                 }
                 return t;
               })
