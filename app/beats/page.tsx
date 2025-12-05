@@ -26,6 +26,8 @@ export default function BeatsPage() {
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
+  const [bpmFilter, setBpmFilter] = useState('');
+  const [moodFilter, setMoodFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentTrack, setCurrentTrack] = useState<Beat | null>(null);
@@ -33,6 +35,17 @@ export default function BeatsPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressPercent =
+    currentTrack && duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
+
+  const formatTime = (sec?: number) => {
+    if (!sec || !Number.isFinite(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60)
+      .toString()
+      .padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   useEffect(() => {
     if (!audioRef.current && typeof window !== 'undefined') {
@@ -87,9 +100,13 @@ export default function BeatsPage() {
         b.title.toLowerCase().includes(search.toLowerCase()) ||
         (b.artist || '').toLowerCase().includes(search.toLowerCase());
       const matchesAuthor = authorFilter === 'all' || (b.artist || '') === authorFilter;
-      return matchesSearch && matchesAuthor;
+      const matchesBpm = bpmFilter ? String(b.bpm || '').includes(bpmFilter.trim()) : true;
+      const matchesMood = moodFilter
+        ? (b.mood || '').toLowerCase().includes(moodFilter.toLowerCase())
+        : true;
+      return matchesSearch && matchesAuthor && matchesBpm && matchesMood;
     });
-  }, [beats, search, authorFilter]);
+  }, [beats, search, authorFilter, bpmFilter, moodFilter]);
 
   const authors = useMemo(() => {
     const names = Array.from(new Set(beats.map((b) => b.artist || '').filter(Boolean)));
@@ -155,6 +172,18 @@ export default function BeatsPage() {
               </option>
             ))}
           </select>
+          <input
+            value={bpmFilter}
+            onChange={(e) => setBpmFilter(e.target.value)}
+            placeholder="BPM (např. 96)"
+            className="w-full max-w-[120px] rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          />
+          <input
+            value={moodFilter}
+            onChange={(e) => setMoodFilter(e.target.value)}
+            placeholder="Mood / vibe (boom bap, lo-fi…)"
+            className="w-full max-w-xs rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          />
         </div>
 
         {loading && <p className="text-[12px] text-[var(--mpc-muted)]">Načítám beaty…</p>}
@@ -214,6 +243,37 @@ export default function BeatsPage() {
           ))}
         </div>
       </div>
+
+      {currentTrack && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
+            <div className="min-w-[160px] flex-1">
+              <p className="font-semibold text-white">{currentTrack.title}</p>
+              <p className="text-[11px] text-[var(--mpc-muted)]">{currentTrack.artist}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => playBeat(currentTrack)}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+              >
+                {isPlaying ? '▮▮' : '►'}
+              </button>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
