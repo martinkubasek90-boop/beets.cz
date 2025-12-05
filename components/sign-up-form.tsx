@@ -66,10 +66,12 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="border border-white/15 bg-black/60 text-white shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
         <CardHeader>
-          <CardTitle className="text-2xl">Registrace</CardTitle>
-          <CardDescription>Vytvoř si účet a potvrď e-mail.</CardDescription>
+          <CardTitle className="text-2xl text-white">Registrace</CardTitle>
+          <CardDescription className="text-[var(--mpc-muted,#c8c8c8)]">
+            Vytvoř si účet a potvrď e-mail.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
@@ -111,13 +113,20 @@ export function SignUpForm({
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               {success && <p className="text-sm text-green-600">{success}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full border border-[var(--mpc-accent,#f37433)] bg-[var(--mpc-accent,#f37433)] text-black font-semibold hover:bg-[#ff8c4d]"
+                disabled={isLoading}
+              >
                 {isLoading ? "Zakládám účet..." : "Registrovat se"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">
               Už máš účet?{" "}
-              <Link href="/auth/login" className="underline underline-offset-4">
+              <Link
+                href="/auth/login"
+                className="font-semibold text-[var(--mpc-accent,#f37433)] underline underline-offset-4"
+              >
                 Přihlásit se
               </Link>
             </div>

@@ -48,10 +48,10 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
+      <Card className="border border-white/15 bg-black/60 text-white shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
         <CardHeader>
-          <CardTitle className="text-2xl">Přihlášení</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-white">Přihlášení</CardTitle>
+          <CardDescription className="text-[var(--mpc-muted,#c8c8c8)]">
             Zadejte svůj e-mail a heslo pro přihlášení.
           </CardDescription>
         </CardHeader>
@@ -74,7 +74,7 @@ export function LoginForm({
                   <Label htmlFor="password">Heslo</Label>
                   <Link
                     href="/auth/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    className="ml-auto inline-block text-sm text-[var(--mpc-accent,#f37433)] underline-offset-4 hover:underline"
                   >
                     Zapomněli jste heslo?
                   </Link>
@@ -88,7 +88,11 @@ export function LoginForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full border border-[var(--mpc-accent,#f37433)] bg-[var(--mpc-accent,#f37433)] text-black font-semibold hover:bg-[#ff8c4d]"
+                disabled={isLoading}
+              >
                 {isLoading ? "Přihlašuji..." : "Přihlásit se"}
               </Button>
             </div>
@@ -96,7 +100,7 @@ export function LoginForm({
               Nemáte účet?{" "}
               <Link
                 href="/auth/sign-up"
-                className="underline underline-offset-4"
+                className="font-semibold text-[var(--mpc-accent,#f37433)] underline underline-offset-4"
               >
                 Registrovat se
               </Link>
