@@ -270,7 +270,9 @@ export default function ProfileClient() {
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [projectEditTitle, setProjectEditTitle] = useState('');
   const [projectEditDescription, setProjectEditDescription] = useState('');
-  const [projectEditTracks, setProjectEditTracks] = useState<Array<{ name: string; url?: string; file?: File | null }>>([]);
+  const [projectEditTracks, setProjectEditTracks] = useState<
+    Array<{ name: string; url?: string; path?: string | null; file?: File | null }>
+  >([]);
   const [projectEditCover, setProjectEditCover] = useState<{ url?: string; file?: File | null }>({});
   const [projectSaving, setProjectSaving] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
@@ -1873,8 +1875,18 @@ export default function ProfileClient() {
                               url: publicUrl || '',
                               path,
                             });
+                          } else if (tr.path) {
+                            // Zachovej původní nahrané soubory (mají uloženou path)
+                            const { data: signed } = await supabase.storage
+                              .from('projects')
+                              .createSignedUrl(tr.path, 60 * 60 * 24 * 7);
+                            finalTracks.push({
+                              name: tr.name.trim() || tr.path.split('/').pop() || 'Track',
+                              url: signed?.signedUrl || tr.url || '',
+                              path: tr.path,
+                            });
                           } else if (tr.url) {
-                            finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url });
+                            finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url, path: tr.path || null });
                           }
                         }
 
@@ -1976,14 +1988,16 @@ export default function ProfileClient() {
                             setEditingProject(project);
                             setProjectEditTitle(project.title || '');
                             setProjectEditDescription(project.description || '');
-                            const tracks = Array.isArray(project.tracks_json)
-                              ? project.tracks_json.map((t: any) => ({
-                                  name: t.name || '',
-                                  url: t.url || '',
-                                  path: t.path || null,
-                                }))
-                              : [];
-                            setProjectEditTracks(tracks.length > 0 ? tracks : [{ name: '', url: '', file: null }]);
+                        const tracks = Array.isArray(project.tracks_json)
+                          ? project.tracks_json.map((t: any) => ({
+                              name: t.name || '',
+                              url: t.url || '',
+                              path: t.path || null,
+                            }))
+                          : [];
+                        setProjectEditTracks(
+                          tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                        );
                           }}
                           className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                         >
