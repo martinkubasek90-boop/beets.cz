@@ -80,7 +80,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
         throw userError ?? new Error('Uživatel není přihlášen.');
       }
 
-      const uploadedTracks: Array<{ name: string; path: string }> = [];
+      const uploadedTracks: Array<{ name: string; path: string; url: string }> = [];
 
       for (const t of validTracks) {
         const ext = t.file!.name.split('.').pop()?.toLowerCase();
@@ -96,9 +96,12 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
         if (uploadTrackError) {
           throw uploadTrackError;
         }
+        const { data: pubUrl } = supabase.storage.from('projects').getPublicUrl(trackPath);
+
         uploadedTracks.push({
           name: t.name.trim() || t.file!.name,
           path: trackPath,
+          url: pubUrl.publicUrl,
         });
       }
 
@@ -131,7 +134,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
       const payload: Record<string, any> = {
         title: title.trim(),
         description: description.trim() || null,
-        project_url: null, // přehrávání řešíme přes signed URL z path
+        project_url: uploadedTracks[0]?.url || null,
         tracks_json: uploadedTracks,
         user_id: user.id,
         access_mode: accessMode,
