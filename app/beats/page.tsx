@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { FireButton } from '@/components/fire-button';
 
 type Beat = {
   id: number | string;
@@ -221,6 +222,11 @@ export default function BeatsPage() {
                 >
                   {currentTrack?.id === beat.id && isPlaying ? 'Pause' : 'Play'}
                 </button>
+                <FireButton
+                  itemType="beat"
+                  itemId={String(beat.id)}
+                  className="mt-1"
+                />
                 {currentTrack?.id === beat.id && (
                   <div className="w-full">
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
