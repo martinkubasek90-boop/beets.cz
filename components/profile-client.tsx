@@ -267,6 +267,7 @@ export default function ProfileClient() {
     profile: false,
     beatUpload: false,
     projectUpload: false,
+    messages: false,
   });
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [projectEditTitle, setProjectEditTitle] = useState('');
