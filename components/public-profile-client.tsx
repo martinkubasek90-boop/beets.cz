@@ -760,7 +760,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           )}
           {collabs.length === 0 ? (
             <div className="space-y-3 text-sm text-[var(--mpc-muted)]">
-              <p>Žádné spolupráce k zobrazení.</p>
+              <p>O spolupráce mohou žádat pouze registrovaní uživatelé.</p>
               {isLoggedIn && currentUserId !== profileId && (
                 <div className="space-y-2">
                   <button
