@@ -404,7 +404,7 @@ export default function ProfileClient() {
         if (ownedIds.length > 0) {
           const { data: grants, error: grantErr } = await supabase
             .from('project_access_grants')
-            .select('id, project_id, user_id, created_at, profiles:profiles(display_name)')
+            .select('id, project_id, user_id, created_at')
             .in('project_id', ownedIds);
           if (grantErr) {
             console.warn('Chyba načítání grantů (ignorováno):', grantErr);
@@ -418,7 +418,7 @@ export default function ProfileClient() {
                 id: g.id,
                 project_id: String(g.project_id),
                 user_id: g.user_id,
-                display_name: g.profiles?.display_name || null,
+                display_name: null,
                 created_at: g.created_at,
               });
             });
