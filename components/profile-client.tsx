@@ -101,12 +101,14 @@ type BlogPost = {
   published?: boolean | null;
 };
 
-type InboxMessage = {
+type DirectMessage = {
   id: number;
+  user_id: string;
+  to_user_id: string;
   from_name?: string | null;
-  from: string;
-  preview: string;
-  time: string;
+  to_name?: string | null;
+  body: string;
+  created_at: string;
   unread?: boolean;
 };
 
@@ -214,7 +216,8 @@ export default function ProfileClient() {
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [projectGrants, setProjectGrants] = useState<Record<string, ProjectAccessGrant[]>>({});
   const [projectGrantsError, setProjectGrantsError] = useState<string | null>(null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoCollabMessages);
+  const [messages, setMessages] = useState<DirectMessage[]>([]);
+  const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
@@ -444,30 +447,33 @@ export default function ProfileClient() {
       try {
         const { data, error } = await supabase
           .from('messages')
-          .select('id, from_name, to_name, body, created_at, unread')
+          .select('id, user_id, to_user_id, from_name, to_name, body, created_at, unread')
           .or(`to_user_id.eq.${userId},user_id.eq.${userId}`)
           .order('created_at', { ascending: false })
-          .limit(20);
+          .limit(100);
 
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const mapped: InboxMessage[] = data.map((item: any) => ({
+          const mapped: DirectMessage[] = data.map((item: any) => ({
             id: item.id,
-            from: item.from_name || 'Neznámý',
-            preview: item.body || '',
-            time: formatRelativeTime(item.created_at),
+            user_id: item.user_id,
+            to_user_id: item.to_user_id,
+            from_name: item.from_name,
+            to_name: item.to_name,
+            body: item.body || '',
+            created_at: item.created_at,
             unread: Boolean(item.unread),
           }));
           setMessages(mapped);
           setMessagesError(null);
         } else {
-          setMessages(demoCollabMessages);
+          setMessages([]);
         }
       } catch (err) {
         console.error('Chyba při načítání zpráv:', err);
-        setMessagesError('Nepodařilo se načíst zprávy. Zobrazuji demo.');
-        setMessages(demoCollabMessages);
+        setMessagesError('Nepodařilo se načíst zprávy.');
+        setMessages([]);
       } finally {
         setMessagesLoading(false);
       }
