@@ -1013,10 +1013,10 @@ export default function Home() {
             </div>
           </div>
           <nav className="hidden items-center gap-6 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-muted)] md:flex">
-            <a className="relative py-1 hover:text-white" href="#beats">
+            <Link className="relative py-1 hover:text-white" href="/beats">
               Beaty
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
-            </a>
+            </Link>
             <Link className="relative py-1 hover:text-white" href="/projects">
               Projekty
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
