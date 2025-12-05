@@ -2898,15 +2898,6 @@ export default function ProfileClient() {
                     {messages.length} {t('profile.messages.count', 'konverzací')}
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('collab-new-message');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }}
-                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px]"
-                >
-                  {t('profile.messages.new', 'Nová zpráva')}
-                </button>
               </div>
 
               {messagesLoading && (
