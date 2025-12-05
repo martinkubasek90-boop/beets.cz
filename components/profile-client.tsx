@@ -101,6 +101,7 @@ type BlogPost = {
 
 type InboxMessage = {
   id: number;
+  from_name?: string | null;
   from: string;
   preview: string;
   time: string;
