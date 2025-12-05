@@ -113,9 +113,6 @@ export default function BeatsPage() {
     return names;
   }, [beats]);
 
-  const progressPercent =
-    currentTrack && duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
-
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url || !audioRef.current) return;
     if (currentTrack?.id === beat.id) {
