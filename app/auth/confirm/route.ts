@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/";
+  const next = searchParams.get("next") ?? "/auth/login?verified=1";
 
   if (token_hash && type) {
     const supabase = await createClient();
@@ -21,10 +21,10 @@ export async function GET(request: NextRequest) {
       redirect(next);
     } else {
       // redirect the user to an error page with some instructions
-      redirect(`/auth/error?error=${error?.message}`);
+      redirect(`/auth/login?verify_error=1`);
     }
   }
 
-  // redirect the user to an error page with some instructions
-  redirect(`/auth/error?error=No token hash or type`);
+  // fallback: pokud chybí parametry, pošleme uživatele na login se statusem
+  redirect(`/auth/login?verified=1`);
 }

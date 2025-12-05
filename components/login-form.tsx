@@ -18,8 +18,13 @@ import { useState } from "react";
 
 export function LoginForm({
   className,
+  infoMessage,
+  infoVariant = "info",
   ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+}: React.ComponentPropsWithoutRef<"div"> & {
+  infoMessage?: string | null;
+  infoVariant?: "info" | "success" | "error";
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +100,19 @@ export function LoginForm({
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {(error || infoMessage) && (
+                <p
+                  className={`text-sm ${
+                    error || infoVariant === "error"
+                      ? "text-red-500"
+                      : infoVariant === "success"
+                      ? "text-green-400"
+                      : "text-[var(--mpc-muted,#c8c8c8)]"
+                  }`}
+                >
+                  {error || infoMessage}
+                </p>
+              )}
               <Button
                 type="submit"
                 className="w-full border border-[var(--mpc-accent,#f37433)] bg-[var(--mpc-accent,#f37433)] text-black font-semibold hover:bg-[#ff8c4d]"

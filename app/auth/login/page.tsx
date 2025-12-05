@@ -1,7 +1,18 @@
-import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
+import Link from "next/link";
 
-export default function Page() {
+export default function Page({
+  searchParams,
+}: {
+  searchParams?: { verified?: string; verify_error?: string };
+}) {
+  const infoMessage = searchParams?.verified
+    ? "Profil je ověřený. Přihlas se prosím."
+    : searchParams?.verify_error
+    ? "Ověření e-mailu se nepodařilo. Zkus to prosím znovu."
+    : null;
+  const infoVariant = searchParams?.verify_error ? "error" : searchParams?.verified ? "success" : "info";
+
   return (
     <div className="min-h-svh w-full bg-gradient-to-br from-[#05090f] via-[#08121b] to-[#03060b] text-white">
       <div className="flex min-h-svh w-full flex-col items-center justify-center gap-4 p-6 md:p-10">
@@ -14,7 +25,7 @@ export default function Page() {
           </Link>
         </div>
         <div className="w-full max-w-sm">
-          <LoginForm />
+          <LoginForm infoMessage={infoMessage} infoVariant={infoVariant} />
         </div>
       </div>
     </div>
