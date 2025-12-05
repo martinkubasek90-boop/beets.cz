@@ -2924,7 +2924,9 @@ export default function ProfileClient() {
                   >
                     <div className="flex items-center justify-between text-[12px]">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[var(--mpc-light)]">{msg.from}</span>
+                        <span className="font-semibold text-[var(--mpc-light)]">
+                          {msg.from_name || msg.from || 'Neznámý uživatel'}
+                        </span>
                         {msg.unread && (
                           <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
                             Nové
@@ -2934,100 +2936,86 @@ export default function ProfileClient() {
                       <span className="text-[var(--mpc-muted)]">{msg.time}</span>
                     </div>
                     <p className="mt-1 text-[var(--mpc-muted)]">{msg.preview}</p>
-                    <div className="mt-2 flex items-center gap-2 text-[11px]">
-                      <button
-                        onClick={() => handleReplyToCollab(msg)}
-                        className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                      >
-                        Odpovědět
-                      </button>
-                      <button className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]">
-                        Otevřít vlákno
-                      </button>
-                    </div>
                   </div>
                 ))}
               </div>
 
-              <form onSubmit={handleSendCollabMessage} id="collab-new-message" className="mt-4 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Komu
-                    </label>
-                    <input
-                      type="text"
-                      value={newMessage.to}
-                      onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value }))}
-                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      placeholder="Např. MC Panel, Blockboy…"
-                    />
-                    {userSuggestionsLoading && (
-                      <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
-                    )}
-                    {!userSuggestionsLoading && userSuggestions.length > 0 && (
-                      <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-2 text-[11px]">
-                        {userSuggestions.map((u) => (
-                          <button
-                            key={u.id}
-                            type="button"
-                            onClick={() =>
-                              setNewMessage((prev) => ({
-                                ...prev,
-                                to: u.display_name || 'Neznámý',
-                                toUserId: u.id,
-                              }))
-                            }
-                            className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-[var(--mpc-panel)]"
-                          >
-                            <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
-                            <span className="text-[var(--mpc-muted)] text-[10px]">{u.id}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => setOpenSections((prev) => ({ ...prev, messages: !prev.messages }))}
+                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                >
+                  {openSections.messages ? 'Skrýt formulář' : 'Nová zpráva'}
+                </button>
+              </div>
+
+              {openSections.messages && (
+                <form onSubmit={handleSendCollabMessage} className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        Komu
+                      </label>
+                      <input
+                        type="text"
+                        value={newMessage.to}
+                        onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value, toUserId: '' }))}
+                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        placeholder="Začni psát jméno profilu…"
+                      />
+                      {userSuggestionsLoading && (
+                        <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
+                      )}
+                      {!userSuggestionsLoading && userSuggestions.length > 0 && (
+                        <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-2 text-[11px]">
+                          {userSuggestions.map((u) => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() =>
+                                setNewMessage((prev) => ({
+                                  ...prev,
+                                  to: u.display_name || '',
+                                  toUserId: u.id,
+                                }))
+                              }
+                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-white/5"
+                            >
+                              <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
+                              <span className="text-[var(--mpc-muted)]">{u.id.slice(0, 6)}…</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        Zpráva
+                      </label>
+                      <textarea
+                        value={newMessage.body}
+                        onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
+                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        rows={4}
+                        placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      ID příjemce (UUID)
-                    </label>
-                    <input
-                      type="text"
-                      value={newMessage.toUserId}
-                      onChange={(e) => setNewMessage((prev) => ({ ...prev, toUserId: e.target.value }))}
-                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      placeholder="uuid příjemce z auth.users"
-                    />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[11px] text-[var(--mpc-muted)] max-w-xl">
+                      Zpráva se odešle uživateli s vybraným jménem. Pokud jméno neexistuje, uvidíš chybu.
+                    </p>
+                    <button
+                      type="submit"
+                      disabled={sendingMessage || !newMessage.body.trim() || !newMessage.toUserId.trim()}
+                      className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
+                    >
+                      {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Zpráva
-                    </label>
-                    <textarea
-                      value={newMessage.body}
-                      onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
-                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      rows={4}
-                      placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[11px] text-[var(--mpc-muted)]">
-                    Zprávy se ukládají do Supabase tabulky messages (user_id → odesílatel, to_user_id → příjemce). Pokud backend chybí, zůstanou lokálně.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={sendingMessage}
-                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-white disabled:opacity-60"
-                  >
-                    {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                  </button>
-                </div>
-              </form>
-              <p className="text-[11px] text-[var(--mpc-muted)]">
-                Tady se sbíhají domluvy na spolupráci i soukromé zprávy. Brzy přidáme realtime a e-mail notifikace.
-              </p>
+                </form>
+              )}
             </div>
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
