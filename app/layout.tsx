@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { NotificationBell } from "@/components/notification-bell";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -37,7 +38,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="relative min-h-screen">
+            <div className="pointer-events-none fixed right-4 top-4 z-40">
+              <div className="pointer-events-auto">
+                <NotificationBell />
+              </div>
+            </div>
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

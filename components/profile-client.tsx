@@ -2948,7 +2948,6 @@ export default function ProfileClient() {
                     {messages.length} {t('profile.messages.count', 'konverzací')}
                   </p>
                 </div>
-                <NotificationBell />
               </div>
 
               {messagesLoading && (
