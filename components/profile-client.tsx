@@ -1087,6 +1087,12 @@ export default function ProfileClient() {
     if (!selectedThreadId || !collabMessageBody.trim() || !userId) return;
     setSendingCollabMessage(true);
     try {
+      // Ujisti se, že existuje vazba v collab_participants pro aktuálního uživatele,
+      // jinak RLS nepustí insert do collab_messages.
+      await supabase
+        .from('collab_participants')
+        .upsert({ thread_id: selectedThreadId, user_id: userId, role: 'guest' }, { onConflict: 'thread_id,user_id' });
+
       const { error } = await supabase.from('collab_messages').insert({
         thread_id: selectedThreadId,
         body: collabMessageBody.trim(),
