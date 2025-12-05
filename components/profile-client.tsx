@@ -1037,6 +1037,24 @@ export default function ProfileClient() {
       const { error: partErr } = await supabase.from('collab_participants').insert(rows);
       if (partErr) throw partErr;
 
+      // Notifikace pro partnera
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: partner.id,
+            type: 'collab_created',
+            title: 'Nová spolupráce',
+            body: newThreadTitle.trim(),
+            item_type: 'collab_thread',
+            item_id: threadId,
+          }),
+        });
+      } catch (err) {
+        console.error('Notifikace partnera se nepodařila:', err);
+      }
+
       setCollabThreads((prev) => [
         { id: threadId, title: newThreadTitle.trim(), status: 'active', updated_at: new Date().toISOString() },
         ...prev,
@@ -1133,6 +1151,35 @@ export default function ProfileClient() {
       setCollabThreads((prev) =>
         prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
       );
+      // Notifikace pro ostatní účastníky vlákna
+      try {
+        const { data: participants } = await supabase
+          .from('collab_participants')
+          .select('user_id')
+          .eq('thread_id', selectedThreadId);
+        const targets =
+          (participants ?? [])
+            .map((p: any) => p.user_id as string)
+            .filter((uid) => uid && uid !== userId) || [];
+        await Promise.all(
+          targets.map((uid) =>
+            fetch('/api/notifications', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_id: uid,
+                type: 'collab_message',
+                title: 'Nová zpráva ve spolupráci',
+                body: collabMessageBody.trim(),
+                item_type: 'collab_thread',
+                item_id: selectedThreadId,
+              }),
+            })
+          )
+        );
+      } catch (err) {
+        console.error('Notifikace pro účastníky se nepodařila:', err);
+      }
       setCollabMessageBody('');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);

@@ -252,6 +252,24 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .from('collab_messages')
         .insert({ thread_id: thread.id, user_id: uid, body: 'Ahoj, rád bych spolupracoval.' });
 
+      // Notifikace pro partnera (API využívá service role, na FE jen voláme fetch)
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: profileId,
+            type: 'collab_created',
+            title: 'Nová spolupráce',
+            body: threadTitle,
+            item_type: 'collab_thread',
+            item_id: thread.id,
+          }),
+        });
+      } catch {
+        // když notifikace selže, nebráníme založení vlákna
+      }
+
       await new Promise((res) => setTimeout(res, 300)); // krátký wait
       // reload collabs
       const { data, error } = await supabase
