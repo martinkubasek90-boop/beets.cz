@@ -261,6 +261,7 @@ export default function BeatsPage() {
               >
                 {isPlaying ? '▮▮' : '►'}
               </button>
+              <FireButton itemType="beat" itemId={String(currentTrack.id)} />
             </div>
             <div className="flex-1 min-w-[200px]">
               <div className="h-2 overflow-hidden rounded-full bg-white/10">

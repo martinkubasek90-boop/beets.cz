@@ -14,6 +14,7 @@ import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
+import { FireButton } from './fire-button';
 
 type Profile = {
   display_name: string;
@@ -2032,6 +2033,7 @@ export default function ProfileClient() {
                       </div>
                       <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
                         <span>Projekt</span>
+                        <FireButton itemType="project" itemId={project.id} />
                         <button
                           onClick={() => {
                             setEditingProject(project);
