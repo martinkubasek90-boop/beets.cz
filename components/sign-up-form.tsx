@@ -23,6 +23,7 @@ export function SignUpForm({
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -32,7 +33,7 @@ export function SignUpForm({
     setError(null);
 
     if (password !== repeatPassword) {
-      setError("Passwords do not match");
+      setError("Hesla se neshodují.");
       setIsLoading(false);
       return;
     }
@@ -48,12 +49,16 @@ export function SignUpForm({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "Sign up failed");
+        throw new Error(data.error || "Registrace se nezdařila.");
       }
 
-      router.push("/protected");
+      setSuccess("Zkontroluj e-mail a potvrď registraci. Poté se můžeš přihlásit.");
+      setEmail("");
+      setPassword("");
+      setRepeatPassword("");
+      router.push("/auth/sign-up-success");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+      setError(error instanceof Error ? error.message : "Došlo k chybě při registraci.");
     } finally {
       setIsLoading(false);
     }
@@ -63,18 +68,18 @@ export function SignUpForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle className="text-2xl">Registrace</CardTitle>
+          <CardDescription>Vytvoř si účet a potvrď e-mail.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">E-mail</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="jan@domena.cz"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -82,7 +87,7 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Heslo</Label>
                 </div>
                 <Input
                   id="password"
@@ -94,7 +99,7 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
+                  <Label htmlFor="repeat-password">Zopakuj heslo</Label>
                 </div>
                 <Input
                   id="repeat-password"
@@ -105,14 +110,15 @@ export function SignUpForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
+              {success && <p className="text-sm text-green-600">{success}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+                {isLoading ? "Zakládám účet..." : "Registrovat se"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">
-              Already have an account?{" "}
+              Už máš účet?{" "}
               <Link href="/auth/login" className="underline underline-offset-4">
-                Login
+                Přihlásit se
               </Link>
             </div>
           </form>
