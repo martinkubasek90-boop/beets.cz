@@ -1,5 +1,6 @@
-import { LoginForm } from "@/components/login-form";
+<<<<<<< HEAD
 import Link from "next/link";
+import { LoginForm } from "@/components/login-form";
 
 export default function Page({
   searchParams,
