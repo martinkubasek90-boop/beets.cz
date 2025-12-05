@@ -214,6 +214,22 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         profile?.display_name?.trim()
           ? `Spolupráce s ${profile.display_name}`
           : 'Nová spolupráce';
+
+      // Nezakládej duplicitní vlákno: zjisti, zda už existuje thread s oběma uživateli.
+      const [{ data: myThreads, error: myErr }, { data: targetThreads, error: targetErr }] = await Promise.all([
+        supabase.from('collab_participants').select('thread_id').eq('user_id', uid),
+        supabase.from('collab_participants').select('thread_id').eq('user_id', profileId),
+      ]);
+      if (myErr) throw myErr;
+      if (targetErr) throw targetErr;
+      const mySet = new Set((myThreads ?? []).map((r: any) => r.thread_id));
+      const existing = (targetThreads ?? []).find((r: any) => mySet.has(r.thread_id));
+      if (existing) {
+        setCollabRequestError('Spolupráce s tímto uživatelem už existuje.');
+        setCollabRequestLoading(false);
+        return;
+      }
+
       const { data: thread, error: threadErr } = await supabase
         .from('collab_threads')
         .insert({

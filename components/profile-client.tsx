@@ -1001,6 +1001,23 @@ export default function ProfileClient() {
       if (partnerErr) throw partnerErr;
       if (!partner?.id) throw new Error('Partner nenalezen.');
 
+      // Zabráníme duplicitnímu vláknu mezi stejnou dvojicí uživatelů.
+      const [{ data: myThreads, error: myErr }, { data: partnerThreads, error: partnerThreadsErr }] = await Promise.all([
+        supabase.from('collab_participants').select('thread_id').eq('user_id', userId),
+        supabase.from('collab_participants').select('thread_id').eq('user_id', partner.id),
+      ]);
+      if (myErr) throw myErr;
+      if (partnerThreadsErr) throw partnerThreadsErr;
+      const mySet = new Set((myThreads ?? []).map((r: any) => r.thread_id));
+      const existing = (partnerThreads ?? []).find((r: any) => mySet.has(r.thread_id));
+      if (existing?.thread_id) {
+        setCollabThreadsError('Spolupráce s tímto uživatelem už existuje.');
+        setSelectedThreadId(existing.thread_id);
+        setShowNewThreadForm(false);
+        setCreatingThread(false);
+        return;
+      }
+
       const { data: thread, error: threadErr } = await supabase
         .from('collab_threads')
         .insert({ title: newThreadTitle.trim(), created_by: userId })
