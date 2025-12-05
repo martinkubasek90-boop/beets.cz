@@ -15,6 +15,7 @@ import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
 import { FireButton } from './fire-button';
+import { NotificationBell } from './notification-bell';
 
 type Profile = {
   display_name: string;
@@ -2900,6 +2901,7 @@ export default function ProfileClient() {
                     {messages.length} {t('profile.messages.count', 'konverzací')}
                   </p>
                 </div>
+                <NotificationBell />
               </div>
 
               {messagesLoading && (
