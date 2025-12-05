@@ -268,16 +268,18 @@ export default function ProjectsPage() {
 
             const tracksWithSigned = await Promise.all(
               normalizedTracks.map(async (t) => {
-                // Pokud už má URL nebo přístup není povolen, jen vrať
-                if (t.url) {
-                  return t;
+                // Pokud je soubor uložený v bucketu a máme přístup, podepiš URL.
+                if (hasAccess) {
+                  const pathToUse = t.path || null;
+                  if (pathToUse) {
+                    const signed = await resolveSignedUrl(pathToUse);
+                    return { ...t, url: signed, path: pathToUse };
+                  }
                 }
                 if (!hasAccess) {
                   return { ...t, url: '' };
                 }
-                const pathToUse = t.path || t.url;
-                const signed = await resolveSignedUrl(pathToUse);
-                return { ...t, url: signed };
+                return t;
               })
             );
 
@@ -444,157 +446,195 @@ export default function ProjectsPage() {
                 return (
                   <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
                     {!hasAccess ? (
-                      <div className="space-y-2 text-center text-sm text-[var(--mpc-muted)]">
-                        <p>Projekt je uzamčený.</p>
-                        {userId && requiresRequest && (
-                          <RequestAccessRow
-                            projectId={project.id}
-                            status={myRequests[project.id]}
-                            onRequest={() => void requestAccess(project.id)}
-                            loading={requesting[project.id]}
-                          />
-                        )}
-                        {!userId && requiresRequest && (
-                          <div className="space-y-2">
-                            <button
-                              onClick={() =>
-                                alert('O přístup mohou požádat jen přihlášení uživatelé s profilem. Přihlas se nebo si založ účet.')
+                      <div
+                        className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
+                        style={
+                          project.cover_url
+                            ? {
+                                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
                               }
-                              className="w-full rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-white"
-                            >
-                              Požádat o přístup
-                            </button>
-                            <p className="text-[11px]">
-                              Nemáš účet?{' '}
-                              <Link href="/auth/sign-up" className="text-[var(--mpc-accent)] underline">
-                                Registruj se
-                              </Link>
-                              , a pak klikni na „Požádat o přístup“.
+                            : undefined
+                        }
+                      >
+                        <div className="flex flex-col items-center gap-3 text-center">
+                          <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                            {project.cover_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <span>{project.title.slice(0, 2)}</span>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            {project.author_name && (
+                              <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                                Autor: {project.author_name}
+                              </p>
+                            )}
+                            <p className="text-lg font-semibold text-white">{project.title}</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">
+                              {project.description || 'Projekt je uzamčený.'}
                             </p>
                           </div>
-                        )}
-                        {!requiresRequest && !userId && (
-                          <p className="text-[11px]">Přihlas se, pokud chceš požádat o přístup.</p>
-                        )}
-                      </div>
-                    ) : (
-                        <div
-                          className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
-                          style={
-                            project.cover_url
-                              ? {
-                                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
+                        </div>
+
+                        <div className="mt-4 space-y-2 text-center text-sm text-[var(--mpc-muted)]">
+                          <p className="font-semibold text-white">Projekt je uzamčený.</p>
+                          {userId && requiresRequest && (
+                            <RequestAccessRow
+                              projectId={project.id}
+                              status={myRequests[project.id]}
+                              onRequest={() => void requestAccess(project.id)}
+                              loading={requesting[project.id]}
+                            />
+                          )}
+                          {!userId && requiresRequest && (
+                            <div className="space-y-2">
+                              <button
+                                onClick={() =>
+                                  alert('O přístup mohou požádat jen přihlášení uživatelé s profilem. Přihlas se nebo si založ účet.')
                                 }
-                              : undefined
-                          }
-                        >
-                          <div className="flex flex-col items-center gap-3 text-center">
-                            <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                              {project.cover_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
-                              ) : (
-                                <span>{project.title.slice(0, 2)}</span>
-                              )}
-                            </div>
-                            <div className="space-y-1">
-                              {project.author_name && (
-                                <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                                  Autor: {project.author_name}
-                                </p>
-                              )}
-                              <p className="text-lg font-semibold text-white">{project.title}</p>
-                              <p className="text-[12px] text-[var(--mpc-muted)]">
-                                {project.description || 'Projekt'}
+                                className="w-full rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-white"
+                              >
+                                Požádat o přístup
+                              </button>
+                              <p className="text-[11px]">
+                                Nemáš účet?{' '}
+                                <Link href="/auth/sign-up" className="text-[var(--mpc-accent)] underline">
+                                  Registruj se
+                                </Link>
+                                , a pak klikni na „Požádat o přístup“.
                               </p>
                             </div>
-                          </div>
-
-                          <div className="mt-4 flex flex-col items-center gap-2">
-                            <button
-                              onClick={() =>
-                                setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
-                              }
-                              className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
-                            >
-                              <span
-                                className="text-lg font-bold transition-transform"
-                                style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                              >
-                                ▼
-                              </span>
-                            </button>
-                            <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
-                              Tracklist
-                            </span>
-                          </div>
-
-                          {expandedProjects[project.id] && (
-                            <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
-                              {tracks.length > 0 ? (
-                                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                                  {tracks.map((t, idx) => {
-                                    const isCurrent =
-                                      currentTrack?.projectId === project.id && currentTrack.url === t.url;
-                                    const progress = trackProgress(project.id, t.url);
-                                    return (
-                                      <div
-                                        key={`${project.id}-${idx}`}
-                                        className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-3">
-                                            <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
-                                            <span>{t.name || `Track ${idx + 1}`}</span>
-                                          </div>
-                                          <button
-                                            onClick={() => playTrack(project.id, t.name || `Track ${idx + 1}`, t.url)}
-                                            disabled={!t.url}
-                                            className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
-                                          >
-                                            {isCurrent && isPlaying ? '▮▮' : '►'}
-                                          </button>
-                                        </div>
-                                        <div
-                                          className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                                          onClick={(e) => {
-                                            if (!isCurrent || !t.url) return;
-                                            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                            const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-                                            if (audioRef.current && duration > 0) {
-                                              const next = ratio * duration;
-                                              audioRef.current.currentTime = next;
-                                              setCurrentTime(next);
-                                            }
-                                          }}
-                                        >
-                                          <div
-                                            className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                                            style={{ width: `${progress}%` }}
-                                          />
-                                        </div>
-                                        {isCurrent && (
-                                          <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                            <span>{formatTime(currentTime)}</span>
-                                            <span>{formatTime(duration)}</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
-                              )}
-                            </div>
+                          )}
+                          {!requiresRequest && !userId && (
+                            <p className="text-[11px]">Přihlas se, pokud chceš požádat o přístup.</p>
+                          )}
+                          {!requiresRequest && !hasGrant && isOwner && (
+                            <p className="text-[11px]">Jako autor vidíš projekt po odemčení.</p>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                      </div>
+                    ) : (
+                      <div
+                        className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
+                        style={
+                          project.cover_url
+                            ? {
+                                backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                              }
+                            : undefined
+                        }
+                      >
+                        <div className="flex flex-col items-center gap-3 text-center">
+                          <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                            {project.cover_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <span>{project.title.slice(0, 2)}</span>
+                            )}
+                          </div>
+                          <div className="space-y-1">
+                            {project.author_name && (
+                              <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                                Autor: {project.author_name}
+                              </p>
+                            )}
+                            <p className="text-lg font-semibold text-white">{project.title}</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">
+                              {project.description || 'Projekt'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-col items-center gap-2">
+                          <button
+                            onClick={() =>
+                              setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
+                            }
+                            className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
+                          >
+                            <span
+                              className="text-lg font-bold transition-transform"
+                              style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                            >
+                              ▼
+                            </span>
+                          </button>
+                          <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
+                            Tracklist
+                          </span>
+                        </div>
+
+                        {expandedProjects[project.id] && (
+                          <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
+                            {tracks.length > 0 ? (
+                              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                {tracks.map((t, idx) => {
+                                  const isCurrent =
+                                    currentTrack?.projectId === project.id && currentTrack.url === t.url;
+                                  const progress = trackProgress(project.id, t.url);
+                                  return (
+                                    <div
+                                      key={`${project.id}-${idx}`}
+                                      className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-3">
+                                          <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
+                                          <span>{t.name || `Track ${idx + 1}`}</span>
+                                        </div>
+                                        <button
+                                          onClick={() => playTrack(project.id, t.name || `Track ${idx + 1}`, t.url)}
+                                          disabled={!t.url}
+                                          className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
+                                        >
+                                          {isCurrent && isPlaying ? '▮▮' : '►'}
+                                        </button>
+                                      </div>
+                                      <div
+                                        className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                                        onClick={(e) => {
+                                          if (!isCurrent || !t.url) return;
+                                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                          const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+                                          if (audioRef.current && duration > 0) {
+                                            const next = ratio * duration;
+                                            audioRef.current.currentTime = next;
+                                            setCurrentTime(next);
+                                          }
+                                        }}
+                                      >
+                                        <div
+                                          className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                                          style={{ width: `${progress}%` }}
+                                        />
+                                      </div>
+                                      {isCurrent && (
+                                        <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                                          <span>{formatTime(currentTime)}</span>
+                                          <span>{formatTime(duration)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               </div>
           ))}
         </div>

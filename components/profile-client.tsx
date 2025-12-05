@@ -39,7 +39,7 @@ type ProjectItem = {
   cover_url: string | null;
   project_url: string | null;
   access_mode?: 'public' | 'request' | 'private';
-  tracks_json?: Array<{ name: string; url: string }>;
+  tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
 };
 
 type CollabThread = {
@@ -1834,7 +1834,7 @@ export default function ProfileClient() {
                       setProjectsError(null);
                       try {
                         const uploads: Array<{ name: string; url: string }> = [];
-                        const finalTracks: Array<{ name: string; url: string }> = [];
+                        const finalTracks: Array<{ name: string; url: string; path?: string | null }> = [];
 
                         // Cover upload (pokud je vybrán nový soubor)
                         let coverUrl = editingProject.cover_url || null;
@@ -1863,9 +1863,16 @@ export default function ProfileClient() {
                               .from('projects')
                               .upload(path, tr.file, { upsert: true });
                             if (uploadErr) throw uploadErr;
-                            const { data: pub } = supabase.storage.from('projects').getPublicUrl(path);
-                            uploads.push({ name: tr.name.trim() || tr.file.name, url: pub.publicUrl });
-                            finalTracks.push({ name: tr.name.trim() || tr.file.name, url: pub.publicUrl });
+                            const { data: signed } = await supabase.storage
+                              .from('projects')
+                              .createSignedUrl(path, 60 * 60 * 24 * 7);
+                            const publicUrl = signed?.signedUrl;
+                            uploads.push({ name: tr.name.trim() || tr.file.name, url: publicUrl || '' });
+                            finalTracks.push({
+                              name: tr.name.trim() || tr.file.name,
+                              url: publicUrl || '',
+                              path,
+                            });
                           } else if (tr.url) {
                             finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url });
                           }
@@ -1970,7 +1977,11 @@ export default function ProfileClient() {
                             setProjectEditTitle(project.title || '');
                             setProjectEditDescription(project.description || '');
                             const tracks = Array.isArray(project.tracks_json)
-                              ? project.tracks_json.map((t: any) => ({ name: t.name || '', url: t.url || '' }))
+                              ? project.tracks_json.map((t: any) => ({
+                                  name: t.name || '',
+                                  url: t.url || '',
+                                  path: t.path || null,
+                                }))
                               : [];
                             setProjectEditTracks(tracks.length > 0 ? tracks : [{ name: '', url: '', file: null }]);
                           }}
