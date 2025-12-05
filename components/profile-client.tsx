@@ -1045,7 +1045,7 @@ export default function ProfileClient() {
       try {
         const { data: msgs, error: msgErr } = await supabase
           .from('collab_messages')
-          .select('id, body, user_id, created_at, profiles:profiles(display_name)')
+          .select('id, body, user_id, created_at')
           .eq('thread_id', selectedThreadId)
           .order('created_at', { ascending: true });
         if (msgErr) throw msgErr;
@@ -1055,7 +1055,7 @@ export default function ProfileClient() {
             body: m.body,
             user_id: m.user_id,
             created_at: m.created_at,
-            author_name: m.profiles?.display_name || null,
+            author_name: null, // záměrně bez joinu na profiles (chybí FK); lze doplnit později samostatným fetch podle user_id
           }))
         );
       } catch (err) {
