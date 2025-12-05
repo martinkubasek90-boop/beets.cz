@@ -1564,7 +1564,7 @@ export default function Home() {
               const gradient = colors[idx % colors.length];
               return (
                 <Link
-                  href={`/artists`}
+                  href={`/u/${artist.id}`}
                   key={artist.id}
                   className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
                 >
