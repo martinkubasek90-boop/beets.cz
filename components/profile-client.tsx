@@ -587,21 +587,43 @@ export default function ProfileClient() {
         return;
       }
       try {
-        const { data, error } = await supabase
-          .from('collab_threads')
-          .select('id, title, status, updated_at, collab_participants(user_id)')
-          // UUID s pomlčkami musí být v OR řetězci uzavřené v uvozovkách, jinak PostgREST parsuje pomlčky jako minus.
-          .or(`created_by.eq."${userId}",collab_participants.user_id.eq."${userId}"`)
-          .order('updated_at', { ascending: false });
-        if (error) throw error;
-        const mapped =
-          data?.map((t: any) => ({
-            id: t.id as string,
-            title: t.title as string,
-            status: t.status as string,
-            updated_at: t.updated_at as string | null,
-          })) ?? [];
-        setCollabThreads(mapped);
+        // Kvůli PostgREST OR parsing chybám s UUID načteme zvlášť vlákna, kde je uživatel zakladatel,
+        // a zvlášť vlákna, kde je účastník, a pak je sloučíme na FE.
+        const [byCreator, byParticipant] = await Promise.all([
+          supabase
+            .from('collab_threads')
+            .select('id, title, status, updated_at')
+            .eq('created_by', userId)
+            .order('updated_at', { ascending: false }),
+          supabase
+            .from('collab_threads')
+            .select('id, title, status, updated_at, collab_participants!inner(user_id)')
+            .eq('collab_participants.user_id', userId)
+            .order('updated_at', { ascending: false }),
+        ]);
+
+        if (byCreator.error) throw byCreator.error;
+        if (byParticipant.error) throw byParticipant.error;
+
+        const mapThread = (t: any) => ({
+          id: t.id as string,
+          title: t.title as string,
+          status: t.status as string,
+          updated_at: t.updated_at as string | null,
+        });
+
+        const combinedMap = new Map<string, { id: string; title: string; status: string; updated_at: string | null }>();
+        (byCreator.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
+        (byParticipant.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
+
+        // Seřadíme podle updated_at (desc)
+        const merged = Array.from(combinedMap.values()).sort((a, b) => {
+          const ta = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const tb = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return tb - ta;
+        });
+
+        setCollabThreads(merged);
       } catch (err) {
         console.error('Chyba načítání spoluprací:', err);
         setCollabThreadsError('Nepodařilo se načíst spolupráce.');
