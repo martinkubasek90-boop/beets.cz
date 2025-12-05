@@ -23,6 +23,7 @@ type Artist = {
   initials: string;
   beatsCount: number;
   city: string;
+  avatar_url?: string | null;
   user_id?: string | null;
 };
 
