@@ -53,6 +53,14 @@ export default function CollabsPage() {
   return (
     <main className="min-h-screen bg-black text-white" id="collabs">
       <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12">
+        <div className="flex justify-end">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
+          >
+            ← Zpět na homepage
+          </a>
+        </div>
         <div className="rounded-2xl border border-white/15 bg-white/5 p-6 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
           <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--mpc-muted)]">Co jsou spolupráce na beets.cz</p>
           <h1 className="mt-2 text-3xl font-semibold">Spolupráce bez chaosu</h1>

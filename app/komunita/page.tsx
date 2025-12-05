@@ -7,6 +7,14 @@ export default function KomunitaPage() {
   return (
     <main className="min-h-screen bg-black text-white">
       <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12">
+        <div className="flex justify-end">
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
+          >
+            ← Zpět na homepage
+          </a>
+        </div>
         <div className="overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-black via-black/70 to-[#0f0f0f] p-6 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
           <div className="flex flex-col gap-3 text-left">
             <p className="text-[12px] uppercase tracking-[0.14em] text-[var(--mpc-muted)]">Komunita</p>
