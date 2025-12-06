@@ -82,6 +82,40 @@ const faqs = [
     ],
   },
   {
+    title: "Fórum",
+    items: [
+      {
+        q: "Jak založit vlákno?",
+        a: "Ve fóru vyber správnou kategorii (např. Spolupráce, Mix/Master), klikni na ‘Nové vlákno’, zadej název, text a odešli.",
+      },
+      {
+        q: "Můžu přidávat nové kategorie?",
+        a: "Kategorie spravuje admin. Pokud chybí kategorie, napiš zprávu moderátorům nebo do vlákna návrhů.",
+      },
+      {
+        q: "Jak reagovat na vlákno?",
+        a: "Otevři vlákno, napiš odpověď a odešli. Dodržuj téma kategorie a základní pravidla slušnosti.",
+      },
+    ],
+  },
+  {
+    title: "Blogové články",
+    items: [
+      {
+        q: "Jak založit nový článek?",
+        a: "V profilu v sekci Blog klikni na ‘Nový článek’, vyplň titul, perex, text (CZ/EN) a případně přidej cover obrázek nebo embed. Ulož a zkontroluj náhled.",
+      },
+      {
+        q: "Jak přidám obrázek/cover?",
+        a: "V editoru článku nahraj obrázek jako cover (JPG/PNG/WEBP). Případně můžeš vložit externí URL (YouTube/Vimeo) do pole embed.",
+      },
+      {
+        q: "Kde se článek zobrazí?",
+        a: "Na homepage v sekci Blog a v samostatné stránce Blog. Články se řadí podle data.",
+      },
+    ],
+  },
+  {
     title: "Oheň (reakce)",
     items: [
       {
