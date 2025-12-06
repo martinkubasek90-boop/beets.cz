@@ -1569,9 +1569,7 @@ export default function Home() {
             {Array.from({ length: 5 }).map((_, idx) => {
               const list = artists.length ? artists : dummyArtists;
               const artist = list[(artistIndex + idx) % list.length];
-              const followers = artist.beatsCount
-                ? `${(artist.beatsCount * 3200 + 1500).toLocaleString('cs-CZ')} followers`
-                : 'Profil';
+              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
               const colors = [
                 'from-emerald-600 to-emerald-900',
                 'from-amber-400 to-orange-600',
@@ -1600,7 +1598,7 @@ export default function Home() {
                   </div>
                   <div className="space-y-1 text-center w-full">
                     <p className="text-sm font-semibold text-white">{artist.name}</p>
-                    <p className="text-[11px] text-[var(--mpc-muted)]">{followers}</p>
+                    <p className="text-[11px] text-[var(--mpc-muted)]">{stats}</p>
                   </div>
                 </Link>
               );
