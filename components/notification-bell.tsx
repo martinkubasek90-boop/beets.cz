@@ -71,6 +71,11 @@ export function NotificationBell({ className }: { className?: string }) {
     return () => clearInterval(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (open) void fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   const markAllRead = async () => {
     try {
       const { data: authData } = await supabase.auth.getUser();

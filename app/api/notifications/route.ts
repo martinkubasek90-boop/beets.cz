@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       body,
       item_type: item_type ?? null,
       item_id: item_id ?? null,
+      read: false,
     });
 
     if (error) {
