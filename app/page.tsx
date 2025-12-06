@@ -245,7 +245,7 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, beats (id), projects (id)')
+          .select('id, display_name, avatar_url, beats (count), projects (count)')
           .limit(20);
 
         if (!error && data && data.length > 0) {
