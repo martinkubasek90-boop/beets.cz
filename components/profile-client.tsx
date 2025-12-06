@@ -369,7 +369,9 @@ export default function ProfileClient() {
       const isFromMe = m.user_id === userId;
       const otherId = isFromMe ? m.to_user_id : m.user_id;
       if (!otherId) return;
-      const otherName = isFromMe ? m.to_name || 'Neznámý' : m.from_name || 'Neznámý';
+      const otherName = isFromMe
+        ? profilesById[m.to_user_id || ''] || m.to_name || 'Neznámý'
+        : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
       const ts = m.created_at ? new Date(m.created_at).getTime() : 0;
       const existing = map.get(otherId) || { otherId, otherName, lastMessage: m.body || '', lastTs: ts, unread: false, messages: [] };
       existing.messages.push(m);
@@ -391,6 +393,27 @@ export default function ProfileClient() {
     });
     return threads.sort((a, b) => b.lastTs - a.lastTs);
   }, [messages, userId]);
+
+
+  // Načti display_name pro všechny uživatele z přímých zpráv
+  useEffect(() => {
+    const loadProfileNames = async () => {
+      const ids = new Set<string>();
+      messages.forEach((m) => {
+        if (m.user_id) ids.add(m.user_id);
+        if (m.to_user_id) ids.add(m.to_user_id);
+      });
+      if (!ids.size) return;
+      const { data, error } = await supabase.from('profiles').select('id, display_name').in('id', Array.from(ids));
+      if (error || !data) return;
+      const map: Record<string, string> = {};
+      data.forEach((p: any) => {
+        if (p.id && p.display_name) map[p.id as string] = p.display_name as string;
+      });
+      setProfilesById((prev) => ({ ...prev, ...map }));
+    };
+    void loadProfileNames();
+  }, [messages, supabase]);
 
 function handleFieldChange(field: keyof Profile, value: string) {
     setProfile((prev) => ({
@@ -2942,7 +2965,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           {thread.messages.map((m) => (
                             <div key={m.id} className="rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
                               <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                                <span>{m.user_id === userId ? (m.from_name || 'Ty') : m.from_name || 'Neznámý'}</span>
+                                <span>
+                                  {m.user_id === userId
+                                    ? 'Ty'
+                                    : profilesById[m.user_id || ''] || m.from_name || 'Neznámý'}
+                                </span>
                                 <span>{formatRelativeTime(m.created_at)}</span>
                               </div>
                               <p className="mt-1 whitespace-pre-line text-[var(--mpc-light)]">{m.body}</p>
