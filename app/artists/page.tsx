@@ -8,7 +8,8 @@ type ArtistCard = {
   id: string | number;
   name: string;
   initials: string;
-  followers?: number;
+  beatsCount?: number;
+  projectsCount?: number;
   city?: string;
   avatar_url?: string | null;
 };
@@ -48,7 +49,7 @@ export default function ArtistsPage() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url')
+          .select('id, display_name, avatar_url, beats (id), projects (id)')
           .limit(50);
         if (error || !data || data.length === 0) {
           setArtists(fallbackArtists);
