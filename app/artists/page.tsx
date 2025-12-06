@@ -47,42 +47,39 @@ export default function ArtistsPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, beats (count), projects (count)')
-          .limit(50);
-        if (!error && data && data.length > 0) {
-          const mapped: ArtistCard[] = data.map((p: any) => ({
-            id: p.id,
-            name: p.display_name || 'Bez jména',
-            initials: getInitials(p.display_name || '??'),
-            beatsCount: Array.isArray(p.beats) ? (p.beats[0]?.count ?? 0) : 0,
-            projectsCount: Array.isArray(p.projects) ? (p.projects[0]?.count ?? 0) : 0,
-            city: '',
-            avatar_url: p.avatar_url || null,
-          }));
-          setArtists(mapped);
-          return;
-        }
-        const { data: simple, error: err2 } = await supabase
+        const { data: profiles, error } = await supabase
           .from('profiles')
           .select('id, display_name, avatar_url')
           .limit(50);
-        if (err2 || !simple || simple.length === 0) {
+        if (error || !profiles || profiles.length === 0) {
           setArtists(fallbackArtists);
           return;
         }
-        setArtists(
-          (simple as any[]).map((p) => ({
-            id: p.id,
-            name: p.display_name || 'Bez jména',
-            initials: getInitials(p.display_name || '??'),
-            beatsCount: 0,
-            projectsCount: 0,
-            city: '',
-            avatar_url: p.avatar_url || null,
-          }))
-        );
+
+        const [beatsResp, projectsResp] = await Promise.all([
+          supabase.from('beats').select('user_id, count:id').group('user_id'),
+          supabase.from('projects').select('user_id, count:id').group('user_id'),
+        ]);
+
+        const beatMap: Record<string, number> = {};
+        const projMap: Record<string, number> = {};
+        (beatsResp.data as any[] | null)?.forEach((row) => {
+          if (row.user_id) beatMap[row.user_id] = row.count || 0;
+        });
+        (projectsResp.data as any[] | null)?.forEach((row) => {
+          if (row.user_id) projMap[row.user_id] = row.count || 0;
+        });
+
+        const mapped: ArtistCard[] = (profiles as any[]).map((p: any) => ({
+          id: p.id,
+          name: p.display_name || 'Bez jména',
+          initials: getInitials(p.display_name || '??'),
+          beatsCount: beatMap[p.id] || 0,
+          projectsCount: projMap[p.id] || 0,
+          city: '',
+          avatar_url: p.avatar_url || null,
+        }));
+        setArtists(mapped);
       } catch (err) {
         console.error('Chyba při načítání umělců:', err);
         setArtists(fallbackArtists);
