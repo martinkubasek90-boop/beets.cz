@@ -741,30 +741,29 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       </div>
 
                       <div className="mt-4 flex flex-col items-center gap-2">
-                      {isLocked && project.access_mode === 'request' && (
-                        <div className="mt-3 flex flex-col items-center gap-2">
-                          {isLoggedIn && currentUserId !== project.user_id ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => void requestProjectAccess(String(project.id))}
-                                disabled={projectRequesting[String(project.id)]}
-                                className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
-                              >
-                                {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
-                              </button>
-                              {projectRequestInfo && <div className="text-[12px] text-green-300">{projectRequestInfo}</div>}
-                              {projectRequestError && <div className="text-[12px] text-red-300">{projectRequestError}</div>}
-                            </>
-                          ) : (
-                            <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
-                              Přihlas se a zažádej o přístup.
-                            </Link>
-                          )}
-                        </div>
-                      )}
+                        {isLocked && project.access_mode === 'request' && (
+                          <div className="mt-3 flex flex-col items-center gap-2">
+                            {isLoggedIn && currentUserId !== project.user_id ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => void requestProjectAccess(String(project.id))}
+                                  disabled={projectRequesting[String(project.id)]}
+                                  className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                                >
+                                  {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
+                                </button>
+                                {projectRequestInfo && <div className="text-[12px] text-green-300">{projectRequestInfo}</div>}
+                                {projectRequestError && <div className="text-[12px] text-red-300">{projectRequestError}</div>}
+                              </>
+                            ) : (
+                              <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
+                                Přihlas se a zažádej o přístup.
+                              </Link>
+                            )}
+                          </div>
+                        )}
 
-                      <div className="mt-4 flex flex-col items-center gap-2">
                         <button
                           onClick={() => setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
                           disabled={!!isLocked}
