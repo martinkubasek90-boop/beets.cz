@@ -265,7 +265,7 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
       <button
         type="submit"
         disabled={loading}
-        className="border-2 border-black bg-black px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-light)] disabled:opacity-60"
+        className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(255,122,26,0.35)] transition hover:brightness-105 disabled:opacity-60"
       >
         {loading ? 'Nahrávám…' : 'Nahrát beat'}
       </button>

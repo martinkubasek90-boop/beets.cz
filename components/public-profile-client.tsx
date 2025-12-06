@@ -136,7 +136,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const loadProjects = async () => {
         const { data, error } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, project_url, tracks_json')
+          .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
           .eq('user_id', profileId)
           .order('created_at', { ascending: false })
           .limit(6);
