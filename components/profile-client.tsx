@@ -131,6 +131,14 @@ type ForumThreadSummary = {
   updated_at?: string | null;
 };
 
+type InboxMessage = {
+  id: number | string;
+  from: string;
+  preview: string;
+  time: string;
+  unread?: boolean;
+};
+
 const demoCollabMessages: InboxMessage[] = [
   {
     id: 1,
