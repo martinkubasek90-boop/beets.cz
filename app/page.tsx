@@ -22,6 +22,7 @@ type Artist = {
   name: string;
   initials: string;
   beatsCount: number;
+  projectsCount: number;
   city: string;
   avatar_url?: string | null;
   user_id?: string | null;
@@ -82,12 +83,12 @@ const dummyBeats: Beat[] = [
 ];
 
 const dummyArtists: Artist[] = [
-  { id: 1, name: 'Northside', initials: 'NS', beatsCount: 24, city: 'Praha' },
-  { id: 2, name: 'Blockboy', initials: 'BB', beatsCount: 15, city: 'Ostrava' },
-  { id: 3, name: 'LoFi Karel', initials: 'LK', beatsCount: 19, city: 'Brno' },
-  { id: 4, name: 'GreyTone', initials: 'GT', beatsCount: 11, city: 'Plzeň' },
-  { id: 5, name: 'Elevated', initials: 'EL', beatsCount: 31, city: 'Brno' },
-  { id: 6, name: 'GoodVibe', initials: 'GV', beatsCount: 28, city: 'Praha' },
+  { id: 1, name: 'Northside', initials: 'NS', beatsCount: 24, projectsCount: 6, city: 'Praha' },
+  { id: 2, name: 'Blockboy', initials: 'BB', beatsCount: 15, projectsCount: 3, city: 'Ostrava' },
+  { id: 3, name: 'LoFi Karel', initials: 'LK', beatsCount: 19, projectsCount: 4, city: 'Brno' },
+  { id: 4, name: 'GreyTone', initials: 'GT', beatsCount: 11, projectsCount: 2, city: 'Plzeň' },
+  { id: 5, name: 'Elevated', initials: 'EL', beatsCount: 31, projectsCount: 7, city: 'Brno' },
+  { id: 6, name: 'GoodVibe', initials: 'GV', beatsCount: 28, projectsCount: 5, city: 'Praha' },
 ];
 
 const dummyProjects: Project[] = [
