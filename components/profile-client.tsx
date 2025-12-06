@@ -228,6 +228,7 @@ export default function ProfileClient() {
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [threadReplies, setThreadReplies] = useState<Record<string, string>>({});
+  const [profilesById, setProfilesById] = useState<Record<string, string>>({});
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
@@ -392,7 +393,7 @@ export default function ProfileClient() {
       });
     });
     return threads.sort((a, b) => b.lastTs - a.lastTs);
-  }, [messages, userId]);
+  }, [messages, userId, profilesById]);
 
 
   // Načti display_name pro všechny uživatele z přímých zpráv
