@@ -80,6 +80,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const [collabRequestLoading, setCollabRequestLoading] = useState(false);
+  const [showCollabForm, setShowCollabForm] = useState(false);
+  const [collabRequestBody, setCollabRequestBody] = useState('');
+  const [collabRequestFile, setCollabRequestFile] = useState<File | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -203,19 +206,30 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   }, [profileId, supabase, router]);
 
   const handleRequestCollab = async () => {
+    // První klik jen otevře formulář
+    if (!showCollabForm) {
+      setShowCollabForm(true);
+      return;
+    }
+
     setCollabRequestError(null);
+
     const { data: userData, error: userErr } = await supabase.auth.getUser();
     const uid = userData?.user?.id || currentUserId;
     if (userErr || !uid) {
       setCollabRequestError('Musíš být přihlášen.');
       return;
     }
+
+    if (!collabRequestBody.trim()) {
+      setCollabRequestError('Napiš krátkou zprávu k žádosti.');
+      return;
+    }
+
     try {
       setCollabRequestLoading(true);
       const threadTitle =
-        profile?.display_name?.trim()
-          ? `Spolupráce s ${profile.display_name}`
-          : 'Nová spolupráce';
+        profile?.display_name?.trim() ? `Spolupráce s ${profile.display_name}` : 'Nová spolupráce';
 
       // Nezakládej duplicitní vlákno: zjisti, zda už existuje thread s oběma uživateli.
       const [{ data: myThreads, error: myErr }, { data: targetThreads, error: targetErr }] = await Promise.all([
@@ -252,7 +266,22 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
       await supabase
         .from('collab_messages')
-        .insert({ thread_id: thread.id, user_id: uid, body: 'Ahoj, rád bych spolupracoval.' });
+        .insert({ thread_id: thread.id, user_id: uid, body: collabRequestBody.trim() });
+
+      if (collabRequestFile) {
+        const safeName = collabRequestFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const storagePath = `${uid}/${thread.id}/${Date.now()}-${safeName}`;
+        const { error: uploadErr } = await supabase.storage.from('collabs').upload(storagePath, collabRequestFile, {
+          upsert: true,
+        });
+        if (uploadErr) throw uploadErr;
+        const { data: publicUrlData } = supabase.storage.from('collabs').getPublicUrl(storagePath);
+        if (publicUrlData?.publicUrl) {
+          await supabase
+            .from('collab_files')
+            .insert({ thread_id: thread.id, user_id: uid, file_url: publicUrlData.publicUrl, file_name: collabRequestFile.name });
+        }
+      }
 
       // Notifikace pro partnera (API využívá service role, na FE jen voláme fetch)
       try {
@@ -292,6 +321,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         }));
         setCollabs(mapped);
       }
+
+      setShowCollabForm(false);
+      setCollabRequestBody('');
+      setCollabRequestFile(null);
     } catch (err) {
       const message =
         err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
@@ -665,7 +698,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       <div className="mt-4 flex flex-col items-center gap-2">
                         <button
                           onClick={() => setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
-                          disabled={isLocked}
+                          disabled={!!isLocked}
                           className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px] disabled:opacity-50"
                           aria-label="Zobrazit tracklist"
                         >
@@ -804,15 +837,38 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             <div className="space-y-3 text-sm text-[var(--mpc-muted)]">
               <p>O spolupráce mohou žádat pouze registrovaní uživatelé.</p>
               {isLoggedIn && currentUserId !== profileId && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <button
                     type="button"
                     onClick={handleRequestCollab}
                     disabled={collabRequestLoading}
                     className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
                   >
-                    {collabRequestLoading ? 'Zakládám…' : 'Požádat o spolupráci'}
+                    {collabRequestLoading
+                      ? 'Odesílám…'
+                      : showCollabForm
+                      ? 'Odeslat žádost'
+                      : 'Požádat o spolupráci'}
                   </button>
+
+                  {showCollabForm && (
+                    <div className="space-y-2">
+                      <textarea
+                        value={collabRequestBody}
+                        onChange={(e) => setCollabRequestBody(e.target.value)}
+                        placeholder="Popiš spolupráci, tempo, mood, deadline…"
+                        className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
+                        rows={4}
+                      />
+                      <input
+                        type="file"
+                        accept=".wav,.mp3,audio/wav,audio/mpeg,application/zip"
+                        onChange={(e) => setCollabRequestFile(e.target.files?.[0] ?? null)}
+                        className="block w-full text-[12px] text-[var(--mpc-light)]"
+                      />
+                    </div>
+                  )}
+
                   {collabRequestError && (
                     <div className="rounded-md border border-red-700/40 bg-red-900/20 px-3 py-2 text-xs text-red-100">
                       {collabRequestError}
