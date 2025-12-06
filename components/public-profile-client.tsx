@@ -83,6 +83,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [showCollabForm, setShowCollabForm] = useState(false);
   const [collabRequestBody, setCollabRequestBody] = useState('');
   const [collabRequestFile, setCollabRequestFile] = useState<File | null>(null);
+  const [projectRequesting, setProjectRequesting] = useState<Record<number, boolean>>({});
+  const [projectRequestError, setProjectRequestError] = useState<string | null>(null);
+  const [projectRequestInfo, setProjectRequestInfo] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -351,10 +354,22 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         setMessageError('Musíš být přihlášen.');
         return;
       }
+
+      // Získáme jméno odesílatele z profilu, jinak e-mail
+      let senderName = userData.user.email ?? 'Uživatel';
+      try {
+        const { data: senderProfile } = await supabase.from('profiles').select('display_name').eq('id', userData.user.id).maybeSingle();
+        if (senderProfile?.display_name) {
+          senderName = senderProfile.display_name;
+        }
+      } catch (inner) {
+        console.warn('Nepodařilo se načíst jméno odesílatele:', inner);
+      }
+
       const payload = {
         user_id: userData.user.id,
         to_user_id: profileId,
-        from_name: userData.user.email ?? 'Uživatel',
+        from_name: senderName,
         to_name: profile?.display_name ?? 'Uživatel',
         body: messageBody.trim(),
       };
@@ -385,6 +400,31 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       return true;
     });
   }
+
+  const requestProjectAccess = async (projectId: number) => {
+    setProjectRequestError(null);
+    setProjectRequestInfo(null);
+    if (!currentUserId) {
+      setProjectRequestError('Pro odeslání žádosti se přihlas.');
+      return;
+    }
+    setProjectRequesting((prev) => ({ ...prev, [projectId]: true }));
+    try {
+      const message = prompt('Krátká zpráva pro autora (nepovinné):') ?? '';
+      const { error: insertErr } = await supabase.from('project_access_requests').insert({
+        project_id: projectId,
+        requester_id: currentUserId,
+        message: message.trim() || null,
+      });
+      if (insertErr) throw insertErr;
+      setProjectRequestInfo('Žádost odeslána.');
+    } catch (err) {
+      console.error('Chyba při odeslání žádosti o přístup:', err);
+      setProjectRequestError('Nepodařilo se odeslat žádost.');
+    } finally {
+      setProjectRequesting((prev) => ({ ...prev, [projectId]: false }));
+    }
+  };
 
   function seekInCurrent(clientX: number, width: number) {
     const el = audioRef.current;
@@ -718,13 +758,33 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
                           <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
                           {isLocked ? (
-                            <div className="space-y-2 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
-                              <p>Projekt je uzamčený.</p>
-                              <p className="text-[12px] text-[var(--mpc-muted)]">
-                                {project.access_mode === 'request'
-                                  ? 'Požádej o přístup z detailu projektu.'
-                                  : 'Přístup mají jen schválení uživatelé.'}
-                              </p>
+                            <div className="space-y-3 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
+                              <div>
+                                <p>Projekt je uzamčený.</p>
+                                <p className="text-[12px] text-[var(--mpc-muted)]">
+                                  {project.access_mode === 'request'
+                                    ? 'Požádej o přístup z detailu projektu.'
+                                    : 'Přístup mají jen schválení uživatelé.'}
+                                </p>
+                              </div>
+                              {project.access_mode === 'request' && isLoggedIn && currentUserId !== project.user_id && (
+                                <div className="space-y-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => void requestProjectAccess(project.id)}
+                                    disabled={projectRequesting[project.id]}
+                                    className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                                  >
+                                    {projectRequesting[project.id] ? 'Odesílám…' : 'Požádat o přístup'}
+                                  </button>
+                                  {projectRequestInfo && (
+                                    <div className="text-[12px] text-green-300">{projectRequestInfo}</div>
+                                  )}
+                                  {projectRequestError && (
+                                    <div className="text-[12px] text-red-300">{projectRequestError}</div>
+                                  )}
+                                </div>
+                              )}
                               {!isLoggedIn && (
                                 <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
                                   Přihlas se a zažádej o přístup.
