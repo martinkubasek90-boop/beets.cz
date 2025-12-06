@@ -254,17 +254,17 @@ export default function Home() {
         }
 
         const [beatsResp, projectsResp] = await Promise.all([
-          supabase.from('beats').select('user_id, count:id').group('user_id'),
-          supabase.from('projects').select('user_id, count:id').group('user_id'),
+          supabase.from('beats').select('user_id'),
+          supabase.from('projects').select('user_id'),
         ]);
 
         const beatMap: Record<string, number> = {};
         const projMap: Record<string, number> = {};
         (beatsResp.data as any[] | null)?.forEach((row) => {
-          if (row.user_id) beatMap[row.user_id] = row.count || 0;
+          if (row.user_id) beatMap[row.user_id] = (beatMap[row.user_id] || 0) + 1;
         });
         (projectsResp.data as any[] | null)?.forEach((row) => {
-          if (row.user_id) projMap[row.user_id] = row.count || 0;
+          if (row.user_id) projMap[row.user_id] = (projMap[row.user_id] || 0) + 1;
         });
 
         const mapped: Artist[] = (profiles as any[]).map((p: any) => ({
