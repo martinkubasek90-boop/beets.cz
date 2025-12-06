@@ -791,7 +791,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                             <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
                               <span>{project.title || 'Ukázka projektu'}</span>
                               <button
-                                disabled={isLocked}
+                                disabled={!!isLocked}
                                 onClick={() =>
                                   handlePlayTrack({
                                     id: `project-${project.id}`,
