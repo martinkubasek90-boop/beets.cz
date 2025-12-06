@@ -111,8 +111,7 @@ export default function ArtistsPage() {
               <div className="space-y-1">
                 <p className="text-base font-semibold">{artist.name}</p>
                 <p className="text-[12px] text-[var(--mpc-muted,#8a8a8a)]">
-                  👥 {artist.followers?.toLocaleString('cs-CZ') || 'Profil'}
-                  {artist.city ? ` · ${artist.city}` : ''}
+                  {artist.beatsCount ?? 0} beatů · {artist.projectsCount ?? 0} projektů{artist.city ? ` · ${artist.city}` : ''}
                 </p>
               </div>
               <Link
