@@ -14,12 +14,12 @@ type ArtistCard = {
 };
 
 const fallbackArtists: ArtistCard[] = [
-  { id: 1, name: 'Northside', initials: 'NS', followers: 88400, city: 'Praha' },
-  { id: 2, name: 'No Bad Vibes', initials: 'NB', followers: 21000, city: 'Brno' },
-  { id: 3, name: 'Cay Caleb', initials: 'CC', followers: 22000, city: 'Ostrava' },
-  { id: 4, name: 'Neck', initials: 'NK', followers: 6354, city: 'Praha' },
-  { id: 5, name: 'Elevated', initials: 'EL', followers: 14860, city: 'Plzeň' },
-  { id: 6, name: 'Good Vibe', initials: 'GV', followers: 30200, city: 'Brno' },
+  { id: 1, name: 'Northside', initials: 'NS', beatsCount: 12, projectsCount: 3, city: 'Praha' },
+  { id: 2, name: 'No Bad Vibes', initials: 'NB', beatsCount: 9, projectsCount: 2, city: 'Brno' },
+  { id: 3, name: 'Cay Caleb', initials: 'CC', beatsCount: 7, projectsCount: 1, city: 'Ostrava' },
+  { id: 4, name: 'Neck', initials: 'NK', beatsCount: 5, projectsCount: 2, city: 'Praha' },
+  { id: 5, name: 'Elevated', initials: 'EL', beatsCount: 14, projectsCount: 4, city: 'Plzeň' },
+  { id: 6, name: 'Good Vibe', initials: 'GV', beatsCount: 11, projectsCount: 2, city: 'Brno' },
 ];
 
 export default function ArtistsPage() {

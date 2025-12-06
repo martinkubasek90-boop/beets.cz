@@ -245,7 +245,7 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url')
+          .select('id, display_name, avatar_url, beats (id), projects (id)')
           .limit(20);
 
         if (error || !data || data.length === 0) {
@@ -253,11 +253,12 @@ export default function Home() {
           return;
         }
 
-        const mapped: Artist[] = data.map((p: any, idx: number) => ({
+        const mapped: Artist[] = data.map((p: any) => ({
           id: p.id,
           name: p.display_name || 'Bez jména',
           initials: getInitials(p.display_name || '??'),
-          beatsCount: idx + 1,
+          beatsCount: Array.isArray(p.beats) ? p.beats.length : 0,
+          projectsCount: Array.isArray(p.projects) ? p.projects.length : 0,
           city: '',
           avatar_url: p.avatar_url || null,
         }));
