@@ -83,7 +83,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [showCollabForm, setShowCollabForm] = useState(false);
   const [collabRequestBody, setCollabRequestBody] = useState('');
   const [collabRequestFile, setCollabRequestFile] = useState<File | null>(null);
-  const [projectRequesting, setProjectRequesting] = useState<Record<number, boolean>>({});
+  const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
   const [projectRequestError, setProjectRequestError] = useState<string | null>(null);
   const [projectRequestInfo, setProjectRequestInfo] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -401,18 +401,19 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     });
   }
 
-  const requestProjectAccess = async (projectId: number) => {
+  const requestProjectAccess = async (projectId: string | number) => {
     setProjectRequestError(null);
     setProjectRequestInfo(null);
     if (!currentUserId) {
       setProjectRequestError('Pro odeslání žádosti se přihlas.');
       return;
     }
-    setProjectRequesting((prev) => ({ ...prev, [projectId]: true }));
+    const idKey = String(projectId);
+    setProjectRequesting((prev) => ({ ...prev, [idKey]: true }));
     try {
       const message = prompt('Krátká zpráva pro autora (nepovinné):') ?? '';
       const { error: insertErr } = await supabase.from('project_access_requests').insert({
-        project_id: projectId,
+        project_id: Number(projectId),
         requester_id: currentUserId,
         message: message.trim() || null,
       });
@@ -422,7 +423,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       console.error('Chyba při odeslání žádosti o přístup:', err);
       setProjectRequestError('Nepodařilo se odeslat žádost.');
     } finally {
-      setProjectRequesting((prev) => ({ ...prev, [projectId]: false }));
+      setProjectRequesting((prev) => ({ ...prev, [idKey]: false }));
     }
   };
 
@@ -772,10 +773,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                   <button
                                     type="button"
                                     onClick={() => void requestProjectAccess(project.id)}
-                                    disabled={projectRequesting[project.id]}
+                                    disabled={projectRequesting[String(project.id)]}
                                     className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
                                   >
-                                    {projectRequesting[project.id] ? 'Odesílám…' : 'Požádat o přístup'}
+                                    {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
                                   </button>
                                   {projectRequestInfo && (
                                     <div className="text-[12px] text-green-300">{projectRequestInfo}</div>
