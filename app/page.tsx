@@ -206,7 +206,6 @@ export default function Home() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [peaksMap, setPeaksMap] = useState<Record<number, number[]>>({});
-  const [openProjectTracks, setOpenProjectTracks] = useState<Record<number, boolean>>({});
   const [videoIndex, setVideoIndex] = useState(0);
   const [forumError, setForumError] = useState<string | null>(null);
   const { lang, setLang } = useLanguage('cs');
@@ -1198,70 +1197,48 @@ export default function Home() {
                       </div>
                     </div>
 
-                  <div className="flex items-center justify-center">
-                    <button
-                      onClick={() =>
-                        setOpenProjectTracks((prev) => ({
-                          ...prev,
-                          [project.id]: !prev[project.id],
-                        }))
-                      }
-                      className="text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white flex items-center gap-1"
-                    >
-                      {openProjectTracks[project.id] ? '▲ Skrýt projekt' : '▼ Celý projekt'}
-                    </button>
-                  </div>
-
-                  {openProjectTracks[project.id] && (
-                    <div className="w-full space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                      {project.tracks && project.tracks.length > 0 ? (
-                        <div
-                          className="flex flex-col gap-2"
-                          style={{
-                            maxHeight: '260px',
-                            overflowY: 'auto',
-                          }}
-                        >
-                          {project.tracks.map((t, i) => (
-                            <div
-                              key={t.id}
-                              className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-3">
-                                  <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
-                                    {i + 1}.
-                                  </span>
-                                  <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
-                                    {project.cover_url ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
-                                    ) : (
-                                      <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-semibold text-white">{t.title}</p>
-                                  </div>
+                  <div className="w-full space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                    {project.tracks && project.tracks.length > 0 ? (
+                      <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                        {project.tracks.map((t, i) => (
+                          <div
+                            key={t.id}
+                            className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
+                                  {i + 1}.
+                                </span>
+                                <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
+                                  {project.cover_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
+                                  )}
                                 </div>
-                                <button
-                                  onClick={() => handlePlayProjectTrack(project, t)}
-                                  className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
-                                >
-                                  {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
-                                </button>
+                                <div>
+                                  <p className="text-sm font-semibold text-white">{t.title}</p>
+                                </div>
                               </div>
-                              <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
-                                {renderTrackBars(project.id, t.id, 60)}
-                              </div>
+                              <button
+                                onClick={() => handlePlayProjectTrack(project, t)}
+                                className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
+                              >
+                                {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-sm text-[var(--mpc-muted)]">Tracklist zatím není k dispozici.</p>
-                      )}
-                    </div>
-                  )}
+                            <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
+                              {renderTrackBars(project.id, t.id, 60)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-[var(--mpc-muted)]">Tracklist zatím není k dispozici.</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
