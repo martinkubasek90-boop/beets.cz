@@ -218,6 +218,7 @@ export default function ProfileClient() {
   const [projectGrantsError, setProjectGrantsError] = useState<string | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
+  const [threadReplies, setThreadReplies] = useState<Record<string, string>>({});
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
@@ -274,6 +275,7 @@ export default function ProfileClient() {
     projectUpload: false,
     messages: false,
   });
+
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [projectEditTitle, setProjectEditTitle] = useState('');
   const [projectEditDescription, setProjectEditDescription] = useState('');
@@ -350,7 +352,38 @@ export default function ProfileClient() {
     loadProfile();
   }, [supabase, router]);
 
-  function handleFieldChange(field: keyof Profile, value: string) {
+  
+  // Vlákna přímých zpráv seskupená podle protistrany
+  const directThreads = useMemo(() => {
+    const map = new Map<string, { otherId: string; otherName: string; lastMessage: string; lastTs: number; unread: boolean; messages: DirectMessage[] }>();
+    messages.forEach((m) => {
+      const isFromMe = m.user_id === userId;
+      const otherId = isFromMe ? m.to_user_id : m.user_id;
+      if (!otherId) return;
+      const otherName = isFromMe ? m.to_name || 'Neznámý' : m.from_name || 'Neznámý';
+      const ts = m.created_at ? new Date(m.created_at).getTime() : 0;
+      const existing = map.get(otherId) || { otherId, otherName, lastMessage: m.body || '', lastTs: ts, unread: false, messages: [] };
+      existing.messages.push(m);
+      if (ts > existing.lastTs) {
+        existing.lastTs = ts;
+        existing.lastMessage = m.body || '';
+        existing.otherName = otherName;
+      }
+      if (m.to_user_id === userId && m.unread) existing.unread = true;
+      map.set(otherId, existing);
+    });
+    const threads = Array.from(map.values());
+    threads.forEach((t) => {
+      t.messages.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return ta - tb;
+      });
+    });
+    return threads.sort((a, b) => b.lastTs - a.lastTs);
+  }, [messages, userId]);
+
+function handleFieldChange(field: keyof Profile, value: string) {
     setProfile((prev) => ({
       ...prev,
       [field]: value,
@@ -1222,18 +1255,91 @@ export default function ProfileClient() {
     }
   };
 
-  function handleReplyToCollab(msg: InboxMessage) {
-    setNewMessage({
-      to: msg.from,
-      toUserId: '',
-      body: `@${msg.from} `,
-    });
-    const el = document.getElementById('collab-new-message');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  async function resolveRecipientId(name: string, explicitId?: string) {
+    const trimmed = explicitId?.trim();
+    if (trimmed) return trimmed;
+    const { data: target, error: targetErr } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('display_name', name)
+      .limit(1)
+      .maybeSingle();
+    if (targetErr) throw targetErr;
+    if (!target?.id) {
+      throw new Error('Profil příjemce nebyl nalezen.');
+    }
+    return target.id as string;
   }
 
-  async function handleSendCollabMessage(e: FormEvent) {
-    e.preventDefault();
+  async function sendDirectMessage(targetUserId: string, targetName: string, body: string) {
+    if (!userId) throw new Error('Chybí přihlášený uživatel.');
+
+    const payload = {
+      from_name: profile.display_name || email || 'Neznámý',
+      to_name: targetName || 'Neznámý',
+      body,
+      user_id: userId,
+      to_user_id: targetUserId,
+    };
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert(payload)
+      .select('id, user_id, to_user_id, from_name, to_name, body, created_at, unread')
+      .single();
+
+    if (error) throw error;
+
+    const created: DirectMessage =
+      data || {
+        id: Date.now(),
+        user_id: payload.user_id,
+        to_user_id: payload.to_user_id,
+        from_name: payload.from_name,
+        to_name: payload.to_name,
+        body: payload.body,
+        created_at: new Date().toISOString(),
+        unread: false,
+      };
+
+    setMessages((prev) => [{ ...created, unread: false }, ...prev]);
+
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'direct_message',
+          targetUserId,
+          data: { from: payload.from_name, body: payload.body },
+        }),
+      });
+    } catch (notifyErr) {
+      console.warn('Notifikační webhook selhal:', notifyErr);
+    }
+
+    return created;
+  }
+
+  async function handleThreadReply(otherId: string, otherName: string) {
+    const body = threadReplies[otherId]?.trim() || '';
+    if (!body) return;
+    setSendingMessage(true);
+    setMessagesError(null);
+    try {
+      await sendDirectMessage(otherId, otherName, body);
+      setThreadReplies((prev) => ({ ...prev, [otherId]: '' }));
+      setExpandedThread(otherId);
+    } catch (err) {
+      console.error('Chyba při odeslání zprávy:', err);
+      setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
+    } finally {
+      setSendingMessage(false);
+    }
+  }
+
+  async function handleSendDirectMessage(e?: FormEvent) {
+    if (e) e.preventDefault();
     if (!newMessage.body.trim()) {
       setMessagesError('Zpráva je prázdná.');
       return;
@@ -1245,60 +1351,13 @@ export default function ProfileClient() {
     setSendingMessage(true);
     setMessagesError(null);
     try {
-    let targetUserId = newMessage.toUserId.trim();
-    if (!targetUserId) {
-      const { data: target, error: targetErr } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('display_name', newMessage.to)
-        .limit(1)
-        .maybeSingle();
-      if (targetErr) throw targetErr;
-      if (!target?.id) {
-        setMessagesError('Profil příjemce nebyl nalezen.');
-        setSendingMessage(false);
-        return;
-      }
-      targetUserId = target.id as string;
-    }
-      const payload = {
-        from_name: profile.display_name || email || 'Neznámý',
-        to_name: newMessage.to.trim() || 'Neznámý',
-        body: newMessage.body.trim(),
-        user_id: userId,
-        to_user_id: targetUserId,
-      };
-    const { data, error } = await supabase
-      .from('messages')
-      .insert(payload)
-      .select('id, from_name, to_name, body, created_at, unread')
-      .single();
-
-      if (error) throw error;
-
-      const mapped: InboxMessage = {
-        id: data?.id ?? Date.now(),
-        from: data?.from_name || payload.from_name,
-        preview: data?.body || payload.body,
-        time: formatRelativeTime(data?.created_at),
-        unread: false,
-      };
-      setMessages((prev) => [mapped, ...prev]);
+      const targetUserId = await resolveRecipientId(newMessage.to, newMessage.toUserId);
+      await sendDirectMessage(targetUserId, newMessage.to.trim(), newMessage.body.trim());
       setNewMessage({ to: '', toUserId: '', body: '' });
+      setExpandedThread(targetUserId);
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
-      setMessagesError('Nepodařilo se odeslat zprávu. Uloženo jen lokálně.');
-      setMessages((prev) => [
-        {
-          id: Date.now(),
-          from: profile.display_name || email || 'Neznámý',
-          preview: newMessage.body.trim(),
-          time: 'draft',
-          unread: false,
-        },
-        ...prev,
-      ]);
-      setNewMessage({ to: '', toUserId: '', body: '' });
+      setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
     } finally {
       setSendingMessage(false);
     }
@@ -2679,129 +2738,6 @@ export default function ProfileClient() {
                 </button>
               </div>
             </div>
-
-            <div className="hidden">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
-                    Zprávy
-                  </h2>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                    {messages.length} konverzací
-                  </p>
-                </div>
-                <button className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white">
-                  Nová zpráva
-                </button>
-              </div>
-              {messagesLoading && (
-                <p className="text-xs text-[var(--mpc-muted)]">Načítám zprávy…</p>
-              )}
-              {messagesError && (
-                <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                  {messagesError}
-                </div>
-              )}
-              <div className="space-y-3">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`rounded-lg border px-4 py-3 text-sm transition ${msg.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
-                  >
-                    <div className="flex items-center justify-between text-[12px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[var(--mpc-light)]">{msg.from}</span>
-                        {msg.unread && (
-                          <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                            Nové
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[var(--mpc-muted)]">{msg.time}</span>
-                    </div>
-                    <p className="mt-1 text-[var(--mpc-muted)]">{msg.preview}</p>
-                    <div className="mt-2 flex items-center gap-2 text-[11px]">
-                      <button
-                        onClick={() => handleReplyToCollab(msg)}
-                        className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                      >
-                        Odpovědět
-                      </button>
-                      <button className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]">
-                        Otevřít vlákno
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <form onSubmit={handleSendCollabMessage} id="collab-new-message" className="mt-4 space-y-4 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-5">
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Komu
-                    </label>
-                    <input
-                      type="text"
-                      value={newMessage.to}
-                      onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-3 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      placeholder="Např. MC Panel, Blockboy…"
-                    />
-                    {userSuggestionsLoading && (
-                      <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
-                    )}
-                    {!userSuggestionsLoading && userSuggestions.length > 0 && (
-                      <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-2 text-[11px]">
-                        {userSuggestions.map((u) => (
-                          <button
-                            key={u.id}
-                            type="button"
-                            onClick={() =>
-                              setNewMessage((prev) => ({
-                                ...prev,
-                                to: u.display_name || 'Neznámý',
-                                toUserId: u.id,
-                              }))
-                            }
-                            className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-[var(--mpc-panel)]"
-                          >
-                            <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
-                            <span className="text-[var(--mpc-muted)] text-[10px]">{u.id}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Zpráva
-                    </label>
-                    <textarea
-                      value={newMessage.body}
-                      onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
-                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-3 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      rows={5}
-                      placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <p className="text-[11px] text-[var(--mpc-muted)]">
-                    Zprávy se ukládají do Supabase tabulky messages (user_id → odesílatel, to_user_id → příjemce). Pokud backend chybí, zůstanou lokálně.
-                  </p>
-                  <button
-                    type="submit"
-                    disabled={sendingMessage}
-                    className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-white disabled:opacity-60"
-                  >
-                    {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                  </button>
-                </div>
-              </form>
-              <p className="mt-3 text-[11px] text-[var(--mpc-muted)]">
-                Tady se sbíhají domluvy na spolupráci i soukromé zprávy. Brzy přidáme realtime a e-mail notifikace.
-              </p>
-            </div>
           </div>
 
           {/* Pravý sloupec: akce */}
@@ -2966,27 +2902,67 @@ export default function ProfileClient() {
               )}
 
               <div className="space-y-3">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`rounded-lg border px-4 py-3 text-sm transition ${msg.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
-                  >
-                    <div className="flex items-center justify-between text-[12px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[var(--mpc-light)]">
-                          {msg.from_name || msg.from || 'Neznámý uživatel'}
-                        </span>
-                        {msg.unread && (
-                          <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                            Nové
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[var(--mpc-muted)]">{msg.time}</span>
+                {directThreads.length === 0 && !messagesLoading && (
+                  <p className="text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
+                )}
+                {directThreads.map((thread) => {
+                  const isOpen = expandedThread === thread.otherId;
+                  return (
+                    <div
+                      key={thread.otherId}
+                      className={`rounded-lg border px-4 py-3 text-sm transition ${thread.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
+                    >
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between text-left"
+                        onClick={() => setExpandedThread(isOpen ? null : thread.otherId)}
+                      >
+                        <div>
+                          <p className="font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">{thread.lastMessage}</p>
+                          {thread.unread && (
+                            <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                              Nové
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[var(--mpc-muted)]">{formatRelativeTime(new Date(thread.lastTs).toISOString())}</span>
+                      </button>
+                      {isOpen && (
+                        <div className="mt-3 space-y-2 border-t border-[var(--mpc-dark)] pt-2">
+                          {thread.messages.map((m) => (
+                            <div key={m.id} className="rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
+                              <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                                <span>{m.user_id === userId ? (m.from_name || 'Ty') : m.from_name || 'Neznámý'}</span>
+                                <span>{formatRelativeTime(m.created_at)}</span>
+                              </div>
+                              <p className="mt-1 whitespace-pre-line text-[var(--mpc-light)]">{m.body}</p>
+                            </div>
+                          ))}
+                          <div className="mt-2 space-y-2">
+                            <textarea
+                              className="w-full rounded-md border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
+                              rows={3}
+                              placeholder="Napiš odpověď…"
+                              value={threadReplies[thread.otherId] || ''}
+                              onChange={(e) => setThreadReplies((prev) => ({ ...prev, [thread.otherId]: e.target.value }))}
+                            />
+                            <div className="flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => void handleThreadReply(thread.otherId, thread.otherName)}
+                                disabled={sendingMessage || !(threadReplies[thread.otherId]?.trim())}
+                                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
+                              >
+                                {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="mt-1 text-[var(--mpc-muted)]">{msg.preview}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="mt-4">
@@ -3000,7 +2976,7 @@ export default function ProfileClient() {
               </div>
 
               {openSections.messages && (
-                <form onSubmit={handleSendCollabMessage} className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
+                <form onSubmit={handleSendDirectMessage} className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
                   <div className="space-y-3">
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -3057,7 +3033,7 @@ export default function ProfileClient() {
                     </p>
                     <button
                       type="submit"
-                      disabled={sendingMessage || !newMessage.body.trim() || !newMessage.toUserId.trim()}
+                      disabled={sendingMessage || !newMessage.body.trim() || !newMessage.to.trim()}
                       className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
                     >
                       {sendingMessage ? 'Odesílám…' : 'Odeslat'}
