@@ -29,6 +29,8 @@ type Project = {
   title: string;
   description: string | null;
   cover_url: string | null;
+  user_id?: string | null;
+  access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
   tracks_json?: Array<{ name: string; url?: string | null; path?: string | null }>;
 };
@@ -136,7 +138,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const loadProjects = async () => {
         const { data, error } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
+          .select('id, title, description, cover_url, project_url, tracks_json, access_mode, user_id')
           .eq('user_id', profileId)
           .order('created_at', { ascending: false })
           .limit(6);
@@ -617,148 +619,170 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             <p className="text-sm text-[var(--mpc-muted)]">Žádné projekty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
-                >
+                            {projects.map((project) => {
+                const isLocked = project.access_mode && project.access_mode !== 'public' && currentUserId !== project.user_id;
+                return (
                   <div
-                    className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
-                    style={
-                      project.cover_url
-                        ? {
-                            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                          }
-                        : {
-                            background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
-                          }
-                    }
+                    key={project.id}
+                    className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
                   >
-                    <div className="flex flex-col items-center gap-3 text-center">
-                      <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                        {project.cover_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <span>{project.title.slice(0, 2)}</span>
-                        )}
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-lg font-semibold text-white">{project.title}</p>
-                        <p className="text-[12px] text-[var(--mpc-muted)]">
-                          {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex flex-col items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
-                        }
-                        className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
-                        aria-label="Zobrazit tracklist"
-                      >
-                        <span
-                          className="text-lg font-bold transition-transform"
-                          style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        >
-                          ▼
-                        </span>
-                      </button>
-                      <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
-                        Tracklist
-                      </span>
-                    </div>
-
-                    {expandedProjects[project.id] && (
-                      <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
-                      <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
-                      {project.tracks_json && project.tracks_json.length > 0 ? (
-                        <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                          {project.tracks_json.map((t, idx) => {
-                            const trackId = `project-${project.id}-${idx}`;
-                            const isCurrent = currentTrack?.id === trackId;
-                            const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
-                            return (
-                              <div
-                                key={trackId}
-                                className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-3">
-                                    <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
-                                    <span>{t.name || `Track ${idx + 1}`}</span>
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      handlePlayTrack({
-                                        id: trackId,
-                                        title: t.name || `Track ${idx + 1}`,
-                                        url: t.url || '',
-                                        source: 'project',
-                                        cover_url: project.cover_url,
-                                        subtitle: profile?.display_name || null,
-                                      })
-                                    }
-                                    disabled={!t.url}
-                                    className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
-                                  >
-                                    {isCurrent && isPlaying ? '▮▮' : '►'}
-                                  </button>
-                                </div>
-                                <div
-                                  className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                                  onClick={(e) => {
-                                    if (!isCurrent) return;
-                                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                    seekInCurrent(e.clientX - rect.left, rect.width);
-                                  }}
-                                >
-                                  <div
-                                    className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                                    style={{ width: progressPct }}
-                                  />
-                                </div>
-                                {isCurrent && (
-                                  <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                    <span>{formatTime(currentTime)}</span>
-                                    <span>{formatTime(duration)}</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : project.project_url ? (
-                        <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
-                          <span>{project.title || 'Ukázka projektu'}</span>
-                          <button
-                            onClick={() =>
-                              handlePlayTrack({
-                                id: `project-${project.id}`,
-                                title: project.title,
-                                url: project.project_url || '',
-                                source: 'project',
-                                cover_url: project.cover_url,
-                                subtitle: profile?.display_name || null,
-                              })
-                            }
-                            className="text-[11px] text-[var(--mpc-accent)] hover:text-white"
-                          >
-                            {currentTrack?.id === `project-${project.id}` && isPlaying ? '▮▮' : '►'}
-                          </button>
-                        </div>
-                      ) : (
-                        <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
-                      )}
+                    {isLocked && (
+                      <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-yellow-200">
+                        Zamčeno · {project.access_mode === 'request' ? 'Na žádost' : 'Soukromé'}
                       </div>
                     )}
+                    <div
+                      className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
+                      style={
+                        project.cover_url
+                          ? {
+                              backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }
+                          : {
+                              background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
+                            }
+                      }
+                    >
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                          {project.cover_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <span>{project.title.slice(0, 2)}</span>
+                          )}
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-lg font-semibold text-white">{project.title}</p>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">
+                            {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col items-center gap-2">
+                        <button
+                          onClick={() => setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
+                          disabled={isLocked}
+                          className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px] disabled:opacity-50"
+                          aria-label="Zobrazit tracklist"
+                        >
+                          <span
+                            className="text-lg font-bold transition-transform"
+                            style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                          >
+                            ▼
+                          </span>
+                        </button>
+                        <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
+                          Tracklist
+                        </span>
+                      </div>
+
+                      {expandedProjects[project.id] && (
+                        <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
+                          <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
+                          {isLocked ? (
+                            <div className="space-y-2 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
+                              <p>Projekt je uzamčený.</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">
+                                {project.access_mode === 'request'
+                                  ? 'Požádej o přístup z detailu projektu.'
+                                  : 'Přístup mají jen schválení uživatelé.'}
+                              </p>
+                              {!isLoggedIn && (
+                                <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
+                                  Přihlas se a zažádej o přístup.
+                                </Link>
+                              )}
+                            </div>
+                          ) : project.tracks_json && project.tracks_json.length > 0 ? (
+                            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                              {project.tracks_json.map((t, idx) => {
+                                const trackId = `project-${project.id}-${idx}`;
+                                const isCurrent = currentTrack?.id === trackId;
+                                const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+                                return (
+                                  <div
+                                    key={trackId}
+                                    className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-3">
+                                        <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
+                                        <span>{t.name || `Track ${idx + 1}`}</span>
+                                      </div>
+                                      <button
+                                        disabled={isLocked || !t.url}
+                                        onClick={() =>
+                                          handlePlayTrack({
+                                            id: trackId,
+                                            title: t.name || `Track ${idx + 1}`,
+                                            url: t.url || '',
+                                            source: 'project',
+                                            cover_url: project.cover_url,
+                                            subtitle: profile?.display_name || null,
+                                          })
+                                        }
+                                        className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
+                                      >
+                                        {isCurrent && isPlaying ? '▮▮' : '►'}
+                                      </button>
+                                    </div>
+                                    <div
+                                      className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                                      onClick={(e) => {
+                                        if (!isCurrent) return;
+                                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                        seekInCurrent(e.clientX - rect.left, rect.width);
+                                      }}
+                                    >
+                                      <div
+                                        className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                                        style={{ width: progressPct }}
+                                      />
+                                    </div>
+                                    {isCurrent && (
+                                      <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                                        <span>{formatTime(currentTime)}</span>
+                                        <span>{formatTime(duration)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : project.project_url ? (
+                            <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
+                              <span>{project.title || 'Ukázka projektu'}</span>
+                              <button
+                                disabled={isLocked}
+                                onClick={() =>
+                                  handlePlayTrack({
+                                    id: `project-${project.id}`,
+                                    title: project.title,
+                                    url: project.project_url || '',
+                                    source: 'project',
+                                    cover_url: project.cover_url,
+                                    subtitle: profile?.display_name || null,
+                                  })
+                                }
+                                className="text-[11px] text-[var(--mpc-accent)] hover:text-white disabled:opacity-50"
+                              >
+                                {currentTrack?.id === `project-${project.id}` && isPlaying ? '▮▮' : '►'}
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
