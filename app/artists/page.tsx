@@ -49,15 +49,15 @@ export default function ArtistsPage() {
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, beats (id), projects (id)')
+          .select('id, display_name, avatar_url, beats (count), projects (count)')
           .limit(50);
         if (!error && data && data.length > 0) {
           const mapped: ArtistCard[] = data.map((p: any) => ({
             id: p.id,
             name: p.display_name || 'Bez jména',
             initials: getInitials(p.display_name || '??'),
-            beatsCount: Array.isArray(p.beats) ? p.beats.length : 0,
-            projectsCount: Array.isArray(p.projects) ? p.projects.length : 0,
+            beatsCount: Array.isArray(p.beats) ? (p.beats[0]?.count ?? 0) : 0,
+            projectsCount: Array.isArray(p.projects) ? (p.projects[0]?.count ?? 0) : 0,
             city: '',
             avatar_url: p.avatar_url || null,
           }));
