@@ -51,19 +51,38 @@ export default function ArtistsPage() {
           .from('profiles')
           .select('id, display_name, avatar_url, beats (id), projects (id)')
           .limit(50);
-        if (error || !data || data.length === 0) {
+        if (!error && data && data.length > 0) {
+          const mapped: ArtistCard[] = data.map((p: any) => ({
+            id: p.id,
+            name: p.display_name || 'Bez jména',
+            initials: getInitials(p.display_name || '??'),
+            beatsCount: Array.isArray(p.beats) ? p.beats.length : 0,
+            projectsCount: Array.isArray(p.projects) ? p.projects.length : 0,
+            city: '',
+            avatar_url: p.avatar_url || null,
+          }));
+          setArtists(mapped);
+          return;
+        }
+        const { data: simple, error: err2 } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .limit(50);
+        if (err2 || !simple || simple.length === 0) {
           setArtists(fallbackArtists);
           return;
         }
-        const mapped: ArtistCard[] = data.map((p: any, idx: number) => ({
-          id: p.id,
-          name: p.display_name || 'Bez jména',
-          initials: getInitials(p.display_name || '??'),
-          followers: (idx + 1) * 1200 + 500,
-          city: '',
-          avatar_url: p.avatar_url || null,
-        }));
-        setArtists(mapped);
+        setArtists(
+          (simple as any[]).map((p) => ({
+            id: p.id,
+            name: p.display_name || 'Bez jména',
+            initials: getInitials(p.display_name || '??'),
+            beatsCount: 0,
+            projectsCount: 0,
+            city: '',
+            avatar_url: p.avatar_url || null,
+          }))
+        );
       } catch (err) {
         console.error('Chyba při načítání umělců:', err);
         setArtists(fallbackArtists);

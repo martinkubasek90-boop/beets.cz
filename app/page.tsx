@@ -248,21 +248,40 @@ export default function Home() {
           .select('id, display_name, avatar_url, beats (id), projects (id)')
           .limit(20);
 
-        if (error || !data || data.length === 0) {
-          setArtists(dummyArtists);
+        if (!error && data && data.length > 0) {
+          const mapped: Artist[] = data.map((p: any) => ({
+            id: p.id,
+            name: p.display_name || 'Bez jména',
+            initials: getInitials(p.display_name || '??'),
+            beatsCount: Array.isArray(p.beats) ? p.beats.length : 0,
+            projectsCount: Array.isArray(p.projects) ? p.projects.length : 0,
+            city: '',
+            avatar_url: p.avatar_url || null,
+          }));
+          setArtists(mapped);
           return;
         }
 
-        const mapped: Artist[] = data.map((p: any) => ({
-          id: p.id,
-          name: p.display_name || 'Bez jména',
-          initials: getInitials(p.display_name || '??'),
-          beatsCount: Array.isArray(p.beats) ? p.beats.length : 0,
-          projectsCount: Array.isArray(p.projects) ? p.projects.length : 0,
-          city: '',
-          avatar_url: p.avatar_url || null,
-        }));
-        setArtists(mapped);
+        // Fallback: načti jen profily bez relací, aby se něco zobrazilo
+        const { data: simpleProfiles, error: simpleErr } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url')
+          .limit(20);
+        if (simpleErr || !simpleProfiles || simpleProfiles.length === 0) {
+          setArtists(dummyArtists);
+          return;
+        }
+        setArtists(
+          (simpleProfiles as any[]).map((p) => ({
+            id: p.id,
+            name: p.display_name || 'Bez jména',
+            initials: getInitials(p.display_name || '??'),
+            beatsCount: 0,
+            projectsCount: 0,
+            city: '',
+            avatar_url: p.avatar_url || null,
+          }))
+        );
       } catch (err) {
         console.error('Chyba při načítání umělců:', err);
         setArtists(dummyArtists);
@@ -1028,6 +1047,10 @@ export default function Home() {
             </Link>
             <Link className="relative py-1 hover:text-white" href="/collabs">
               Spolupráce
+              <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
+            </Link>
+            <Link className="relative py-1 hover:text-white" href="/faq">
+              FAQ
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
             </Link>
           </nav>
