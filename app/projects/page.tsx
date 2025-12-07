@@ -59,10 +59,10 @@ export default function ProjectsPage() {
       setLoading(true);
       try {
         let rows: any[] = [];
-        // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks")
+        // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks" a bez autor_name/year)
         const { data, error: err } = await supabase
           .from("projects")
-          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,year")
+          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode")
           .order("id", { ascending: false });
         if (err) throw err;
         rows = data ?? [];
