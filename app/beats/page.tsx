@@ -62,13 +62,6 @@ export default function BeatsPage() {
     void load();
   }, [supabase]);
 
-  // Při odchodu ze stránky beatů přehrávač zastavíme
-  useEffect(() => {
-    return () => {
-      pause();
-    };
-  }, [pause]);
-
   const filtered = useMemo(() => {
     return beats.filter((b) => {
       const matchesSearch =
