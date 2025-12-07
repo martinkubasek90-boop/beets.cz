@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '../../lib/supabase/client';
-import { useGlobalPlayer } from '@/components/global-player-provider';
 
 type ProjectTrack = { name: string; url?: string | null; path?: string | null };
 
@@ -61,18 +60,7 @@ export default function ProjectsPage() {
   const [myRequests, setMyRequests] = useState<Record<number, 'pending' | 'approved' | 'denied'>>({});
   const [myGrants, setMyGrants] = useState<Set<number>>(new Set());
   const [requesting, setRequesting] = useState<Record<number, boolean>>({});
-  const [currentTrack, setCurrentTrack] = useState<{ projectId: number; name: string; url: string } | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<number, boolean>>({});
-  const {
-    play: gpPlay,
-    toggle: gpToggle,
-    current: gpCurrent,
-    isPlaying: gpIsPlaying,
-    currentTime: gpTime,
-    duration: gpDuration,
-    seek: gpSeek,
-    setOnEnded,
-  } = useGlobalPlayer();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -81,60 +69,6 @@ export default function ProjectsPage() {
     };
     loadUser();
   }, [supabase]);
-
-  const playTrack = (
-    project: Project,
-    tracks: ProjectTrack[],
-    idx: number
-  ) => {
-    const track = tracks[idx];
-    if (!track) return;
-    const url = track.url || (track.path ? publicUrlFromPath(track.path) : '');
-    if (!url) return;
-    const name = track.name || `Track ${idx + 1}`;
-    const payload = {
-      id: `project-${project.id}-${idx + 1}`,
-      title: name,
-      artist: project.author_name || 'Neznámý',
-      url,
-      cover_url: project.cover_url ?? undefined,
-      user_id: project.user_id ?? undefined,
-    };
-    setCurrentTrack({ projectId: project.id, name, url });
-    setOnEnded(() => {
-      for (let i = idx + 1; i < tracks.length; i++) {
-        const nextUrl = tracks[i].url || (tracks[i].path ? publicUrlFromPath(tracks[i].path) : '');
-        if (nextUrl) {
-          playTrack(project, tracks, i);
-          return;
-        }
-      }
-      setOnEnded(null);
-    });
-    gpPlay(payload);
-  };
-
-  const progressPercent =
-    gpCurrent && currentTrack && gpDuration > 0 && gpCurrent.id === `project-${currentTrack.projectId}-${currentTrack.name}`
-      ? Math.min((gpTime / gpDuration) * 100, 100)
-      : 0;
-
-  const trackProgress = (projectId: number, url?: string) => {
-    if (!currentTrack || !url) return 0;
-    if (currentTrack.projectId === projectId && currentTrack.url === url && gpDuration > 0) {
-      return progressPercent;
-    }
-    return 0;
-  };
-
-  const formatTime = (sec?: number) => {
-    if (!sec || !Number.isFinite(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60)
-      .toString()
-      .padStart(2, '0');
-    return `${m}:${s}`;
-  };
 
   const publicUrlFromPath = (path?: string | null) => {
     if (!path) return '';
@@ -563,57 +497,17 @@ export default function ProjectsPage() {
                           </p>
                           {tracks.length > 0 ? (
                             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                              {tracks.map((t, idx) => {
-                                const isCurrent =
-                                  currentTrack?.projectId === project.id && currentTrack.url === t.url;
-                                const progress = trackProgress(project.id, t.url || undefined);
-                                return (
-                                  <div
-                                    key={`${project.id}-${idx}`}
-                                    className="rounded border border-white/10 bg-black/50 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-3">
-                                        <span className="w-6 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
-                                        <span className="text-sm font-semibold text-white">{t.name || `Track ${idx + 1}`}</span>
-                                      </div>
-                                      <button
-                                        onClick={() => playTrack(project, tracks, idx)}
-                                        disabled={!t.url && !t.path}
-                                        className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
-                                      >
-                                        {isCurrent && gpIsPlaying ? '▮▮' : '►'}
-                                      </button>
-                                    </div>
-                                    <div
-                                      className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                                      onClick={(e) => {
-                                        if (!isCurrent || !t.url) return;
-                                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                        const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-                                        gpSeek(ratio);
-                                      }}
-                                    >
-                                      <div
-                                        className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                                        style={{ width: `${progress}%` }}
-                                      />
-                                    </div>
-                                    {isCurrent && (
-                                      <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                        <span>
-                                          {currentTrack?.projectId === project.id ? formatTime(gpTime) : '0:00'}
-                                        </span>
-                                        <span>
-                                          {currentTrack?.projectId === project.id && gpDuration
-                                            ? formatTime(gpDuration)
-                                            : '--:--'}
-                                        </span>
-                                      </div>
-                                    )}
+                              {tracks.map((t, idx) => (
+                                <div
+                                  key={`${project.id}-${idx}`}
+                                  className="rounded border border-white/10 bg-black/50 px-3 py-2"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="w-6 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
+                                    <span className="text-sm font-semibold text-white">{t.name || `Track ${idx + 1}`}</span>
                                   </div>
-                                );
-                              })}
+                                </div>
+                              ))}
                             </div>
                           ) : (
                             <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
