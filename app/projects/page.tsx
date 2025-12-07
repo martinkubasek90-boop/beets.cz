@@ -310,7 +310,7 @@ export default function ProjectsPage() {
                       </div>
                     </div>
                   ) : project.access_mode === "request" && !project.hasAccess ? (
-                    <div className="space-y-2 text-sm text-[var(--mpc-muted)]">
+                    <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
                       <p>Projekt je na žádost.</p>
                       <button
                         type="button"
