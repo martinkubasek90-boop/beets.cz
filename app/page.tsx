@@ -1035,86 +1035,104 @@ export default function Home() {
                       )}
                     </p>
                     <div className="text-lg font-semibold text-white">{project.title}</div>
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                      Beat tape / EP
-                    </div>
-                    <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
-                      {project.description || 'Instrumentální beat tape.'}
-                    </p>
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                    Beat tape / EP
                   </div>
+                  <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
+                    {project.description || 'Instrumentální beat tape.'}
+                  </p>
+                </div>
 
-                    <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                      <div className="mx-auto flex max-w-3xl items-center gap-3">
-                        <button
-                          onClick={() =>
-                            project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
-                          }
-                          className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                        >
-                          {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
-                        </button>
-                        <div className="flex-1">
-                          <p className="text-center text-sm font-semibold text-white">
-                            {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
-                          </p>
-                          <div className="mt-2 space-y-1">
-                            <div className="h-3 overflow-hidden rounded-full bg-black/70">
-                              <div
-                                className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
-                                style={{ width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%` }}
-                              />
-                            </div>
-                            <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                              <span>0:00</span>
-                              <span>{duration ? formatTime(duration) : ''}</span>
-                            </div>
-                          </div>
+                <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+                  <div className="mx-auto flex max-w-3xl items-center gap-3">
+                    <button
+                      onClick={() =>
+                        project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
+                      }
+                      className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                    >
+                      {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
+                    </button>
+                    <div className="flex-1">
+                      <p className="text-center text-sm font-semibold text-white">
+                        {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
+                      </p>
+                      <div className="mt-2 space-y-1">
+                        <div className="h-3 overflow-hidden rounded-full bg-black/70">
+                          <div
+                            className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
+                            style={{ width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                          <span>0:00</span>
+                          <span>{duration ? formatTime(duration) : ''}</span>
                         </div>
                       </div>
                     </div>
-
-                  <div className="w-full space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                    {project.tracks && project.tracks.length > 0 ? (
-                      <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
-                        {project.tracks.map((t, i) => (
-                          <div
-                            key={t.id}
-                            className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
-                                  {i + 1}.
-                                </span>
-                                <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
-                                  {project.cover_url ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-white">{t.title}</p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handlePlayProjectTrack(project, t, i)}
-                                className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
-                              >
-                                {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
-                              </button>
-                            </div>
-                            <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
-                              {renderTrackBars(project.id, t.id, 60)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-[var(--mpc-muted)]">Tracklist zatím není k dispozici.</p>
+                    {project.tracks && project.tracks.length > 1 && (
+                      <button
+                        onClick={() =>
+                          setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
+                        }
+                        className={`grid h-10 w-10 place-items-center rounded-full border text-white transition ${
+                          homeExpandedProjects[project.id]
+                            ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                            : 'border-white/20 bg-white/5'
+                        }`}
+                        aria-label="Tracklist"
+                      >
+                        <span
+                          className="text-base font-bold transition-transform"
+                          style={{ transform: homeExpandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        >
+                          ▼
+                        </span>
+                      </button>
                     )}
                   </div>
+                </div>
+
+                {project.tracks && project.tracks.length > 1 && homeExpandedProjects[project.id] && (
+                  <div className="w-full space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+                    <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                      {project.tracks.slice(1).map((t, i) => (
+                        <div
+                          key={t.id ?? `${project.id}-${i + 2}`}
+                          className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3">
+                              <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
+                                {i + 2}.
+                              </span>
+                              <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
+                                {project.cover_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
+                                )}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-white">{t.title}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handlePlayProjectTrack(project, t, i + 1)}
+                              className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
+                            >
+                              {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
+                            </button>
+                          </div>
+                          <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
+                            {renderTrackBars(project.id, t.id, 60)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 </div>
               </div>
             ))}
