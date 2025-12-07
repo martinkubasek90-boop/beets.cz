@@ -230,30 +230,28 @@ export default function ProjectsPage() {
             const projectUrl = (p as any).project_url || null;
             const accessMode = (p as any).access_mode || 'public';
 
-            const coerceTracks = (raw: any): any[] | null => {
+            const parseArr = (raw: any): any[] | null => {
               if (Array.isArray(raw)) return raw;
-              if (raw && typeof raw === 'object') {
-                if (Array.isArray(raw.tracks)) return raw.tracks;
-                const values = Object.values(raw).filter((v) => v && typeof v === 'object');
-                if (values.length) return values as any[];
-              }
               if (typeof raw === 'string') {
                 try {
                   const parsed = JSON.parse(raw);
                   if (Array.isArray(parsed)) return parsed;
-                  if (parsed && typeof parsed === 'object') {
-                    if (Array.isArray((parsed as any).tracks)) return (parsed as any).tracks;
-                    const values = Object.values(parsed).filter((v) => v && typeof v === 'object');
-                    if (values.length) return values as any[];
+                  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).tracks)) {
+                    return (parsed as any).tracks;
                   }
                 } catch {
                   return null;
                 }
               }
+              if (raw && typeof raw === 'object') {
+                if (Array.isArray((raw as any).tracks)) return (raw as any).tracks;
+                const vals = Object.values(raw).filter((v) => v && typeof v === 'object');
+                if (vals.length) return vals as any[];
+              }
               return null;
             };
 
-            const tracksSource = coerceTracks(rawJson) ?? coerceTracks(rawLegacy) ?? [];
+            const tracksSource = parseArr(rawJson) ?? parseArr(rawLegacy) ?? [];
             const normalizedTracks = Array.isArray(tracksSource)
               ? tracksSource.map((t: any, idx: number) => ({
                   name: t?.name || t?.title || t?.track_name || `Track ${idx + 1}`,
@@ -270,7 +268,6 @@ export default function ProjectsPage() {
 
             const tracksWithSigned = await Promise.all(
               normalizedTracks.map(async (t) => {
-                // Pokud je soubor uložený v bucketu a máme přístup, podepiš URL.
                 if (hasAccess) {
                   const pathToUse = t.path || null;
                   if (pathToUse) {
@@ -278,15 +275,11 @@ export default function ProjectsPage() {
                     const fallback = t.url || publicUrlFromPath(pathToUse);
                     return { ...t, url: signed || fallback, path: pathToUse };
                   }
+                  // Bez path, ale máme url – ponech
+                  return { ...t };
                 }
-                if (!hasAccess) {
-                  return { ...t, url: '' };
-                }
-                // fallback: pokud máme path ale chybí url, slož public URL
-                if (t.path && !t.url) {
-                  return { ...t, url: publicUrlFromPath(t.path), path: t.path };
-                }
-                return t;
+                // Bez přístupu skryj URL
+                return { ...t, url: '' };
               })
             );
 
