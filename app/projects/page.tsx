@@ -564,6 +564,46 @@ export default function ProjectsPage() {
                           </div>
                         </div>
 
+                        {tracks.length > 0 && (
+                          <div className="mt-4 w-full rounded-xl border border-white/10 bg-black/50 p-3">
+                            <div className="mx-auto flex max-w-3xl items-center gap-3">
+                              <button
+                                onClick={() => playTrack(project, tracks, 0)}
+                                className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                              >
+                                {currentTrack?.projectId === project.id && currentTrack.url === tracks[0].url && gpIsPlaying
+                                  ? '▮▮'
+                                  : '►'}
+                              </button>
+                              <div className="flex-1">
+                                <p className="text-center text-sm font-semibold text-white">
+                                  {tracks[0].name || 'Track 1'}
+                                </p>
+                                <div className="mt-2 space-y-1">
+                                  <div className="h-3 overflow-hidden rounded-full bg-black/70">
+                                    <div
+                                      className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
+                                      style={{ width: `${trackProgress(project.id, tracks[0].url || undefined)}%` }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                                    <span>
+                                      {currentTrack?.projectId === project.id && currentTrack.url === tracks[0].url
+                                        ? formatTime(gpTime)
+                                        : '0:00'}
+                                    </span>
+                                    <span>
+                                      {currentTrack?.projectId === project.id && currentTrack.url === tracks[0].url && gpDuration
+                                        ? formatTime(gpDuration)
+                                        : '--:--'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
                         <div className="mt-4 flex flex-col items-center gap-2">
                           <button
                             onClick={() =>
