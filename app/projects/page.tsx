@@ -232,12 +232,20 @@ export default function ProjectsPage() {
 
             const coerceTracks = (raw: any): any[] | null => {
               if (Array.isArray(raw)) return raw;
-              if (raw && typeof raw === 'object' && Array.isArray(raw.tracks)) return raw.tracks;
+              if (raw && typeof raw === 'object') {
+                if (Array.isArray(raw.tracks)) return raw.tracks;
+                const values = Object.values(raw).filter((v) => v && typeof v === 'object');
+                if (values.length) return values as any[];
+              }
               if (typeof raw === 'string') {
                 try {
                   const parsed = JSON.parse(raw);
                   if (Array.isArray(parsed)) return parsed;
-                  if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tracks)) return parsed.tracks;
+                  if (parsed && typeof parsed === 'object') {
+                    if (Array.isArray((parsed as any).tracks)) return (parsed as any).tracks;
+                    const values = Object.values(parsed).filter((v) => v && typeof v === 'object');
+                    if (values.length) return values as any[];
+                  }
                 } catch {
                   return null;
                 }
