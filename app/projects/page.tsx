@@ -585,24 +585,25 @@ export default function ProjectsPage() {
 
                         {expandedProjects[project.id] && (
                           <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
-                            {tracks.length > 0 ? (
+                            {tracks.length > 1 ? (
                               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                                {tracks.map((t, idx) => {
+                                {tracks.slice(1).map((t, idx) => {
+                                  const listIdx = idx + 1; // odpovídá původnímu pořadí po prvním tracku
                                   const isCurrent =
                                     currentTrack?.projectId === project.id && currentTrack.url === t.url;
                                   const progress = trackProgress(project.id, t.url || undefined);
                                   return (
                                     <div
-                                      key={`${project.id}-${idx}`}
+                                      key={`${project.id}-${listIdx}`}
                                       className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
                                     >
                                       <div className="flex items-center justify-between gap-2">
                                         <div className="flex items-center gap-3">
-                                          <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
-                                          <span>{t.name || `Track ${idx + 1}`}</span>
+                                          <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{listIdx + 1}.</span>
+                                          <span>{t.name || `Track ${listIdx + 1}`}</span>
                                         </div>
                                         <button
-                                          onClick={() => playTrack(project, tracks, idx)}
+                                          onClick={() => playTrack(project, tracks, listIdx)}
                                           disabled={!t.url && !t.path}
                                           className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
                                         >
@@ -640,7 +641,7 @@ export default function ProjectsPage() {
                                 })}
                               </div>
                             ) : (
-                              <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">Další skladby nejsou k dispozici.</p>
                             )}
                           </div>
                         )}
