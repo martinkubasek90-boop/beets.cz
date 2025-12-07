@@ -590,7 +590,7 @@ export default function ProjectsPage() {
                                 {tracks.map((t, idx) => {
                                   const isCurrent =
                                     currentTrack?.projectId === project.id && currentTrack.url === t.url;
-                                  const progress = trackProgress(project.id, t.url);
+                                  const progress = trackProgress(project.id, t.url || undefined);
                                   return (
                                     <div
                                       key={`${project.id}-${idx}`}

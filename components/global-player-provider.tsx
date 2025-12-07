@@ -9,6 +9,7 @@ type Track = {
   url: string;
   cover_url?: string | null;
   user_id?: string | null;
+  item_type?: 'beat' | 'project' | 'collab';
 };
 
 type PlayerCtx = {
@@ -21,6 +22,8 @@ type PlayerCtx = {
   pause: () => void;
   seek: (pct: number) => void;
   setOnEnded: (fn: (() => void) | null) => void;
+  setOnNext?: (fn: (() => void) | null) => void;
+  setOnPrev?: (fn: (() => void) | null) => void;
 };
 
 const Ctx = createContext<PlayerCtx | null>(null);
@@ -38,6 +41,8 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const onEndedRef = useRef<(() => void) | null>(null);
+  const onNextRef = useRef<(() => void) | null>(null);
+  const onPrevRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -102,11 +107,21 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const setOnEnded = (fn: (() => void) | null) => {
     onEndedRef.current = fn;
   };
+  const setOnNext = (fn: (() => void) | null) => {
+    onNextRef.current = fn;
+  };
+  const setOnPrev = (fn: (() => void) | null) => {
+    onPrevRef.current = fn;
+  };
 
   const value = useMemo(
-    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded }),
+    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
     [current, isPlaying, currentTime, duration]
   );
+
+  const derivedItemType =
+    typeof current?.id === "string" && String(current.id).startsWith("project-") ? "project" : "beat";
+  const fireItemId = current ? String(current.id) : null;
 
   return (
     <Ctx.Provider value={value}>
@@ -134,10 +149,24 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
             </div>
             <div className="flex items-center gap-3">
               <button
+                onClick={() => onPrevRef.current?.()}
+                disabled={!onPrevRef.current}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white hover:border-[var(--mpc-accent)] disabled:opacity-40"
+              >
+                ◄
+              </button>
+              <button
                 onClick={toggle}
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
               >
                 {isPlaying ? "▮▮" : "►"}
+              </button>
+              <button
+                onClick={() => onNextRef.current?.()}
+                disabled={!onNextRef.current}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 text-white hover:border-[var(--mpc-accent)] disabled:opacity-40"
+              >
+                ►
               </button>
               <button
                 onClick={pause}
@@ -164,6 +193,11 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 <span>{duration ? Math.floor(duration) : "--"} s</span>
               </div>
             </div>
+            {fireItemId && (
+              <div className="ml-auto">
+                <FireButton itemType={derivedItemType} itemId={fireItemId} />
+              </div>
+            )}
           </div>
         </div>
       )}
