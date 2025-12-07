@@ -738,7 +738,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                   type="button"
                                   onClick={() => void requestProjectAccess(String(project.id))}
                                   disabled={projectRequesting[String(project.id)]}
-                                  className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                                  className="rounded-full border border-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
                                 >
                                   {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
                                 </button>
@@ -785,7 +785,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                 </p>
                               </div>
                               {project.access_mode === 'request' && isLoggedIn && currentUserId !== project.user_id && (
-                                <div className="space-y-2">
+                                <div className="mt-3 space-y-3 text-center">
                                   <button
                                     type="button"
                                     onClick={() => void requestProjectAccess(String(project.id))}
@@ -807,62 +807,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                   Přihlas se a zažádej o přístup.
                                 </Link>
                               )}
-                            </div>
-                          ) : project.tracks_json && project.tracks_json.length > 0 ? (
-                            <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                              {project.tracks_json.map((t, idx) => {
-                                const trackId = `project-${project.id}-${idx}`;
-                                const isCurrent = gpCurrent?.id === trackId;
-                                const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
-                                return (
-                                  <div
-                                    key={trackId}
-                                    className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-3">
-                                        <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
-                                        <span>{t.name || `Track ${idx + 1}`}</span>
-                                      </div>
-                                      <button
-                                        disabled={isLocked || !t.url}
-                                        onClick={() =>
-                                          handlePlayTrack({
-                                            id: trackId,
-                                            title: t.name || `Track ${idx + 1}`,
-                                            url: t.url || '',
-                                            source: 'project',
-                                            cover_url: project.cover_url,
-                                            subtitle: profile?.display_name || null,
-                                          })
-                                        }
-                                       className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
-                                     >
-                                        {isCurrent && gpIsPlaying ? '▮▮' : '►'}
-                                     </button>
-                                   </div>
-                                      <div
-                                        className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                                        onClick={(e) => {
-                                          if (!isCurrent) return;
-                                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                          seekInCurrent(e.clientX - rect.left, rect.width);
-                                        }}
-                                      >
-                                        <div
-                                          className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                                          style={{ width: progressPct }}
-                                      />
-                                    </div>
-                                    {isCurrent && (
-                                      <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                        <span>{formatTime(gpTime)}</span>
-                                        <span>{gpDuration ? formatTime(gpDuration) : '--:--'}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
                             </div>
                           ) : project.project_url ? (
                             <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
