@@ -24,6 +24,7 @@ type Project = {
   tracks_json?: ProjectTrack[];
   tracks?: ProjectTrack[];
   year?: number | null;
+  hasAccess?: boolean;
 };
 
 export default function ProjectsPage() {
