@@ -1075,7 +1075,7 @@ export default function Home() {
                 </div>
 
                 {project.tracks && project.tracks.length > 1 && (
-                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+                  <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
                       <button
