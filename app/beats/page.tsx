@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { FireButton } from '@/components/fire-button';
+import { useGlobalPlayer } from '@/components/global-player-provider';
 
 type Beat = {
   id: number | string;
@@ -24,6 +25,7 @@ const dummyBeats: Beat[] = [
 
 export default function BeatsPage() {
   const supabase = createClient();
+  const { play, pause, current, isPlaying, currentTime, duration } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
@@ -31,41 +33,6 @@ export default function BeatsPage() {
   const [moodFilter, setMoodFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState<Beat | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const progressPercent =
-    currentTrack && duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
-
-  const formatTime = (sec?: number) => {
-    if (!sec || !Number.isFinite(sec)) return '0:00';
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60)
-      .toString()
-      .padStart(2, '0');
-    return `${m}:${s}`;
-  };
-
-  useEffect(() => {
-    if (!audioRef.current && typeof window !== 'undefined') {
-      audioRef.current = new Audio();
-    }
-    const el = audioRef.current;
-    if (!el) return;
-    const onTime = () => setCurrentTime(el.currentTime || 0);
-    const onMeta = () => setDuration(el.duration || 0);
-    const onEnd = () => setIsPlaying(false);
-    el.addEventListener('timeupdate', onTime);
-    el.addEventListener('loadedmetadata', onMeta);
-    el.addEventListener('ended', onEnd);
-    return () => {
-      el.removeEventListener('timeupdate', onTime);
-      el.removeEventListener('loadedmetadata', onMeta);
-      el.removeEventListener('ended', onEnd);
-    };
-  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -95,6 +62,13 @@ export default function BeatsPage() {
     void load();
   }, [supabase]);
 
+  // Při odchodu ze stránky beatů přehrávač zastavíme
+  useEffect(() => {
+    return () => {
+      pause();
+    };
+  }, [pause]);
+
   const filtered = useMemo(() => {
     return beats.filter((b) => {
       const matchesSearch =
@@ -115,24 +89,15 @@ export default function BeatsPage() {
   }, [beats]);
 
   const playBeat = (beat: Beat) => {
-    if (!beat.audio_url || !audioRef.current) return;
-    if (currentTrack?.id === beat.id) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      }
-      return;
-    }
-    setCurrentTrack(beat);
-    audioRef.current.src = beat.audio_url;
-    audioRef.current.currentTime = 0;
-    audioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
+    if (!beat.audio_url) return;
+    play({
+      id: beat.id,
+      title: beat.title,
+      artist: beat.artist,
+      url: beat.audio_url,
+      cover_url: beat.cover_url,
+      user_id: beat.user_id,
+    });
   };
 
   return (
@@ -220,24 +185,20 @@ export default function BeatsPage() {
                   disabled={!beat.audio_url}
                   className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] shadow-[0_10px_24px_rgba(243,116,51,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-50"
                 >
-                  {currentTrack?.id === beat.id && isPlaying ? 'Pause' : 'Play'}
+                  {current?.id === beat.id && isPlaying ? 'Pause' : 'Play'}
                 </button>
-                <FireButton
-                  itemType="beat"
-                  itemId={String(beat.id)}
-                  className="mt-1"
-                />
-                {currentTrack?.id === beat.id && (
+                <FireButton itemType="beat" itemId={String(beat.id)} className="mt-1" />
+                {current?.id === beat.id && (
                   <div className="w-full">
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
                       <div
                         className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                        style={{ width: `${progressPercent}%` }}
+                        style={{ width: duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%' }}
                       />
                     </div>
                     <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
                       <span>{Math.floor(currentTime)} s</span>
-                      <span>{Math.floor(duration)} s</span>
+                      <span>{duration ? Math.floor(duration) : '--'} s</span>
                     </div>
                   </div>
                 )}
@@ -246,38 +207,6 @@ export default function BeatsPage() {
           ))}
         </div>
       </div>
-
-      {currentTrack && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-black/80 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
-            <div className="min-w-[160px] flex-1">
-              <p className="font-semibold text-white">{currentTrack.title}</p>
-              <p className="text-[11px] text-[var(--mpc-muted)]">{currentTrack.artist}</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => playBeat(currentTrack)}
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
-              >
-                {isPlaying ? '▮▮' : '►'}
-              </button>
-              <FireButton itemType="beat" itemId={String(currentTrack.id)} />
-            </div>
-            <div className="flex-1 min-w-[200px]">
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-              <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 }

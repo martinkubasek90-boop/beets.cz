@@ -1,0 +1,161 @@
+"use client";
+
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+
+type Track = {
+  id: string | number;
+  title: string;
+  artist: string;
+  url: string;
+  cover_url?: string | null;
+  user_id?: string | null;
+};
+
+type PlayerCtx = {
+  current: Track | null;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  play: (track: Track) => void;
+  toggle: () => void;
+  pause: () => void;
+  seek: (pct: number) => void;
+};
+
+const Ctx = createContext<PlayerCtx | null>(null);
+
+export function useGlobalPlayer() {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error("useGlobalPlayer must be used inside GlobalPlayerProvider");
+  return ctx;
+}
+
+export function GlobalPlayerProvider({ children }: { children: React.ReactNode }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [current, setCurrent] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+    }
+    const el = audioRef.current;
+    if (!el) return;
+    const onTime = () => setCurrentTime(el.currentTime || 0);
+    const onMeta = () => setDuration(el.duration || 0);
+    const onEnd = () => setIsPlaying(false);
+    el.addEventListener("timeupdate", onTime);
+    el.addEventListener("loadedmetadata", onMeta);
+    el.addEventListener("ended", onEnd);
+    return () => {
+      el.removeEventListener("timeupdate", onTime);
+      el.removeEventListener("loadedmetadata", onMeta);
+      el.removeEventListener("ended", onEnd);
+    };
+  }, []);
+
+  const play = (track: Track) => {
+    if (!audioRef.current || !track.url) return;
+    setCurrent(track);
+    audioRef.current.src = track.url;
+    audioRef.current.currentTime = 0;
+    audioRef.current
+      .play()
+      .then(() => setIsPlaying(true))
+      .catch(() => setIsPlaying(false));
+  };
+
+  const toggle = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
+    }
+  };
+
+  const pause = () => {
+    audioRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  const seek = (pct: number) => {
+    if (!audioRef.current || !duration) return;
+    const next = Math.min(Math.max(pct, 0), 1) * duration;
+    audioRef.current.currentTime = next;
+    setCurrentTime(next);
+  };
+
+  const value = useMemo(
+    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek }),
+    [current, isPlaying, currentTime, duration]
+  );
+
+  return (
+    <Ctx.Provider value={value}>
+      {children}
+      {current && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/85 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
+            <div className="flex items-center gap-3">
+              {current.cover_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={current.cover_url}
+                  alt={current.title}
+                  className="h-12 w-12 rounded border border-white/10 object-cover"
+                />
+              ) : (
+                <div className="grid h-12 w-12 place-items-center rounded border border-white/10 bg-white/10 text-[11px] text-white">
+                  {String(current.title || "?").slice(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-[140px]">
+                <p className="font-semibold text-white leading-tight">{current.title}</p>
+                <p className="text-[11px] text-[var(--mpc-muted)]">{current.artist}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggle}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+              >
+                {isPlaying ? "▮▮" : "►"}
+              </button>
+              <button
+                onClick={pause}
+                className="text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
+              >
+                Stop
+              </button>
+            </div>
+            <div className="flex-1 min-w-[220px]">
+              <div
+                className="h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                onClick={(e) => {
+                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                  seek((e.clientX - rect.left) / rect.width);
+                }}
+              >
+                <div
+                  className="h-full rounded-full bg-[var(--mpc-accent)]"
+                  style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
+                />
+              </div>
+              <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
+                <span>{Math.floor(currentTime)} s</span>
+                <span>{duration ? Math.floor(duration) : "--"} s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </Ctx.Provider>
+  );
+}

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
+import { useGlobalPlayer } from '@/components/global-player-provider';
 
 type Beat = {
   id: number;
@@ -213,8 +214,20 @@ export default function Home() {
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
+  const { play: gpPlay, toggle: gpToggle, pause: gpPause, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration, seek: gpSeek } = useGlobalPlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    setCurrentTrack(gpCurrent ? { ...gpCurrent } : null);
+    setIsPlaying(gpIsPlaying);
+    setCurrentTime(gpTime);
+    setDuration(gpDuration);
+  }, [gpCurrent, gpIsPlaying, gpTime, gpDuration]);
 
   const projectTrackProgress = (trackId: number | string) => {
     if (currentTrack?.id === trackId && duration) {
@@ -222,11 +235,6 @@ export default function Home() {
     }
     return 0;
   };
-
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -504,49 +512,15 @@ export default function Home() {
 
   const yearToShow = currentYear ?? 2025;
 
-  async function ensurePeaks(beat: Beat) {
-    if (peaksMap[beat.id] || !beat.audio_url) return;
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
-      const res = await fetch(beat.audio_url);
-      const arrayBuf = await res.arrayBuffer();
-      const audioBuf = await audioCtxRef.current.decodeAudioData(arrayBuf);
-      const data = audioBuf.getChannelData(0);
-      const bars = 120;
-      const samplesPerBar = Math.max(1, Math.floor(data.length / bars));
-      const peaks: number[] = [];
-      for (let i = 0; i < bars; i++) {
-        let sum = 0;
-        for (let j = 0; j < samplesPerBar; j++) {
-          const idx = i * samplesPerBar + j;
-          if (idx < data.length) {
-            sum += Math.abs(data[idx]);
-          }
-        }
-        peaks.push(sum / samplesPerBar);
-      }
-      const max = Math.max(...peaks, 1);
-      const normalized = peaks.map((p) => p / max);
-      setPeaksMap((prev) => ({ ...prev, [beat.id]: normalized }));
-    } catch (err) {
-      console.error('Chyba při generování waveformu:', err);
-    }
-  }
-
   function handlePlay(url: string | null | undefined, beat: { id: number; title: string; artist: string; cover_url?: string | null; user_id?: string | null }) {
     if (!url) {
-      setPlayerError('Pro tento beat není nahrán audio soubor.');
+      setPlayerError('Audio URL není k dispozici.');
       return;
     }
     setPlayerError(null);
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
-    }
-    void ensurePeaks(beat as Beat);
-    setCurrentTrack({ id: beat.id, title: beat.title, artist: beat.artist, user_id: beat.user_id, url, cover_url: beat.cover_url });
-    setIsPlaying(true);
+    const track = { id: beat.id, title: beat.title, artist: beat.artist, user_id: beat.user_id, url, cover_url: beat.cover_url };
+    setCurrentTrack(track);
+    gpPlay(track);
   }
 
   function handlePlayProjectTrack(project: Project, track: { id: number | string; title: string; url?: string | null }) {
@@ -555,30 +529,17 @@ export default function Home() {
       return;
     }
 
-    const isSame = currentTrack?.id === track.id;
-    // toggle pause/play pokud je to stejný track
-    if (isSame) {
-      setIsPlaying((prev) => !prev);
-      setPlayerError(null);
-      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(() => {});
-      }
-      return;
-    }
-
     setPlayerError(null);
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
-    }
-    setCurrentTrack({
+    const payload = {
       id: track.id,
       title: track.title,
       artist: project.author_name || project.title,
       user_id: project.user_id,
       url: track.url,
       cover_url: project.cover_url ?? undefined,
-    });
-    setIsPlaying(true);
+    };
+    setCurrentTrack(payload);
+    gpPlay(payload);
   }
 
   function renderTrackBars(seedA: number | string, seedB: number | string, bars = 50) {
@@ -606,10 +567,7 @@ export default function Home() {
   }
 
   function togglePlayPause() {
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
-    }
-    setIsPlaying((prev) => !prev);
+    gpToggle();
   }
 
   function playableBeats() {
@@ -617,170 +575,36 @@ export default function Home() {
   }
 
   function handleNext() {
-    const list = playableBeats();
-    if (!currentTrack || list.length === 0) return;
-    const idx = list.findIndex((b) => b.id === currentTrack.id);
-    const nextIndex = isShuffle
-      ? Math.floor(Math.random() * list.length)
-      : (idx + 1) % list.length;
-    const next = list[nextIndex];
-    if (next) {
-      setCurrentTrack({
-        id: next.id,
-        title: next.title,
-        artist: next.artist,
-        user_id: next.user_id,
-        url: next.audio_url as string,
-        cover_url: next.cover_url,
-      });
-      setIsPlaying(true);
-    }
+    return;
   }
 
   function handlePrev() {
-    const list = playableBeats();
-    if (!currentTrack || list.length === 0) return;
-    const idx = list.findIndex((b) => b.id === currentTrack.id);
-    const prevIndex = isShuffle
-      ? Math.floor(Math.random() * list.length)
-      : (idx - 1 + list.length) % list.length;
-    const prev = list[prevIndex];
-    if (prev) {
-      setCurrentTrack({
-        id: prev.id,
-        title: prev.title,
-        artist: prev.artist,
-        user_id: prev.user_id,
-        url: prev.audio_url as string,
-        cover_url: prev.cover_url,
-      });
-      setIsPlaying(true);
-    }
+    return;
   }
 
   function seekInTrack(beat: Beat, clientX: number, targetWidth: number) {
     if (!currentTrack || currentTrack.id !== beat.id || !duration) return;
     const ratio = Math.min(Math.max(clientX / targetWidth, 0), 1);
-    const el = audioRef.current;
-    if (!el) return;
-    const next = ratio * duration;
-    el.currentTime = next;
-    setCurrentTime(next);
-    setIsPlaying(true);
-    void el.play();
+    gpSeek(ratio);
   }
 
   function closePlayer() {
-    const el = audioRef.current;
-    if (el) {
-      el.pause();
-      el.currentTime = 0;
-    }
-    setIsPlaying(false);
+    gpPause();
     setCurrentTrack(null);
     setPlayerError(null);
   }
 
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    const run = async () => {
-      try {
-        if (isPlaying) {
-          await el.play();
-        } else {
-          el.pause();
-        }
-      } catch (err) {
-        console.error('Chyba při přehrávání audia:', err);
-        setPlayerError('Nepodařilo se spustit audio.');
-      }
-    };
-    if (currentTrack?.url) {
-      el.src = currentTrack.url;
-      run();
-    }
+    return;
   }, [isPlaying, currentTrack]);
 
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.volume = volume;
+    return;
   }, [volume]);
 
   // Waveform analyser setup
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    // jistota, že volume je nastavené i po změně tracku
-    el.volume = volume;
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new AudioContext();
-    }
-    if (!sourceRef.current) {
-      sourceRef.current = audioCtxRef.current.createMediaElementSource(el);
-    }
-    if (!analyserRef.current) {
-      const analyser = audioCtxRef.current.createAnalyser();
-      analyser.fftSize = 512;
-      analyserRef.current = analyser;
-      sourceRef.current.connect(analyserRef.current);
-      analyserRef.current.connect(audioCtxRef.current.destination);
-    }
-
-    const canvas = canvasRef.current;
-    const analyser = analyserRef.current;
-    if (!canvas || !analyser) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const draw = () => {
-      rafRef.current = requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
-
-      const dpr = window.devicePixelRatio || 1;
-      const w = canvas.clientWidth * dpr;
-      const h = canvas.clientHeight * dpr;
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-
-      ctx.clearRect(0, 0, w, h);
-
-      const barWidth = (w / bufferLength);
-      const el = audioRef.current;
-      const progress = el && el.duration ? el.currentTime / el.duration : 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = (dataArray[i] / 255) * (h * 0.75);
-        const x = i * barWidth;
-        const isPlayed = x / w <= progress;
-        const grad = ctx.createLinearGradient(0, h - barHeight, 0, h);
-        if (isPlayed) {
-          grad.addColorStop(0, '#00e096');
-          grad.addColorStop(1, '#00b07a');
-        } else {
-          grad.addColorStop(0, 'rgba(0,128,96,0.55)');
-          grad.addColorStop(1, 'rgba(0,128,96,0.25)');
-        }
-        ctx.fillStyle = grad;
-        ctx.fillRect(x, h - barHeight, barWidth * 0.85, barHeight);
-      }
-
-      // jemný baseline
-      ctx.fillStyle = 'rgba(0,128,96,0.55)';
-      ctx.fillRect(0, h - 3, w, 3);
-    };
-
-    draw();
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    return;
   }, [currentTrack, volume]);
 
   function formatTime(sec: number) {
@@ -1654,57 +1478,35 @@ export default function Home() {
                       <button
                         className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
                         onClick={() => {
-                          if (currentTrack?.id === beat.id) {
-                            togglePlayPause();
+                          if (gpCurrent?.id === beat.id) {
+                            gpToggle();
                           } else {
                             handlePlay(beat.audio_url, beat);
                           }
                         }}
                         disabled={!beat.audio_url}
                       >
-                        {currentTrack?.id === beat.id && isPlaying ? '▮▮' : '►'}
+                        {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
                       </button>
                       <div className="flex-1">
                         <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
                         <div className="mt-2 space-y-1">
                           <div
-                            className="overflow-hidden rounded-lg border border-white/10 bg-white/5 px-2 py-2 cursor-pointer"
-                            style={{ height: '50px' }}
+                            className="overflow-hidden rounded-full border border-white/10 bg-white/10 cursor-pointer h-3"
                             onClick={(e) => {
                               const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                               seekInTrack(beat, e.clientX - rect.left, rect.width);
                             }}
                           >
-                            <div className="flex h-full items-end gap-[2px] pointer-events-none">
-                              {peaksMap[beat.id]
-                                ? peaksMap[beat.id].map((p, idx) => {
-                                    const progress =
-                                      currentTrack?.id === beat.id && duration ? currentTime / duration : 0;
-                                    const played = idx / peaksMap[beat.id].length <= progress;
-                                    const height = Math.min(60, Math.max(14, p * 120));
-                                    return (
-                                      <span
-                                        key={idx}
-                                        className="w-[3px] rounded-sm"
-                                        style={{
-                                          height,
-                                          backgroundColor: played ? '#00e096' : 'rgba(0,128,96,0.4)',
-                                          boxShadow: played ? '0 4px 12px rgba(0,224,150,0.45)' : 'none',
-                                        }}
-                                      />
-                                    );
-                                  })
-                                : Array.from({ length: 32 }).map((_, idx) => (
-                                    <span
-                                      key={idx}
-                                      className="w-[3px] rounded-sm"
-                                      style={{
-                                        height: 16 + (idx % 5) * 6,
-                                        backgroundColor: 'rgba(0,128,96,0.35)',
-                                      }}
-                                    />
-                                  ))}
-                            </div>
+                            <div
+                              className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
+                              style={{
+                                width:
+                                  currentTrack?.id === beat.id && duration
+                                    ? `${(currentTime / duration) * 100}%`
+                                    : '0%',
+                              }}
+                            />
                           </div>
                           <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
                             <span>{currentTrack?.id === beat.id ? formatTime(currentTime) : '0:00'}</span>

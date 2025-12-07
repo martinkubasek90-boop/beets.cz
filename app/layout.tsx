@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Script from "next/script";
 import { NotificationBell } from "@/components/notification-bell";
+import { GlobalPlayerProvider } from "@/components/global-player-provider";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -39,14 +40,16 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="relative min-h-screen">
-            <div className="pointer-events-none fixed right-4 top-4 z-40">
-              <div className="pointer-events-auto">
-                <NotificationBell />
+          <GlobalPlayerProvider>
+            <div className="relative min-h-screen pb-24">
+              <div className="pointer-events-none fixed right-4 top-4 z-40">
+                <div className="pointer-events-auto">
+                  <NotificationBell />
+                </div>
               </div>
+              {children}
             </div>
-            {children}
-          </div>
+          </GlobalPlayerProvider>
         </ThemeProvider>
       </body>
     </html>
