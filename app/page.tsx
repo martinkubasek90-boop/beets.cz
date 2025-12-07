@@ -1066,12 +1066,18 @@ export default function Home() {
                           />
                         </div>
                         <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                          <span>0:00</span>
-                          <span>{duration ? formatTime(duration) : ''}</span>
+                          <span>0 s</span>
+                          <span>{duration ? formatTime(duration) : '-- s'}</span>
                         </div>
                       </div>
                     </div>
-                    {project.tracks && project.tracks.length > 1 && (
+                  </div>
+                </div>
+
+                {project.tracks && project.tracks.length > 1 && (
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
                       <button
                         onClick={() =>
                           setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
@@ -1090,48 +1096,45 @@ export default function Home() {
                           ▼
                         </span>
                       </button>
-                    )}
-                  </div>
-                </div>
-
-                {project.tracks && project.tracks.length > 1 && homeExpandedProjects[project.id] && (
-                  <div className="w-full space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                    <div className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
-                      {project.tracks.slice(1).map((t, i) => (
-                        <div
-                          key={t.id ?? `${project.id}-${i + 2}`}
-                          className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-3">
-                              <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
-                                {i + 2}.
-                              </span>
-                              <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
-                                {project.cover_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
-                                ) : (
-                                  <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
-                                )}
-                              </div>
-                              <div>
-                                <p className="text-sm font-semibold text-white">{t.title}</p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => handlePlayProjectTrack(project, t, i + 1)}
-                              className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
-                            >
-                              {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
-                            </button>
-                          </div>
-                          <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
-                            {renderTrackBars(project.id, t.id, 60)}
-                          </div>
-                        </div>
-                      ))}
                     </div>
+                    {homeExpandedProjects[project.id] && (
+                      <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                        {project.tracks.slice(1).map((t, i) => (
+                          <div
+                            key={t.id ?? `${project.id}-${i + 2}`}
+                            className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
+                                  {i + 2}.
+                                </span>
+                                <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
+                                  {project.cover_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-white">{t.title}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handlePlayProjectTrack(project, t, i + 1)}
+                                className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
+                              >
+                                {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
+                              </button>
+                            </div>
+                            <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
+                              {renderTrackBars(project.id, t.id, 60)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 </div>
