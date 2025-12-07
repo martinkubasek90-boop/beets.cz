@@ -20,6 +20,7 @@ type PlayerCtx = {
   toggle: () => void;
   pause: () => void;
   seek: (pct: number) => void;
+  setOnEnded: (fn: (() => void) | null) => void;
 };
 
 const Ctx = createContext<PlayerCtx | null>(null);
@@ -36,6 +37,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const onEndedRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -45,7 +47,12 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     if (!el) return;
     const onTime = () => setCurrentTime(el.currentTime || 0);
     const onMeta = () => setDuration(el.duration || 0);
-    const onEnd = () => setIsPlaying(false);
+    const onEnd = () => {
+      setIsPlaying(false);
+      if (onEndedRef.current) {
+        onEndedRef.current();
+      }
+    };
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("ended", onEnd);
@@ -92,8 +99,12 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     setCurrentTime(next);
   };
 
+  const setOnEnded = (fn: (() => void) | null) => {
+    onEndedRef.current = fn;
+  };
+
   const value = useMemo(
-    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek }),
+    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded }),
     [current, isPlaying, currentTime, duration]
   );
 

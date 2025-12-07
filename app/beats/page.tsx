@@ -25,7 +25,7 @@ const dummyBeats: Beat[] = [
 
 export default function BeatsPage() {
   const supabase = createClient();
-  const { play, pause, current, isPlaying, currentTime, duration } = useGlobalPlayer();
+  const { play, pause, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
@@ -90,6 +90,24 @@ export default function BeatsPage() {
       url: beat.audio_url,
       cover_url: beat.cover_url,
       user_id: beat.user_id,
+    });
+    const playable = filtered.filter((b) => b.audio_url);
+    if (playable.length <= 1) {
+      setOnEnded(null);
+      return;
+    }
+    setOnEnded(() => {
+      const idx = playable.findIndex((b) => b.id === beat.id);
+      if (idx === -1) {
+        setOnEnded(null);
+        return;
+      }
+      const next = playable.slice(idx + 1).find((b) => b.audio_url);
+      if (next) {
+        playBeat(next);
+      } else {
+        setOnEnded(null);
+      }
     });
   };
 

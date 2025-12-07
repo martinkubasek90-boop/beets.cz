@@ -214,7 +214,17 @@ export default function Home() {
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
-  const { play: gpPlay, toggle: gpToggle, pause: gpPause, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration, seek: gpSeek } = useGlobalPlayer();
+  const {
+    play: gpPlay,
+    toggle: gpToggle,
+    pause: gpPause,
+    current: gpCurrent,
+    isPlaying: gpIsPlaying,
+    currentTime: gpTime,
+    duration: gpDuration,
+    seek: gpSeek,
+    setOnEnded,
+  } = useGlobalPlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -512,7 +522,7 @@ export default function Home() {
 
   const yearToShow = currentYear ?? 2025;
 
-  function handlePlay(url: string | null | undefined, beat: { id: number; title: string; artist: string; cover_url?: string | null; user_id?: string | null }) {
+  function handlePlay(url: string | null | undefined, beat: { id: number | string; title: string; artist: string; cover_url?: string | null; user_id?: string | null }) {
     if (!url) {
       setPlayerError('Audio URL není k dispozici.');
       return;
@@ -521,9 +531,33 @@ export default function Home() {
     const track = { id: beat.id, title: beat.title, artist: beat.artist, user_id: beat.user_id, url, cover_url: beat.cover_url };
     setCurrentTrack(track);
     gpPlay(track);
+    const playable = beats.filter((b) => b.audio_url);
+    if (playable.length <= 1) {
+      setOnEnded(null);
+      return;
+    }
+    setOnEnded(() => {
+      const idx = playable.findIndex((b) => b.id === beat.id);
+      if (idx === -1) {
+        setOnEnded(null);
+        return;
+      }
+      for (let i = idx + 1; i < playable.length; i++) {
+        const next = playable[i];
+        if (next.audio_url) {
+          handlePlay(next.audio_url, next);
+          return;
+        }
+      }
+      setOnEnded(null);
+    });
   }
 
-  function handlePlayProjectTrack(project: Project, track: { id: number | string; title: string; url?: string | null }) {
+  function handlePlayProjectTrack(
+    project: Project,
+    track: { id: number | string; title: string; url?: string | null },
+    idx?: number
+  ) {
     if (!track.url) {
       setPlayerError('Pro tuto skladbu chybí audio URL.');
       return;
@@ -540,6 +574,24 @@ export default function Home() {
     };
     setCurrentTrack(payload);
     gpPlay(payload);
+    const tracksList = project.tracks || [];
+    const startIdx =
+      typeof idx === 'number' ? idx : tracksList.findIndex((t) => (t as any).id === track.id);
+    if (startIdx === -1 || tracksList.length <= startIdx + 1) {
+      setOnEnded(null);
+      return;
+    }
+    setOnEnded(() => {
+      for (let i = startIdx + 1; i < tracksList.length; i++) {
+        const next = tracksList[i];
+        const nextUrl = (next as any).url as string | undefined;
+        if (nextUrl) {
+          handlePlayProjectTrack(project, { id: next.id ?? `${project.id}-${i + 1}`, title: next.title, url: nextUrl }, i);
+          return;
+        }
+      }
+      setOnEnded(null);
+    });
   }
 
   function renderTrackBars(seedA: number | string, seedB: number | string, bars = 50) {
@@ -995,7 +1047,7 @@ export default function Home() {
                       <div className="mx-auto flex max-w-3xl items-center gap-3">
                         <button
                           onClick={() =>
-                            project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0]) : null
+                            project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
                           }
                           className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
                         >
@@ -1047,7 +1099,7 @@ export default function Home() {
                                 </div>
                               </div>
                               <button
-                                onClick={() => handlePlayProjectTrack(project, t)}
+                                onClick={() => handlePlayProjectTrack(project, t, i)}
                                 className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
                               >
                                 {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}

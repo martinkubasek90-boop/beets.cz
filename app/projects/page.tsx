@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { createClient } from '../../lib/supabase/client';
 import { useGlobalPlayer } from '@/components/global-player-provider';
 
+type ProjectTrack = { name: string; url?: string | null; path?: string | null };
+
 type Project = {
   id: number;
   title: string;
@@ -14,9 +16,9 @@ type Project = {
   author_name?: string | null;
   project_url?: string | null;
   access_mode?: 'public' | 'request' | 'private';
-  tracks_json?: Array<{ name: string; url?: string; path?: string }>;
+  tracks_json?: ProjectTrack[];
   // Fallback pro starší sloupec "tracks"
-  tracks?: Array<{ name: string; url: string }>;
+  tracks?: ProjectTrack[];
 };
 
 type RequestAccessProps = {
@@ -61,7 +63,16 @@ export default function ProjectsPage() {
   const [requesting, setRequesting] = useState<Record<number, boolean>>({});
   const [currentTrack, setCurrentTrack] = useState<{ projectId: number; name: string; url: string } | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<number, boolean>>({});
-  const { play: gpPlay, toggle: gpToggle, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration, seek: gpSeek } = useGlobalPlayer();
+  const {
+    play: gpPlay,
+    toggle: gpToggle,
+    current: gpCurrent,
+    isPlaying: gpIsPlaying,
+    currentTime: gpTime,
+    duration: gpDuration,
+    seek: gpSeek,
+    setOnEnded,
+  } = useGlobalPlayer();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -71,11 +82,36 @@ export default function ProjectsPage() {
     loadUser();
   }, [supabase]);
 
-  const playTrack = (projectId: number, name: string, url?: string, cover?: string | null, author?: string | null, user?: string | null) => {
+  const playTrack = (
+    project: Project,
+    tracks: ProjectTrack[],
+    idx: number
+  ) => {
+    const track = tracks[idx];
+    if (!track) return;
+    const url = track.url || (track.path ? publicUrlFromPath(track.path) : '');
     if (!url) return;
-    const track = { id: `project-${projectId}-${name}`, title: name, artist: author || 'Neznámý', url, cover_url: cover ?? undefined, user_id: user ?? undefined };
-    setCurrentTrack({ projectId, name, url });
-    gpPlay(track);
+    const name = track.name || `Track ${idx + 1}`;
+    const payload = {
+      id: `project-${project.id}-${idx + 1}`,
+      title: name,
+      artist: project.author_name || 'Neznámý',
+      url,
+      cover_url: project.cover_url ?? undefined,
+      user_id: project.user_id ?? undefined,
+    };
+    setCurrentTrack({ projectId: project.id, name, url });
+    setOnEnded(() => {
+      for (let i = idx + 1; i < tracks.length; i++) {
+        const nextUrl = tracks[i].url || (tracks[i].path ? publicUrlFromPath(tracks[i].path) : '');
+        if (nextUrl) {
+          playTrack(project, tracks, i);
+          return;
+        }
+      }
+      setOnEnded(null);
+    });
+    gpPlay(payload);
   };
 
   const progressPercent =
@@ -566,16 +602,7 @@ export default function ProjectsPage() {
                                           <span>{t.name || `Track ${idx + 1}`}</span>
                                         </div>
                                         <button
-                                          onClick={() =>
-                                            playTrack(
-                                              project.id,
-                                              t.name || `Track ${idx + 1}`,
-                                              t.url || (t.path ? publicUrlFromPath(t.path) : undefined),
-                                              project.cover_url,
-                                              project.author_name,
-                                              project.user_id ?? undefined
-                                            )
-                                          }
+                                          onClick={() => playTrack(project, tracks, idx)}
                                           disabled={!t.url && !t.path}
                                           className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
                                         >
