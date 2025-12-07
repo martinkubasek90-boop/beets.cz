@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { FireButton } from "./fire-button";
 
 type Track = {
   id: string | number;
