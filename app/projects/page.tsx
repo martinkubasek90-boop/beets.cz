@@ -625,10 +625,10 @@ export default function ProjectsPage() {
 
                         {expandedProjects[project.id] && (
                           <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
-                            {tracks.length > 1 ? (
+                            {tracks.length > 0 ? (
                               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                                {tracks.slice(1).map((t, idx) => {
-                                  const listIdx = idx + 1; // odpovídá původnímu pořadí po prvním tracku
+                                {tracks.map((t, idx) => {
+                                  const listIdx = idx; // index v celém tracklistu
                                   const isCurrent =
                                     currentTrack?.projectId === project.id && currentTrack.url === t.url;
                                   const progress = trackProgress(project.id, t.url || undefined);
@@ -681,7 +681,7 @@ export default function ProjectsPage() {
                                 })}
                               </div>
                             ) : (
-                              <p className="text-[12px] text-[var(--mpc-muted)]">Další skladby nejsou k dispozici.</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
                             )}
                           </div>
                         )}
