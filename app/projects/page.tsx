@@ -59,9 +59,10 @@ export default function ProjectsPage() {
       setLoading(true);
       try {
         let rows: any[] = [];
+        // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks")
         const { data, error: err } = await supabase
           .from("projects")
-          .select("id,title,description,cover_url,user_id,project_url,tracks_json,tracks,access_mode,author_name,year")
+          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,author_name,year")
           .order("id", { ascending: false });
         if (err) throw err;
         rows = data ?? [];
@@ -96,7 +97,6 @@ export default function ProjectsPage() {
         const normalized = await Promise.all(
           rows.map(async (p) => {
             const rawJson = p.tracks_json;
-            const rawLegacy = p.tracks;
             const parsedJson =
               Array.isArray(rawJson) || typeof rawJson === "string"
                 ? (() => {
@@ -108,18 +108,7 @@ export default function ProjectsPage() {
                     }
                   })()
                 : [];
-            const parsedLegacy =
-              Array.isArray(rawLegacy) || typeof rawLegacy === "string"
-                ? (() => {
-                    try {
-                      const parsed = Array.isArray(rawLegacy) ? rawLegacy : JSON.parse(rawLegacy);
-                      return Array.isArray(parsed) ? parsed : [];
-                    } catch {
-                      return [];
-                    }
-                  })()
-                : [];
-            const tracksSource = parsedJson.length ? parsedJson : parsedLegacy;
+            const tracksSource = parsedJson.length ? parsedJson : [];
             const normalizedTracks: ProjectTrack[] = tracksSource.map((t: any, idx: number) => ({
               name: t?.name || t?.title || `Track ${idx + 1}`,
               url: t?.url || t?.audio_url || t?.file_url || null,
