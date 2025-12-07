@@ -62,7 +62,7 @@ export default function ProjectsPage() {
         // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks")
         const { data, error: err } = await supabase
           .from("projects")
-          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,author_name,year")
+          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,year")
           .order("id", { ascending: false });
         if (err) throw err;
         rows = data ?? [];
@@ -133,7 +133,7 @@ export default function ProjectsPage() {
 
             return {
               ...p,
-              author_name: p.user_id ? profilesMap[p.user_id] || p.author_name || null : p.author_name || null,
+              author_name: p.user_id ? profilesMap[p.user_id] || null : null,
               tracks_json: signedTracks,
               access_mode: mode,
               hasAccess,
