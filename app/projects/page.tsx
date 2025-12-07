@@ -37,6 +37,8 @@ export default function ProjectsPage() {
   const [requesting, setRequesting] = useState<Record<number, boolean>>({});
   const [myRequests, setMyRequests] = useState<Record<number, "pending" | "approved" | "denied">>({});
   const [myGrants, setMyGrants] = useState<Set<number>>(new Set());
+  const [search, setSearch] = useState("");
+  const [authorFilter, setAuthorFilter] = useState<string>("all");
 
   const { play, toggle, seek, current, isPlaying, currentTime, duration } = useGlobalPlayer();
 
@@ -157,6 +159,20 @@ export default function ProjectsPage() {
     [projects]
   );
 
+  const authorOptions = useMemo(() => {
+    return Array.from(new Set(projectsVisible.map((p) => (p.author_name || "").trim()).filter(Boolean)));
+  }, [projectsVisible]);
+
+  const filteredProjects = useMemo(() => {
+    return projectsVisible.filter((p) => {
+      const haystack = `${p.title} ${p.description || ""}`.toLowerCase();
+      const matchesSearch = haystack.includes(search.toLowerCase().trim());
+      const matchesAuthor =
+        authorFilter === "all" || (p.author_name || "").toLowerCase() === authorFilter.toLowerCase();
+      return matchesSearch && matchesAuthor;
+    });
+  }, [projectsVisible, search, authorFilter]);
+
   const handlePlay = (project: Project, track: ProjectTrack, idx: number) => {
     if (!track.url) return;
     const trackId = `project-${project.id}-${idx}`;
@@ -214,8 +230,29 @@ export default function ProjectsPage() {
           </div>
         )}
 
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Hledat v názvu nebo popisu…"
+            className="w-full max-w-md rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          />
+          <select
+            value={authorFilter}
+            onChange={(e) => setAuthorFilter(e.target.value)}
+            className="rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          >
+            <option value="all">Všichni autoři</option>
+            {authorOptions.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
-          {projectsVisible.map((project) => {
+          {filteredProjects.map((project) => {
             const tracks = project.tracks_json && project.tracks_json.length ? project.tracks_json : [];
             const primaryTrack = tracks[0];
             const isRequest = project.access_mode === "request";
