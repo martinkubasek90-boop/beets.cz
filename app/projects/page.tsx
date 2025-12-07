@@ -230,35 +230,22 @@ export default function ProjectsPage() {
             const projectUrl = (p as any).project_url || null;
             const accessMode = (p as any).access_mode || 'public';
 
-            const parsedJson =
-              Array.isArray(rawJson)
-                ? rawJson
-                : typeof rawJson === 'string'
-                  ? (() => {
-                      try {
-                        const parsed = JSON.parse(rawJson);
-                        return Array.isArray(parsed) ? parsed : null;
-                      } catch {
-                        return null;
-                      }
-                    })()
-                  : null;
+            const coerceTracks = (raw: any): any[] | null => {
+              if (Array.isArray(raw)) return raw;
+              if (raw && typeof raw === 'object' && Array.isArray(raw.tracks)) return raw.tracks;
+              if (typeof raw === 'string') {
+                try {
+                  const parsed = JSON.parse(raw);
+                  if (Array.isArray(parsed)) return parsed;
+                  if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tracks)) return parsed.tracks;
+                } catch {
+                  return null;
+                }
+              }
+              return null;
+            };
 
-            const parsedLegacy =
-              Array.isArray(rawLegacy)
-                ? rawLegacy
-                : typeof rawLegacy === 'string'
-                  ? (() => {
-                      try {
-                        const parsed = JSON.parse(rawLegacy);
-                        return Array.isArray(parsed) ? parsed : null;
-                      } catch {
-                        return null;
-                      }
-                    })()
-                  : null;
-
-            const tracksSource = parsedJson ?? parsedLegacy ?? [];
+            const tracksSource = coerceTracks(rawJson) ?? coerceTracks(rawLegacy) ?? [];
             const normalizedTracks = Array.isArray(tracksSource)
               ? tracksSource.map((t: any, idx: number) => ({
                   name: t?.name || t?.title || t?.track_name || `Track ${idx + 1}`,
