@@ -214,6 +214,7 @@ export default function Home() {
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
+  const [homeExpandedProjects, setHomeExpandedProjects] = useState<Record<number | string, boolean>>({});
   const {
     play: gpPlay,
     toggle: gpToggle,
