@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '../../lib/supabase/client';
+import { useGlobalPlayer } from '@/components/global-player-provider';
 
 type Project = {
   id: number;
@@ -59,30 +60,8 @@ export default function ProjectsPage() {
   const [myGrants, setMyGrants] = useState<Set<number>>(new Set());
   const [requesting, setRequesting] = useState<Record<number, boolean>>({});
   const [currentTrack, setCurrentTrack] = useState<{ projectId: number; name: string; url: string } | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [expandedProjects, setExpandedProjects] = useState<Record<number, boolean>>({});
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    if (!audioRef.current && typeof window !== 'undefined') {
-      audioRef.current = new Audio();
-    }
-    const el = audioRef.current;
-    if (!el) return;
-    const onTime = () => setCurrentTime(el.currentTime || 0);
-    const onMeta = () => setDuration(el.duration || 0);
-    const onEnd = () => setIsPlaying(false);
-    el.addEventListener('timeupdate', onTime);
-    el.addEventListener('loadedmetadata', onMeta);
-    el.addEventListener('ended', onEnd);
-    return () => {
-      el.removeEventListener('timeupdate', onTime);
-      el.removeEventListener('loadedmetadata', onMeta);
-      el.removeEventListener('ended', onEnd);
-    };
-  }, []);
+  const { play: gpPlay, toggle: gpToggle, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration, seek: gpSeek } = useGlobalPlayer();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -92,34 +71,21 @@ export default function ProjectsPage() {
     loadUser();
   }, [supabase]);
 
-  const playTrack = (projectId: number, name: string, url?: string) => {
-    if (!audioRef.current || !url) return;
-    // Toggle if same track
-    if (currentTrack && currentTrack.projectId === projectId && currentTrack.url === url) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      }
-      return;
-    }
+  const playTrack = (projectId: number, name: string, url?: string, cover?: string | null, author?: string | null, user?: string | null) => {
+    if (!url) return;
+    const track = { id: `project-${projectId}-${name}`, title: name, artist: author || 'Neznámý', url, cover_url: cover ?? undefined, user_id: user ?? undefined };
     setCurrentTrack({ projectId, name, url });
-    audioRef.current.src = url;
-    audioRef.current.currentTime = 0;
-    audioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
+    gpPlay(track);
   };
 
   const progressPercent =
-    currentTrack && duration > 0 ? Math.min((currentTime / duration) * 100, 100) : 0;
+    gpCurrent && currentTrack && gpDuration > 0 && gpCurrent.id === `project-${currentTrack.projectId}-${currentTrack.name}`
+      ? Math.min((gpTime / gpDuration) * 100, 100)
+      : 0;
 
   const trackProgress = (projectId: number, url?: string) => {
     if (!currentTrack || !url) return 0;
-    if (currentTrack.projectId === projectId && currentTrack.url === url && duration > 0) {
+    if (currentTrack.projectId === projectId && currentTrack.url === url && gpDuration > 0) {
       return progressPercent;
     }
     return 0;
@@ -134,6 +100,11 @@ export default function ProjectsPage() {
     return `${m}:${s}`;
   };
 
+  const publicUrlFromPath = (path?: string | null) => {
+    if (!path) return '';
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`;
+  };
+
   useEffect(() => {
     const resolveSignedUrl = async (path?: string | null) => {
       if (!path) return '';
@@ -143,11 +114,6 @@ export default function ProjectsPage() {
         return '';
       }
       return data?.signedUrl || '';
-    };
-
-    const publicUrlFromPath = (path?: string | null) => {
-      if (!path) return '';
-      return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`;
     };
 
     const load = async () => {
@@ -600,11 +566,20 @@ export default function ProjectsPage() {
                                           <span>{t.name || `Track ${idx + 1}`}</span>
                                         </div>
                                         <button
-                                          onClick={() => playTrack(project.id, t.name || `Track ${idx + 1}`, t.url)}
-                                          disabled={!t.url}
+                                          onClick={() =>
+                                            playTrack(
+                                              project.id,
+                                              t.name || `Track ${idx + 1}`,
+                                              t.url || (t.path ? publicUrlFromPath(t.path) : undefined),
+                                              project.cover_url,
+                                              project.author_name,
+                                              project.user_id ?? undefined
+                                            )
+                                          }
+                                          disabled={!t.url && !t.path}
                                           className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
                                         >
-                                          {isCurrent && isPlaying ? '▮▮' : '►'}
+                                          {isCurrent && gpIsPlaying ? '▮▮' : '►'}
                                         </button>
                                       </div>
                                       <div
@@ -613,11 +588,7 @@ export default function ProjectsPage() {
                                           if (!isCurrent || !t.url) return;
                                           const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
                                           const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
-                                          if (audioRef.current && duration > 0) {
-                                            const next = ratio * duration;
-                                            audioRef.current.currentTime = next;
-                                            setCurrentTime(next);
-                                          }
+                                          gpSeek(ratio);
                                         }}
                                       >
                                         <div
@@ -627,8 +598,14 @@ export default function ProjectsPage() {
                                       </div>
                                       {isCurrent && (
                                         <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                          <span>{formatTime(currentTime)}</span>
-                                          <span>{formatTime(duration)}</span>
+                                          <span>
+                                            {currentTrack?.projectId === project.id ? formatTime(gpTime) : '0:00'}
+                                          </span>
+                                          <span>
+                                            {currentTrack?.projectId === project.id && gpDuration
+                                              ? formatTime(gpDuration)
+                                              : '--:--'}
+                                          </span>
                                         </div>
                                       )}
                                     </div>

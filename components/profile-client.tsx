@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useState,
-  FormEvent,
-  ChangeEvent,
-  useRef,
-  useMemo,
-} from 'react';
+import { useEffect, useState, FormEvent, ChangeEvent, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -17,6 +10,7 @@ import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
 import { FireButton } from './fire-button';
 import { NotificationBell } from './notification-bell';
+import { useGlobalPlayer } from './global-player-provider';
 
 type Profile = {
   display_name: string;
@@ -295,11 +289,7 @@ export default function ProfileClient() {
   const [projectEditCover, setProjectEditCover] = useState<{ url?: string; file?: File | null }>({});
   const [projectSaving, setProjectSaving] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
-  const [isPlayingBeat, setIsPlayingBeat] = useState(false);
   const [playerMessage, setPlayerMessage] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [beatTime, setBeatTime] = useState(0);
-  const [beatDuration, setBeatDuration] = useState(0);
   const [openBeatMenuId, setOpenBeatMenuId] = useState<number | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -307,6 +297,7 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const { play: gpPlay, toggle: gpToggle, seek: gpSeek, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration } = useGlobalPlayer();
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
@@ -912,16 +903,21 @@ function handleFieldChange(field: keyof Profile, value: string) {
       return;
     }
     setPlayerMessage(null);
-
+    const trackId = `beat-${beat.id}`;
     // pokud kliknu na stejný beat, toggle play/pause
-    if (currentBeat?.id === beat.id) {
-      setIsPlayingBeat((prev) => !prev);
-    } else {
+    if (gpCurrent?.id === trackId) {
+      gpToggle();
       setCurrentBeat(beat);
-      setBeatTime(0);
-      setBeatDuration(0);
-      setIsPlayingBeat(true);
+      return;
     }
+    setCurrentBeat(beat);
+    gpPlay({
+      id: trackId,
+      title: beat.title,
+      artist: profile.display_name || 'Neznámý',
+      url: beat.audio_url,
+      cover_url: beat.cover_url ?? undefined,
+    });
   }
 
   async function handleDeleteBeat(id: number) {
@@ -941,15 +937,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
   }
 
   function seekBeat(beat: BeatItem, clientX: number, width: number) {
-    if (!currentBeat || currentBeat.id !== beat.id || !beatDuration) return;
+    if (!currentBeat || currentBeat.id !== beat.id || !gpDuration) return;
     const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    const el = audioRef.current;
-    if (!el) return;
-    const next = ratio * beatDuration;
-    el.currentTime = next;
-    setBeatTime(next);
-    setIsPlayingBeat(true);
-    void el.play();
+    gpSeek(ratio);
   }
 
   function startEditBeat(beat: BeatItem) {
@@ -1514,24 +1504,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el || !currentBeat?.audio_url) return;
-    el.src = currentBeat.audio_url;
-    const playAudio = async () => {
-      try {
-        if (isPlayingBeat) {
-          await el.play();
-        } else {
-          el.pause();
-        }
-      } catch (err) {
-        console.error('Audio play error:', err);
-        setPlayerMessage('Nepodařilo se spustit audio.');
-      }
-    };
-    playAudio();
-  }, [currentBeat, isPlayingBeat]);
+  // Beat preview používá globální přehrávač, lokální <audio> není potřeba
 
   async function handleSignOut() {
     try {
@@ -1568,16 +1541,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
-      <audio
-        ref={audioRef}
-        className="hidden"
-        onEnded={() => setIsPlayingBeat(false)}
-        onPause={() => setIsPlayingBeat(false)}
-        onPlay={() => setIsPlayingBeat(true)}
-        onTimeUpdate={(e) => setBeatTime((e.target as HTMLAudioElement).currentTime)}
-        onLoadedMetadata={(e) => setBeatDuration((e.target as HTMLAudioElement).duration || 0)}
-      />
-
       {/* Hero / cover */}
       <section
         className="relative overflow-hidden border-b border-[var(--mpc-dark)]"
@@ -1728,9 +1691,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <button
                           onClick={() => handlePlayBeat(beat)}
                           disabled={!beat.audio_url}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${currentBeat?.id === beat.id && isPlayingBeat ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'} disabled:opacity-40`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${
+                            currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'
+                          } disabled:opacity-40`}
                         >
-                          {currentBeat?.id === beat.id && isPlayingBeat ? '▮▮' : '▶'}
+                          {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? '▮▮' : '▶'}
                         </button>
                         <div className="relative">
                           <button
@@ -1839,34 +1804,30 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     </div>
 
                       {/* pseudo-waveform */}
-                      <div
-                        className="mt-3 h-[70px] cursor-pointer overflow-hidden rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
-                        onClick={(e) => {
-                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                          seekBeat(beat, e.clientX - rect.left, rect.width);
-                        }}
-                      >
                         <div
-                          className="h-full"
-                          style={{
-                            width:
-                              currentBeat?.id === beat.id && beatDuration
-                                ? `${Math.min((beatTime / beatDuration) * 100, 100)}%`
-                                : '0%',
-                            background:
-                              'repeating-linear-gradient(to right, rgba(0,86,63,0.95) 0, rgba(0,86,63,0.95) 6px, rgba(255,255,255,0.18) 6px, rgba(255,255,255,0.18) 12px)',
-                            boxShadow: '0 4px 12px rgba(0,224,150,0.35)',
-                            transition: 'width 0.1s linear',
+                          className="mt-3 h-3 cursor-pointer overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
+                          onClick={(e) => {
+                            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                            seekBeat(beat, e.clientX - rect.left, rect.width);
                           }}
-                        />
-                      </div>
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
+                            style={{
+                              width:
+                                currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpDuration
+                                  ? `${Math.min((gpTime / gpDuration) * 100, 100)}%`
+                                  : '0%',
+                            }}
+                          />
+                        </div>
 
                       <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
                         <span>{beat.audio_url ? 'Audio připojeno' : 'Bez audia'}</span>
                         {currentBeat?.id === beat.id && playerMessage && (
                           <span className="text-[var(--mpc-accent)]">{playerMessage}</span>
                         )}
-                        {currentBeat?.id === beat.id && isPlayingBeat && (
+                        {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying && (
                           <span className="rounded-full bg-[var(--mpc-accent)]/15 px-2 py-[2px] text-[10px] text-[var(--mpc-accent)]">
                             Přehrává se
                           </span>

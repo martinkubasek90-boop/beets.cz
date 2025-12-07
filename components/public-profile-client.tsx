@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, FormEvent, useRef } from 'react';
+import { useEffect, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
+import { useGlobalPlayer } from './global-player-provider';
 
 type PublicProfile = {
   display_name: string;
@@ -86,12 +87,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
   const [projectRequestError, setProjectRequestError] = useState<string | null>(null);
   const [projectRequestInfo, setProjectRequestInfo] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [playerError, setPlayerError] = useState<string | null>(null);
+  const { play: gpPlay, toggle: gpToggle, seek: gpSeek, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration } = useGlobalPlayer();
 
   useEffect(() => {
     const loadData = async () => {
@@ -390,15 +388,21 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       return;
     }
     setPlayerError(null);
-    setCurrentTime(0);
-    setDuration(0);
+    const track = {
+      id: item.id,
+      title: item.title,
+      artist: item.subtitle || profile?.display_name || 'Neznámý',
+      url: item.url,
+      cover_url: item.cover_url ?? undefined,
+      user_id: profileId,
+    };
     setCurrentTrack(item);
-    setIsPlaying((prev) => {
-      if (currentTrack && currentTrack.id === item.id) {
-        return !prev;
-      }
-      return true;
-    });
+    // toggle pokud jde o stejný track
+    if (gpCurrent?.id === item.id) {
+      gpToggle();
+    } else {
+      gpPlay(track);
+    }
   }
 
   const requestProjectAccess = async (projectId: string | number) => {
@@ -432,34 +436,25 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   };
 
   function seekInCurrent(clientX: number, width: number) {
-    const el = audioRef.current;
-    if (!el || !duration) return;
+    if (!gpDuration) return;
     const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    const next = ratio * duration;
-    el.currentTime = next;
-    setCurrentTime(next);
-    setIsPlaying(true);
-    void el.play();
+    gpSeek(ratio);
   }
 
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el || !currentTrack) return;
-    el.src = currentTrack.url;
-    const run = async () => {
-      try {
-        if (isPlaying) {
-          await el.play();
-        } else {
-          el.pause();
-        }
-      } catch (err) {
-        console.error('Audio play error:', err);
-        setPlayerError('Nepodařilo se spustit audio.');
-      }
-    };
-    run();
-  }, [currentTrack, isPlaying]);
+    if (!gpCurrent) {
+      setCurrentTrack(null);
+      return;
+    }
+    setCurrentTrack({
+      id: String(gpCurrent.id),
+      title: gpCurrent.title,
+      source: 'beat',
+      url: gpCurrent.url,
+      cover_url: gpCurrent.cover_url,
+      subtitle: gpCurrent.artist,
+    });
+  }, [gpCurrent]);
 
   function formatTime(sec: number) {
     if (!sec || Number.isNaN(sec)) return '0:00';
@@ -473,19 +468,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.subtitle || profile?.display_name || null;
-  const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
+  const progressRatio =
+    gpCurrent && currentTrack && gpCurrent.id === currentTrack.id && gpDuration
+      ? Math.min(gpTime / gpDuration, 1)
+      : 0;
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
-      <audio
-        ref={audioRef}
-        className="hidden"
-        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
-        onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration || 0)}
-        onEnded={() => setIsPlaying(false)}
-        onPause={() => setIsPlaying(false)}
-        onPlay={() => setIsPlaying(true)}
-      />
       {playerError && (
         <div className="fixed top-3 right-3 z-50 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-sm text-red-100 shadow-lg">
           {playerError}
@@ -606,8 +595,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           ) : (
             <div className="space-y-3">
               {beats.map((beat) => {
-                const isCurrent = currentTrack?.id === `beat-${beat.id}`;
-                const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+                const isCurrent = gpCurrent?.id === `beat-${beat.id}`;
+                const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
                 return (
                   <div
                     key={beat.id}
@@ -650,7 +639,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                           disabled={!beat.audio_url}
                           className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                         >
-                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                          {isCurrent && gpIsPlaying ? '▮▮ Pauza' : '► Přehrát'}
                         </button>
                       </div>
                       <div
@@ -668,8 +657,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       </div>
                       {isCurrent && (
                         <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
+                          <span>{isCurrent ? formatTime(gpTime) : '0:00'}</span>
+                          <span>{isCurrent && gpDuration ? formatTime(gpDuration) : '--:--'}</span>
                         </div>
                       )}
                     </div>
@@ -823,8 +812,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                             <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                               {project.tracks_json.map((t, idx) => {
                                 const trackId = `project-${project.id}-${idx}`;
-                                const isCurrent = currentTrack?.id === trackId;
-                                const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+                                const isCurrent = gpCurrent?.id === trackId;
+                                const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
                                 return (
                                   <div
                                     key={trackId}
@@ -847,28 +836,28 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                             subtitle: profile?.display_name || null,
                                           })
                                         }
-                                        className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
-                                      >
-                                        {isCurrent && isPlaying ? '▮▮' : '►'}
-                                      </button>
-                                    </div>
-                                    <div
-                                      className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                                      onClick={(e) => {
-                                        if (!isCurrent) return;
-                                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                        seekInCurrent(e.clientX - rect.left, rect.width);
-                                      }}
-                                    >
+                                       className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
+                                     >
+                                        {isCurrent && gpIsPlaying ? '▮▮' : '►'}
+                                     </button>
+                                   </div>
                                       <div
-                                        className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                                        style={{ width: progressPct }}
+                                        className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                                        onClick={(e) => {
+                                          if (!isCurrent) return;
+                                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                          seekInCurrent(e.clientX - rect.left, rect.width);
+                                        }}
+                                      >
+                                        <div
+                                          className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                                          style={{ width: progressPct }}
                                       />
                                     </div>
                                     {isCurrent && (
                                       <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                                        <span>{formatTime(currentTime)}</span>
-                                        <span>{formatTime(duration)}</span>
+                                        <span>{formatTime(gpTime)}</span>
+                                        <span>{gpDuration ? formatTime(gpDuration) : '--:--'}</span>
                                       </div>
                                     )}
                                   </div>
@@ -1014,7 +1003,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         disabled={!col.audio_url}
                         className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                       >
-                        {currentTrack?.id === `collab-${col.id}` && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                        {gpCurrent?.id === `collab-${col.id}` && gpIsPlaying ? '▮▮ Pauza' : '► Přehrát'}
                       </button>
                     </div>
                     {col.audio_url && (
@@ -1029,12 +1018,12 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         className="h-full"
                         style={{
                           width:
-                            currentTrack?.id === `collab-${col.id}` && duration
-                              ? `${Math.min((currentTime / duration) * 100, 100)}%`
+                            gpCurrent?.id === `collab-${col.id}` && gpDuration
+                              ? `${Math.min((gpTime / gpDuration) * 100, 100)}%`
                               : '0%',
                           background:
                             'repeating-linear-gradient(to right, rgba(0,86,63,0.95) 0, rgba(0,86,63,0.95) 6px, rgba(255,255,255,0.18) 6px, rgba(255,255,255,0.18) 12px)',
-                          boxShadow: currentTrack?.id === `collab-${col.id}` ? '0 4px 12px rgba(0,224,150,0.35)' : 'none',
+                          boxShadow: gpCurrent?.id === `collab-${col.id}` ? '0 4px 12px rgba(0,224,150,0.35)' : 'none',
                           transition: 'width 0.1s linear',
                         }}
                       />
@@ -1131,15 +1120,15 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 />
               </div>
               <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                <span>{formatTime(currentTime)}</span>
-                <span>{formatTime(duration)}</span>
+                <span>{formatTime(gpTime)}</span>
+                <span>{gpDuration ? formatTime(gpDuration) : '--:--'}</span>
               </div>
             </div>
             <button
-              onClick={() => setIsPlaying((prev) => !prev)}
+              onClick={() => gpToggle()}
               className="grid h-12 w-12 place-items-center rounded-full bg-[var(--mpc-accent)] text-lg text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
             >
-              {isPlaying ? '▮▮' : '►'}
+              {gpIsPlaying ? '▮▮' : '►'}
             </button>
           </div>
         </div>
