@@ -144,7 +144,12 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 </div>
               )}
               <div className="min-w-[140px]">
-                <p className="font-semibold text-white leading-tight">{current.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-white leading-tight">{current.title}</p>
+                  {fireItemId && (
+                    <FireButton itemType={derivedItemType} itemId={fireItemId} className="scale-90" />
+                  )}
+                </div>
                 <p className="text-[11px] text-[var(--mpc-muted)]">{current.artist}</p>
               </div>
             </div>
@@ -194,11 +199,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 <span>{duration ? Math.floor(duration) : "--"} s</span>
               </div>
             </div>
-            {fireItemId && (
-              <div className="ml-auto">
-                <FireButton itemType={derivedItemType} itemId={fireItemId} />
-              </div>
-            )}
           </div>
         </div>
       )}
