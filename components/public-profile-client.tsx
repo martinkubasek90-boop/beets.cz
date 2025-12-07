@@ -881,7 +881,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                 }
                                 className="text-[11px] text-[var(--mpc-accent)] hover:text-white disabled:opacity-50"
                               >
-                                {currentTrack?.id === `project-${project.id}` && isPlaying ? '▮▮' : '►'}
+                                {gpCurrent?.id === `project-${project.id}` && gpIsPlaying ? '▮▮' : '►'}
                               </button>
                             </div>
                           ) : (
