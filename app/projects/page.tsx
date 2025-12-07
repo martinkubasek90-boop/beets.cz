@@ -230,28 +230,35 @@ export default function ProjectsPage() {
             const projectUrl = (p as any).project_url || null;
             const accessMode = (p as any).access_mode || 'public';
 
-            const parseArr = (raw: any): any[] | null => {
-              if (Array.isArray(raw)) return raw;
-              if (typeof raw === 'string') {
-                try {
-                  const parsed = JSON.parse(raw);
-                  if (Array.isArray(parsed)) return parsed;
-                  if (parsed && typeof parsed === 'object' && Array.isArray((parsed as any).tracks)) {
-                    return (parsed as any).tracks;
-                  }
-                } catch {
-                  return null;
-                }
-              }
-              if (raw && typeof raw === 'object') {
-                if (Array.isArray((raw as any).tracks)) return (raw as any).tracks;
-                const vals = Object.values(raw).filter((v) => v && typeof v === 'object');
-                if (vals.length) return vals as any[];
-              }
-              return null;
-            };
+            const parsedJson =
+              Array.isArray(rawJson)
+                ? rawJson
+                : typeof rawJson === 'string'
+                  ? (() => {
+                      try {
+                        const parsed = JSON.parse(rawJson);
+                        return Array.isArray(parsed) ? parsed : null;
+                      } catch {
+                        return null;
+                      }
+                    })()
+                  : null;
 
-            const tracksSource = parseArr(rawJson) ?? parseArr(rawLegacy) ?? [];
+            const parsedLegacy =
+              Array.isArray(rawLegacy)
+                ? rawLegacy
+                : typeof rawLegacy === 'string'
+                  ? (() => {
+                      try {
+                        const parsed = JSON.parse(rawLegacy);
+                        return Array.isArray(parsed) ? parsed : null;
+                      } catch {
+                        return null;
+                      }
+                    })()
+                  : null;
+
+            const tracksSource = parsedJson ?? parsedLegacy ?? [];
             const normalizedTracks = Array.isArray(tracksSource)
               ? tracksSource.map((t: any, idx: number) => ({
                   name: t?.name || t?.title || t?.track_name || `Track ${idx + 1}`,
@@ -275,10 +282,8 @@ export default function ProjectsPage() {
                     const fallback = t.url || publicUrlFromPath(pathToUse);
                     return { ...t, url: signed || fallback, path: pathToUse };
                   }
-                  // Bez path, ale máme url – ponech
                   return { ...t };
                 }
-                // Bez přístupu skryj URL
                 return { ...t, url: '' };
               })
             );
