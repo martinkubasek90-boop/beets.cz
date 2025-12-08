@@ -3,6 +3,11 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FireButton } from "./fire-button";
 
+type TrackMeta = {
+  projectId?: string;
+  trackIndex?: number;
+};
+
 type Track = {
   id: string | number;
   title: string;
@@ -11,6 +16,7 @@ type Track = {
   cover_url?: string | null;
   user_id?: string | null;
   item_type?: 'beat' | 'project' | 'collab';
+  meta?: TrackMeta;
 };
 
 type PlayerCtx = {

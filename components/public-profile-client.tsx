@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, FormEvent, MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, FormEvent, MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -82,6 +82,11 @@ type Collaboration = {
   partners: string[];
 };
 
+type TrackMeta = {
+  projectId?: string;
+  trackIndex?: number;
+};
+
 type CurrentTrack = {
   id: string;
   title: string;
@@ -89,6 +94,7 @@ type CurrentTrack = {
   url: string;
   cover_url?: string | null;
   subtitle?: string | null;
+  meta?: TrackMeta;
 };
 
 export default function PublicProfileClient({ profileId }: { profileId: string }) {
@@ -114,7 +120,17 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [messageError, setMessageError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { current: currentTrack, isPlaying, currentTime, duration, play, toggle, seek } = useGlobalPlayer();
+  const {
+    current: currentTrack,
+    isPlaying,
+    currentTime,
+    duration,
+    play,
+    toggle,
+    seek,
+    setOnNext,
+    setOnPrev,
+  } = useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
 
   const loadProjects = async () => {
@@ -262,24 +278,99 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     }
   }
 
-  function handlePlayTrack(track: CurrentTrack) {
-    if (!track.url) {
-      setPlayerError('Tento záznam nemá audio soubor.');
-      return;
-    }
-    setPlayerError(null);
-    if (currentTrack?.id === track.id) {
-      toggle();
-      return;
-    }
-    play({
+  const beatTracks = useMemo<CurrentTrack[]>(() => {
+    return beats
+      .filter((beat) => Boolean(beat.audio_url))
+      .map((beat) => ({
+        id: `beat-${beat.id}`,
+        title: beat.title,
+        url: beat.audio_url || '',
+        source: 'beat',
+        cover_url: beat.cover_url ?? null,
+        subtitle: profile?.display_name ?? null,
+      }));
+  }, [beats, profile?.display_name]);
+
+  const projectTracksMap = useMemo<Record<string, CurrentTrack[]>>(() => {
+    const map: Record<string, CurrentTrack[]> = {};
+    projects.forEach((project) => {
+      const tracks: CurrentTrack[] = [];
+      normalizeProjectTracks(project.tracks_json).forEach((track, idx) => {
+        if (!track.url) return;
+        tracks.push({
+          id: `project-${project.id}-${idx}`,
+          title: track.name || `Track ${idx + 1}`,
+          url: track.url,
+          source: 'project',
+          cover_url: project.cover_url ?? null,
+          subtitle: project.title,
+          meta: { projectId: project.id, trackIndex: idx },
+        });
+      });
+      if (tracks.length === 0 && project.project_url) {
+        tracks.push({
+          id: `project-${project.id}`,
+          title: project.title,
+          url: project.project_url,
+          source: 'project',
+          cover_url: project.cover_url ?? null,
+          subtitle: project.title,
+          meta: { projectId: project.id, trackIndex: -1 },
+        });
+      }
+      if (tracks.length) {
+        map[project.id] = tracks;
+      }
+    });
+    return map;
+  }, [projects]);
+
+  const collabTracks = useMemo<CurrentTrack[]>(() => {
+    return collabs
+      .filter((col) => Boolean(col.audio_url))
+      .map((col) => ({
+        id: `collab-${col.id}`,
+        title: col.title,
+        url: col.audio_url || '',
+        source: 'collab',
+        cover_url: col.cover_url ?? null,
+        subtitle: col.partners.join(' • ') || profile?.display_name || null,
+      }));
+  }, [collabs, profile?.display_name]);
+
+  const buildPlayerTrack = useCallback(
+    (track: CurrentTrack) => ({
       id: track.id,
       title: track.title,
       url: track.url,
       cover_url: track.cover_url,
       artist: track.subtitle || profile?.display_name || 'Profil',
       item_type: track.source,
-    });
+      meta: track.meta,
+    }),
+    [profile?.display_name]
+  );
+
+  const startTrack = useCallback(
+    (track: CurrentTrack) => {
+      if (!track.url) return;
+      setPlayerError(null);
+      play(buildPlayerTrack(track));
+    },
+    [buildPlayerTrack, play]
+  );
+
+  function handlePlayTrack(track: CurrentTrack) {
+    if (!track.url) {
+      setPlayerError('Tento záznam nemá audio soubor.');
+      return;
+    }
+    if (currentTrack?.id === track.id) {
+      setPlayerError(null);
+      toggle();
+      return;
+    }
+    startTrack(track);
   }
 
   function handleTrackProgressClick(trackId: string, e: MouseEvent<HTMLDivElement>) {
@@ -299,6 +390,89 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
     seek(ratio);
   }
+
+  useEffect(() => {
+    if (!setOnNext || !setOnPrev) return;
+    const cycleTracks = (items: CurrentTrack[], direction: 1 | -1) => {
+      if (!items.length) return;
+      const currentId = currentTrack?.id;
+      const idx = items.findIndex((item) => item.id === currentId);
+      const nextIndex =
+        idx === -1
+          ? direction === 1
+            ? 0
+            : items.length - 1
+          : (idx + direction + items.length) % items.length;
+      startTrack(items[nextIndex]);
+    };
+
+    const handleNext = () => {
+      if (!currentTrack) {
+        if (beatTracks.length) {
+          startTrack(beatTracks[0]);
+        }
+        return;
+      }
+      if (currentTrack.item_type === 'beat') {
+        cycleTracks(beatTracks, 1);
+        return;
+      }
+      if (currentTrack.item_type === 'project') {
+        const projectId = currentTrack.meta?.projectId;
+        if (projectId) {
+          const queue = projectTracksMap[projectId];
+          if (queue?.length) {
+            cycleTracks(queue, 1);
+            return;
+          }
+        }
+      }
+      if (currentTrack.item_type === 'collab') {
+        cycleTracks(collabTracks, 1);
+      }
+    };
+
+    const handlePrev = () => {
+      if (!currentTrack) {
+        if (beatTracks.length) {
+          startTrack(beatTracks[beatTracks.length - 1]);
+        }
+        return;
+      }
+      if (currentTrack.item_type === 'beat') {
+        cycleTracks(beatTracks, -1);
+        return;
+      }
+      if (currentTrack.item_type === 'project') {
+        const projectId = currentTrack.meta?.projectId;
+        if (projectId) {
+          const queue = projectTracksMap[projectId];
+          if (queue?.length) {
+            cycleTracks(queue, -1);
+            return;
+          }
+        }
+      }
+      if (currentTrack.item_type === 'collab') {
+        cycleTracks(collabTracks, -1);
+      }
+    };
+
+    setOnNext(() => handleNext);
+    setOnPrev(() => handlePrev);
+    return () => {
+      setOnNext(null);
+      setOnPrev(null);
+    };
+  }, [
+    beatTracks,
+    collabTracks,
+    currentTrack,
+    projectTracksMap,
+    setOnNext,
+    setOnPrev,
+    startTrack,
+  ]);
 
   function formatTime(sec: number) {
     if (!sec || Number.isNaN(sec)) return '0:00';
