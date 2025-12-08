@@ -691,13 +691,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
               list.push(partnerName);
             }
           });
+          const currentUserName = profile.display_name || 'Ty';
           setCollabThreads(
             merged.map((thread) => {
               const partners = threadNames.get(thread.id) ?? [];
               const partnerLabel = partners.length ? partners.join(' • ') : 'někým';
               return {
                 ...thread,
-                title: `Spolupráce s ${partnerLabel}`,
+                title: `Spolupráce ${currentUserName} a ${partnerLabel}`,
               };
             })
           );
@@ -713,7 +714,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
     loadCollabThreads();
-  }, [supabase, userId]);
+  }, [supabase, userId, profile.display_name]);
 
   useEffect(() => {
     if (!selectedThreadId && collabThreads.length > 0) {
