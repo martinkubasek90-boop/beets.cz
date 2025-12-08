@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, FormEvent } from 'react';
+import { useEffect, useState, FormEvent, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
-import { useGlobalPlayer } from './global-player-provider';
 
 type PublicProfile = {
   display_name: string;
@@ -25,15 +24,51 @@ type Beat = {
   cover_url?: string | null;
 };
 
+type ProjectTrack = {
+  name: string;
+  url?: string | null;
+  path?: string | null;
+};
+
 type Project = {
   id: string;
   title: string;
   description: string | null;
   cover_url: string | null;
-  user_id?: string | null;
   access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
-  tracks_json?: Array<{ name: string; url?: string | null; path?: string | null }>;
+  tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
+};
+
+const isProjectTrack = (value: unknown): value is ProjectTrack =>
+  !!value &&
+  typeof value === 'object' &&
+  ('name' in (value as Record<string, unknown>) || 'url' in (value as Record<string, unknown>));
+
+const normalizeProjectTracks = (raw?: Project['tracks_json']): ProjectTrack[] => {
+  if (!raw) {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw.filter(isProjectTrack);
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(isProjectTrack);
+      }
+      if (parsed && typeof parsed === 'object') {
+        return Object.values(parsed).filter(isProjectTrack);
+      }
+    } catch {
+      return [];
+    }
+  }
+  if (typeof raw === 'object') {
+    return Object.values(raw).filter(isProjectTrack);
+  }
+  return [];
 };
 
 type Collaboration = {
@@ -69,6 +104,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectDeleteError, setProjectDeleteError] = useState<Record<string, string>>({});
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
@@ -78,18 +115,32 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [messageError, setMessageError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
-  const [collabRequestLoading, setCollabRequestLoading] = useState(false);
-  const [showCollabForm, setShowCollabForm] = useState(false);
-  const [collabRequestBody, setCollabRequestBody] = useState('');
-  const [collabRequestFile, setCollabRequestFile] = useState<File | null>(null);
-  const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
-  const [projectRequestError, setProjectRequestError] = useState<string | null>(null);
-  const [projectRequestInfo, setProjectRequestInfo] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const { play: gpPlay, toggle: gpToggle, seek: gpSeek, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration } = useGlobalPlayer();
+
+  const loadProjects = async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
+      .eq('user_id', profileId)
+      .order('id', { ascending: false })
+      .limit(6);
+    if (error) {
+      const message =
+        error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
+          ? (error as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba načítání projektů:', error);
+      setProjectsError('Nepodařilo se načíst projekty: ' + message);
+      return;
+    }
+    setProjects((data as Project[]) ?? []);
+    setProjectsError(null);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -139,33 +190,12 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
     };
 
-    const loadProjects = async () => {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, title, description, cover_url, project_url, tracks_json, access_mode, user_id')
-          .eq('user_id', profileId)
-          .order('created_at', { ascending: false })
-          .limit(6);
-      if (error) {
-        const message =
-          error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-            ? (error as any).message
-            : 'Neznámá chyba';
-        console.error('Chyba načítání projektů:', error);
-        setProjectsError('Nepodařilo se načíst projekty: ' + message);
-      } else {
-        setProjects((data as Project[]) ?? []);
-        setProjectsError(null);
-      }
-    };
-
     const loadCollabs = async () => {
-      // Vlákna, kde je profil jako participant
       const { data, error } = await supabase
-        .from('collab_threads')
-        .select('id, title, status, result_audio_url, result_cover_url, collab_participants!inner(user_id)')
-        .eq('collab_participants.user_id', profileId)
-        .order('updated_at', { ascending: false })
+        .from('collabs')
+        .select('id, title, bpm, mood, audio_url, cover_url, partner_a_name, partner_b_name')
+        .eq('user_id', profileId)
+        .order('id', { ascending: false })
         .limit(10);
       if (error) {
         const message =
@@ -179,11 +209,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
         id: c.id,
         title: c.title,
-        bpm: null,
-        mood: c.status,
-        audio_url: c.result_audio_url,
-        cover_url: c.result_cover_url,
-        partners: [],
+        bpm: c.bpm,
+        mood: c.mood,
+        audio_url: c.audio_url,
+        cover_url: c.cover_url,
+        partners: [c.partner_a_name, c.partner_b_name].filter(Boolean),
       }));
       setCollabs(mapped);
       setCollabsError(null);
@@ -193,7 +223,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const { data } = await supabase.auth.getSession();
       const uid = data.session?.user?.id;
       setIsLoggedIn(!!uid);
-      setCurrentUserId(uid ?? null);
       if (uid && uid === profileId) {
         router.push('/profile');
       }
@@ -205,138 +234,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     loadProjects();
     loadCollabs();
   }, [profileId, supabase, router]);
-
-  const handleRequestCollab = async () => {
-    // První klik jen otevře formulář
-    if (!showCollabForm) {
-      setShowCollabForm(true);
-      return;
-    }
-
-    setCollabRequestError(null);
-
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    const uid = userData?.user?.id || currentUserId;
-    if (userErr || !uid) {
-      setCollabRequestError('Musíš být přihlášen.');
-      return;
-    }
-
-    if (!collabRequestBody.trim()) {
-      setCollabRequestError('Napiš krátkou zprávu k žádosti.');
-      return;
-    }
-
-    try {
-      setCollabRequestLoading(true);
-      const threadTitle =
-        profile?.display_name?.trim() ? `Spolupráce s ${profile.display_name}` : 'Nová spolupráce';
-
-      // Nezakládej duplicitní vlákno: zjisti, zda už existuje thread s oběma uživateli.
-      const [{ data: myThreads, error: myErr }, { data: targetThreads, error: targetErr }] = await Promise.all([
-        supabase.from('collab_participants').select('thread_id').eq('user_id', uid),
-        supabase.from('collab_participants').select('thread_id').eq('user_id', profileId),
-      ]);
-      if (myErr) throw myErr;
-      if (targetErr) throw targetErr;
-      const mySet = new Set((myThreads ?? []).map((r: any) => r.thread_id));
-      const existing = (targetThreads ?? []).find((r: any) => mySet.has(r.thread_id));
-      if (existing) {
-        setCollabRequestError('Spolupráce s tímto uživatelem už existuje.');
-        setCollabRequestLoading(false);
-        return;
-      }
-
-      const { data: thread, error: threadErr } = await supabase
-        .from('collab_threads')
-        .insert({
-          title: threadTitle,
-          created_by: uid,
-          status: 'active',
-        })
-        .select('id')
-        .single();
-      if (threadErr || !thread) throw threadErr || new Error('Vlákno nevytvořeno');
-
-      const participants = [
-        { thread_id: thread.id, user_id: uid, role: 'owner' },
-        { thread_id: thread.id, user_id: profileId, role: 'guest' },
-      ];
-      const { error: partErr } = await supabase.from('collab_participants').insert(participants);
-      if (partErr) throw partErr;
-
-      await supabase
-        .from('collab_messages')
-        .insert({ thread_id: thread.id, user_id: uid, body: collabRequestBody.trim() });
-
-      if (collabRequestFile) {
-        const safeName = collabRequestFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const storagePath = `${uid}/${thread.id}/${Date.now()}-${safeName}`;
-        const { error: uploadErr } = await supabase.storage.from('collabs').upload(storagePath, collabRequestFile, {
-          upsert: true,
-        });
-        if (uploadErr) throw uploadErr;
-        const { data: publicUrlData } = supabase.storage.from('collabs').getPublicUrl(storagePath);
-        if (publicUrlData?.publicUrl) {
-          await supabase
-            .from('collab_files')
-            .insert({ thread_id: thread.id, user_id: uid, file_url: publicUrlData.publicUrl, file_name: collabRequestFile.name });
-        }
-      }
-
-      // Notifikace pro partnera (API využívá service role, na FE jen voláme fetch)
-      try {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: profileId,
-            type: 'collab_created',
-            title: 'Nová spolupráce',
-            body: threadTitle,
-            item_type: 'collab_thread',
-            item_id: thread.id,
-          }),
-        });
-      } catch {
-        // když notifikace selže, nebráníme založení vlákna
-      }
-
-      await new Promise((res) => setTimeout(res, 300)); // krátký wait
-      // reload collabs
-      const { data, error } = await supabase
-        .from('collab_threads')
-        .select('id, title, status, result_audio_url, result_cover_url, collab_participants!inner(user_id)')
-        .eq('collab_participants.user_id', profileId)
-        .order('updated_at', { ascending: false })
-        .limit(10);
-      if (!error && data) {
-        const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
-          id: c.id,
-          title: c.title,
-          bpm: null,
-          mood: c.status,
-          audio_url: c.result_audio_url,
-          cover_url: c.result_cover_url,
-          partners: [],
-        }));
-        setCollabs(mapped);
-      }
-
-      setShowCollabForm(false);
-      setCollabRequestBody('');
-      setCollabRequestFile(null);
-    } catch (err) {
-      const message =
-        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-          ? (err as any).message
-          : 'Neznámá chyba';
-      console.error('Chyba při zakládání spolupráce:', err);
-      setCollabRequestError('Nepodařilo se založit spolupráci: ' + message);
-    } finally {
-      setCollabRequestLoading(false);
-    }
-  };
 
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
@@ -352,22 +249,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         setMessageError('Musíš být přihlášen.');
         return;
       }
-
-      // Získáme jméno odesílatele z profilu, jinak e-mail
-      let senderName = userData.user.email ?? 'Uživatel';
-      try {
-        const { data: senderProfile } = await supabase.from('profiles').select('display_name').eq('id', userData.user.id).maybeSingle();
-        if (senderProfile?.display_name) {
-          senderName = senderProfile.display_name;
-        }
-      } catch (inner) {
-        console.warn('Nepodařilo se načíst jméno odesílatele:', inner);
-      }
-
       const payload = {
         user_id: userData.user.id,
         to_user_id: profileId,
-        from_name: senderName,
+        from_name: userData.user.email ?? 'Uživatel',
         to_name: profile?.display_name ?? 'Uživatel',
         body: messageBody.trim(),
       };
@@ -388,73 +273,67 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       return;
     }
     setPlayerError(null);
-    const track = {
-      id: item.id,
-      title: item.title,
-      artist: item.subtitle || profile?.display_name || 'Neznámý',
-      url: item.url,
-      cover_url: item.cover_url ?? undefined,
-      user_id: profileId,
-    };
+    setCurrentTime(0);
+    setDuration(0);
     setCurrentTrack(item);
-    // toggle pokud jde o stejný track
-    if (gpCurrent?.id === item.id) {
-      gpToggle();
-    } else {
-      gpPlay(track);
+    setIsPlaying((prev) => {
+      if (currentTrack && currentTrack.id === item.id) {
+        return !prev;
+      }
+      return true;
+    });
+  }
+
+  async function handleDeleteProject(projectId: string) {
+    if (typeof window !== 'undefined' && !window.confirm('Opravdu chceš tento projekt odstranit?')) {
+      return;
+    }
+    setProjectDeleteError((prev) => ({ ...prev, [projectId]: '' }));
+    setDeletingProjectId(projectId);
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId).eq('user_id', profileId);
+      if (error) throw error;
+      await loadProjects();
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Nepodařilo se projekt odstranit.';
+      setProjectDeleteError((prev) => ({ ...prev, [projectId]: message }));
+    } finally {
+      setDeletingProjectId(null);
     }
   }
 
-  const requestProjectAccess = async (projectId: string | number) => {
-    setProjectRequestError(null);
-    setProjectRequestInfo(null);
-    if (!currentUserId) {
-      setProjectRequestError('Pro odeslání žádosti se přihlas.');
-      return;
-    }
-    const idKey = String(projectId);
-    setProjectRequesting((prev) => ({ ...prev, [idKey]: true }));
-    try {
-      const message = prompt('Krátká zpráva pro autora (nepovinné):') ?? '';
-      const numericId = Number(projectId);
-      if (Number.isNaN(numericId)) {
-        throw new Error('Neplatné ID projektu.');
-      }
-      const { error: insertErr } = await supabase.from('project_access_requests').insert({
-        project_id: numericId,
-        requester_id: currentUserId,
-        message: message.trim() || null,
-      });
-      if (insertErr) throw insertErr;
-      setProjectRequestInfo('Žádost odeslána.');
-    } catch (err) {
-      console.error('Chyba při odeslání žádosti o přístup:', err);
-      setProjectRequestError('Nepodařilo se odeslat žádost.');
-    } finally {
-      setProjectRequesting((prev) => ({ ...prev, [idKey]: false }));
-    }
-  };
-
   function seekInCurrent(clientX: number, width: number) {
-    if (!gpDuration) return;
+    const el = audioRef.current;
+    if (!el || !duration) return;
     const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    gpSeek(ratio);
+    const next = ratio * duration;
+    el.currentTime = next;
+    setCurrentTime(next);
+    setIsPlaying(true);
+    void el.play();
   }
 
   useEffect(() => {
-    if (!gpCurrent) {
-      setCurrentTrack(null);
-      return;
-    }
-    setCurrentTrack({
-      id: String(gpCurrent.id),
-      title: gpCurrent.title,
-      source: 'beat',
-      url: gpCurrent.url,
-      cover_url: gpCurrent.cover_url,
-      subtitle: gpCurrent.artist,
-    });
-  }, [gpCurrent]);
+    const el = audioRef.current;
+    if (!el || !currentTrack) return;
+    el.src = currentTrack.url;
+    const run = async () => {
+      try {
+        if (isPlaying) {
+          await el.play();
+        } else {
+          el.pause();
+        }
+      } catch (err) {
+        console.error('Audio play error:', err);
+        setPlayerError('Nepodařilo se spustit audio.');
+      }
+    };
+    run();
+  }, [currentTrack, isPlaying]);
 
   function formatTime(sec: number) {
     if (!sec || Number.isNaN(sec)) return '0:00';
@@ -468,13 +347,19 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.subtitle || profile?.display_name || null;
-  const progressRatio =
-    gpCurrent && currentTrack && gpCurrent.id === currentTrack.id && gpDuration
-      ? Math.min(gpTime / gpDuration, 1)
-      : 0;
+  const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
+      <audio
+        ref={audioRef}
+        className="hidden"
+        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
+        onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration || 0)}
+        onEnded={() => setIsPlaying(false)}
+        onPause={() => setIsPlaying(false)}
+        onPlay={() => setIsPlaying(true)}
+      />
       {playerError && (
         <div className="fixed top-3 right-3 z-50 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-sm text-red-100 shadow-lg">
           {playerError}
@@ -595,8 +480,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           ) : (
             <div className="space-y-3">
               {beats.map((beat) => {
-                const isCurrent = gpCurrent?.id === `beat-${beat.id}`;
-                const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
+                const isCurrent = currentTrack?.id === `beat-${beat.id}`;
+                const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
                 return (
                   <div
                     key={beat.id}
@@ -639,7 +524,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                           disabled={!beat.audio_url}
                           className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                         >
-                          {isCurrent && gpIsPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
                         </button>
                       </div>
                       <div
@@ -657,8 +542,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       </div>
                       {isCurrent && (
                         <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                          <span>{isCurrent ? formatTime(gpTime) : '0:00'}</span>
-                          <span>{isCurrent && gpDuration ? formatTime(gpDuration) : '--:--'}</span>
+                          <span>{formatTime(currentTime)}</span>
+                          <span>{formatTime(duration)}</span>
                         </div>
                       )}
                     </div>
@@ -686,157 +571,181 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             <p className="text-sm text-[var(--mpc-muted)]">Žádné projekty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
-                            {projects.map((project) => {
-                const isLocked = project.access_mode && project.access_mode !== 'public' && currentUserId !== project.user_id;
+              {projects.map((project) => {
+                const tracks = normalizeProjectTracks(project.tracks_json);
                 return (
                   <div
                     key={project.id}
                     className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
                   >
-                    {isLocked && (
-                      <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-yellow-200">
-                        Zamčeno · {project.access_mode === 'request' ? 'Na žádost' : 'Soukromé'}
+                  {/** přístupový režim projektu */}
+                  {project.access_mode && project.access_mode !== 'public' && (
+                    <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-yellow-200">
+                      Zamčeno · {project.access_mode === 'request' ? 'Na žádost' : 'Soukromé'}
+                    </div>
+                  )}
+                  <div
+                    className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
+                    style={
+                      project.cover_url
+                        ? {
+                            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }
+                        : {
+                            background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
+                          }
+                    }
+                  >
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                        {project.cover_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <span>{project.title.slice(0, 2)}</span>
+                        )}
                       </div>
-                    )}
-                    <div
-                      className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
-                      style={
-                        project.cover_url
-                          ? {
-                              backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                            }
-                          : {
-                              background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
-                            }
-                      }
-                    >
-                      <div className="flex flex-col items-center gap-3 text-center">
-                        <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                          {project.cover_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <span>{project.title.slice(0, 2)}</span>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-lg font-semibold text-white">{project.title}</p>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">
-                            {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
-                          </p>
-                        </div>
+                      <div className="space-y-1">
+                        <p className="text-lg font-semibold text-white">{project.title}</p>
+                        <p className="text-[12px] text-[var(--mpc-muted)]">
+                          {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
+                        </p>
                       </div>
+                    </div>
 
-                      <div className="mt-4 flex flex-col items-center gap-2">
-                        {isLocked && project.access_mode === 'request' && (
-                          <div className="mt-3 flex flex-col items-center gap-2">
-                            {isLoggedIn && currentUserId !== project.user_id ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => void requestProjectAccess(String(project.id))}
-                                  disabled={projectRequesting[String(project.id)]}
-                                  className="rounded-full border border-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
-                                >
-                                  {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
-                                </button>
-                                {projectRequestInfo && <div className="text-[12px] text-green-300">{projectRequestInfo}</div>}
-                                {projectRequestError && <div className="text-[12px] text-red-300">{projectRequestError}</div>}
-                              </>
-                            ) : (
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
+                        }
+                        className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
+                        aria-label="Zobrazit tracklist"
+                      >
+                        <span
+                          className="text-lg font-bold transition-transform"
+                          style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                        >
+                          ▼
+                        </span>
+                      </button>
+                      <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
+                        Tracklist
+                      </span>
+                      <button
+                        onClick={() => handleDeleteProject(project.id)}
+                        disabled={deletingProjectId === project.id}
+                        className="rounded-full border border-red-500/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-red-400 hover:bg-red-500/10 disabled:opacity-50"
+                      >
+                        {deletingProjectId === project.id ? 'Mažu...' : 'Odebrat projekt'}
+                      </button>
+                      {projectDeleteError[project.id] && (
+                        <p className="text-[11px] text-red-300">{projectDeleteError[project.id]}</p>
+                      )}
+                    </div>
+
+                    {expandedProjects[project.id] && (
+                      <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
+                        <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
+                        {project.access_mode && project.access_mode !== 'public' ? (
+                          <div className="space-y-2 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
+                            <p>Projekt je uzamčený.</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">
+                              {project.access_mode === 'request'
+                                ? 'Požádej o přístup z detailu projektu.'
+                                : 'Přístup mají jen schválení uživatelé.'}
+                            </p>
+                            {!isLoggedIn && (
                               <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
                                 Přihlas se a zažádej o přístup.
                               </Link>
                             )}
                           </div>
-                        )}
-
-                        <button
-                          onClick={() => setExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
-                          disabled={!!isLocked}
-                          className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px] disabled:opacity-50"
-                          aria-label="Zobrazit tracklist"
-                        >
-                          <span
-                            className="text-lg font-bold transition-transform"
-                            style={{ transform: expandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                          >
-                            ▼
-                          </span>
-                        </button>
-                        <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
-                          Tracklist
-                        </span>
-                      </div>
-
-                      {expandedProjects[project.id] && (
-                        <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
-                          <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
-                          {isLocked ? (
-                            <div className="space-y-3 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
-                              <div>
-                                <p>Projekt je uzamčený.</p>
-                                <p className="text-[12px] text-[var(--mpc-muted)]">
-                                  {project.access_mode === 'request'
-                                    ? 'Požádej o přístup z detailu projektu.'
-                                    : 'Přístup mají jen schválení uživatelé.'}
-                                </p>
-                              </div>
-                              {project.access_mode === 'request' && isLoggedIn && currentUserId !== project.user_id && (
-                                <div className="mt-3 space-y-3 text-center">
-                                  <button
-                                    type="button"
-                                    onClick={() => void requestProjectAccess(String(project.id))}
-                                    disabled={projectRequesting[String(project.id)]}
-                                    className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                        ) : tracks.length > 0 ? (
+                          <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                            {tracks.map((t, idx) => {
+                              const trackId = `project-${project.id}-${idx}`;
+                              const isCurrent = currentTrack?.id === trackId;
+                              const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+                              return (
+                                <div
+                                  key={trackId}
+                                  className="rounded border border-white/10 bg-black/40 px-3 py-2 transition hover:border-[var(--mpc-accent)]/60"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                      <span className="w-5 text-[11px] text-[var(--mpc-muted)]">{idx + 1}.</span>
+                                      <span>{t.name || `Track ${idx + 1}`}</span>
+                                    </div>
+                                    <button
+                                      onClick={() =>
+                                        handlePlayTrack({
+                                          id: trackId,
+                                          title: t.name || `Track ${idx + 1}`,
+                                          url: t.url || '',
+                                          source: 'project',
+                                          cover_url: project.cover_url,
+                                          subtitle: profile?.display_name || null,
+                                        })
+                                      }
+                                      disabled={!t.url}
+                                      className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
+                                    >
+                                      {isCurrent && isPlaying ? '▮▮' : '►'}
+                                    </button>
+                                  </div>
+                                  <div
+                                    className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                                    onClick={(e) => {
+                                      if (!isCurrent) return;
+                                      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                      seekInCurrent(e.clientX - rect.left, rect.width);
+                                    }}
                                   >
-                                    {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
-                                  </button>
-                                  {projectRequestInfo && (
-                                    <div className="text-[12px] text-green-300">{projectRequestInfo}</div>
-                                  )}
-                                  {projectRequestError && (
-                                    <div className="text-[12px] text-red-300">{projectRequestError}</div>
+                                    <div
+                                      className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                                      style={{ width: progressPct }}
+                                    />
+                                  </div>
+                                  {isCurrent && (
+                                    <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                                      <span>{formatTime(currentTime)}</span>
+                                      <span>{formatTime(duration)}</span>
+                                    </div>
                                   )}
                                 </div>
-                              )}
-                              {!isLoggedIn && (
-                                <Link href="/auth/login" className="text-[var(--mpc-accent)] underline">
-                                  Přihlas se a zažádej o přístup.
-                                </Link>
-                              )}
-                            </div>
-                          ) : project.project_url ? (
-                            <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
-                              <span>{project.title || 'Ukázka projektu'}</span>
-                              <button
-                                disabled={!!isLocked}
-                                onClick={() =>
-                                  handlePlayTrack({
-                                    id: `project-${project.id}`,
-                                    title: project.title,
-                                    url: project.project_url || '',
-                                    source: 'project',
-                                    cover_url: project.cover_url,
-                                    subtitle: profile?.display_name || null,
-                                  })
-                                }
-                                className="text-[11px] text-[var(--mpc-accent)] hover:text-white disabled:opacity-50"
-                              >
-                                {gpCurrent?.id === `project-${project.id}` && gpIsPlaying ? '▮▮' : '►'}
-                              </button>
-                            </div>
-                          ) : (
-                            <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                              );
+                            })}
+                          </div>
+                        ) : project.project_url ? (
+                          <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
+                            <span>{project.title || 'Ukázka projektu'}</span>
+                            <button
+                              onClick={() =>
+                                handlePlayTrack({
+                                  id: `project-${project.id}`,
+                                  title: project.title,
+                                  url: project.project_url || '',
+                                  source: 'project',
+                                  cover_url: project.cover_url,
+                                  subtitle: profile?.display_name || null,
+                                })
+                              }
+                              className="text-[11px] text-[var(--mpc-accent)] hover:text-white"
+                            >
+                              {currentTrack?.id === `project-${project.id}` && isPlaying ? '▮▮' : '►'}
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
             </div>
           )}
         </div>
@@ -855,49 +764,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </div>
           )}
           {collabs.length === 0 ? (
-            <div className="space-y-3 text-sm text-[var(--mpc-muted)]">
-              <p>O spolupráce mohou žádat pouze registrovaní uživatelé.</p>
-              {isLoggedIn && currentUserId !== profileId && (
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleRequestCollab}
-                    disabled={collabRequestLoading}
-                    className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
-                  >
-                    {collabRequestLoading
-                      ? 'Odesílám…'
-                      : showCollabForm
-                      ? 'Odeslat žádost'
-                      : 'Požádat o spolupráci'}
-                  </button>
-
-                  {showCollabForm && (
-                    <div className="space-y-2">
-                      <textarea
-                        value={collabRequestBody}
-                        onChange={(e) => setCollabRequestBody(e.target.value)}
-                        placeholder="Popiš spolupráci, tempo, mood, deadline…"
-                        className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
-                        rows={4}
-                      />
-                      <input
-                        type="file"
-                        accept=".wav,.mp3,audio/wav,audio/mpeg,application/zip"
-                        onChange={(e) => setCollabRequestFile(e.target.files?.[0] ?? null)}
-                        className="block w-full text-[12px] text-[var(--mpc-light)]"
-                      />
-                    </div>
-                  )}
-
-                  {collabRequestError && (
-                    <div className="rounded-md border border-red-700/40 bg-red-900/20 px-3 py-2 text-xs text-red-100">
-                      {collabRequestError}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <p className="text-sm text-[var(--mpc-muted)]">Žádné spolupráce k zobrazení.</p>
           ) : (
             <div className="space-y-3">
               {collabs.map((col) => (
@@ -947,7 +814,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         disabled={!col.audio_url}
                         className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                       >
-                        {gpCurrent?.id === `collab-${col.id}` && gpIsPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                        {currentTrack?.id === `collab-${col.id}` && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
                       </button>
                     </div>
                     {col.audio_url && (
@@ -962,12 +829,12 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         className="h-full"
                         style={{
                           width:
-                            gpCurrent?.id === `collab-${col.id}` && gpDuration
-                              ? `${Math.min((gpTime / gpDuration) * 100, 100)}%`
+                            currentTrack?.id === `collab-${col.id}` && duration
+                              ? `${Math.min((currentTime / duration) * 100, 100)}%`
                               : '0%',
                           background:
                             'repeating-linear-gradient(to right, rgba(0,86,63,0.95) 0, rgba(0,86,63,0.95) 6px, rgba(255,255,255,0.18) 6px, rgba(255,255,255,0.18) 12px)',
-                          boxShadow: gpCurrent?.id === `collab-${col.id}` ? '0 4px 12px rgba(0,224,150,0.35)' : 'none',
+                          boxShadow: currentTrack?.id === `collab-${col.id}` ? '0 4px 12px rgba(0,224,150,0.35)' : 'none',
                           transition: 'width 0.1s linear',
                         }}
                       />
@@ -1064,15 +931,15 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 />
               </div>
               <div className="mt-1 flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                <span>{formatTime(gpTime)}</span>
-                <span>{gpDuration ? formatTime(gpDuration) : '--:--'}</span>
+                <span>{formatTime(currentTime)}</span>
+                <span>{formatTime(duration)}</span>
               </div>
             </div>
             <button
-              onClick={() => gpToggle()}
+              onClick={() => setIsPlaying((prev) => !prev)}
               className="grid h-12 w-12 place-items-center rounded-full bg-[var(--mpc-accent)] text-lg text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
             >
-              {gpIsPlaying ? '▮▮' : '►'}
+              {isPlaying ? '▮▮' : '►'}
             </button>
           </div>
         </div>
