@@ -1383,9 +1383,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          user_id: targetUserId,
           type: 'direct_message',
-          targetUserId,
-          data: { from: payload.from_name, body: payload.body },
+          title: payload.from_name || 'Nová zpráva',
+          body: payload.body,
+          item_type: 'message',
+          item_id: created.id ? String(created.id) : undefined,
         }),
       });
     } catch (notifyErr) {
