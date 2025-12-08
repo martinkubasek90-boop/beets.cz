@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, FormEvent, useRef } from 'react';
+import { useEffect, useState, FormEvent, MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
+import { useGlobalPlayer } from './global-player-provider';
 
 type PublicProfile = {
   display_name: string;
@@ -113,11 +114,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [messageError, setMessageError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const { current: currentTrack, isPlaying, currentTime, duration, play, toggle, seek } = useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
 
   const loadProjects = async () => {
@@ -265,52 +262,43 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     }
   }
 
-  function handlePlayTrack(item: { id: string; title: string; url: string; source: CurrentTrack['source']; cover_url?: string | null; subtitle?: string | null }) {
-    if (!item.url) {
+  function handlePlayTrack(track: CurrentTrack) {
+    if (!track.url) {
       setPlayerError('Tento záznam nemá audio soubor.');
       return;
     }
     setPlayerError(null);
-    setCurrentTime(0);
-    setDuration(0);
-    setCurrentTrack(item);
-    setIsPlaying((prev) => {
-      if (currentTrack && currentTrack.id === item.id) {
-        return !prev;
-      }
-      return true;
+    if (currentTrack?.id === track.id) {
+      toggle();
+      return;
+    }
+    play({
+      id: track.id,
+      title: track.title,
+      url: track.url,
+      cover_url: track.cover_url,
+      artist: track.subtitle || profile?.display_name || 'Profil',
+      item_type: track.source,
     });
   }
 
-  function seekInCurrent(clientX: number, width: number) {
-    const el = audioRef.current;
-    if (!el || !duration) return;
-    const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    const next = ratio * duration;
-    el.currentTime = next;
-    setCurrentTime(next);
-    setIsPlaying(true);
-    void el.play();
+  function handleTrackProgressClick(trackId: string, e: MouseEvent<HTMLDivElement>) {
+    if (currentTrack?.id !== trackId) {
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    seek(ratio);
   }
 
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el || !currentTrack) return;
-    el.src = currentTrack.url;
-    const run = async () => {
-      try {
-        if (isPlaying) {
-          await el.play();
-        } else {
-          el.pause();
-        }
-      } catch (err) {
-        console.error('Audio play error:', err);
-        setPlayerError('Nepodařilo se spustit audio.');
-      }
-    };
-    run();
-  }, [currentTrack, isPlaying]);
+  function handleGlobalProgressClick(e: MouseEvent<HTMLDivElement>) {
+    if (!currentTrack) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+    seek(ratio);
+  }
 
   function formatTime(sec: number) {
     if (!sec || Number.isNaN(sec)) return '0:00';
@@ -323,20 +311,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
-  const currentSubtitle = currentTrack?.subtitle || profile?.display_name || null;
+  const currentSubtitle = currentTrack?.artist || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
-      <audio
-        ref={audioRef}
-        className="hidden"
-        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
-        onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration || 0)}
-        onEnded={() => setIsPlaying(false)}
-        onPause={() => setIsPlaying(false)}
-        onPlay={() => setIsPlaying(true)}
-      />
       {playerError && (
         <div className="fixed top-3 right-3 z-50 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-sm text-red-100 shadow-lg">
           {playerError}
@@ -457,7 +436,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           ) : (
             <div className="space-y-3">
               {beats.map((beat) => {
-                const isCurrent = currentTrack?.id === `beat-${beat.id}`;
+                const trackId = `beat-${beat.id}`;
+                const isCurrent = currentTrack?.id === trackId;
                 const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
                 return (
                   <div
@@ -508,8 +488,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                         className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
                         onClick={(e) => {
                           if (!isCurrent) return;
-                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                          seekInCurrent(e.clientX - rect.left, rect.width);
+                          handleTrackProgressClick(trackId, e);
                         }}
                       >
                         <div
@@ -666,8 +645,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                     className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
                                     onClick={(e) => {
                                       if (!isCurrent) return;
-                                      const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                      seekInCurrent(e.clientX - rect.left, rect.width);
+                                      handleTrackProgressClick(trackId, e);
                                     }}
                                   >
                                     <div
@@ -787,11 +765,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                     {col.audio_url && (
                       <div
                         className="mt-3 h-[70px] cursor-pointer overflow-hidden rounded-md border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
-                        onClick={(e) => {
-                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                        seekInCurrent(e.clientX - rect.left, rect.width);
-                      }}
-                    >
+                        onClick={(e) => handleTrackProgressClick(`collab-${col.id}`, e)}
+                      >
                       <div
                         className="h-full"
                         style={{
@@ -887,10 +862,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             <div className="flex-1">
               <div
                 className="h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                onClick={(e) => {
-                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                  seekInCurrent(e.clientX - rect.left, rect.width);
-                }}
+                onClick={handleGlobalProgressClick}
               >
                 <div
                   className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
@@ -903,7 +875,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               </div>
             </div>
             <button
-              onClick={() => setIsPlaying((prev) => !prev)}
+              onClick={toggle}
               className="grid h-12 w-12 place-items-center rounded-full bg-[var(--mpc-accent)] text-lg text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
             >
               {isPlaying ? '▮▮' : '►'}
