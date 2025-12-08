@@ -148,16 +148,20 @@ export default function FaqPage() {
     <main className="min-h-screen bg-black text-white">
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
         <header className="space-y-2">
-          <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">FAQ</h1>
-          <p className="text-[13px] text-[var(--mpc-muted)]">
-            Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.
-          </p>
-          <Link
-            href="/"
-            className="inline-flex rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
-          >
-            Zpět na homepage
-          </Link>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">FAQ</h1>
+              <p className="text-[13px] text-[var(--mpc-muted)]">
+                Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.
+              </p>
+            </div>
+            <Link
+              href="/"
+              className="inline-flex rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
+            >
+              Zpět na homepage
+            </Link>
+          </div>
         </header>
 
         <div className="space-y-6">
