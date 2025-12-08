@@ -73,13 +73,15 @@ const normalizeProjectTracks = (raw?: Project['tracks_json']): ProjectTrack[] =>
 };
 
 type Collaboration = {
-  id: number;
+  id: string;
   title: string;
+  status?: string | null;
   bpm: number | null;
-  mood: string | null;
+  mood: number | null;
   audio_url: string | null;
   cover_url?: string | null;
   partners: string[];
+  updated_at?: string | null;
 };
 
 type TrackMeta = {
@@ -202,32 +204,66 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
 
     const loadCollabs = async () => {
-      const { data, error } = await supabase
-        .from('collabs')
-        .select('id, title, bpm, mood, audio_url, cover_url, partner_a_name, partner_b_name')
-        .eq('user_id', profileId)
-        .order('id', { ascending: false })
-        .limit(10);
-      if (error) {
+      const collaboratorSelect = `
+        id,
+        title,
+        status,
+        result_audio_url,
+        result_cover_url,
+        updated_at,
+        collab_participants!inner(user_id, profiles(display_name))
+      `;
+
+      try {
+        const [byCreator, byParticipant] = await Promise.all([
+          supabase
+            .from('collab_threads')
+            .select(collaboratorSelect)
+            .eq('created_by', profileId)
+            .order('updated_at', { ascending: false }),
+          supabase
+            .from('collab_threads')
+            .select(collaboratorSelect)
+            .eq('collab_participants.user_id', profileId)
+            .order('updated_at', { ascending: false }),
+        ]);
+
+        if (byCreator.error) throw byCreator.error;
+        if (byParticipant.error) throw byParticipant.error;
+
+        const mapThread = (thread: any): Collaboration => {
+          const participants = Array.isArray(thread.collab_participants)
+            ? thread.collab_participants
+                .map((p: any) => p.profiles?.display_name || p.user_id)
+                .filter(Boolean) as string[]
+            : [];
+          return {
+            id: thread.id,
+            title: thread.title || 'Spolupráce',
+            status: thread.status ?? null,
+            bpm: null,
+            mood: null,
+            audio_url: thread.result_audio_url ?? null,
+            cover_url: thread.result_cover_url ?? null,
+            partners: participants,
+            updated_at: thread.updated_at ?? null,
+          };
+        };
+
+        const merged = new Map<string, Collaboration>();
+        (byCreator.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
+        (byParticipant.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
+
+        setCollabs(Array.from(merged.values()));
+        setCollabsError(null);
+      } catch (err) {
         const message =
-          error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-            ? (error as any).message
+          err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+            ? (err as any).message
             : 'Neznámá chyba';
-        console.error('Chyba načítání spoluprací:', error);
+        console.error('Chyba načítání spoluprací:', err);
         setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
-        return;
       }
-      const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        bpm: c.bpm,
-        mood: c.mood,
-        audio_url: c.audio_url,
-        cover_url: c.cover_url,
-        partners: [c.partner_a_name, c.partner_b_name].filter(Boolean),
-      }));
-      setCollabs(mapped);
-      setCollabsError(null);
     };
 
     const loadSession = async () => {
