@@ -211,6 +211,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
 
     const loadCollabs = async () => {
+      if (!currentUserId || currentUserId !== profileId) {
+        setCollabs([]);
+        setCollabsError('Spolupráce tohoto profilu jsou soukromé.');
+        return;
+      }
       const fields = `
         id,
         title,
@@ -332,7 +337,147 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     loadBeats();
     loadProjects();
     loadCollabs();
-  }, [profileId, supabase, router, collabsReload]);
+  }, [profileId, supabase, router]);
+
+  const loadCollabs = useCallback(async () => {
+    if (!currentUserId || currentUserId !== profileId) {
+      setCollabs([]);
+      setCollabsError('Spolupráce tohoto profilu jsou soukromé.');
+      return;
+    }
+    const fields = `
+      id,
+      title,
+      status,
+      result_audio_url,
+      result_cover_url,
+      updated_at
+    `;
+    try {
+      const creatorPromise = supabase
+        .from('collab_threads')
+        .select(fields)
+        .eq('created_by', profileId)
+        .order('updated_at', { ascending: false });
+      const participantIdsPromise = supabase
+        .from('collab_participants')
+        .select('thread_id')
+        .eq('user_id', profileId);
+
+      const [byCreator, participantIds] = await Promise.all([creatorPromise, participantIdsPromise]);
+      if (byCreator.error) throw byCreator.error;
+      if (participantIds.error) throw participantIds.error;
+
+      const participantThreadIds = Array.from(
+        new Set(
+          ((participantIds.data as any[]) ?? [])
+            .map((row) => row.thread_id)
+            .filter(Boolean)
+        )
+      );
+
+      const participantThreadsResult =
+        participantThreadIds.length > 0
+          ? await supabase
+              .from('collab_threads')
+              .select(fields)
+              .in('id', participantThreadIds)
+              .order('updated_at', { ascending: false })
+          : { data: [], error: null };
+
+      if (participantThreadsResult.error) throw participantThreadsResult.error;
+
+      const mergedThreads = new Map<string, Collaboration>();
+      const collect = (items: any[] = []) => {
+        items.forEach((thread) => {
+          if (!thread?.id) return;
+          mergedThreads.set(thread.id, {
+            id: thread.id,
+            title: thread.title || 'Spolupráce',
+            status: thread.status ?? null,
+            bpm: null,
+            mood: null,
+            audio_url: thread.result_audio_url ?? null,
+            cover_url: thread.result_cover_url ?? null,
+            partners: [],
+            updated_at: thread.updated_at ?? null,
+          });
+        });
+      };
+      collect(byCreator.data as any[]);
+      collect(participantThreadsResult.data as any[]);
+
+      const threadIds = Array.from(mergedThreads.keys());
+      if (threadIds.length) {
+        const { data: participants, error: participantsErr } = await supabase
+          .from('collab_participants')
+          .select('thread_id,user_id')
+          .in('thread_id', threadIds);
+        if (participantsErr) throw participantsErr;
+
+        const userIds = Array.from(
+          new Set((participants ?? []).map((p: any) => p.user_id).filter(Boolean))
+        );
+        let nameMap: Record<string, string> = {};
+        if (userIds.length) {
+          const { data: profiles, error: profileErr } = await supabase
+            .from('profiles')
+            .select('id,display_name')
+            .in('id', userIds);
+          if (profileErr) throw profileErr;
+          if (profiles) {
+            nameMap = Object.fromEntries(
+              (profiles as any[]).map((p) => [p.id, (p.display_name as string) || ''])
+            );
+          }
+        }
+
+        const threadNames = new Map<string, string[]>();
+        (participants ?? []).forEach((p: any) => {
+          const thread = mergedThreads.get(p.thread_id);
+          if (!thread) return;
+          const displayName = nameMap[p.user_id] || p.user_id;
+          if (!threadNames.has(p.thread_id)) {
+            threadNames.set(p.thread_id, []);
+          }
+          const list = threadNames.get(p.thread_id)!;
+          if (!list.includes(displayName)) {
+            list.push(displayName);
+          }
+        });
+
+        const ownerName = profile?.display_name || 'Ty';
+        setCollabs(
+          Array.from(mergedThreads.values()).map((thread) => {
+            const partners = threadNames.get(thread.id) ?? [];
+            const partnerLabel = partners.length ? partners.filter((name) => name !== ownerName) : [];
+            const partnerDisplay = partnerLabel.length ? partnerLabel.join(' • ') : 'někým';
+            return {
+              ...thread,
+              title: `Spolupráce ${ownerName} a ${partnerDisplay}`,
+            };
+          })
+        );
+      } else {
+        setCollabs(Array.from(mergedThreads.values()));
+      }
+      setCollabsError(null);
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba načítání spoluprací:', err);
+      setCollabs([]);
+      setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
+    }
+  }, [currentUserId, profileId, supabase]);
+
+  useEffect(() => {
+    if (currentUserId) {
+      loadCollabs();
+    }
+  }, [currentUserId, loadCollabs, collabsReload]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
