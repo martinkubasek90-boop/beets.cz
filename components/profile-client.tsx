@@ -2200,11 +2200,27 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       key={project.id}
                       className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)]"
                     >
-                      <div>
-                        <p className="font-semibold">{project.title}</p>
-                        <p className="text-[12px] text-[var(--mpc-muted)]">
-                          {project.description || 'Bez popisu'}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <div className="h-16 w-16 overflow-hidden rounded border border-white/10 bg-black/30">
+                          {project.cover_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={project.cover_url}
+                              alt={project.title || 'Projektová grafika'}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-[11px] uppercase tracking-[0.08em] text-white">
+                              {project.title?.slice(0, 2).toUpperCase() || 'PR'}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{project.title}</p>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">
+                            {project.description || 'Bez popisu'}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
                         <span>Projekt</span>
