@@ -9,7 +9,6 @@ import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
 import { FireButton } from './fire-button';
-import { NotificationBell } from './notification-bell';
 import { useGlobalPlayer } from './global-player-provider';
 
 type Profile = {
@@ -125,48 +124,6 @@ type ForumThreadSummary = {
   category_id: string;
   updated_at?: string | null;
 };
-
-type InboxMessage = {
-  id: number | string;
-  from: string;
-  preview: string;
-  time: string;
-  unread?: boolean;
-};
-
-const demoCollabMessages: InboxMessage[] = [
-  {
-    id: 1,
-    from: 'MC Panel',
-    preview: 'Hej, posílám ti vokály k „Betonovej sen“, můžeš mrknout?',
-    time: '10:32',
-    unread: true,
-  },
-  {
-    id: 2,
-    from: 'Třetí Vchod',
-    preview: 'Díky za beat, máš i verzi bez basy na živák?',
-    time: '09:15',
-  },
-  {
-    id: 3,
-    from: 'GreyTone',
-    preview: 'Můžem hodit rychlej call ohledně mixu akapely?',
-    time: 'včera',
-  },
-  {
-    id: 4,
-    from: 'Northside',
-    preview: 'Máme připravený hook na tvůj beat, chceš poslat raw?',
-    time: 'před 2 dny',
-  },
-  {
-    id: 5,
-    from: 'DJ Lávka',
-    preview: 'Hledám scratch části na live set, pošleš stems?',
-    time: 'před 3 dny',
-  },
-];
 
 type NewMessageForm = {
   to: string;
@@ -1166,13 +1123,35 @@ function handleFieldChange(field: keyof Profile, value: string) {
           .eq('thread_id', selectedThreadId)
           .order('created_at', { ascending: true });
         if (msgErr) throw msgErr;
+        const normalized = ((msgs as any[]) ?? []).map((m) => ({
+          id: m.id,
+          body: m.body,
+          user_id: m.user_id,
+          created_at: m.created_at,
+          author_name: undefined as string | null | undefined,
+        }));
+        const userIds = Array.from(
+          new Set(normalized.map((m) => m.user_id).filter(Boolean))
+        ) as string[];
+        let nameMap: Record<string, string> = {};
+        if (userIds.length) {
+          const { data: profiles, error: profileErr } = await supabase
+            .from('profiles')
+            .select('id, display_name')
+            .in('id', userIds);
+          if (profileErr) throw profileErr;
+          if (profiles) {
+            nameMap = Object.fromEntries(
+              (profiles as any[]).map((p) => [p.id, p.display_name || ''])
+            );
+          }
+        }
         setCollabMessages(
-          ((msgs as any[]) ?? []).map((m) => ({
-            id: m.id,
-            body: m.body,
-            user_id: m.user_id,
-            created_at: m.created_at,
-            author_name: null, // záměrně bez joinu na profiles (chybí FK); lze doplnit později samostatným fetch podle user_id
+          normalized.map((msg) => ({
+            ...msg,
+            author_name:
+              nameMap[msg.user_id] ||
+              (msg.user_id === userId ? profile.display_name || 'Ty' : null),
           }))
         );
       } catch (err) {
@@ -1198,7 +1177,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
     loadDetails();
-  }, [selectedThreadId, supabase]);
+  }, [profile?.display_name, selectedThreadId, supabase, userId]);
 
   const handleSendCollabMsg = async () => {
     if (!selectedThreadId || !collabMessageBody.trim() || !userId) return;
