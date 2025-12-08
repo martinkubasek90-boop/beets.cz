@@ -104,8 +104,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const [projectDeleteError, setProjectDeleteError] = useState<Record<string, string>>({});
-  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
@@ -282,27 +280,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
       return true;
     });
-  }
-
-  async function handleDeleteProject(projectId: string) {
-    if (typeof window !== 'undefined' && !window.confirm('Opravdu chceš tento projekt odstranit?')) {
-      return;
-    }
-    setProjectDeleteError((prev) => ({ ...prev, [projectId]: '' }));
-    setDeletingProjectId(projectId);
-    try {
-      const { error } = await supabase.from('projects').delete().eq('id', projectId).eq('user_id', profileId);
-      if (error) throw error;
-      await loadProjects();
-    } catch (err) {
-      const message =
-        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-          ? (err as any).message
-          : 'Nepodařilo se projekt odstranit.';
-      setProjectDeleteError((prev) => ({ ...prev, [projectId]: message }));
-    } finally {
-      setDeletingProjectId(null);
-    }
   }
 
   function seekInCurrent(clientX: number, width: number) {
@@ -633,16 +610,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       <span className="text-[12px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] text-center">
                         Tracklist
                       </span>
-                      <button
-                        onClick={() => handleDeleteProject(project.id)}
-                        disabled={deletingProjectId === project.id}
-                        className="rounded-full border border-red-500/60 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-red-400 hover:bg-red-500/10 disabled:opacity-50"
-                      >
-                        {deletingProjectId === project.id ? 'Mažu...' : 'Odebrat projekt'}
-                      </button>
-                      {projectDeleteError[project.id] && (
-                        <p className="text-[11px] text-red-300">{projectDeleteError[project.id]}</p>
-                      )}
                     </div>
 
                     {expandedProjects[project.id] && (
