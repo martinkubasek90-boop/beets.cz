@@ -213,21 +213,38 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         updated_at
       `;
       try {
-        const [byCreator, byParticipant] = await Promise.all([
-          supabase
-            .from('collab_threads')
-            .select(fields)
-            .eq('created_by', profileId)
-            .order('updated_at', { ascending: false }),
-          supabase
-            .from('collab_threads')
-            .select(fields)
-            .eq('collab_participants.user_id', profileId)
-            .order('updated_at', { ascending: false }),
-        ]);
+        const creatorPromise = supabase
+          .from('collab_threads')
+          .select(fields)
+          .eq('created_by', profileId)
+          .order('updated_at', { ascending: false });
+        const participantIdsPromise = supabase
+          .from('collab_participants')
+          .select('thread_id')
+          .eq('user_id', profileId);
 
+        const [byCreator, participantIds] = await Promise.all([creatorPromise, participantIdsPromise]);
         if (byCreator.error) throw byCreator.error;
-        if (byParticipant.error) throw byParticipant.error;
+        if (participantIds.error) throw participantIds.error;
+
+        const participantThreadIds = Array.from(
+          new Set(
+            ((participantIds.data as any[]) ?? [])
+              .map((row) => row.thread_id)
+              .filter(Boolean)
+          )
+        );
+
+        const participantThreadsResult =
+          participantThreadIds.length > 0
+            ? await supabase
+                .from('collab_threads')
+                .select(fields)
+                .in('id', participantThreadIds)
+                .order('updated_at', { ascending: false })
+            : { data: [], error: null };
+
+        if (participantThreadsResult.error) throw participantThreadsResult.error;
 
         const mergedThreads = new Map<string, Collaboration>();
         const collect = (items: any[] = []) => {
@@ -247,7 +264,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           });
         };
         collect(byCreator.data as any[]);
-        collect(byParticipant.data as any[]);
+        collect(participantThreadsResult.data as any[]);
 
         const threadIds = Array.from(mergedThreads.keys());
         if (threadIds.length) {
