@@ -38,6 +38,12 @@ type ProjectItem = {
   tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
 };
 
+const resolveProjectCoverUrl = (cover: string | null) => {
+  if (!cover) return null;
+  if (cover.startsWith('http')) return cover;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${cover}`;
+};
+
 type CollabThread = {
   id: string;
   title: string;
@@ -2202,10 +2208,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     >
                       <div className="flex items-start gap-3">
                         <div className="h-16 w-16 overflow-hidden rounded border border-white/10 bg-black/30">
-                          {project.cover_url ? (
+                          {resolveProjectCoverUrl(project.cover_url) ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                              src={project.cover_url}
+                              src={resolveProjectCoverUrl(project.cover_url) || undefined}
                               alt={project.title || 'Projektová grafika'}
                               className="h-full w-full object-cover"
                             />
