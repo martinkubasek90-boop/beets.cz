@@ -647,7 +647,57 @@ function handleFieldChange(field: keyof Profile, value: string) {
           return tb - ta;
         });
 
-        setCollabThreads(merged);
+        const threadIds = merged.map((thread) => thread.id);
+        if (threadIds.length) {
+          const { data: participants, error: participantsErr } = await supabase
+            .from('collab_participants')
+            .select('thread_id,user_id')
+            .in('thread_id', threadIds);
+          if (participantsErr) throw participantsErr;
+          const partnerIds = Array.from(
+            new Set(
+              (participants ?? [])
+                .map((p: any) => p.user_id)
+                .filter((id) => id && id !== userId)
+            )
+          );
+          let nameMap: Record<string, string> = {};
+          if (partnerIds.length) {
+            const { data: profiles, error: profileErr } = await supabase
+              .from('profiles')
+              .select('id,display_name')
+              .in('id', partnerIds);
+            if (profileErr) throw profileErr;
+            if (profiles) {
+              nameMap = Object.fromEntries((profiles as any[]).map((p) => [p.id, p.display_name || '']));
+            }
+          }
+          const threadNames = new Map<string, string[]>();
+          (participants ?? []).forEach((p: any) => {
+            if (!p.thread_id || !p.user_id) return;
+            if (p.user_id === userId) return;
+            const partnerName = nameMap[p.user_id] || p.user_id;
+            if (!threadNames.has(p.thread_id)) {
+              threadNames.set(p.thread_id, []);
+            }
+            const list = threadNames.get(p.thread_id)!;
+            if (!list.includes(partnerName)) {
+              list.push(partnerName);
+            }
+          });
+          setCollabThreads(
+            merged.map((thread) => {
+              const partners = threadNames.get(thread.id) ?? [];
+              const partnerLabel = partners.length ? partners.join(' • ') : 'někým';
+              return {
+                ...thread,
+                title: `Spolupráce s ${partnerLabel}`,
+              };
+            })
+          );
+        } else {
+          setCollabThreads(merged);
+        }
       } catch (err) {
         console.error('Chyba načítání spoluprací:', err);
         setCollabThreadsError('Nepodařilo se načíst spolupráce.');
