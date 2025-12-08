@@ -105,15 +105,37 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     setCurrentTime(next);
   };
 
+  const skipBy = (seconds: number) => {
+    const el = audioRef.current;
+    if (!el) return;
+    const baseCurrent = el.currentTime || 0;
+    const dur = duration || el.duration || 0;
+    const next = Math.min(Math.max(baseCurrent + seconds, 0), dur);
+    el.currentTime = next;
+    setCurrentTime(next);
+  };
+
+  const handleNextDefault = () => skipBy(10);
+  const handlePrevDefault = () => skipBy(-10);
+
   const setOnEnded = (fn: (() => void) | null) => {
     onEndedRef.current = fn;
   };
   const setOnNext = (fn: (() => void) | null) => {
-    onNextRef.current = fn;
+    onNextRef.current = fn ?? handleNextDefault;
   };
   const setOnPrev = (fn: (() => void) | null) => {
-    onPrevRef.current = fn;
+    onPrevRef.current = fn ?? handlePrevDefault;
   };
+
+  useEffect(() => {
+    if (!onNextRef.current) {
+      onNextRef.current = handleNextDefault;
+    }
+    if (!onPrevRef.current) {
+      onPrevRef.current = handlePrevDefault;
+    }
+  }, [handleNextDefault, handlePrevDefault]);
 
   const value = useMemo(
     () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
