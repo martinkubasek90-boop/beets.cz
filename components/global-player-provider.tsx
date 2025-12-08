@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FireButton } from "./fire-button";
 
 type TrackMeta = {
@@ -75,7 +75,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     };
   }, []);
 
-  const play = (track: Track) => {
+  const play = useCallback((track: Track) => {
     if (!audioRef.current || !track.url) return;
     setCurrent(track);
     audioRef.current.src = track.url;
@@ -84,9 +84,9 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       .play()
       .then(() => setIsPlaying(true))
       .catch(() => setIsPlaying(false));
-  };
+  }, []);
 
-  const toggle = () => {
+  const toggle = useCallback(() => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
@@ -97,42 +97,54 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
         .then(() => setIsPlaying(true))
         .catch(() => {});
     }
-  };
+  }, [isPlaying]);
 
-  const pause = () => {
+  const pause = useCallback(() => {
     audioRef.current?.pause();
     setIsPlaying(false);
-  };
+  }, []);
 
-  const seek = (pct: number) => {
-    if (!audioRef.current || !duration) return;
-    const next = Math.min(Math.max(pct, 0), 1) * duration;
-    audioRef.current.currentTime = next;
-    setCurrentTime(next);
-  };
+  const seek = useCallback(
+    (pct: number) => {
+      if (!audioRef.current || !duration) return;
+      const next = Math.min(Math.max(pct, 0), 1) * duration;
+      audioRef.current.currentTime = next;
+      setCurrentTime(next);
+    },
+    [duration]
+  );
 
-  const skipBy = (seconds: number) => {
-    const el = audioRef.current;
-    if (!el) return;
-    const baseCurrent = el.currentTime || 0;
-    const dur = duration || el.duration || 0;
-    const next = Math.min(Math.max(baseCurrent + seconds, 0), dur);
-    el.currentTime = next;
-    setCurrentTime(next);
-  };
+  const skipBy = useCallback(
+    (seconds: number) => {
+      const el = audioRef.current;
+      if (!el) return;
+      const baseCurrent = el.currentTime || 0;
+      const dur = duration || el.duration || 0;
+      const next = Math.min(Math.max(baseCurrent + seconds, 0), dur);
+      el.currentTime = next;
+      setCurrentTime(next);
+    },
+    [duration]
+  );
 
-  const handleNextDefault = () => skipBy(10);
-  const handlePrevDefault = () => skipBy(-10);
+  const handleNextDefault = useCallback(() => skipBy(300), [skipBy]);
+  const handlePrevDefault = useCallback(() => skipBy(-300), [skipBy]);
 
-  const setOnEnded = (fn: (() => void) | null) => {
+  const setOnEnded = useCallback((fn: (() => void) | null) => {
     onEndedRef.current = fn;
-  };
-  const setOnNext = (fn: (() => void) | null) => {
-    onNextRef.current = fn ?? handleNextDefault;
-  };
-  const setOnPrev = (fn: (() => void) | null) => {
-    onPrevRef.current = fn ?? handlePrevDefault;
-  };
+  }, []);
+  const setOnNext = useCallback(
+    (fn: (() => void) | null) => {
+      onNextRef.current = fn ?? handleNextDefault;
+    },
+    [handleNextDefault]
+  );
+  const setOnPrev = useCallback(
+    (fn: (() => void) | null) => {
+      onPrevRef.current = fn ?? handlePrevDefault;
+    },
+    [handlePrevDefault]
+  );
 
   useEffect(() => {
     if (!onNextRef.current) {
@@ -145,7 +157,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
 
   const value = useMemo(
     () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
-    [current, isPlaying, currentTime, duration]
+    [current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
   );
 
   const derivedItemType =
