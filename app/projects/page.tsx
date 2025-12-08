@@ -200,6 +200,25 @@ export default function ProjectsPage() {
       });
       if (insertErr) throw insertErr;
       setMyRequests((prev) => ({ ...prev, [projectId]: "pending" }));
+      const project = projects.find((p) => p.id === projectId);
+      if (project && project.user_id) {
+        try {
+          await fetch("/api/notifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user_id: project.user_id,
+              type: "project_request",
+              title: "Nová žádost o přístup",
+              body: `${project.author_name || "Uživatel"} žádá o přístup k projektu ${project.title}`,
+              item_type: "project",
+              item_id: String(projectId),
+            }),
+          });
+        } catch (notifyErr) {
+          console.warn("Nepodařilo se poslat notifikaci o žádosti o přístup:", notifyErr);
+        }
+      }
     } catch (e) {
       alert("Nepodařilo se odeslat žádost.");
     } finally {

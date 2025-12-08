@@ -1012,6 +1012,22 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
       setProjectRequests((prev) => prev.filter((r) => r.id !== req.id));
       setProjectRequestsError(null);
+      try {
+        await fetch("/api/notifications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: req.requester_id,
+            type: approve ? "project_request_approved" : "project_request_denied",
+            title: approve ? "Žádost schválena" : "Žádost zamítnuta",
+            body: `Žádost o přístup k ${req.project_title || "projektu"} byla ${approve ? "schválena" : "zamítnuta"}.`,
+            item_type: "project",
+            item_id: String(req.project_id),
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn("Nepodařilo se poslat notifikaci o žádosti o přístup:", notifyErr);
+      }
     } catch (err) {
       console.error('Chyba při schválení/odmítnutí žádosti:', err);
       setProjectRequestsError('Nepodařilo se aktualizovat žádost.');
