@@ -204,26 +204,24 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
 
     const loadCollabs = async () => {
-      const collaboratorSelect = `
+      const fields = `
         id,
         title,
         status,
         result_audio_url,
         result_cover_url,
-        updated_at,
-        collab_participants!inner(user_id, profiles(display_name))
+        updated_at
       `;
-
       try {
         const [byCreator, byParticipant] = await Promise.all([
           supabase
             .from('collab_threads')
-            .select(collaboratorSelect)
+            .select(fields)
             .eq('created_by', profileId)
             .order('updated_at', { ascending: false }),
           supabase
             .from('collab_threads')
-            .select(collaboratorSelect)
+            .select(fields)
             .eq('collab_participants.user_id', profileId)
             .order('updated_at', { ascending: false }),
         ]);
@@ -231,30 +229,58 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         if (byCreator.error) throw byCreator.error;
         if (byParticipant.error) throw byParticipant.error;
 
-        const mapThread = (thread: any): Collaboration => {
-          const participants = Array.isArray(thread.collab_participants)
-            ? thread.collab_participants
-                .map((p: any) => p.profiles?.display_name || p.user_id)
-                .filter(Boolean) as string[]
-            : [];
-          return {
-            id: thread.id,
-            title: thread.title || 'Spolupráce',
-            status: thread.status ?? null,
-            bpm: null,
-            mood: null,
-            audio_url: thread.result_audio_url ?? null,
-            cover_url: thread.result_cover_url ?? null,
-            partners: participants,
-            updated_at: thread.updated_at ?? null,
-          };
+        const mergedThreads = new Map<string, Collaboration>();
+        const collect = (items: any[] = []) => {
+          items.forEach((thread) => {
+            if (!thread?.id) return;
+            mergedThreads.set(thread.id, {
+              id: thread.id,
+              title: thread.title || 'Spolupráce',
+              status: thread.status ?? null,
+              bpm: null,
+              mood: null,
+              audio_url: thread.result_audio_url ?? null,
+              cover_url: thread.result_cover_url ?? null,
+              partners: [],
+              updated_at: thread.updated_at ?? null,
+            });
+          });
         };
+        collect(byCreator.data as any[]);
+        collect(byParticipant.data as any[]);
 
-        const merged = new Map<string, Collaboration>();
-        (byCreator.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
-        (byParticipant.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
+        const threadIds = Array.from(mergedThreads.keys());
+        if (threadIds.length) {
+          const { data: participants, error: participantsErr } = await supabase
+            .from('collab_participants')
+            .select('thread_id,user_id')
+            .in('thread_id', threadIds);
+          if (participantsErr) throw participantsErr;
+          const userIds = Array.from(new Set((participants ?? []).map((p: any) => p.user_id).filter(Boolean)));
+          let nameMap: Record<string, string> = {};
+          if (userIds.length) {
+            const { data: profiles, error: profileErr } = await supabase
+              .from('profiles')
+              .select('id,display_name')
+              .in('id', userIds);
+            if (profileErr) throw profileErr;
+            if (profiles) {
+              nameMap = Object.fromEntries(
+                (profiles as any[]).map((p) => [p.id, (p.display_name as string) || ''])
+              );
+            }
+          }
+          (participants ?? []).forEach((p: any) => {
+            const thread = mergedThreads.get(p.thread_id);
+            if (!thread) return;
+            const displayName = nameMap[p.user_id] || p.user_id;
+            if (!thread.partners.includes(displayName)) {
+              thread.partners.push(displayName);
+            }
+          });
+        }
 
-        setCollabs(Array.from(merged.values()));
+        setCollabs(Array.from(mergedThreads.values()));
         setCollabsError(null);
       } catch (err) {
         const message =
@@ -262,6 +288,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             ? (err as any).message
             : 'Neznámá chyba';
         console.error('Chyba načítání spoluprací:', err);
+        setCollabs([]);
         setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
       }
     };
