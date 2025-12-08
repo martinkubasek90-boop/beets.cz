@@ -773,13 +773,24 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                           <span>{project.title.slice(0, 2)}</span>
                         )}
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-lg font-semibold text-white">{project.title}</p>
-                        <p className="text-[12px] text-[var(--mpc-muted)]">
-                          {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-semibold text-white">{project.title}</p>
+                    <p className="text-[12px] text-[var(--mpc-muted)]">
+                      {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
+                    </p>
+                  </div>
+                </div>
+
+                {project.access_mode === 'request' && (
+                  <div className="mt-4 flex justify-center">
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                    >
+                      Požádat o přístup
+                    </Link>
+                  </div>
+                )}
 
                     <div className="mt-4 flex flex-col items-center gap-2">
                       <button
