@@ -1,6 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, FormEvent, ChangeEvent, useCallback } from 'react';
+import {
+  useEffect,
+  useState,
+  FormEvent,
+  ChangeEvent,
+  useRef,
+  useMemo,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -8,9 +15,6 @@ import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
-import AcapellaUploadForm from './acapella-upload-form';
-import { useGlobalPlayer } from './global-player-provider';
-import { NotificationBell } from './notification-bell';
 
 type Profile = {
   display_name: string;
@@ -18,12 +22,6 @@ type Profile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
-  region?: string | null;
-  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null;
-  seeking_signals?: string[] | null;
-  offering_signals?: string[] | null;
-  seeking_custom?: string | null;
-  offering_custom?: string | null;
 };
 
 type BeatItem = {
@@ -35,16 +33,6 @@ type BeatItem = {
   cover_url?: string | null;
 };
 
-type AcapellaItem = {
-  id: number;
-  title: string;
-  bpm: number | null;
-  mood: string | null;
-  audio_url: string | null;
-  cover_url?: string | null;
-  access_mode?: 'public' | 'request' | 'private' | null;
-};
-
 type ProjectItem = {
   id: string;
   title: string;
@@ -52,63 +40,15 @@ type ProjectItem = {
   cover_url: string | null;
   project_url: string | null;
   access_mode?: 'public' | 'request' | 'private';
-  tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
-};
-
-type PlayerMeta = {
-  projectId?: string;
-  trackIndex?: number;
-};
-
-type PlayerTrack = {
-  id: string;
-  title: string;
-  url: string;
-  cover_url?: string | null;
-  artist?: string | null;
-  item_type: 'beat' | 'project' | 'acapella';
-  meta?: PlayerMeta;
-};
-
-const SEEKING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'GRAFIKA', 'VIDEO', 'STUDIO'];
-const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', 'GRAFIKA', 'VIDEO'];
-const SIGNAL_CACHE_KEY = 'beets-signals-cache';
-const SHOW_SHARE_FEATURE = false;
-
-const resolveProjectCoverUrl = (cover: string | null) => {
-  if (!cover) return null;
-  if (cover.startsWith('http')) return cover;
-  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${cover}`;
-};
-
-const normalizeProjectTracks = (raw?: ProjectItem['tracks_json']) => {
-  if (!Array.isArray(raw)) return [] as { name: string; url: string }[];
-  return raw
-    .map((t, idx) => {
-      const url =
-        t?.url && t.url.startsWith('http')
-          ? t.url
-          : t?.path
-            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${t.path}`
-            : '';
-      return {
-        name: t?.name || `Track ${idx + 1}`,
-        url,
-      };
-    })
-    .filter((t) => Boolean(t.url));
+  tracks_json?: Array<{ name: string; url: string }>;
 };
 
 type CollabThread = {
   id: string;
   title: string;
-  status: 'pending' | 'active' | 'rejected' | string;
+  status: string;
   updated_at: string | null;
   participants: string[];
-  creator_id?: string | null;
-  deadline?: string | null;
-  last_activity?: string | null;
-  milestones?: { id: string; title: string; due?: string | null; done?: boolean }[];
 };
 
 type CollabMessage = {
@@ -126,40 +66,6 @@ type CollabFile = {
   user_id: string;
   created_at: string | null;
 };
-
-type NotifyPayload = {
-  user_id: string;
-  type: string;
-  title?: string | null;
-  body?: string | null;
-  item_type?: string | null;
-  item_id?: string | null;
-  targetEmail?: string | null;
-  senderId?: string | null;
-  data?: Record<string, any>;
-};
-
-async function sendNotificationSafe(supabase: ReturnType<typeof createClient>, payload: NotifyPayload) {
-  if (!payload?.user_id || typeof payload.user_id !== 'string' || !payload.user_id.match(/^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$/)) {
-    return;
-  }
-  try {
-    const res = await fetch('/api/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error('API notification failed');
-    return;
-  } catch {
-    try {
-      const { user_id, type, title, body, item_type, item_id } = payload;
-      await supabase.from('notifications').insert({ user_id, type, title, body, item_type, item_id, read: false });
-    } catch (inner) {
-      console.warn('Notifikaci se nepodařilo uložit:', inner);
-    }
-  }
-}
 
 type ProjectAccessRequest = {
   id: string;
@@ -195,14 +101,11 @@ type BlogPost = {
   published?: boolean | null;
 };
 
-type DirectMessage = {
+type InboxMessage = {
   id: number;
-  user_id: string;
-  to_user_id: string;
-  from_name?: string | null;
-  to_name?: string | null;
-  body: string;
-  created_at: string;
+  from: string;
+  preview: string;
+  time: string;
   unread?: boolean;
 };
 
@@ -224,6 +127,48 @@ type ForumThreadSummary = {
   category_id: string;
   updated_at?: string | null;
 };
+
+type InboxMessage = {
+  id: number | string;
+  from: string;
+  preview: string;
+  time: string;
+  unread?: boolean;
+};
+
+const demoCollabMessages: InboxMessage[] = [
+  {
+    id: 1,
+    from: 'MC Panel',
+    preview: 'Hej, posílám ti vokály k „Betonovej sen“, můžeš mrknout?',
+    time: '10:32',
+    unread: true,
+  },
+  {
+    id: 2,
+    from: 'Třetí Vchod',
+    preview: 'Díky za beat, máš i verzi bez basy na živák?',
+    time: '09:15',
+  },
+  {
+    id: 3,
+    from: 'GreyTone',
+    preview: 'Můžem hodit rychlej call ohledně mixu akapely?',
+    time: 'včera',
+  },
+  {
+    id: 4,
+    from: 'Northside',
+    preview: 'Máme připravený hook na tvůj beat, chceš poslat raw?',
+    time: 'před 2 dny',
+  },
+  {
+    id: 5,
+    from: 'DJ Lávka',
+    preview: 'Hledám scratch části na live set, pošleš stems?',
+    time: 'před 3 dny',
+  },
+];
 
 type NewMessageForm = {
   to: string;
@@ -258,15 +203,6 @@ function buildCollabLabel(names?: string[]) {
   return `Spolupráce ${uniqueNames.join(', ')} a ${last}`;
 }
 
-  function formatTime(sec?: number) {
-  if (!sec || Number.isNaN(sec)) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60)
-    .toString()
-    .padStart(2, '0');
-  return `${m}:${s}`;
-}
-
 export default function ProfileClient() {
   const supabase = createClient();
   const router = useRouter();
@@ -275,20 +211,14 @@ export default function ProfileClient() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     hardware: '',
     bio: '',
     avatar_url: null,
     banner_url: null,
-    region: null,
-    role: 'creator',
-    seeking_signals: [],
-    offering_signals: [],
-    seeking_custom: '',
-    offering_custom: '',
   });
-  const [editRegion, setEditRegion] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -296,56 +226,15 @@ export default function ProfileClient() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null>('creator');
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
-  const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
-  const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const [myAccessRequests, setMyAccessRequests] = useState<ProjectAccessRequest[]>([]);
-  const [myAccessRequestsError, setMyAccessRequestsError] = useState<string | null>(null);
-  const [myAccessRequestsLoading, setMyAccessRequestsLoading] = useState(false);
   const [projectGrants, setProjectGrants] = useState<Record<string, ProjectAccessGrant[]>>({});
   const [projectGrantsError, setProjectGrantsError] = useState<string | null>(null);
-  const [messages, setMessages] = useState<DirectMessage[]>([]);
-  const [expandedThread, setExpandedThread] = useState<string | null>(null);
-  const [threadReplies, setThreadReplies] = useState<Record<string, string>>({});
-  const [profilesById, setProfilesById] = useState<Record<string, string>>({});
+  const [messages, setMessages] = useState<InboxMessage[]>(demoCollabMessages);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
-  const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
-  const [seekingSignals, setSeekingSignals] = useState<string[]>([]);
-  const [offeringSignals, setOfferingSignals] = useState<string[]>([]);
-  const [seekingCustom, setSeekingCustom] = useState('');
-  const [offeringCustom, setOfferingCustom] = useState('');
-  const toggleSignal = (value: string, list: string[], setter: (next: string[]) => void) => {
-    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
-  };
-  const loadCachedSignals = () => {
-    if (typeof window === 'undefined') return null;
-    const raw = window.localStorage.getItem(SIGNAL_CACHE_KEY);
-    if (!raw) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      return {
-        seeking_signals: (parsed?.seeking_signals as string[]) || [],
-        offering_signals: (parsed?.offering_signals as string[]) || [],
-        seeking_custom: (parsed?.seeking_custom as string) || '',
-        offering_custom: (parsed?.offering_custom as string) || '',
-      };
-    } catch {
-      return null;
-    }
-  };
-
-  const currentRole = profile.role ?? 'creator';
-  const isSuperAdmin = currentRole === 'superadmin';
-  const isAdmin = currentRole === 'admin' || isSuperAdmin;
-  const isMcOnly = currentRole === 'mc';
-  const canUpload = !isMcOnly;
-  const canUploadAcapellas = currentRole === 'mc';
-  const canWriteArticles = isAdmin;
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
@@ -358,48 +247,12 @@ export default function ProfileClient() {
   const [collabFiles, setCollabFiles] = useState<CollabFile[]>([]);
   const [collabMessagesLoading, setCollabMessagesLoading] = useState<boolean>(false);
   const [collabFilesLoading, setCollabFilesLoading] = useState<boolean>(false);
-  const [collabStatusUpdating, setCollabStatusUpdating] = useState<string | null>(null);
-  const [shareLoadingId, setShareLoadingId] = useState<string | null>(null);
-  const [shareMessage, setShareMessage] = useState<string | null>(null);
-  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
-  const [newMilestoneDue, setNewMilestoneDue] = useState('');
-  const [savingMilestone, setSavingMilestone] = useState(false);
-  const collabSummary = useMemo(() => {
-    const counts = { active: 0, pending: 0, done: 0, cancelled: 0, paused: 0, rejected: 0 };
-    collabThreads.forEach((t) => {
-      if (t.status === 'active') counts.active += 1;
-      else if (t.status === 'pending') counts.pending += 1;
-      else if (t.status === 'done') counts.done += 1;
-      else if (t.status === 'cancelled') counts.cancelled += 1;
-      else if (t.status === 'paused') counts.paused += 1;
-      else if (t.status === 'rejected') counts.rejected += 1;
-    });
-    return counts;
-  }, [collabThreads]);
-  const [startingCollabCall, setStartingCollabCall] = useState(false);
-  const profileCompleteness = useMemo(() => {
-    const missing: string[] = [];
-    if (!profile.avatar_url) missing.push('avatar');
-    if (!profile.bio?.trim()) missing.push('bio');
-    if (!profile.region?.trim()) missing.push('město/region');
-    if (!profile.role) missing.push('role');
-    if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
-
-    const requireBeat = profile.role !== 'mc' && profile.role !== 'curator';
-    const requireAcapella = profile.role === 'mc';
-    if (requireBeat && !beats.length) missing.push('nahraný beat');
-    if (requireAcapella && !acapellas.length) missing.push('nahraná akapela');
-
-    const total = 5 + (requireBeat ? 1 : 0) + (requireAcapella ? 1 : 0);
-    const done = total - missing.length;
-    const percent = Math.round((done / total) * 100);
-    return { missing, percent };
-  }, [acapellas.length, beats.length, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
   const [collabMessageBody, setCollabMessageBody] = useState('');
   const [sendingCollabMessage, setSendingCollabMessage] = useState(false);
+  const [profilesById, setProfilesById] = useState<Record<string, string>>({});
   const [uploadingCollabFile, setUploadingCollabFile] = useState(false);
   const [collabFile, setCollabFile] = useState<File | null>(null);
   const [showNewThreadForm, setShowNewThreadForm] = useState(false);
@@ -435,20 +288,21 @@ export default function ProfileClient() {
     profile: false,
     beatUpload: false,
     projectUpload: false,
-    acapellaUpload: false,
-    messages: false,
   });
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [projectEditTitle, setProjectEditTitle] = useState('');
   const [projectEditDescription, setProjectEditDescription] = useState('');
-  const [projectEditTracks, setProjectEditTracks] = useState<
-    Array<{ name: string; url?: string; path?: string | null; file?: File | null }>
-  >([]);
+  const [projectEditTracks, setProjectEditTracks] = useState<Array<{ name: string; url?: string; file?: File | null }>>([]);
   const [projectEditCover, setProjectEditCover] = useState<{ url?: string; file?: File | null }>({});
   const [projectSaving, setProjectSaving] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [deleteProjectError, setDeleteProjectError] = useState<Record<string, string>>({});
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
-  const [currentAcapella, setCurrentAcapella] = useState<AcapellaItem | null>(null);
+  const [isPlayingBeat, setIsPlayingBeat] = useState(false);
   const [playerMessage, setPlayerMessage] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [beatTime, setBeatTime] = useState(0);
+  const [beatDuration, setBeatDuration] = useState(0);
   const [openBeatMenuId, setOpenBeatMenuId] = useState<number | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -456,215 +310,6 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
-  const [openAcapellaMenuId, setOpenAcapellaMenuId] = useState<number | null>(null);
-  const [editingAcapellaId, setEditingAcapellaId] = useState<number | null>(null);
-  const [editAcapellaTitle, setEditAcapellaTitle] = useState('');
-  const [editAcapellaBpm, setEditAcapellaBpm] = useState('');
-  const [editAcapellaMood, setEditAcapellaMood] = useState('');
-  const [editAcapellaCoverUrl, setEditAcapellaCoverUrl] = useState('');
-  const [editAcapellaCoverFile, setEditAcapellaCoverFile] = useState<File | null>(null);
-  const [editAcapellaAccess, setEditAcapellaAccess] = useState<'public' | 'request' | 'private'>('public');
-  const [acapellaSaving, setAcapellaSaving] = useState(false);
-  const [deletingAcapellaId, setDeletingAcapellaId] = useState<number | null>(null);
-  const [updatingAcapellaAccessId, setUpdatingAcapellaAccessId] = useState<number | null>(null);
-  const [tabsOpen, setTabsOpen] = useState(false);
-  const {
-    play: gpPlay,
-    toggle: gpToggle,
-    seek: gpSeek,
-    current: gpCurrent,
-    isPlaying: gpIsPlaying,
-    currentTime: gpTime,
-    duration: gpDuration,
-    setOnEnded: gpSetOnEnded,
-    setOnNext: gpSetOnNext,
-    setOnPrev: gpSetOnPrev,
-  } = useGlobalPlayer();
-  const beatPlayerTracks = useMemo<PlayerTrack[]>(
-    () =>
-      beats
-        .filter((beat) => Boolean(beat.audio_url))
-        .map((beat) => ({
-          id: `beat-${beat.id}`,
-          title: beat.title,
-          url: beat.audio_url || '',
-          cover_url: beat.cover_url ?? null,
-          artist: profile.display_name || 'Profil',
-          item_type: 'beat' as const,
-        })),
-    [beats, profile.display_name]
-  );
-
-  const acapellaPlayerTracks = useMemo<PlayerTrack[]>(
-    () =>
-      acapellas
-        .filter((item) => Boolean(item.audio_url))
-        .map((item) => ({
-          id: `acapella-${item.id}`,
-          title: item.title,
-          url: item.audio_url || '',
-          cover_url: item.cover_url ?? null,
-          artist: profile.display_name || 'Profil',
-          item_type: 'acapella' as const,
-        })),
-    [acapellas, profile.display_name]
-  );
-
-  const projectPlayerTracksMap = useMemo<Record<string, PlayerTrack[]>>(() => {
-    const map: Record<string, PlayerTrack[]> = {};
-    projects.forEach((project) => {
-      const tracks: PlayerTrack[] = [];
-      normalizeProjectTracks(project.tracks_json).forEach((track, idx) => {
-        tracks.push({
-          id: `project-${project.id}-${idx}`,
-          title: track.name,
-          url: track.url,
-          cover_url: project.cover_url ?? null,
-          artist: profile.display_name || project.title || 'Projekt',
-          item_type: 'project',
-          meta: { projectId: project.id, trackIndex: idx },
-        });
-      });
-      if (tracks.length === 0 && project.project_url) {
-        tracks.push({
-          id: `project-${project.id}`,
-          title: project.title || 'Projekt',
-          url: project.project_url,
-          cover_url: project.cover_url ?? null,
-          artist: profile.display_name || project.title || 'Projekt',
-          item_type: 'project',
-          meta: { projectId: project.id, trackIndex: -1 },
-        });
-      }
-      if (tracks.length) {
-        map[project.id] = tracks;
-      }
-    });
-    return map;
-  }, [projects, profile.display_name]);
-
-  // Heartbeat pro last_seen_at každých 60 s
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    const ping = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) return;
-      await supabase
-        .from('profiles')
-        .update({ last_seen_at: new Date().toISOString() })
-        .eq('id', auth.user.id);
-    };
-    void ping();
-    timer = setInterval(ping, 60_000);
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [supabase]);
-
-  const startPlayerTrack = useCallback(
-    (track: PlayerTrack) => {
-      if (!track.url) return;
-      gpPlay({
-        id: track.id,
-        title: track.title,
-        url: track.url,
-        cover_url: track.cover_url || undefined,
-        artist: track.artist || profile.display_name || 'Profil',
-        item_type: track.item_type,
-        meta: track.meta,
-      });
-    },
-    [gpPlay, profile.display_name]
-  );
-
-  useEffect(() => {
-    if (!gpSetOnNext || !gpSetOnPrev) return;
-
-    const cycleTracks = (items: PlayerTrack[], direction: 1 | -1) => {
-      if (!items.length) return;
-      const currentId = gpCurrent?.id;
-      const idx = items.findIndex((item) => item.id === currentId);
-      const nextIndex =
-        idx === -1
-          ? direction === 1
-            ? 0
-            : items.length - 1
-          : (idx + direction + items.length) % items.length;
-      startPlayerTrack(items[nextIndex]);
-    };
-
-    const handleNext = () => {
-      if (!gpCurrent) {
-        if (acapellaPlayerTracks.length) {
-          startPlayerTrack(acapellaPlayerTracks[0]);
-          return;
-        }
-        if (beatPlayerTracks.length) {
-          startPlayerTrack(beatPlayerTracks[0]);
-        }
-        return;
-      }
-      if (gpCurrent.item_type === 'beat') {
-        cycleTracks(beatPlayerTracks, 1);
-        return;
-      }
-      if (gpCurrent.item_type === 'acapella') {
-        cycleTracks(acapellaPlayerTracks, 1);
-        return;
-      }
-      if (gpCurrent.item_type === 'project') {
-        const projectId = gpCurrent.meta?.projectId;
-        if (projectId) {
-          const queue = projectPlayerTracksMap[projectId];
-          if (queue?.length) {
-            cycleTracks(queue, 1);
-            return;
-          }
-        }
-      }
-    };
-
-    const handlePrev = () => {
-      if (!gpCurrent) {
-        if (acapellaPlayerTracks.length) {
-          startPlayerTrack(acapellaPlayerTracks[acapellaPlayerTracks.length - 1]);
-          return;
-        }
-        if (beatPlayerTracks.length) {
-          startPlayerTrack(beatPlayerTracks[beatPlayerTracks.length - 1]);
-        }
-        return;
-      }
-      if (gpCurrent.item_type === 'beat') {
-        cycleTracks(beatPlayerTracks, -1);
-        return;
-      }
-      if (gpCurrent.item_type === 'acapella') {
-        cycleTracks(acapellaPlayerTracks, -1);
-        return;
-      }
-      if (gpCurrent.item_type === 'project') {
-        const projectId = gpCurrent.meta?.projectId;
-        if (projectId) {
-          const queue = projectPlayerTracksMap[projectId];
-          if (queue?.length) {
-            cycleTracks(queue, -1);
-            return;
-          }
-        }
-      }
-    };
-
-    gpSetOnNext(handleNext);
-    gpSetOnPrev(handlePrev);
-    gpSetOnEnded(handleNext);
-
-    return () => {
-      gpSetOnNext(null);
-      gpSetOnPrev(null);
-      gpSetOnEnded(null);
-    };
-  }, [acapellaPlayerTracks, beatPlayerTracks, gpCurrent, gpSetOnEnded, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
@@ -685,78 +330,24 @@ export default function ProfileClient() {
 
         setEmail(user.email ?? null);
         setUserId(user.id);
-        const metaRole = (user.user_metadata as any)?.role ?? 'creator';
-        setDefaultRole(metaRole as any);
+        setIsLoggedIn(true);
 
-        // Nejprve zkusíme načíst nová pole; pokud nejsou ve schématu (prod), spadneme do fallbacku
-        let data: any | null = null;
-        const baseSelect =
-          'display_name, hardware, bio, avatar_url, banner_url, region, role, seeking_signals, offering_signals, seeking_custom, offering_custom';
-        const { data: fullData, error: profileError } = await supabase
+        const { data, error: profileError } = await supabase
           .from('profiles')
-          .select(baseSelect)
+          .select('display_name, hardware, bio, avatar_url, banner_url')
           .eq('id', user.id)
           .maybeSingle();
-        if (profileError && typeof profileError.message === 'string' && profileError.message.includes('column')) {
-          const { data: fallbackData, error: fbError } = await supabase
-            .from('profiles')
-            .select('display_name, hardware, bio, avatar_url, banner_url, region, role')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (fbError) throw fbError;
-          data = fallbackData;
-        } else if (profileError) {
-          throw profileError;
-        } else {
-          data = fullData;
-        }
+
+        if (profileError) throw profileError;
 
         if (data) {
-          const cachedSignals = loadCachedSignals();
-          const hasDbSignals =
-            Array.isArray((data as any).seeking_signals) ||
-            Array.isArray((data as any).offering_signals) ||
-            Boolean((data as any).seeking_custom) ||
-            Boolean((data as any).offering_custom);
-          const mergedSeeking = hasDbSignals ? (data as any).seeking_signals ?? [] : cachedSignals?.seeking_signals ?? [];
-          const mergedOffering = hasDbSignals ? (data as any).offering_signals ?? [] : cachedSignals?.offering_signals ?? [];
-          const mergedSeekingCustom = hasDbSignals ? (data as any).seeking_custom ?? '' : cachedSignals?.seeking_custom ?? '';
-          const mergedOfferingCustom = hasDbSignals ? (data as any).offering_custom ?? '' : cachedSignals?.offering_custom ?? '';
-
           setProfile({
             display_name: data.display_name ?? '',
             hardware: data.hardware ?? '',
             bio: data.bio ?? '',
             avatar_url: data.avatar_url ?? null,
             banner_url: (data as any).banner_url ?? null,
-            region: (data as any).region ?? null,
-            role: (data as any).role ?? (metaRole as any),
-            seeking_signals: mergedSeeking,
-            offering_signals: mergedOffering,
-            seeking_custom: mergedSeekingCustom,
-            offering_custom: mergedOfferingCustom,
           });
-          setEditRegion((data as any).region ?? '');
-          setSeekingSignals(mergedSeeking);
-          setOfferingSignals(mergedOffering);
-          setSeekingCustom(mergedSeekingCustom);
-          setOfferingCustom(mergedOfferingCustom);
-        } else {
-          // Pokud profil neexistuje, založ ho s rolí z metadata
-          try {
-            await supabase.from('profiles').insert({
-              id: user.id,
-              display_name: user.email?.split('@')[0] || null,
-              role: metaRole,
-            });
-            setProfile((prev) => ({
-              ...prev,
-              display_name: user.email?.split('@')[0] || '',
-              role: metaRole as any,
-            }));
-          } catch (insertErr) {
-            console.warn('Nepodařilo se založit profil:', insertErr);
-          }
         }
       } catch (err) {
         const message =
@@ -775,115 +366,18 @@ export default function ProfileClient() {
     loadProfile();
   }, [supabase, router]);
 
-  
-  // Vlákna přímých zpráv seskupená podle protistrany
-  const directThreads = useMemo(() => {
-    const map = new Map<string, { otherId: string; otherName: string; lastMessage: string; lastTs: number; unread: boolean; messages: DirectMessage[] }>();
-    messages.forEach((m) => {
-      const isFromMe = m.user_id === userId;
-      const otherId = isFromMe ? m.to_user_id : m.user_id;
-      if (!otherId) return;
-      const otherName = isFromMe
-        ? profilesById[m.to_user_id || ''] || m.to_name || 'Neznámý'
-        : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
-      const ts = m.created_at ? new Date(m.created_at).getTime() : 0;
-      const existing = map.get(otherId) || { otherId, otherName, lastMessage: m.body || '', lastTs: ts, unread: false, messages: [] };
-      existing.messages.push(m);
-      if (ts > existing.lastTs) {
-        existing.lastTs = ts;
-        existing.lastMessage = m.body || '';
-        existing.otherName = otherName;
-      }
-      if (m.to_user_id === userId && m.unread) existing.unread = true;
-      map.set(otherId, existing);
-    });
-    const threads = Array.from(map.values());
-    threads.forEach((t) => {
-      t.messages.sort((a, b) => {
-        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return ta - tb;
-      });
-    });
-    return threads.sort((a, b) => b.lastTs - a.lastTs);
-  }, [messages, userId, profilesById]);
-
-
-  // Načti display_name pro všechny uživatele z přímých zpráv
-  useEffect(() => {
-    const loadProfileNames = async () => {
-      const ids = new Set<string>();
-      messages.forEach((m) => {
-        if (m.user_id) ids.add(m.user_id);
-        if (m.to_user_id) ids.add(m.to_user_id);
-      });
-      if (!ids.size) return;
-      const { data, error } = await supabase.from('profiles').select('id, display_name').in('id', Array.from(ids));
-      if (error || !data) return;
-      const map: Record<string, string> = {};
-      data.forEach((p: any) => {
-        if (p.id && p.display_name) map[p.id as string] = p.display_name as string;
-      });
-      setProfilesById((prev) => ({ ...prev, ...map }));
-    };
-    void loadProfileNames();
-  }, [messages, supabase]);
-
-function handleFieldChange(field: keyof Profile, value: string) {
+  function handleFieldChange(field: keyof Profile, value: string) {
     setProfile((prev) => ({
       ...prev,
       [field]: value,
     }));
   }
 
-  // Načtení uživatelských beatů/projektů nebo akapel
+  // Načtení uživatelských beatů a projektů
   useEffect(() => {
     if (!userId) return;
 
     const loadBeatsProjectsCollabs = async () => {
-      if (currentRole === 'mc') {
-        let acapellaData: AcapellaItem[] | null = null;
-        try {
-          const { data, error } = await supabase
-            .from('acapellas')
-            .select('id, title, bpm, mood, audio_url, cover_url, access_mode')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: false });
-
-          if (error) throw error;
-          acapellaData = (data as AcapellaItem[]) ?? [];
-        } catch (err: any) {
-          const message = typeof err?.message === 'string' ? err.message : '';
-          // Fallback pro schéma bez sloupce access_mode
-          if (message.toLowerCase().includes('access_mode') || message.toLowerCase().includes('column')) {
-            const { data, error: fallbackErr } = await supabase
-              .from('acapellas')
-              .select('id, title, bpm, mood, audio_url, cover_url')
-              .eq('user_id', userId)
-              .order('created_at', { ascending: false });
-            if (!fallbackErr) {
-              acapellaData = (data as AcapellaItem[]) ?? [];
-            } else {
-              console.error('Chyba při načítání akapel (fallback):', fallbackErr);
-              setAcapellasError('Nepodařilo se načíst tvoje akapely.');
-            }
-          } else {
-            console.error('Chyba při načítání akapel:', err);
-            setAcapellasError('Nepodařilo se načíst tvoje akapely.');
-          }
-        }
-        if (acapellaData) {
-          setAcapellas(acapellaData);
-          setAcapellasError(null);
-        }
-        setBeats([]);
-        setProjects([]);
-        setBeatsError(null);
-        setProjectsError(null);
-        setProjectGrants({});
-        return;
-      }
-
       // načti beaty
       const { data: beatData, error: beatErr } = await supabase
         .from('beats')
@@ -933,7 +427,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         if (ownedIds.length > 0) {
           const { data: grants, error: grantErr } = await supabase
             .from('project_access_grants')
-            .select('id, project_id, user_id, created_at')
+            .select('id, project_id, user_id, created_at, profiles:profiles(display_name)')
             .in('project_id', ownedIds);
           if (grantErr) {
             console.warn('Chyba načítání grantů (ignorováno):', grantErr);
@@ -947,7 +441,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 id: g.id,
                 project_id: String(g.project_id),
                 user_id: g.user_id,
-                display_name: null,
+                display_name: g.profiles?.display_name || null,
                 created_at: g.created_at,
               });
             });
@@ -960,6 +454,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         console.error('Chyba při načítání projektů:', projectErr);
         setProjectsError('Nepodařilo se načíst tvoje projekty.');
       }
+
     };
 
     const loadMessages = async () => {
@@ -1103,177 +598,39 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
 
-    const loadMyAccessRequests = async () => {
-      if (!userId) return;
-      setMyAccessRequestsLoading(true);
-      setMyAccessRequestsError(null);
-      try {
-        const { data, error } = await supabase
-          .from('project_access_requests')
-          .select('id, project_id, status, message, created_at, projects!inner(id,title,user_id)')
-          .eq('requester_id', userId)
-          .order('created_at', { ascending: false });
-        if (error) throw error;
-
-        const projIds = Array.from(new Set(((data as any[]) ?? []).map((r) => r.project_id).filter(Boolean) as string[]));
-        let nameMap: Record<string, string> = {};
-        if (projIds.length) {
-          const { data: projects, error: projErr } = await supabase
-            .from('projects')
-            .select('id,title')
-            .in('id', projIds);
-          if (projErr) throw projErr;
-          nameMap = Object.fromEntries((projects as any[]).map((p) => [p.id, p.title || 'Projekt']));
-        }
-
-        const mapped: ProjectAccessRequest[] =
-          (data as any[]).map((row) => ({
-            id: row.id,
-            project_id: row.project_id,
-            status: row.status,
-            message: row.message,
-            requester_id: userId,
-            requester_name: profile.display_name || null,
-            project_title: nameMap[row.project_id] || row.projects?.title || null,
-            created_at: row.created_at,
-          })) ?? [];
-        setMyAccessRequests(mapped);
-      } catch (err) {
-        console.error('Chyba načítání mých žádostí:', err);
-        setMyAccessRequests([]);
-        setMyAccessRequestsError('Nepodařilo se načíst tvoje žádosti.');
-      } finally {
-        setMyAccessRequestsLoading(false);
-      }
-    };
-
     loadBeatsProjectsCollabs();
     loadMessages();
     loadMyPosts();
     loadMyForum();
     loadProjectRequests();
-    loadMyAccessRequests();
 
     const loadCollabThreads = async () => {
       setCollabThreadsLoading(true);
       setCollabThreadsError(null);
-      if (!userId) {
-        setCollabThreads([]);
-        setCollabThreadsLoading(false);
-        return;
-      }
       try {
-        // Kvůli PostgREST OR parsing chybám s UUID načteme zvlášť vlákna, kde je uživatel zakladatel,
-        // a zvlášť vlákna, kde je účastník, a pak je sloučíme na FE.
-        const [byCreator, byParticipant] = await Promise.all([
-          supabase
-            .from('collab_threads')
-            .select('id, title, status, updated_at, created_by, deadline, last_activity, milestones')
-            .eq('created_by', userId)
-            .order('updated_at', { ascending: false }),
-          supabase
-            .from('collab_threads')
-            .select('id, title, status, updated_at, created_by, deadline, last_activity, milestones, collab_participants!inner(user_id)')
-            .eq('collab_participants.user_id', userId)
-            .order('updated_at', { ascending: false }),
-        ]);
-
-        if (byCreator.error) throw byCreator.error;
-        if (byParticipant.error) throw byParticipant.error;
-
-        const mapThread = (t: any) => ({
-          id: t.id as string,
-          title: t.title as string,
-          status: (t.status as string) || 'pending',
-          updated_at: t.updated_at as string | null,
-          creator_id: t.created_by || null,
-          deadline: t.deadline || null,
-          last_activity: t.last_activity || t.updated_at || null,
-          milestones: Array.isArray(t.milestones) ? t.milestones : [],
-          participants: [],
-        });
-
-        const combinedMap = new Map<
-          string,
-          {
-            id: string;
-            title: string;
-            status: string;
-            updated_at: string | null;
-            participants: string[];
-            deadline?: string | null;
-            last_activity?: string | null;
-            milestones?: { id: string; title: string; due?: string | null; done?: boolean }[];
-            creator_id?: string | null;
-          }
-        >();
-        (byCreator.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
-        (byParticipant.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
-
-        // Seřadíme podle updated_at (desc)
-        const merged = Array.from(combinedMap.values()).sort((a, b) => {
-          const ta = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const tb = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return tb - ta;
-        });
-
-        const threadIds = merged.map((thread) => thread.id);
-        if (threadIds.length) {
-          const { data: participants, error: participantsErr } = await supabase
-            .from('collab_participants')
-            .select('thread_id,user_id')
-            .in('thread_id', threadIds);
-          if (participantsErr) throw participantsErr;
-          const partnerIds = Array.from(
-            new Set(
-              (participants ?? [])
-                .map((p: any) => p.user_id)
-                .filter((id) => id && id !== userId)
-            )
-          );
-          let nameMap: Record<string, string> = {};
-          if (partnerIds.length) {
-            const { data: profiles, error: profileErr } = await supabase
-              .from('profiles')
-              .select('id,display_name')
-              .in('id', partnerIds);
-            if (profileErr) throw profileErr;
-            if (profiles) {
-              nameMap = Object.fromEntries((profiles as any[]).map((p) => [p.id, p.display_name || '']));
-            }
-          }
-          const threadNames = new Map<string, string[]>();
-          (participants ?? []).forEach((p: any) => {
-            if (!p.thread_id || !p.user_id) return;
-            const partnerName = nameMap[p.user_id] || null;
-            if (!partnerName) return; // nechceme zobrazovat UUID
-            if (!threadNames.has(p.thread_id)) {
-              threadNames.set(p.thread_id, []);
-            }
-            const list = threadNames.get(p.thread_id)!;
-            if (!list.includes(partnerName)) {
-              list.push(partnerName);
-            }
-          });
-          const currentUserName = profile.display_name || 'Ty';
-          const finalThreads = merged.map((thread) => {
-            const partners = (threadNames.get(thread.id) ?? []).filter(Boolean);
-            const participants = [currentUserName, ...partners.filter((name) => name !== currentUserName)];
-            return {
-              ...thread,
-              participants,
-            };
-          });
-          setCollabThreads(finalThreads);
-        } else {
-          const currentUserName = profile.display_name || 'Ty';
-          setCollabThreads(
-            merged.map((thread) => ({
-              ...thread,
-              participants: [currentUserName],
-            }))
-          );
-        }
+        const { data, error } = await supabase
+          .from('collab_threads')
+          .select('id, title, status, updated_at, collab_participants!inner(user_id, profiles(display_name))')
+          .eq('collab_participants.user_id', userId)
+          .order('updated_at', { ascending: false });
+        if (error) throw error;
+        const mapped =
+          data?.map((t: any) => ({
+            id: t.id as string,
+            title: t.title as string,
+            status: t.status as string,
+            updated_at: t.updated_at as string | null,
+            participants: Array.isArray(t.collab_participants)
+              ? Array.from(
+                  new Set(
+                    t.collab_participants
+                      .map((p: any) => p.profiles?.display_name || p.user_id)
+                      .filter(Boolean)
+                  )
+                )
+              : [],
+          })) ?? [];
+        setCollabThreads(mapped);
       } catch (err) {
         console.error('Chyba načítání spoluprací:', err);
         setCollabThreadsError('Nepodařilo se načíst spolupráce.');
@@ -1283,9 +640,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
     loadCollabThreads();
-  }, [currentRole, supabase, userId, profile.display_name]);
-
-  // Stream embed byl přesunut na samostatnou stránku /stream
+  }, [supabase, userId]);
 
   useEffect(() => {
     if (!selectedThreadId && collabThreads.length > 0) {
@@ -1325,6 +680,41 @@ function handleFieldChange(field: keyof Profile, value: string) {
       clearTimeout(t);
     };
   }, [newMessage.to, supabase]);
+
+  // Vlákna přímých zpráv seskupená podle protistrany
+  const directThreads = useMemo(() => {
+    const map = new Map<string, { otherId: string; otherName: string; lastMessage: string; lastTs: number; unread: boolean; messages: DirectMessage[] }>();
+    messages.forEach((m) => {
+      const isFromMe = m.user_id === userId;
+      const otherId = isFromMe ? m.to_user_id : m.user_id;
+      if (!otherId) return;
+      const otherName = isFromMe ? m.to_name || 'Neznámý' : m.from_name || 'Neznámý';
+      const ts = m.created_at ? new Date(m.created_at).getTime() : 0;
+      const existing = map.get(otherId) || { otherId, otherName, lastMessage: m.body || '', lastTs: ts, unread: false, messages: [] };
+      existing.messages.push(m);
+      if (ts > existing.lastTs) {
+        existing.lastTs = ts;
+        existing.lastMessage = m.body || '';
+        existing.otherName = otherName;
+      }
+      if (m.to_user_id === userId && m.unread) existing.unread = true;
+      map.set(otherId, existing);
+    });
+    const threads = Array.from(map.values());
+    threads.forEach((t) => {
+      t.messages.sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return ta - tb;
+      });
+    });
+    return threads.sort((a, b) => b.lastTs - a.lastTs);
+  }, [messages, userId]);
+
+  const unreadThreadCount = useMemo(
+    () => directThreads.filter((thread) => thread.unread).length,
+    [directThreads]
+  );
 
   // Upload profilové fotky
   async function handleAvatarChange(e: ChangeEvent<HTMLInputElement>) {
@@ -1437,12 +827,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setError(null);
     setSuccess(null);
 
-    if (!editRegion.trim()) {
-      setError('Vyber prosím kraj.');
-      setSaving(false);
-      return;
-    }
-
     try {
       const {
         data: { user },
@@ -1453,71 +837,22 @@ function handleFieldChange(field: keyof Profile, value: string) {
         throw userError ?? new Error('Uživatel není přihlášen.');
       }
 
-      let fallbackUsed = false;
-      let upsertError: any = null;
-      const fullPayload = {
-        id: user.id,
-        display_name: profile.display_name.trim() || null,
-        hardware: profile.hardware.trim() || null,
-        bio: profile.bio.trim() || null,
-        avatar_url: profile.avatar_url,
-        banner_url: profile.banner_url,
-        region: editRegion.trim() || null,
-        role: profile.role ?? defaultRole ?? 'creator',
-        seeking_signals: seekingSignals,
-        offering_signals: offeringSignals,
-        seeking_custom: seekingCustom.trim() || null,
-        offering_custom: offeringCustom.trim() || null,
-      };
-
-      const { error: firstError } = await supabase.from('profiles').upsert(fullPayload, { onConflict: 'id' });
-      upsertError = firstError;
-
-      if (upsertError && typeof upsertError.message === 'string' && upsertError.message.includes('column')) {
-        // Prod schéma ještě nemá nové sloupce – zkusíme uložit bez nich
-        fallbackUsed = true;
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(
-            SIGNAL_CACHE_KEY,
-            JSON.stringify({
-              seeking_signals: seekingSignals,
-              offering_signals: offeringSignals,
-              seeking_custom: seekingCustom.trim(),
-              offering_custom: offeringCustom.trim(),
-            })
-          );
-        }
-        const { error: fallbackError } = await supabase
-          .from('profiles')
-          .upsert(
-            {
-              id: user.id,
-              display_name: profile.display_name.trim() || null,
-              hardware: profile.hardware.trim() || null,
-              bio: profile.bio.trim() || null,
-              avatar_url: profile.avatar_url,
-              banner_url: profile.banner_url,
-              region: editRegion.trim() || null,
-              role: profile.role ?? 'creator',
-            },
-            { onConflict: 'id' }
-          );
-        upsertError = fallbackError;
-      }
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: user.id,
+            display_name: profile.display_name.trim() || null,
+            hardware: profile.hardware.trim() || null,
+            bio: profile.bio.trim() || null,
+            avatar_url: profile.avatar_url,
+            banner_url: profile.banner_url,
+          },
+          { onConflict: 'id' }
+        );
 
       if (upsertError) throw upsertError;
 
-      setProfile((prev) => ({
-        ...prev,
-        region: editRegion.trim() || null,
-        seeking_signals: seekingSignals,
-        offering_signals: offeringSignals,
-        seeking_custom: seekingCustom.trim() || null,
-        offering_custom: offeringCustom.trim() || null,
-      }));
-      if (!fallbackUsed && typeof window !== 'undefined') {
-        window.localStorage.removeItem(SIGNAL_CACHE_KEY);
-      }
       setSuccess('Profil byl uložen.');
     } catch (err) {
       const message =
@@ -1533,38 +868,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
-  function toggleSection(key: 'profile' | 'beatUpload' | 'projectUpload' | 'acapellaUpload') {
+  function toggleSection(key: 'profile' | 'beatUpload' | 'projectUpload') {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
-
-  const createShareLink = async (itemType: 'beat' | 'project', itemId: string, allowDownload = false) => {
-    if (!userId) return;
-    setShareLoadingId(`${itemType}-${itemId}`);
-    setShareMessage(null);
-    try {
-      const res = await fetch('/api/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_type: itemType, item_id: itemId, allow_download: allowDownload, expires_in_hours: 72 }),
-      });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Failed to create share link');
-      }
-      const json = await res.json();
-      if (json?.url && typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(json.url);
-        setShareMessage('Odkaz zkopírován do schránky.');
-      } else if (json?.url) {
-        setShareMessage(json.url);
-      }
-    } catch (err: any) {
-      console.error('Chyba při vytváření sdílecího odkazu:', err);
-      setShareMessage('Nepodařilo se vytvořit odkaz.');
-    } finally {
-      setShareLoadingId(null);
-    }
-  };
 
   function handlePlayBeat(beat: BeatItem) {
     if (!beat.audio_url) {
@@ -1572,146 +878,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
       return;
     }
     setPlayerMessage(null);
-    const trackId = `beat-${beat.id}`;
+
     // pokud kliknu na stejný beat, toggle play/pause
-    if (gpCurrent?.id === trackId) {
-      gpToggle();
+    if (currentBeat?.id === beat.id) {
+      setIsPlayingBeat((prev) => !prev);
+    } else {
       setCurrentBeat(beat);
-      return;
-    }
-    setCurrentBeat(beat);
-    startPlayerTrack({
-      id: trackId,
-      title: beat.title,
-      artist: profile.display_name || 'Neznámý',
-      url: beat.audio_url,
-      cover_url: beat.cover_url ?? null,
-      item_type: 'beat',
-    });
-  }
-
-  function handlePlayAcapella(item: AcapellaItem) {
-    if (!item.audio_url) {
-      setPlayerMessage('Tato akapela nemá nahraný audio soubor.');
-      return;
-    }
-    setPlayerMessage(null);
-    const trackId = `acapella-${item.id}`;
-    if (gpCurrent?.id === trackId) {
-      gpToggle();
-      setCurrentAcapella(item);
-      return;
-    }
-    setCurrentAcapella(item);
-    startPlayerTrack({
-      id: trackId,
-      title: item.title,
-      artist: profile.display_name || 'Neznámý',
-      url: item.audio_url,
-      cover_url: item.cover_url ?? null,
-      item_type: 'acapella',
-    });
-  }
-
-  function startEditAcapella(item: AcapellaItem) {
-    setEditingAcapellaId(item.id);
-    setEditAcapellaTitle(item.title || '');
-    setEditAcapellaBpm(item.bpm ? String(item.bpm) : '');
-    setEditAcapellaMood(item.mood || '');
-    setEditAcapellaCoverUrl(item.cover_url || '');
-    setEditAcapellaCoverFile(null);
-    setEditAcapellaAccess((item.access_mode as any) || 'public');
-    setOpenAcapellaMenuId(null);
-  }
-
-  async function handleSaveAcapella() {
-    if (!editingAcapellaId || !userId) return;
-    setAcapellaSaving(true);
-    try {
-      let coverUrl = editAcapellaCoverUrl.trim() || null;
-      if (editAcapellaCoverFile) {
-        const safe = editAcapellaCoverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        const path = `${userId}/acapellas/covers/${Date.now()}-${safe}`;
-        const { error: uploadErr } = await supabase.storage.from('acapella_covers').upload(path, editAcapellaCoverFile, { upsert: true });
-        if (uploadErr) throw uploadErr;
-        const { data: pub } = supabase.storage.from('acapella_covers').getPublicUrl(path);
-        coverUrl = pub.publicUrl;
-      }
-
-      const payload: Partial<AcapellaItem> = {
-        title: editAcapellaTitle.trim() || 'Untitled',
-        bpm: editAcapellaBpm ? Number(editAcapellaBpm) : null,
-        mood: editAcapellaMood.trim() || null,
-        cover_url: coverUrl,
-        access_mode: editAcapellaAccess,
-      };
-
-      const { error } = await supabase
-        .from('acapellas')
-        .update(payload)
-        .eq('id', editingAcapellaId)
-        .eq('user_id', userId);
-      if (error) throw error;
-
-      setAcapellas((prev) =>
-        prev.map((a) =>
-          a.id === editingAcapellaId
-            ? { ...a, ...payload }
-            : a
-        )
-      );
-      setEditingAcapellaId(null);
-      setEditAcapellaCoverFile(null);
-    } catch (err) {
-      console.error('Chyba při ukládání akapely:', err);
-      setPlayerMessage('Nepodařilo se uložit akapelu.');
-    } finally {
-      setAcapellaSaving(false);
+      setBeatTime(0);
+      setBeatDuration(0);
+      setIsPlayingBeat(true);
     }
   }
-
-  async function handleDeleteAcapella(id: number) {
-    if (!userId || !confirm('Opravdu smazat tuto akapelu?')) return;
-    setDeletingAcapellaId(id);
-    try {
-      const { error } = await supabase.from('acapellas').delete().eq('id', id).eq('user_id', userId);
-      if (error) throw error;
-      setAcapellas((prev) => prev.filter((a) => a.id !== id));
-      if (editingAcapellaId === id) {
-        setEditingAcapellaId(null);
-      }
-      setOpenAcapellaMenuId(null);
-    } catch (err) {
-      console.error('Chyba při mazání akapely:', err);
-      setPlayerMessage('Nepodařilo se smazat akapelu.');
-    } finally {
-      setDeletingAcapellaId(null);
-    }
-  }
-
-  const handleUpdateAcapellaAccess = async (id: number, mode: 'public' | 'request' | 'private') => {
-    if (!userId) return;
-    setUpdatingAcapellaAccessId(id);
-    // Optimisticky přepni, aby se odznak hned přepsal
-    const prev = acapellas;
-    setAcapellas((prevList) => prevList.map((a) => (a.id === id ? { ...a, access_mode: mode } : a)));
-    setOpenAcapellaMenuId(null);
-    try {
-      const { error } = await supabase
-        .from('acapellas')
-        .update({ access_mode: mode })
-        .eq('id', id)
-        .eq('user_id', userId);
-      if (error) throw error;
-    } catch (err) {
-      console.error('Chyba při změně přístupu akapely:', err);
-      // vrať původní stav při chybě
-      setAcapellas(prev);
-      setPlayerMessage('Nepodařilo se uložit přístup akapely.');
-    } finally {
-      setUpdatingAcapellaAccessId(null);
-    }
-  };
 
   async function handleDeleteBeat(id: number) {
     if (!confirm('Opravdu smazat tento beat?')) return;
@@ -1730,9 +907,15 @@ function handleFieldChange(field: keyof Profile, value: string) {
   }
 
   function seekBeat(beat: BeatItem, clientX: number, width: number) {
-    if (!currentBeat || currentBeat.id !== beat.id || !gpDuration) return;
+    if (!currentBeat || currentBeat.id !== beat.id || !beatDuration) return;
     const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    gpSeek(ratio);
+    const el = audioRef.current;
+    if (!el) return;
+    const next = ratio * beatDuration;
+    el.currentTime = next;
+    setBeatTime(next);
+    setIsPlayingBeat(true);
+    void el.play();
   }
 
   function startEditBeat(beat: BeatItem) {
@@ -1781,12 +964,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
-  function seekAcapella(item: AcapellaItem, clientX: number, width: number) {
-    if (!currentAcapella || currentAcapella.id !== item.id || !gpDuration) return;
-    const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    gpSeek(ratio);
-  }
-
   const handleProjectRequestDecision = async (req: ProjectAccessRequest, approve: boolean) => {
     if (!userId) return;
     try {
@@ -1811,16 +988,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
       setProjectRequests((prev) => prev.filter((r) => r.id !== req.id));
       setProjectRequestsError(null);
-      await sendNotificationSafe(supabase, {
-        user_id: req.requester_id,
-        type: approve ? 'project_request_approved' : 'project_request_denied',
-        title: approve ? 'Žádost schválena' : 'Žádost zamítnuta',
-        body: `Žádost o přístup k ${req.project_title || 'projektu'} byla ${approve ? 'schválena' : 'zamítnuta'}.`,
-        item_type: 'project',
-        item_id: String(req.project_id),
-        senderId: userId,
-        data: { from: profile.display_name || email || 'Neznámý', projectTitle: req.project_title || 'projekt' },
-      });
     } catch (err) {
       console.error('Chyba při schválení/odmítnutí žádosti:', err);
       setProjectRequestsError('Nepodařilo se aktualizovat žádost.');
@@ -1846,6 +1013,31 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    if (!userId || !confirm('Opravdu chcete tento projekt smazat?')) return;
+    setDeletingProjectId(projectId);
+    setDeleteProjectError((prev) => ({ ...prev, [projectId]: '' }));
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', projectId).eq('user_id', userId);
+      if (error) throw error;
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      setDeleteProjectError((prev) => {
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+    } catch (err) {
+      console.error('Chyba při mazání projektu:', err);
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Projekt se nepodařilo smazat.';
+      setDeleteProjectError((prev) => ({ ...prev, [projectId]: message }));
+    } finally {
+      setDeletingProjectId(null);
+    }
+  };
+
   const handleRevokeGrant = async (projectId: string, grantId: string) => {
     try {
       const { error } = await supabase.from('project_access_grants').delete().eq('id', grantId);
@@ -1861,51 +1053,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
-  const handleTogglePostPublished = async (postId: number, published: boolean) => {
-    try {
-      const { error } = await supabase.from('posts').update({ published }).eq('id', postId);
-      if (error) throw error;
-      setMyPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, published } : p))
-      );
-      setMyPostsError(null);
-    } catch (err) {
-      console.error('Chyba při změně publikace:', err);
-      setMyPostsError('Nepodařilo se změnit publikaci článku.');
-    }
-  };
-
   // Spolupráce – vytvoření vlákna
   const handleCreateCollabThread = async () => {
     if (!userId || !newThreadTitle.trim() || !newThreadPartner.trim()) return;
     setCreatingThread(true);
     setCollabThreadsError(null);
     try {
-    const { data: partner, error: partnerErr } = await supabase
-      .from('profiles')
-      .select('id, display_name')
+      const { data: partner, error: partnerErr } = await supabase
+        .from('profiles')
+        .select('id, display_name')
         .ilike('display_name', newThreadPartner.trim())
         .limit(1)
         .maybeSingle();
       if (partnerErr) throw partnerErr;
       if (!partner?.id) throw new Error('Partner nenalezen.');
-
-      // Zabráníme duplicitnímu vláknu mezi stejnou dvojicí uživatelů.
-      const [{ data: myThreads, error: myErr }, { data: partnerThreads, error: partnerThreadsErr }] = await Promise.all([
-        supabase.from('collab_participants').select('thread_id').eq('user_id', userId),
-        supabase.from('collab_participants').select('thread_id').eq('user_id', partner.id),
-      ]);
-      if (myErr) throw myErr;
-      if (partnerThreadsErr) throw partnerThreadsErr;
-      const mySet = new Set((myThreads ?? []).map((r: any) => r.thread_id));
-      const existing = (partnerThreads ?? []).find((r: any) => mySet.has(r.thread_id));
-      if (existing?.thread_id) {
-        setCollabThreadsError('Spolupráce s tímto uživatelem už existuje.');
-        setSelectedThreadId(existing.thread_id);
-        setShowNewThreadForm(false);
-        setCreatingThread(false);
-        return;
-      }
 
       const { data: thread, error: threadErr } = await supabase
         .from('collab_threads')
@@ -1922,30 +1083,16 @@ function handleFieldChange(field: keyof Profile, value: string) {
       const { error: partErr } = await supabase.from('collab_participants').insert(rows);
       if (partErr) throw partErr;
 
-      // Notifikace pro partnera
-      const ownerName = profile.display_name || 'Ty';
-      await sendNotificationSafe(supabase, {
-        user_id: partner.id,
-        type: 'collab_created',
-        title: 'Nová spolupráce',
-        body: newThreadTitle.trim(),
-        item_type: 'collab_thread',
-        item_id: threadId,
-        senderId: userId,
-        data: { from: ownerName, threadTitle: newThreadTitle.trim(), partnerName: partner.display_name || 'Spolupracovník' },
-      });
-
-      const partnerName = partner.display_name?.trim() || newThreadPartner.trim() || 'Partner';
+      const ownerName = profile.display_name?.trim() || 'Ty';
+      const partnerName = (partner.display_name?.trim() || newThreadPartner.trim()).trim();
       const participants = Array.from(new Set([ownerName, partnerName].filter(Boolean)));
       setCollabThreads((prev) => [
         {
           id: threadId,
           title: newThreadTitle.trim(),
-          status: 'pending',
+          status: 'active',
           updated_at: new Date().toISOString(),
-          last_activity: new Date().toISOString(),
           participants,
-          creator_id: userId,
         },
         ...prev,
       ]);
@@ -1974,39 +1121,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
       try {
         const { data: msgs, error: msgErr } = await supabase
           .from('collab_messages')
-          .select('id, body, user_id, created_at')
+          .select('id, body, user_id, created_at, profiles:profiles(display_name)')
           .eq('thread_id', selectedThreadId)
           .order('created_at', { ascending: true });
         if (msgErr) throw msgErr;
-        const normalized = ((msgs as any[]) ?? []).map((m) => ({
-          id: m.id,
-          body: m.body,
-          user_id: m.user_id,
-          created_at: m.created_at,
-          author_name: undefined as string | null | undefined,
-        }));
-        const userIds = Array.from(
-          new Set(normalized.map((m) => m.user_id).filter(Boolean))
-        ) as string[];
-        let nameMap: Record<string, string> = {};
-        if (userIds.length) {
-          const { data: profiles, error: profileErr } = await supabase
-            .from('profiles')
-            .select('id, display_name')
-            .in('id', userIds);
-          if (profileErr) throw profileErr;
-          if (profiles) {
-            nameMap = Object.fromEntries(
-              (profiles as any[]).map((p) => [p.id, p.display_name || ''])
-            );
-          }
-        }
         setCollabMessages(
-          normalized.map((msg) => ({
-            ...msg,
-            author_name:
-              nameMap[msg.user_id] ||
-              (msg.user_id === userId ? profile.display_name || 'Ty' : null),
+          ((msgs as any[]) ?? []).map((m) => ({
+            id: m.id,
+            body: m.body,
+            user_id: m.user_id,
+            created_at: m.created_at,
+            author_name: m.profiles?.display_name || null,
           }))
         );
       } catch (err) {
@@ -2032,25 +1157,18 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
     loadDetails();
-  }, [profile?.display_name, selectedThreadId, supabase, userId]);
+  }, [selectedThreadId, supabase]);
 
   const handleSendCollabMsg = async () => {
     if (!selectedThreadId || !collabMessageBody.trim() || !userId) return;
     setSendingCollabMessage(true);
     try {
-      // Ujisti se, že existuje vazba v collab_participants pro aktuálního uživatele,
-      // jinak RLS nepustí insert do collab_messages.
-      await supabase
-        .from('collab_participants')
-        .upsert({ thread_id: selectedThreadId, user_id: userId, role: 'guest' }, { onConflict: 'thread_id,user_id' });
-
       const { error } = await supabase.from('collab_messages').insert({
         thread_id: selectedThreadId,
         body: collabMessageBody.trim(),
         user_id: userId,
       });
       if (error) throw error;
-      await supabase.from('collab_threads').update({ last_activity: new Date().toISOString() }).eq('id', selectedThreadId);
       setCollabMessages((prev) => [
         ...prev,
         {
@@ -2062,37 +1180,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
         },
       ]);
       setCollabThreads((prev) =>
-        prev.map((t) =>
-          t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString(), last_activity: new Date().toISOString() } : t
-        )
+        prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
       );
-      // Notifikace pro ostatní účastníky vlákna
-      try {
-        const { data: participants } = await supabase
-          .from('collab_participants')
-          .select('user_id')
-          .eq('thread_id', selectedThreadId);
-        const targets =
-          (participants ?? [])
-            .map((p: any) => p.user_id as string)
-            .filter((uid) => uid && uid !== userId) || [];
-        await Promise.all(
-          targets.map((uid) =>
-            sendNotificationSafe(supabase, {
-              user_id: uid,
-              type: 'collab_message',
-              title: 'Nová zpráva ve spolupráci',
-              body: collabMessageBody.trim(),
-              item_type: 'collab_thread',
-              item_id: selectedThreadId,
-              senderId: userId,
-              data: { from: profile.display_name || email || 'Neznámý' },
-            })
-          )
-        );
-      } catch (err) {
-        console.error('Notifikace pro účastníky se nepodařila:', err);
-      }
       setCollabMessageBody('');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
@@ -2105,7 +1194,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
     if (!selectedThreadId || !collabFile || !userId) return;
     setUploadingCollabFile(true);
     try {
-      const safe = collabFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const safe = collabFile.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
       const path = `${userId}/${selectedThreadId}/${Date.now()}-${safe}`;
       const { error: upErr } = await supabase.storage.from('collabs').upload(path, collabFile, { upsert: true });
       if (upErr) throw upErr;
@@ -2118,7 +1207,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
         { id: crypto.randomUUID(), file_name: collabFile.name, file_url: pub.publicUrl, user_id: userId, created_at: new Date().toISOString() },
         ...prev,
       ]);
-      await supabase.from('collab_threads').update({ last_activity: new Date().toISOString() }).eq('id', selectedThreadId);
       setCollabThreads((prev) =>
         prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
       );
@@ -2130,170 +1218,16 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
-  const updateCollabStatus = async (threadId: string, status: 'active' | 'paused' | 'done' | 'cancelled' | 'rejected') => {
-    if (!userId) return;
-    const threadTitle = collabThreads.find((t) => t.id === threadId)?.title?.trim() || 'spolupráce';
-    setCollabStatusUpdating(threadId);
-    try {
-      const { error } = await supabase.from('collab_threads').update({ status, last_activity: new Date().toISOString() }).eq('id', threadId);
-      if (error) throw error;
-      setCollabThreads((prev) =>
-        prev.map((t) =>
-          t.id === threadId ? { ...t, status, updated_at: new Date().toISOString(), last_activity: new Date().toISOString() } : t
-        )
-      );
-      // Notifikace druhé straně
-      try {
-        const { data: participants } = await supabase
-          .from('collab_participants')
-          .select('user_id')
-          .eq('thread_id', threadId);
-        const targets =
-          (participants ?? [])
-            .map((p: any) => p.user_id as string)
-            .filter((uid) => uid && uid !== userId) || [];
-        await Promise.all(
-          targets.map((uid) =>
-            sendNotificationSafe(supabase, {
-              user_id: uid,
-              type: status === 'active' ? 'collab_created' : 'collab_message',
-              title:
-                status === 'active'
-                  ? 'Spolupráce potvrzena'
-                  : status === 'paused'
-                    ? 'Spolupráce pozastavena'
-                    : status === 'done'
-                      ? 'Spolupráce dokončena'
-                      : status === 'cancelled'
-                        ? 'Spolupráce ukončena'
-                        : 'Spolupráce odmítnuta',
-              body: `Status: ${status}`,
-              item_type: 'collab_thread',
-              item_id: threadId,
-              senderId: userId,
-              data: { from: profile.display_name || email || 'Uživatel', threadTitle },
-            })
-          )
-        );
-      } catch (notifyErr) {
-        console.warn('Notifikace spolupráce se nepodařila:', notifyErr);
-      }
-    } catch (err) {
-      console.error('Chyba při změně stavu spolupráce:', err);
-      setPlayerMessage('Nepodařilo se změnit stav spolupráce.');
-    } finally {
-      setCollabStatusUpdating(null);
-    }
-  };
-
-  const getThreadById = (id: string | null) => collabThreads.find((t) => t.id === id) || null;
-  const getLastActivity = (thread: CollabThread | null) => thread?.last_activity || thread?.updated_at || null;
-  const inactivityDays = (thread: CollabThread | null) => {
-    const ts = getLastActivity(thread);
-    if (!ts) return null;
-    const diff = Date.now() - new Date(ts).getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  };
-
-  const saveMilestones = async (threadId: string, milestones: { id: string; title: string; due?: string | null; done?: boolean }[], deadline?: string | null) => {
-    setSavingMilestone(true);
-    try {
-      const payload: any = { milestones };
-      if (deadline !== undefined) payload.deadline = deadline || null;
-      payload.last_activity = new Date().toISOString();
-      const { error } = await supabase.from('collab_threads').update(payload).eq('id', threadId);
-      if (error) throw error;
-      setCollabThreads((prev) =>
-        prev.map((t) =>
-          t.id === threadId
-            ? { ...t, milestones, deadline: deadline || null, last_activity: payload.last_activity, updated_at: payload.last_activity }
-            : t
-        )
-      );
-    } catch (err) {
-      console.error('Chyba při ukládání milníků:', err);
-      setPlayerMessage('Nepodařilo se uložit milníky.');
-    } finally {
-      setSavingMilestone(false);
-    }
-  };
-
-  const handleAddMilestone = async () => {
-    if (!selectedThreadId || !newMilestoneTitle.trim()) return;
-    const thread = getThreadById(selectedThreadId);
-    const list = Array.isArray(thread?.milestones) ? thread!.milestones! : [];
-    const newItem = { id: crypto.randomUUID(), title: newMilestoneTitle.trim(), due: newMilestoneDue || null, done: false };
-    await saveMilestones(selectedThreadId, [...list, newItem], thread?.deadline ?? null);
-    setNewMilestoneTitle('');
-    setNewMilestoneDue('');
-  };
-
-  const toggleMilestone = async (threadId: string, milestoneId: string) => {
-    const thread = getThreadById(threadId);
-    if (!thread || !Array.isArray(thread.milestones)) return;
-    const updated = thread.milestones.map((m) => (m.id === milestoneId ? { ...m, done: !m.done } : m));
-    await saveMilestones(threadId, updated, thread.deadline ?? null);
-  };
-
-  const removeMilestone = async (threadId: string, milestoneId: string) => {
-    const thread = getThreadById(threadId);
-    if (!thread || !Array.isArray(thread.milestones)) return;
-    const updated = thread.milestones.filter((m) => m.id !== milestoneId);
-    await saveMilestones(threadId, updated, thread.deadline ?? null);
-  };
-
-  const buildRoomName = (a: string, b: string) => {
-    const sorted = [a, b].sort();
-    return `beets-${sorted[0]}-${sorted[1]}`;
-  };
-
-  const handleStartCollabCall = async () => {
-    if (!selectedThreadId || !userId) {
-      setPlayerMessage('Vyber spolupráci a přihlas se.');
-      return;
-    }
-    setStartingCollabCall(true);
-    try {
-      const { data: participants } = await supabase
-        .from('collab_participants')
-        .select('user_id')
-        .eq('thread_id', selectedThreadId);
-      const target = (participants ?? []).map((p: any) => p.user_id as string).find((uid) => uid && uid !== userId) || null;
-      if (!target) {
-        setPlayerMessage('Nenalezen druhý profil ve spolupráci.');
-        return;
-      }
-      const roomName = buildRoomName(userId, target);
-      const url = `https://meet.jit.si/${roomName}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
-      const { error } = await supabase
-        .from('calls')
-        .insert({
-          room_name: roomName,
-          caller_id: userId,
-          callee_id: target,
-          status: 'ringing',
-        })
-        .select('id')
-        .single();
-      if (error) throw error;
-      await sendNotificationSafe(supabase, {
-        user_id: target,
-        type: 'call_incoming',
-        title: 'Příchozí hovor',
-        body: profile.display_name || 'Uživatel',
-        item_type: 'call',
-        item_id: selectedThreadId,
-        senderId: userId,
-        data: { from: profile.display_name || email || 'Uživatel', roomName },
-      });
-    } catch (err) {
-      console.error('Chyba při zahájení hovoru:', err);
-      setPlayerMessage('Nepodařilo se zahájit hovor.');
-    } finally {
-      setStartingCollabCall(false);
-    }
-  };
+  function handleReplyToCollab(msg: InboxMessage) {
+    setOpenSections((prev) => ({ ...prev, messages: true }));
+    setNewMessage({
+      to: msg.from,
+      toUserId: '',
+      body: `@${msg.from} `,
+    });
+    const el = document.getElementById('messages');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 
   async function resolveRecipientId(name: string, explicitId?: string) {
     const trimmed = explicitId?.trim();
@@ -2312,8 +1246,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
   }
 
   async function sendDirectMessage(targetUserId: string, targetName: string, body: string) {
-    if (!userId) throw new Error('Chybí přihlášený uživatel.');
-
+    if (!userId) {
+      throw new Error('Chybí přihlášený uživatel.');
+    }
     const payload = {
       from_name: profile.display_name || email || 'Neznámý',
       to_name: targetName || 'Neznámý',
@@ -2344,16 +1279,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
     setMessages((prev) => [{ ...created, unread: false }, ...prev]);
 
-    await sendNotificationSafe(supabase, {
-      user_id: targetUserId,
-      type: 'direct_message',
-      title: payload.from_name || 'Nová zpráva',
-      body: payload.body,
-      item_type: 'message',
-      item_id: created.id ? String(created.id) : undefined,
-      senderId: userId,
-      data: { from: payload.from_name, body: payload.body },
-    });
+    // best-effort notifikace
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'direct_message',
+          targetUserId,
+          data: { from: payload.from_name, body: payload.body },
+        }),
+      });
+    } catch (notifyErr) {
+      console.warn('Notifikační webhook selhal:', notifyErr);
+    }
 
     return created;
   }
@@ -2387,13 +1326,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
     setSendingMessage(true);
     setMessagesError(null);
-    setMessageSuccess(null);
     try {
       const targetUserId = await resolveRecipientId(newMessage.to, newMessage.toUserId);
       await sendDirectMessage(targetUserId, newMessage.to.trim(), newMessage.body.trim());
       setNewMessage({ to: '', toUserId: '', body: '' });
       setExpandedThread(targetUserId);
-      setMessageSuccess('Zpráva odeslána.');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
@@ -2520,7 +1457,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
-  // Beat preview používá globální přehrávač, lokální <audio> není potřeba
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el || !currentBeat?.audio_url) return;
+    el.src = currentBeat.audio_url;
+    const playAudio = async () => {
+      try {
+        if (isPlayingBeat) {
+          await el.play();
+        } else {
+          el.pause();
+        }
+      } catch (err) {
+        console.error('Audio play error:', err);
+        setPlayerMessage('Nepodařilo se spustit audio.');
+      }
+    };
+    playAudio();
+  }, [currentBeat, isPlayingBeat]);
 
   async function handleSignOut() {
     try {
@@ -2558,6 +1512,16 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+      <audio
+        ref={audioRef}
+        className="hidden"
+        onEnded={() => setIsPlayingBeat(false)}
+        onPause={() => setIsPlayingBeat(false)}
+        onPlay={() => setIsPlayingBeat(true)}
+        onTimeUpdate={(e) => setBeatTime((e.target as HTMLAudioElement).currentTime)}
+        onLoadedMetadata={(e) => setBeatDuration((e.target as HTMLAudioElement).duration || 0)}
+      />
+
       {/* Hero / cover */}
       <section
         className="relative overflow-hidden border-b border-[var(--mpc-dark)]"
@@ -2574,8 +1538,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.15),transparent_30%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-10 md:py-12">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-end sm:text-left">
-              <div className="relative h-20 w-20 overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24 md:h-28 md:w-28">
+            <div className="flex items-end gap-4">
+              <div className="relative h-24 w-24 overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] shadow-[0_10px_30px_rgba(0,0,0,0.35)] md:h-28 md:w-28">
                 {profile.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -2593,55 +1557,19 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </div>
               <div className="space-y-3">
                 <div className="flex flex-col gap-2">
-                  <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-black/70 bg-black/75 px-4 py-2 text-white shadow-[0_8px_18px_rgba(0,0,0,0.35)] backdrop-blur sm:justify-start">
+                  <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/75 px-4 py-2 text-white shadow-[0_8px_18px_rgba(0,0,0,0.35)] backdrop-blur">
                     <span className="text-2xl font-black uppercase tracking-[0.12em] md:text-3xl">
                       {profile.display_name || 'Nový uživatel'}
                     </span>
                   </div>
                   {profile.hardware && (
-                    <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur sm:justify-start">
+                    <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
                       <span className="text-[13px] font-semibold tracking-[0.08em]">
                         {t('profile.hardware', 'Hardware')}:
                       </span>
                       <span className="text-[13px] font-medium tracking-[0.06em] text-white/90">
                         {profile.hardware}
                       </span>
-                    </div>
-                  )}
-                  {(profile.seeking_signals?.length || profile.seeking_custom) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Hledám:</span>
-                      {profile.seeking_signals?.map((opt) => (
-                        <span
-                          key={`seeking-${opt}`}
-                          className="rounded-full border border-[var(--mpc-accent)]/70 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] shadow-[0_8px_18px_rgba(243,116,51,0.25)]"
-                        >
-                          {opt}
-                        </span>
-                      ))}
-                      {profile.seeking_custom && (
-                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
-                          {profile.seeking_custom}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {(profile.offering_signals?.length || profile.offering_custom) && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Nabízím:</span>
-                      {profile.offering_signals?.map((opt) => (
-                        <span
-                          key={`offering-${opt}`}
-                          className="rounded-full border border-emerald-400/60 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.25)]"
-                        >
-                          {opt}
-                        </span>
-                      ))}
-                      {profile.offering_custom && (
-                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
-                          {profile.offering_custom}
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -2654,7 +1582,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       {/* Tabs */}
       <section className="mt-3 border-b border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/60 py-3 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="flex flex-wrap items-center gap-3 md:gap-4">
+          <div className="flex items-center gap-6 text-sm uppercase tracking-[0.15em]">
             <Link
               href="/"
               className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
@@ -2662,413 +1590,60 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <span className="text-[14px]">←</span>
               <span>Zpět</span>
             </Link>
-            <div className="hidden flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] md:flex md:text-sm">
-              <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
-                {t('profile.tab.all', 'Vše')}
-              </a>
-              {!isMcOnly && (
-                <>
-                  <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                    {t('profile.tab.beats', 'Beaty')}
-                  </a>
-                  <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                    {t('profile.tab.projects', 'Projekty')}
-                  </a>
-                </>
-              )}
-              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
-              </a>
-              {(isAdmin || !isMcOnly) && (
-                <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.stream', 'Stream')}
-                </Link>
-              )}
-              <a href="#messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.messages', 'Zprávy')}
-              </a>
-              <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                Moje fórum
-              </a>
-              {canWriteArticles && (
-                <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.posts', 'Moje články')}
-                </a>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                  Admin
-                </Link>
-              )}
-              <NotificationBell />
-            </div>
-            <button
-              onClick={() => setTabsOpen((p) => !p)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
-            >
-              Menu
-              <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
-            </button>
+            <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
+              {t('profile.tab.all', 'Vše')}
+            </a>
+            <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              {t('profile.tab.beats', 'Beaty')}
+            </a>
+            <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              {t('profile.tab.projects', 'Projekty')}
+            </a>
+            <a href="#collabs" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              {t('profile.tab.collabs', 'Spolupráce')}
+            </a>
+            <a href="#messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              {t('profile.tab.messages', 'Zprávy')}
+            </a>
+            <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              Moje fórum
+            </a>
+            <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              {t('profile.tab.posts', 'Moje články')}
+            </a>
           </div>
-          {tabsOpen && (
-            <div className="mt-3 grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)] md:hidden">
-              <a href="#feed" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
-                {t('profile.tab.all', 'Vše')}
-              </a>
-              {!isMcOnly && (
-                <>
-                  <a href="#beats-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                    {t('profile.tab.beats', 'Beaty')}
-                  </a>
-                  <a href="#projects-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                    {t('profile.tab.projects', 'Projekty')}
-                  </a>
-                </>
-              )}
-              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
-              </a>
-              {(isAdmin || !isMcOnly) && (
-                <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.stream', 'Stream')}
-                </Link>
-              )}
-              {isAdmin && (
-                <Link href="/admin" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  Admin
-                </Link>
-              )}
-              <a href="#messages" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('profile.tab.messages', 'Zprávy')}
-              </a>
-              <a href="#my-forum" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                Moje fórum
-              </a>
-              {canWriteArticles && (
-                <a href="#my-posts" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.posts', 'Moje články')}
-                </a>
-              )}
-              <NotificationBell />
-            </div>
-          )}
         </div>
       </section>
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
-          {/* Levý sloupec: releasy (na mobilu za akcemi) */}
-          <div className="space-y-6 order-2 lg:order-1">
-            {profileCompleteness.missing.length > 0 && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
-                    <p className="text-[12px] text-amber-100/90">
-                      Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
-                    </p>
-                  </div>
-                  <a
-                    href="#profile"
-                    className="inline-flex items-center rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-50 hover:bg-amber-400/30"
-                  >
-                    Opravit profil
-                  </a>
+          {/* Levý sloupec: releasy */}
+          <div className="space-y-6">
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
+                    {t('profile.beats.title', 'Moje beaty')}
+                  </h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 text-[12px] text-amber-50/90">
-                  {profileCompleteness.missing.map((item) => (
-                    <span key={item} className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1">
-                      {item}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
+                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
+                  <span className="text-[var(--mpc-dark)]">•</span>
+                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
                 </div>
               </div>
-            )}
-            {isMcOnly && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Moje akapely</h2>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{acapellas.length} {t('profile.items', 'položek')}</p>
-                  </div>
+              {beatsError && (
+                <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
+                  {beatsError}
                 </div>
-                {acapellasError && (
-                  <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
-                    {acapellasError}
-                  </div>
-                )}
-                {acapellas.length === 0 ? (
-                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-6 text-sm text-[var(--mpc-muted)]">
-                    Zatím žádné akapely. Nahraj první akapelu a ukaž se.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {acapellas.map((item) => {
-                      const trackId = `acapella-${item.id}`;
-                      const isCurrent = currentAcapella?.id === item.id && gpCurrent?.id === trackId;
-                      const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
-                      return (
-                        <div
-                          key={item.id}
-                          className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)]"
-                          style={{
-                            ...(item.cover_url
-                              ? {
-                                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${item.cover_url})`,
-                                  backgroundSize: 'cover',
-                                  backgroundPosition: 'center',
-                                  borderRadius: '16px',
-                                }
-                              : {}),
-                            overflow: 'visible',
-                          }}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <p className="text-base font-semibold text-[var(--mpc-light)]">{item.title}</p>
-                              <p className="text-[12px] text-[var(--mpc-muted)]">
-                                {item.bpm ? `${item.bpm} BPM` : '—'} · {item.mood || '—'}
-                              </p>
-                              <div className="mt-1 flex items-center gap-2 text-[10px]">
-                                <span
-                                  className={`rounded-full border px-2 py-[2px] uppercase tracking-[0.12em] ${
-                                    item.access_mode === 'request'
-                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                      : item.access_mode === 'private'
-                                        ? 'border-red-500/30 bg-red-500/10 text-red-100'
-                                        : 'border-white/15 bg-white/5 text-[var(--mpc-muted)]'
-                                  }`}
-                                >
-                                  {item.access_mode === 'request'
-                                    ? 'Na žádost'
-                                    : item.access_mode === 'private'
-                                      ? 'Soukromá'
-                                      : 'Veřejná'}
-                                </span>
-                                {updatingAcapellaAccessId === item.id && (
-                                  <span className="text-[var(--mpc-accent)]">Ukládám…</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handlePlayAcapella(item)}
-                                disabled={!item.audio_url}
-                                className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${
-                                  isCurrent && gpIsPlaying ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'
-                                } disabled:opacity-40`}
-                              >
-                                {isCurrent && gpIsPlaying ? '▮▮' : '▶'}
-                              </button>
-                              <div className="flex flex-col items-end gap-1">
-                                <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Přístup</span>
-                                <select
-                                  value={item.access_mode || 'public'}
-                                  onChange={(e) =>
-                                    handleUpdateAcapellaAccess(
-                                      item.id,
-                                      e.target.value as 'public' | 'request' | 'private'
-                                    )
-                                  }
-                                  disabled={updatingAcapellaAccessId === item.id}
-                                  className="h-8 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-2 text-[11px] text-[var(--mpc-light)] outline-none hover:border-[var(--mpc-accent)]"
-                                >
-                                  <option value="public">Veřejná</option>
-                                  <option value="request">Na žádost</option>
-                                  <option value="private">Soukromá</option>
-                                </select>
-                              </div>
-                              <div className="relative">
-                                <button
-                                  onClick={() =>
-                                    setOpenAcapellaMenuId((prev) => (prev === item.id ? null : item.id))
-                                  }
-                                  className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                >
-                                  •••
-                                </button>
-                                {openAcapellaMenuId === item.id && (
-                                  <div className="absolute right-0 top-10 z-50 min-w-[180px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_18px_36px_rgba(0,0,0,0.55)]">
-                                    <button
-                                      onClick={() => startEditAcapella(item)}
-                                      className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                                    >
-                                      Upravit akapelu
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleUpdateAcapellaAccess(
-                                          item.id,
-                                          item.access_mode === 'request' ? 'public' : 'request'
-                                        )
-                                      }
-                                      disabled={updatingAcapellaAccessId === item.id}
-                                      className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] disabled:opacity-60"
-                                    >
-                                      {item.access_mode === 'request' ? 'Zpřístupnit veřejně' : 'Přístup na žádost'}
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteAcapella(item.id)}
-                                      disabled={deletingAcapellaId === item.id}
-                                      className="block w-full px-3 py-2 text-left text-red-400 hover:bg-[var(--mpc-deck)] disabled:opacity-60"
-                                    >
-                                      {deletingAcapellaId === item.id ? 'Mažu…' : 'Smazat akapelu'}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          {editingAcapellaId === item.id && (
-                            <div className="mt-3 space-y-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-3">
-                              <div className="grid gap-3 md:grid-cols-2">
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    Název
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editAcapellaTitle}
-                                    onChange={(e) => setEditAcapellaTitle(e.target.value)}
-                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    BPM
-                                  </label>
-                                  <input
-                                    type="number"
-                                    value={editAcapellaBpm}
-                                    onChange={(e) => setEditAcapellaBpm(e.target.value)}
-                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    Mood
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editAcapellaMood}
-                                    onChange={(e) => setEditAcapellaMood(e.target.value)}
-                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    Cover URL
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editAcapellaCoverUrl}
-                                    onChange={(e) => setEditAcapellaCoverUrl(e.target.value)}
-                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    Nahrát nový cover
-                                  </label>
-                                  <input
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/webp"
-                                    onChange={(e) => setEditAcapellaCoverFile(e.target.files?.[0] ?? null)}
-                                    className="mt-1 w-full text-[12px] text-[var(--mpc-light)]"
-                                  />
-                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Nahraje se do bucketu akapel.</p>
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                                    Přístup
-                                  </label>
-                                  <select
-                                    value={editAcapellaAccess}
-                                    onChange={(e) => setEditAcapellaAccess(e.target.value as 'public' | 'request' | 'private')}
-                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                                  >
-                                    <option value="public">Veřejná</option>
-                                    <option value="request">Na žádost</option>
-                                    <option value="private">Soukromá</option>
-                                  </select>
-                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">&quot;Na žádost&quot; skryje přímé stahování, nejdřív musíš schválit.</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={handleSaveAcapella}
-                                  disabled={acapellaSaving}
-                                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-white disabled:opacity-60"
-                                >
-                                  {acapellaSaving ? 'Ukládám…' : 'Uložit akapelu'}
-                                </button>
-                                <button
-                                  onClick={() => setEditingAcapellaId(null)}
-                                  className="rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                >
-                                  Zrušit
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          <div
-                            className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                            onClick={(e) => {
-                              const width = e.currentTarget.getBoundingClientRect().width;
-                              if (!width) return;
-                              seekAcapella(item, e.clientX - e.currentTarget.getBoundingClientRect().left, width);
-                            }}
-                          >
-                            <div
-                              className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                              style={{ width: progressPct }}
-                            />
-                          </div>
-                          {isCurrent && (
-                            <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                              <span>{formatTime(gpTime)}</span>
-                              <span>{formatTime(gpDuration)}</span>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-            {!isMcOnly && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
-                <div className="mb-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
-                      {t('profile.beats.title', 'Moje beaty')}
-                    </h2>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
-                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
-                    <span className="text-[var(--mpc-dark)]">•</span>
-                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
-                  </div>
-                </div>
-                {SHOW_SHARE_FEATURE && shareMessage && (
-                  <div className="mb-2 rounded-md border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[12px] text-[var(--mpc-light)]">
-                    {shareMessage}
-                  </div>
-                )}
-                {beatsError && (
-                  <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
-                    {beatsError}
-                  </div>
-                )}
-                {beats.length === 0 ? (
+              )}
+              {beats.length === 0 ? (
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-6 text-sm text-[var(--mpc-muted)]">
                   Zatím žádné beaty. Nahraj první beat a ukaž se.
                 </div>
-                ) : (
+              ) : (
                 <div className="space-y-3">
                   {beats.map((beat) => (
                     <div
@@ -3097,11 +1672,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <button
                           onClick={() => handlePlayBeat(beat)}
                           disabled={!beat.audio_url}
-                          className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${
-                            currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'
-                          } disabled:opacity-40`}
+                          className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${currentBeat?.id === beat.id && isPlayingBeat ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'} disabled:opacity-40`}
                         >
-                          {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? '▮▮' : '▶'}
+                          {currentBeat?.id === beat.id && isPlayingBeat ? '▮▮' : '▶'}
                         </button>
                         <div className="relative">
                           <button
@@ -3120,14 +1693,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               >
                                 Upravit beat
                               </button>
-                              {SHOW_SHARE_FEATURE && (
-                                <button
-                                  onClick={() => void createShareLink('beat', String(beat.id))}
-                                  className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                                >
-                                  Sdílet
-                                </button>
-                              )}
                               <button
                                 onClick={() => handleDeleteBeat(beat.id)}
                                 className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] text-red-400"
@@ -3218,30 +1783,34 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     </div>
 
                       {/* pseudo-waveform */}
+                      <div
+                        className="mt-3 h-[70px] cursor-pointer overflow-hidden rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                          seekBeat(beat, e.clientX - rect.left, rect.width);
+                        }}
+                      >
                         <div
-                          className="mt-3 h-3 cursor-pointer overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
-                          onClick={(e) => {
-                            const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                            seekBeat(beat, e.clientX - rect.left, rect.width);
+                          className="h-full"
+                          style={{
+                            width:
+                              currentBeat?.id === beat.id && beatDuration
+                                ? `${Math.min((beatTime / beatDuration) * 100, 100)}%`
+                                : '0%',
+                            background:
+                              'repeating-linear-gradient(to right, rgba(0,86,63,0.95) 0, rgba(0,86,63,0.95) 6px, rgba(255,255,255,0.18) 6px, rgba(255,255,255,0.18) 12px)',
+                            boxShadow: '0 4px 12px rgba(0,224,150,0.35)',
+                            transition: 'width 0.1s linear',
                           }}
-                        >
-                          <div
-                            className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
-                            style={{
-                              width:
-                                currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpDuration
-                                  ? `${Math.min((gpTime / gpDuration) * 100, 100)}%`
-                                  : '0%',
-                            }}
-                          />
-                        </div>
+                        />
+                      </div>
 
                       <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
                         <span>{beat.audio_url ? 'Audio připojeno' : 'Bez audia'}</span>
                         {currentBeat?.id === beat.id && playerMessage && (
                           <span className="text-[var(--mpc-accent)]">{playerMessage}</span>
                         )}
-                        {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying && (
+                        {currentBeat?.id === beat.id && isPlayingBeat && (
                           <span className="rounded-full bg-[var(--mpc-accent)]/15 px-2 py-[2px] text-[10px] text-[var(--mpc-accent)]">
                             Přehrává se
                           </span>
@@ -3253,9 +1822,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
               )}
             </div>
 
-            )}
-
-            {!isMcOnly && editingProject && (
+            {editingProject && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -3408,7 +1975,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       setProjectsError(null);
                       try {
                         const uploads: Array<{ name: string; url: string }> = [];
-                        const finalTracks: Array<{ name: string; url: string; path?: string | null }> = [];
+                        const finalTracks: Array<{ name: string; url: string }> = [];
 
                         // Cover upload (pokud je vybrán nový soubor)
                         let coverUrl = editingProject.cover_url || null;
@@ -3437,29 +2004,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               .from('projects')
                               .upload(path, tr.file, { upsert: true });
                             if (uploadErr) throw uploadErr;
-                            const { data: signed } = await supabase.storage
-                              .from('projects')
-                              .createSignedUrl(path, 60 * 60 * 24 * 7);
-                            const publicUrl = signed?.signedUrl;
-                            uploads.push({ name: tr.name.trim() || tr.file.name, url: publicUrl || '' });
-                            finalTracks.push({
-                              name: tr.name.trim() || tr.file.name,
-                              url: publicUrl || '',
-                              path,
-                            });
-                          } else if (tr.path) {
-                            // Zachovej původní nahrané soubory (mají uloženou path)
-                            const { data: signed } = await supabase.storage
-                              .from('projects')
-                              .createSignedUrl(tr.path, 60 * 60 * 24 * 7);
-                            const fallbackUrl = tr.url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${tr.path}`;
-                            finalTracks.push({
-                              name: tr.name.trim() || tr.path.split('/').pop() || 'Track',
-                              url: signed?.signedUrl || fallbackUrl,
-                              path: tr.path,
-                            });
+                            const { data: pub } = supabase.storage.from('projects').getPublicUrl(path);
+                            uploads.push({ name: tr.name.trim() || tr.file.name, url: pub.publicUrl });
+                            finalTracks.push({ name: tr.name.trim() || tr.file.name, url: pub.publicUrl });
                           } else if (tr.url) {
-                            finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url, path: tr.path || null });
+                            finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url });
                           }
                         }
 
@@ -3536,8 +2085,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </div>
             )}
 
-            {!isMcOnly && (
-            <>
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -3571,10 +2118,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   {projects.map((project) => {
                     const projectStyle = project.cover_url
                       ? {
-                          backgroundImage:
-                            'linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.9)), url(' +
-                            (resolveProjectCoverUrl(project.cover_url) || '') +
-                            ')',
+                          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.9)), url(${project.cover_url})`,
                           backgroundSize: 'cover',
                           backgroundPosition: 'center',
                         }
@@ -3599,35 +2143,21 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               setProjectEditTitle(project.title || '');
                               setProjectEditDescription(project.description || '');
                               const tracks = Array.isArray(project.tracks_json)
-                                ? project.tracks_json.map((t: any) => {
-                                    const path = t.path || null;
-                                    const urlFallback =
-                                      path && (!t.url || t.url.startsWith('http') === false)
-                                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                        : '';
-                                    return {
-                                      name: t.name || '',
-                                      url: t.url || urlFallback,
-                                      path,
-                                    };
-                                  })
+                                ? project.tracks_json.map((t: any) => ({ name: t.name || '', url: t.url || '' }))
                                 : [];
-                              setProjectEditTracks(
-                                tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                              );
+                              setProjectEditTracks(tracks.length > 0 ? tracks : [{ name: '', url: '', file: null }]);
                             }}
                             className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                           >
                             Upravit
                           </button>
-                          {SHOW_SHARE_FEATURE && (
-                            <button
-                              onClick={() => void createShareLink('project', String(project.id))}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                            >
-                              Sdílet
-                            </button>
-                          )}
+                          <button
+                            onClick={() => void handleDeleteProject(project.id)}
+                            disabled={deletingProjectId === project.id}
+                            className="rounded-full border border-red-400 px-3 py-1 text-[var(--mpc-accent)] hover:bg-red-500/10 disabled:opacity-50"
+                          >
+                            {deletingProjectId === project.id ? 'Mažu…' : 'Odebrat'}
+                          </button>
                           <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                             <label className="text-[var(--mpc-muted)]">Přístup</label>
                             <select
@@ -3640,6 +2170,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               <option value="private">Soukromý</option>
                             </select>
                           </div>
+                          {deleteProjectError[project.id] && (
+                            <p className="mt-1 text-[11px] text-red-300">{deleteProjectError[project.id]}</p>
+                          )}
                           {projectGrantsError && (
                             <p className="text-[11px] text-red-300">{projectGrantsError}</p>
                           )}
@@ -3721,58 +2254,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </div>
               )}
             </div>
-            </>
-            )}
-            {isMcOnly && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje žádosti o přístup</h3>
-                  </div>
-                </div>
-                {myAccessRequestsLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám žádosti…</p>}
-                {myAccessRequestsError && (
-                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                    {myAccessRequestsError}
-                  </div>
-                )}
-                {myAccessRequests.length === 0 ? (
-                  <p className="text-[12px] text-[var(--mpc-muted)]">Zatím jsi neposlal žádnou žádost.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {myAccessRequests.map((req) => (
-                      <div key={req.id} className="flex flex-col gap-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-semibold">{req.project_title || req.project_id}</p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="text-[11px] text-[var(--mpc-muted)]">Status:</span>
-                              <span
-                                className={`rounded-full border px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] ${
-                                  req.status === 'approved'
-                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                    : req.status === 'pending'
-                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                      : 'border-red-500/40 bg-red-500/10 text-red-100'
-                                }`}
-                              >
-                                {req.status === 'approved'
-                                  ? 'Aktivní'
-                                  : req.status === 'pending'
-                                    ? 'Čeká na schválení'
-                                    : 'Odmítnuto'}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-[11px] text-[var(--mpc-muted)]">{formatRelativeTime(req.created_at)}</p>
-                        </div>
-                        {req.message && <p className="text-[12px] text-[var(--mpc-light)]">„{req.message}“</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="collabs">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -3781,9 +2263,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   </h2>
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                     {collabThreads.length} {t('profile.collabs.count', 'spoluprací')}
-                  </p>
-                  <p className="text-[11px] text-[var(--mpc-muted)]">
-                    Aktivní: {collabSummary.active} · Čeká: {collabSummary.pending} · Dokončené: {collabSummary.done} · Ukončené: {collabSummary.cancelled}
                   </p>
                 </div>
                 <button
@@ -3848,8 +2327,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna. Založ novou spolupráci.</p>
                   ) : (
                     collabThreads.map((thread) => {
-                      const isActive = thread.id === selectedThreadId;
                       const displayTitle = buildCollabLabel(thread.participants);
+                      const isActive = thread.id === selectedThreadId;
                       return (
                         <button
                           type="button"
@@ -3868,30 +2347,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 {formatRelativeTime(thread.updated_at)}
                               </p>
                             </div>
-                            <span
-                              className={`rounded-full border px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] ${
-                                thread.status === 'active'
-                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                  : thread.status === 'pending'
-                                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                    : thread.status === 'paused'
-                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                      : thread.status === 'done'
-                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                        : 'border-red-500/40 bg-red-500/10 text-red-100'
-                              }`}
-                            >
-                              {thread.status === 'active'
-                                ? 'Aktivní'
-                                : thread.status === 'pending'
-                                  ? 'Čeká na potvrzení'
-                                  : thread.status === 'paused'
-                                    ? 'Pozastavená'
-                                    : thread.status === 'done'
-                                      ? 'Dokončená'
-                                      : thread.status === 'cancelled'
-                                        ? 'Ukončená'
-                                        : 'Odmítnuto'}
+                            <span className="rounded-full border border-[var(--mpc-dark)] bg-black/40 px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-light)]">
+                              {thread.status}
                             </span>
                           </div>
                         </button>
@@ -3909,169 +2366,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <div>
                           <p className="text-base font-semibold">{activeThreadLabel}</p>
                           <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                            Status:{' '}
-                            {activeThread.status === 'active'
-                              ? 'Aktivní'
-                              : activeThread.status === 'pending'
-                                ? 'Čeká na potvrzení'
-                                : activeThread.status === 'paused'
-                                  ? 'Pozastavená'
-                                  : activeThread.status === 'done'
-                                    ? 'Dokončená'
-                                    : activeThread.status === 'cancelled'
-                                      ? 'Ukončená'
-                                      : 'Odmítnuto'}
+                            Status: {activeThread.status}
                           </p>
                         </div>
                         <p className="text-[11px] text-[var(--mpc-muted)]">
                           Aktualizováno {formatRelativeTime(activeThread.updated_at)}
                         </p>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--mpc-muted)]">
-                        <span>Poslední aktivita: {formatRelativeTime(getLastActivity(activeThread))}</span>
-                        {activeThread.deadline && (
-                          <span>Deadline: {new Date(activeThread.deadline).toLocaleDateString('cs-CZ')}</span>
-                        )}
-                      </div>
-
-                      {activeThread.status === 'pending' && activeThread.creator_id !== userId && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[11px] text-[var(--mpc-muted)]">Čeká na potvrzení</span>
-                          <button
-                            onClick={() => void updateCollabStatus(activeThread.id, 'active')}
-                            disabled={collabStatusUpdating === activeThread.id}
-                            className="rounded-full bg-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-60"
-                          >
-                            {collabStatusUpdating === activeThread.id ? 'Ukládám…' : 'Potvrdit'}
-                          </button>
-                          <button
-                            onClick={() => void updateCollabStatus(activeThread.id, 'rejected')}
-                            disabled={collabStatusUpdating === activeThread.id}
-                            className="rounded-full border border-red-400 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-red-200 hover:bg-red-500/10 disabled:opacity-60"
-                          >
-                            Odmítnout
-                          </button>
-                        </div>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          onClick={() => void handleStartCollabCall()}
-                          disabled={startingCollabCall}
-                          className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-                        >
-                          {startingCollabCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
-                        </button>
-                      </div>
-
-                      {/* Aktivity a deadline */}
-                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
-                            Aktivity
-                            {Array.isArray(activeThread.milestones) && activeThread.milestones.length > 0 && (
-                              <span className="text-[11px] text-[var(--mpc-muted)]">
-                                {activeThread.milestones.filter((m) => m.done).length}/{activeThread.milestones.length} splněno
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <label className="text-[var(--mpc-muted)]">Deadline:</label>
-                            <input
-                              type="date"
-                              value={activeThread.deadline ? activeThread.deadline.slice(0, 10) : ''}
-                              onChange={(e) => void saveMilestones(activeThread.id, activeThread.milestones || [], e.target.value || null)}
-                              className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-1 text-[11px] text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          {(activeThread.milestones || []).map((m) => (
-                            <div key={m.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={!!m.done}
-                                  onChange={() => void toggleMilestone(activeThread.id, m.id)}
-                                  className="h-4 w-4"
-                                />
-                                <div>
-                                  <p className="text-[var(--mpc-light)]">{m.title}</p>
-                                  {m.due && <p className="text-[11px] text-[var(--mpc-muted)]">Do: {new Date(m.due).toLocaleDateString('cs-CZ')}</p>}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => void removeMilestone(activeThread.id, m.id)}
-                                className="text-[11px] text-red-300 hover:text-white"
-                              >
-                                Odebrat
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Nová aktivita..."
-                            value={newMilestoneTitle}
-                            onChange={(e) => setNewMilestoneTitle(e.target.value)}
-                            className="flex-1 min-w-[180px] rounded border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                          />
-                          <input
-                            type="date"
-                            value={newMilestoneDue}
-                            onChange={(e) => setNewMilestoneDue(e.target.value)}
-                            className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                          />
-                          <button
-                            onClick={() => void handleAddMilestone()}
-                            disabled={savingMilestone || !newMilestoneTitle.trim()}
-                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-                          >
-                            {savingMilestone ? 'Ukládám…' : 'Přidat'}
-                          </button>
-                        </div>
-                        {inactivityDays(activeThread) !== null && inactivityDays(activeThread)! >= 7 && activeThread.status === 'active' && (
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
-                            <span>Partner nereagoval {inactivityDays(activeThread)} dní.</span>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const { data: participants } = await supabase
-                                    .from('collab_participants')
-                                    .select('user_id')
-                                    .eq('thread_id', activeThread.id);
-                                  const targets =
-                                    (participants ?? [])
-                                      .map((p: any) => p.user_id as string)
-                                      .filter((uid) => uid && uid !== userId) || [];
-                                  await Promise.all(
-                                    targets.map((uid) =>
-                                      sendNotificationSafe(supabase, {
-                                        user_id: uid,
-                                        type: 'collab_message',
-                                        title: 'Připomenutí spolupráce',
-                                        body: 'Reaguj prosím na spolupráci',
-                                        item_type: 'collab_thread',
-                                        item_id: activeThread.id,
-                                        senderId: userId,
-                                        data: { from: profile.display_name || email || 'Uživatel' },
-                                      })
-                                    )
-                                  );
-                                  setPlayerMessage('Připomenutí odesláno.');
-                                } catch (err) {
-                                  console.error('Ping selhal:', err);
-                                  setPlayerMessage('Nepodařilo se odeslat připomenutí.');
-                                }
-                              }}
-                              className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
-                            >
-                              Připomenout
-                            </button>
-                          </div>
-                        )}
                       </div>
 
                       <div className="space-y-3">
@@ -4174,166 +2474,155 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </div>
             </div>
 
-            {profile.role !== 'mc' && (
-              <div
-                className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3"
-                id="my-forum"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje fórum</h3>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Tvé kategorie, podkategorie a vlákna
-                    </p>
-                  </div>
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-forum">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje fórum</h3>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Tvé kategorie, podkategorie a vlákna
+                  </p>
                 </div>
-                {myForumLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
-                {myForumError && (
-                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                    {myForumError}
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
-                    <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Kategorie / subkategorie</div>
-                    {myForumCategories.length === 0 ? (
-                      <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné kategorie.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {myForumCategories.map((cat) => (
-                          <div
-                            key={cat.id}
-                            className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
-                          >
-                            <div>
-                              <p className="font-semibold">{cat.name}</p>
-                              <p className="text-[11px] text-[var(--mpc-muted)]">{cat.description || 'Bez popisu'}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 text-[11px]">
-                              <button
-                                onClick={async () => {
-                                  const name = prompt('Upravit název kategorie', cat.name) ?? cat.name;
-                                  const desc = prompt('Upravit popis', cat.description || '') ?? cat.description;
-                                  try {
-                                    const { error } = await supabase
-                                      .from('forum_categories')
-                                      .update({ name, description: desc || null })
-                                      .eq('id', cat.id)
-                                      .eq('user_id', userId);
-                                    if (error) throw error;
-                                    setMyForumCategories((prev) =>
-                                      prev.map((c) => (c.id === cat.id ? { ...c, name, description: desc || null } : c))
-                                    );
-                                  } catch (err) {
-                                    console.error('Chyba při úpravě kategorie:', err);
-                                    setMyForumError('Nepodařilo se upravit kategorii.');
-                                  }
-                                }}
-                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                              >
-                                Upravit
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const { error } = await supabase
-                                      .from('forum_categories')
-                                      .delete()
-                                      .eq('id', cat.id)
-                                      .eq('user_id', userId);
-                                    if (error) throw error;
-                                    setMyForumCategories((prev) => prev.filter((c) => c.id !== cat.id));
-                                  } catch (err) {
-                                    console.error('Chyba při mazání kategorie:', err);
-                                    setMyForumError('Nepodařilo se smazat kategorii.');
-                                  }
-                                }}
-                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
-                              >
-                                Smazat
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
-                    <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Vlákna</div>
-                    {myForumThreads.length === 0 ? (
-                      <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {myForumThreads.map((thr) => (
-                          <div
-                            key={thr.id}
-                            className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
-                          >
-                            <div>
-                              <p className="font-semibold">{thr.title}</p>
-                              <p className="text-[11px] text-[var(--mpc-muted)]">Kategorie: {thr.category_id}</p>
-                            </div>
-                            <div className="flex flex-col gap-1 text-[11px]">
-                              <button
-                                onClick={async () => {
-                                  const title = prompt('Upravit název vlákna', thr.title) ?? thr.title;
-                                  try {
-                                    const { error } = await supabase
-                                      .from('forum_threads')
-                                      .update({ title })
-                                      .eq('id', thr.id)
-                                      .eq('user_id', userId);
-                                    if (error) throw error;
-                                    setMyForumThreads((prev) => prev.map((t) => (t.id === thr.id ? { ...t, title } : t)));
-                                  } catch (err) {
-                                    console.error('Chyba při úpravě vlákna:', err);
-                                    setMyForumError('Nepodařilo se upravit vlákno.');
-                                  }
-                                }}
-                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                              >
-                                Upravit
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const { error } = await supabase
-                                      .from('forum_threads')
-                                      .delete()
-                                      .eq('id', thr.id)
-                                      .eq('user_id', userId);
-                                    if (error) throw error;
-                                    setMyForumThreads((prev) => prev.filter((t) => t.id !== thr.id));
-                                  } catch (err) {
-                                    console.error('Chyba při mazání vlákna:', err);
-                                    setMyForumError('Nepodařilo se smazat vlákno.');
-                                  }
-                                }}
-                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
-                              >
-                                Smazat
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <Link
-                  href="/forum"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                >
-                  Otevřít fórum
-                </Link>
               </div>
-            )}
+              {myForumLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
+              {myForumError && (
+                <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+                  {myForumError}
+                </div>
+              )}
 
-            {canWriteArticles && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
+              <div className="space-y-3">
+                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
+                  <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Kategorie / subkategorie</div>
+                  {myForumCategories.length === 0 ? (
+                    <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné kategorie.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {myForumCategories.map((cat) => (
+                        <div key={cat.id} className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]">
+                          <div>
+                            <p className="font-semibold">{cat.name}</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">{cat.description || 'Bez popisu'}</p>
+                            {cat.parent_id && <p className="text-[11px] text-[var(--mpc-muted)]">Subkategorie</p>}
+                          </div>
+                          <div className="flex flex-col gap-1 text-[11px]">
+                            <button
+                              onClick={async () => {
+                                const name = prompt('Upravit název kategorie', cat.name) ?? cat.name;
+                                const desc = prompt('Upravit popis', cat.description || '') ?? cat.description;
+                                try {
+                                  const { error } = await supabase
+                                    .from('forum_categories')
+                                    .update({ name, description: desc || null })
+                                    .eq('id', cat.id)
+                                    .eq('user_id', userId);
+                                  if (error) throw error;
+                                  setMyForumCategories((prev) =>
+                                    prev.map((c) => (c.id === cat.id ? { ...c, name, description: desc || null } : c))
+                                  );
+                                } catch (err) {
+                                  console.error('Chyba při úpravě kategorie:', err);
+                                  setMyForumError('Nepodařilo se upravit kategorii.');
+                                }
+                              }}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            >
+                              Upravit
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase
+                                    .from('forum_categories')
+                                    .delete()
+                                    .eq('id', cat.id)
+                                    .eq('user_id', userId);
+                                  if (error) throw error;
+                                  setMyForumCategories((prev) => prev.filter((c) => c.id !== cat.id));
+                                } catch (err) {
+                                  console.error('Chyba při mazání kategorie:', err);
+                                  setMyForumError('Nepodařilo se smazat kategorii.');
+                                }
+                              }}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
+                            >
+                              Smazat
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
+                  <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Vlákna</div>
+                  {myForumThreads.length === 0 ? (
+                    <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {myForumThreads.map((thr) => (
+                        <div key={thr.id} className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]">
+                          <div>
+                            <p className="font-semibold">{thr.title}</p>
+                            <p className="text-[11px] text-[var(--mpc-muted)]">Kategorie: {thr.category_id}</p>
+                          </div>
+                          <div className="flex flex-col gap-1 text-[11px]">
+                            <button
+                              onClick={async () => {
+                                const title = prompt('Upravit název vlákna', thr.title) ?? thr.title;
+                                try {
+                                  const { error } = await supabase
+                                    .from('forum_threads')
+                                    .update({ title })
+                                    .eq('id', thr.id)
+                                    .eq('user_id', userId);
+                                  if (error) throw error;
+                                  setMyForumThreads((prev) => prev.map((t) => (t.id === thr.id ? { ...t, title } : t)));
+                                } catch (err) {
+                                  console.error('Chyba při úpravě vlákna:', err);
+                                  setMyForumError('Nepodařilo se upravit vlákno.');
+                                }
+                              }}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            >
+                              Upravit
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const { error } = await supabase
+                                    .from('forum_threads')
+                                    .delete()
+                                    .eq('id', thr.id)
+                                    .eq('user_id', userId);
+                                  if (error) throw error;
+                                  setMyForumThreads((prev) => prev.filter((t) => t.id !== thr.id));
+                                } catch (err) {
+                                  console.error('Chyba při mazání vlákna:', err);
+                                  setMyForumError('Nepodařilo se smazat vlákno.');
+                                }
+                              }}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
+                            >
+                              Smazat
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <Link
+                href="/forum"
+                className="inline-flex w-full items-center justify-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+              >
+                Otevřít fórum
+              </Link>
+            </div>
+
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje články</h3>
@@ -4361,20 +2650,28 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           <p className="text-[11px] text-[var(--mpc-muted)]">{post.date}</p>
                         </div>
                         <div className="flex flex-col gap-2 text-[11px]">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => void handleTogglePostPublished(post.id, true)}
-                              className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                            >
-                              {post.published ? 'Publikováno' : 'Publikovat'}
-                            </button>
-                            <button
-                              onClick={() => void handleTogglePostPublished(post.id, false)}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-red-400 hover:text-red-300"
-                            >
-                              Schovat
-                            </button>
-                          </div>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const { error } = await supabase
+                                  .from('posts')
+                                  .update({ published: true })
+                                  .eq('id', post.id);
+                                if (error) throw error;
+                                setMyPosts((prev) =>
+                                  prev.map((p) =>
+                                    p.id === post.id ? { ...p, published: true } : p
+                                  )
+                                );
+                              } catch (err) {
+                                console.error('Chyba publikace:', err);
+                                setMyPostsError('Nepodařilo se publikovat článek. Zkontroluj sloupec published v tabulce.');
+                              }
+                            }}
+                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                          >
+                            {post.published ? 'Publikováno' : 'Publikovat'}
+                          </button>
                           <button
                             onClick={() => {
                               setEditingPostId(post.id);
@@ -4410,11 +2707,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     setEditingPostId(null);
                     setBlogForm({
                       title: '',
-                      titleEn: '',
                       excerpt: '',
-                      excerptEn: '',
                       body: '',
-                      bodyEn: '',
                       author: profile.display_name || '',
                       date: '',
                       coverUrl: '',
@@ -4430,63 +2724,38 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </button>
               </div>
             </div>
-          )}
 
-          {/* konec levého sloupce */}
           </div>
 
-          {/* Pravý sloupec: akce (na mobilu nahoře) */}
-          <div className="space-y-4 order-1 lg:order-2" id="profile-settings">
-            {(canUpload || canUploadAcapellas) && (
-              <>
-                {canUploadAcapellas && (
-                  <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                    <button
-                      onClick={() => toggleSection('acapellaUpload')}
-                      className="w-full rounded-full bg-gradient-to-r from-[#1b8bff] to-[#4dc0ff] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(27,139,255,0.35)] transition hover:brightness-105"
-                    >
-                      {openSections.acapellaUpload ? 'Schovat formulář' : 'Nahrát akapely'}
-                    </button>
-                    {openSections.acapellaUpload && (
-                      <div className="mt-4">
-                        <AcapellaUploadForm />
-                      </div>
-                    )}
-                  </div>
-                )}
-                {canUpload && (
-                  <>
-                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                      <button
-                        onClick={() => toggleSection('beatUpload')}
-                        className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
-                      >
-                        {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
-                      </button>
-                      {openSections.beatUpload && (
-                        <div className="mt-4">
-                          <BeatUploadForm />
-                        </div>
-                      )}
-                    </div>
+          {/* Pravý sloupec: akce */}
+          <div className="space-y-4" id="profile-settings">
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+              <button
+                onClick={() => toggleSection('beatUpload')}
+                className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
+              >
+                {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
+              </button>
+              {openSections.beatUpload && (
+                <div className="mt-4">
+                  <BeatUploadForm />
+                </div>
+              )}
+            </div>
 
-                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                      <button
-                        onClick={() => toggleSection('projectUpload')}
-                        className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                      >
-                        {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
-                      </button>
-                      {openSections.projectUpload && (
-                        <div className="mt-4">
-                          <ProjectUploadForm />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </>
-            )}
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+              <button
+                onClick={() => toggleSection('projectUpload')}
+                className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+              >
+                {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
+              </button>
+              {openSections.projectUpload && (
+                <div className="mt-4">
+                  <ProjectUploadForm />
+                </div>
+              )}
+            </div>
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
               <button
@@ -4554,114 +2823,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                        Kraj (povinné)
-                      </label>
-                      <select
-                        value={editRegion}
-                        onChange={(e) => setEditRegion(e.target.value)}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        required
-                      >
-                        <option value="">Vyber kraj…</option>
-                        <option value="Hlavní město Praha">Hlavní město Praha</option>
-                        <option value="Středočeský kraj">Středočeský kraj</option>
-                        <option value="Jihočeský kraj">Jihočeský kraj</option>
-                        <option value="Plzeňský kraj">Plzeňský kraj</option>
-                        <option value="Karlovarský kraj">Karlovarský kraj</option>
-                        <option value="Ústecký kraj">Ústecký kraj</option>
-                        <option value="Liberecký kraj">Liberecký kraj</option>
-                        <option value="Královéhradecký kraj">Královéhradecký kraj</option>
-                        <option value="Pardubický kraj">Pardubický kraj</option>
-                        <option value="Kraj Vysočina">Kraj Vysočina</option>
-                        <option value="Jihomoravský kraj">Jihomoravský kraj</option>
-                        <option value="Olomoucký kraj">Olomoucký kraj</option>
-                        <option value="Zlínský kraj">Zlínský kraj</option>
-                        <option value="Moravskoslezský kraj">Moravskoslezský kraj</option>
-                        <option value="Bratislavský kraj">Bratislavský kraj</option>
-                        <option value="Trnavský kraj">Trnavský kraj</option>
-                        <option value="Trenčiansky kraj">Trenčiansky kraj</option>
-                        <option value="Nitriansky kraj">Nitriansky kraj</option>
-                        <option value="Žilinský kraj">Žilinský kraj</option>
-                        <option value="Banskobystrický kraj">Banskobystrický kraj</option>
-                        <option value="Prešovský kraj">Prešovský kraj</option>
-                        <option value="Košický kraj">Košický kraj</option>
-                      </select>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                            Hledám
-                          </label>
-                          <span className="text-[11px] text-[var(--mpc-muted)]">Vyber vše, co platí</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {SEEKING_OPTIONS.map((opt) => {
-                            const active = seekingSignals.includes(opt);
-                            return (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => toggleSignal(opt, seekingSignals, setSeekingSignals)}
-                                className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
-                                  active
-                                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)]'
-                                    : 'border-[var(--mpc-dark)] bg-[var(--mpc-deck)] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]'
-                                }`}
-                              >
-                                {opt}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <input
-                          type="text"
-                          value={seekingCustom}
-                          onChange={(e) => setSeekingCustom(e.target.value)}
-                          placeholder="Jiné – napiš vlastní popis"
-                          className="mt-2 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        />
-                      </div>
-
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                            Nabízím
-                          </label>
-                          <span className="text-[11px] text-[var(--mpc-muted)]">Vyber vše, co nabízíš</span>
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {OFFERING_OPTIONS.map((opt) => {
-                            const active = offeringSignals.includes(opt);
-                            return (
-                              <button
-                                key={opt}
-                                type="button"
-                                onClick={() => toggleSignal(opt, offeringSignals, setOfferingSignals)}
-                                className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
-                                  active
-                                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)]'
-                                    : 'border-[var(--mpc-dark)] bg-[var(--mpc-deck)] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]'
-                                }`}
-                              >
-                                {opt}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <input
-                          type="text"
-                          value={offeringCustom}
-                          onChange={(e) => setOfferingCustom(e.target.value)}
-                          placeholder="Jiné – napiš vlastní popis"
-                          className="mt-2 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
                         Krátké info o sobě
                       </label>
                       <textarea
@@ -4712,21 +2873,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
-                  {directThreads.some((t) => t.unread) && (
+                  {unreadThreadCount > 0 && (
                     <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
+                      {unreadThreadCount} {t('profile.messages.new', 'nových zpráv')}
                     </p>
                   )}
                 </div>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('collab-new-message');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px]"
+                >
+                  {t('profile.messages.new', 'Nová zpráva')}
+                </button>
               </div>
 
               {messagesLoading && (
                 <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>
-              )}
-              {messageSuccess && (
-                <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
-                  {messageSuccess}
-                </div>
               )}
               {messagesError && (
                 <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
@@ -4735,152 +2900,125 @@ function handleFieldChange(field: keyof Profile, value: string) {
               )}
 
               <div className="space-y-3">
-                {directThreads.length === 0 && !messagesLoading && (
-                  <p className="text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
-                )}
-                {directThreads.map((thread) => {
-                  const isOpen = expandedThread === thread.otherId;
-                  return (
-                    <div
-                      key={thread.otherId}
-                      className={`rounded-lg border px-4 py-3 text-sm transition ${thread.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
-                    >
+                {messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`rounded-lg border px-4 py-3 text-sm transition ${msg.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
+                  >
+                    <div className="flex items-center justify-between text-[12px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-[var(--mpc-light)]">{msg.from}</span>
+                        {msg.unread && (
+                          <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                            Nové
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[var(--mpc-muted)]">{msg.time}</span>
+                    </div>
+                    <p className="mt-1 text-[var(--mpc-muted)]">{msg.preview}</p>
+                    <div className="mt-2 flex items-center gap-2 text-[11px]">
                       <button
-                        type="button"
-                        className="flex w-full items-center justify-between text-left"
-                        onClick={() => setExpandedThread(isOpen ? null : thread.otherId)}
+                        onClick={() => handleReplyToCollab(msg)}
+                        className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
                       >
-                        <div>
-                          <p className="font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{thread.lastMessage}</p>
-                          {thread.unread && (
-                            <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                              Nové
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[var(--mpc-muted)]">{formatRelativeTime(new Date(thread.lastTs).toISOString())}</span>
+                        Odpovědět
                       </button>
-                      {isOpen && (
-                        <div className="mt-3 space-y-2 border-t border-[var(--mpc-dark)] pt-2">
-                          {thread.messages.map((m) => (
-                            <div key={m.id} className="rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
-                              <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                                <span>
-                                  {m.user_id === userId
-                                    ? 'Ty'
-                                    : profilesById[m.user_id || ''] || m.from_name || 'Neznámý'}
-                                </span>
-                                <span>{formatRelativeTime(m.created_at)}</span>
-                              </div>
-                              <p className="mt-1 whitespace-pre-line text-[var(--mpc-light)]">{m.body}</p>
-                            </div>
-                          ))}
-                          <div className="mt-2 space-y-2">
-                            <textarea
-                              className="w-full rounded-md border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
-                              rows={3}
-                              placeholder="Napiš odpověď…"
-                              value={threadReplies[thread.otherId] || ''}
-                              onChange={(e) => setThreadReplies((prev) => ({ ...prev, [thread.otherId]: e.target.value }))}
-                            />
-                            <div className="flex items-center justify-end">
-                              <button
-                                type="button"
-                                onClick={() => void handleThreadReply(thread.otherId, thread.otherName)}
-                                disabled={sendingMessage || !(threadReplies[thread.otherId]?.trim())}
-                                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
-                              >
-                                {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => setOpenSections((prev) => ({ ...prev, messages: !prev.messages }))}
-                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                >
-                  {openSections.messages ? 'Skrýt formulář' : 'Nová zpráva'}
-                </button>
-              </div>
-
-              {openSections.messages && (
-                <form onSubmit={handleSendDirectMessage} className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        Komu
-                      </label>
-                      <input
-                        type="text"
-                        value={newMessage.to}
-                        onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value, toUserId: '' }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="Začni psát jméno profilu…"
-                      />
-                      {userSuggestionsLoading && (
-                        <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
-                      )}
-                      {!userSuggestionsLoading && userSuggestions.length > 0 && (
-                        <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-2 text-[11px]">
-                          {userSuggestions.map((u) => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() =>
-                                setNewMessage((prev) => ({
-                                  ...prev,
-                                  to: u.display_name || '',
-                                  toUserId: u.id,
-                                }))
-                              }
-                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-white/5"
-                            >
-                              <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
-                              <span className="text-[var(--mpc-muted)]">{u.id.slice(0, 6)}…</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        Zpráva
-                      </label>
-                      <textarea
-                        value={newMessage.body}
-                        onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        rows={4}
-                        placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
-                      />
+                      <button className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]">
+                        Otevřít vlákno
+                      </button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-[11px] text-[var(--mpc-muted)] max-w-xl">
-                      Zpráva se odešle uživateli s vybraným jménem. Pokud jméno neexistuje, uvidíš chybu.
-                    </p>
-                    <button
-                      type="submit"
-                      disabled={sendingMessage || !newMessage.body.trim() || !newMessage.to.trim()}
-                      className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
-                    >
-                      {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                    </button>
+                ))}
+              </div>
+
+              <form onSubmit={handleSendCollabMessage} id="collab-new-message" className="mt-4 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      Komu
+                    </label>
+                    <input
+                      type="text"
+                      value={newMessage.to}
+                      onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value }))}
+                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                      placeholder="Např. MC Panel, Blockboy…"
+                    />
+                    {userSuggestionsLoading && (
+                      <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
+                    )}
+                    {!userSuggestionsLoading && userSuggestions.length > 0 && (
+                      <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-2 text-[11px]">
+                        {userSuggestions.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            onClick={() =>
+                              setNewMessage((prev) => ({
+                                ...prev,
+                                to: u.display_name || 'Neznámý',
+                                toUserId: u.id,
+                              }))
+                            }
+                            className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-[var(--mpc-panel)]"
+                          >
+                            <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
+                            <span className="text-[var(--mpc-muted)] text-[10px]">{u.id}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </form>
-              )}
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      ID příjemce (UUID)
+                    </label>
+                    <input
+                      type="text"
+                      value={newMessage.toUserId}
+                      onChange={(e) => setNewMessage((prev) => ({ ...prev, toUserId: e.target.value }))}
+                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                      placeholder="uuid příjemce z auth.users"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      Zpráva
+                    </label>
+                    <textarea
+                      value={newMessage.body}
+                      onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
+                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                      rows={4}
+                      placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-[var(--mpc-muted)]">
+                    Zprávy se ukládají do Supabase tabulky messages (user_id → odesílatel, to_user_id → příjemce). Pokud backend chybí, zůstanou lokálně.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={sendingMessage}
+                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.15em] text-white disabled:opacity-60"
+                  >
+                    {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                  </button>
+                </div>
+              </form>
+              <p className="text-[11px] text-[var(--mpc-muted)]">
+                Tady se sbíhají domluvy na spolupráci i soukromé zprávy. Brzy přidáme realtime a e-mail notifikace.
+              </p>
             </div>
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
+              {!blogFormOpen && (
+                <div className="text-center text-[11px] text-[var(--mpc-muted)]">
+                  Formulář pro článek otevřeš tlačítkem výše v sekci Moje články.
+                </div>
+              )}
               {blogFormOpen && (
                 <form className="space-y-3" onSubmit={handleCreateBlogPost}>
                   <div className="grid gap-3 md:grid-cols-2">
@@ -5047,5 +3185,5 @@ function handleFieldChange(field: keyof Profile, value: string) {
         </div>
       </section>
     </main>
-);
+  );
 }

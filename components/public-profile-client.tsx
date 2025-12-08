@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, FormEvent, useRef } from 'react';
+import { useEffect, useState, FormEvent, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
+import { useGlobalPlayer } from './global-player-provider';
 
 type PublicProfile = {
   display_name: string;
@@ -71,14 +72,26 @@ const normalizeProjectTracks = (raw?: Project['tracks_json']): ProjectTrack[] =>
   return [];
 };
 
+function buildCollabLabel(names?: string[]) {
+  const filtered = (names ?? []).filter(Boolean);
+  const uniqueNames = Array.from(new Set(filtered));
+  if (uniqueNames.length === 0) return 'Spolupráce';
+  if (uniqueNames.length === 1) return `Spolupráce ${uniqueNames[0]}`;
+  if (uniqueNames.length === 2) return `Spolupráce ${uniqueNames[0]} a ${uniqueNames[1]}`;
+  const last = uniqueNames.pop();
+  return `Spolupráce ${uniqueNames.join(', ')} a ${last}`;
+}
+
 type Collaboration = {
-  id: number;
+  id: string;
   title: string;
+  status?: string | null;
   bpm: number | null;
   mood: string | null;
   audio_url: string | null;
   cover_url?: string | null;
   partners: string[];
+  updated_at?: string | null;
 };
 
 type CurrentTrack = {
@@ -113,13 +126,32 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [messageError, setMessageError] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [currentTrack, setCurrentTrack] = useState<CurrentTrack | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const { play, toggle, current: currentTrack, isPlaying, currentTime, duration, seek } =
+    useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
 
+  const loadProjects = async () => {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
+      .eq('user_id', profileId)
+      .order('id', { ascending: false })
+      .limit(6);
+    if (error) {
+      const message =
+        error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
+          ? (error as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba načítání projektů:', error);
+      setProjectsError('Nepodařilo se načíst projekty: ' + message);
+      return;
+    }
+    setProjects((data as Project[]) ?? []);
+    setProjectsError(null);
+  };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -168,58 +200,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
     };
 
-    const loadProjects = async () => {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, title, description, cover_url, project_url, tracks_json')
-          .eq('user_id', profileId)
-          .order('created_at', { ascending: false })
-          .limit(6);
-      if (error) {
-        const message =
-          error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-            ? (error as any).message
-            : 'Neznámá chyba';
-        console.error('Chyba načítání projektů:', error);
-        setProjectsError('Nepodařilo se načíst projekty: ' + message);
-      } else {
-        setProjects((data as Project[]) ?? []);
-        setProjectsError(null);
-      }
-    };
-
-    const loadCollabs = async () => {
-      const { data, error } = await supabase
-        .from('collabs')
-        .select('id, title, bpm, mood, audio_url, cover_url, partner_a_name, partner_b_name')
-        .eq('user_id', profileId)
-        .order('id', { ascending: false })
-        .limit(10);
-      if (error) {
-        const message =
-          error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
-            ? (error as any).message
-            : 'Neznámá chyba';
-        console.error('Chyba načítání spoluprací:', error);
-        setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
-        return;
-      }
-      const mapped: Collaboration[] = (data ?? []).map((c: any) => ({
-        id: c.id,
-        title: c.title,
-        bpm: c.bpm,
-        mood: c.mood,
-        audio_url: c.audio_url,
-        cover_url: c.cover_url,
-        partners: [c.partner_a_name, c.partner_b_name].filter(Boolean),
-      }));
-      setCollabs(mapped);
-      setCollabsError(null);
-    };
-
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession();
-      const uid = data.session?.user?.id;
+      const uid = data.session?.user?.id ?? null;
+      setSessionUserId(uid);
       setIsLoggedIn(!!uid);
       if (uid && uid === profileId) {
         router.push('/profile');
@@ -230,8 +214,83 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     loadData();
     loadBeats();
     loadProjects();
-    loadCollabs();
   }, [profileId, supabase, router]);
+
+  const fetchCollabs = useCallback(async () => {
+    const collaboratorSelect = `
+      id,
+      title,
+      status,
+      result_audio_url,
+      result_cover_url,
+      updated_at,
+      collab_participants!inner(user_id, profiles(display_name))
+    `;
+
+    try {
+      const [byCreator, byParticipant] = await Promise.all([
+        supabase
+          .from('collab_threads')
+          .select(collaboratorSelect)
+          .eq('created_by', profileId)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('collab_threads')
+          .select(collaboratorSelect)
+          .eq('collab_participants.user_id', profileId)
+          .order('updated_at', { ascending: false }),
+      ]);
+
+      if (byCreator.error) throw byCreator.error;
+      if (byParticipant.error) throw byParticipant.error;
+
+      const mapThread = (thread: any): Collaboration => {
+        const participants = Array.isArray(thread.collab_participants)
+          ? Array.from(
+              new Set(
+                thread.collab_participants
+                  .map((p: any) => p.profiles?.display_name || p.user_id)
+                  .filter(Boolean)
+              )
+            )
+          : [];
+        return {
+          id: thread.id,
+          title: buildCollabLabel(participants),
+          status: thread.status ?? null,
+          bpm: null,
+          mood: null,
+          audio_url: thread.result_audio_url ?? null,
+          cover_url: thread.result_cover_url ?? null,
+          partners: participants,
+          updated_at: thread.updated_at ?? null,
+        };
+      };
+
+      const merged = new Map<string, Collaboration>();
+      (byCreator.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
+      (byParticipant.data ?? []).forEach((thread: any) => merged.set(thread.id, mapThread(thread)));
+
+      setCollabs(Array.from(merged.values()));
+      setCollabsError(null);
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba načítání spoluprací:', err);
+      setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
+    }
+  }, [profileId, supabase]);
+
+  useEffect(() => {
+    if (!sessionUserId || sessionUserId !== profileId) {
+      setCollabs([]);
+      setCollabsError(null);
+      return;
+    }
+    void fetchCollabs();
+  }, [fetchCollabs, profileId, sessionUserId]);
 
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
@@ -271,46 +330,21 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       return;
     }
     setPlayerError(null);
-    setCurrentTime(0);
-    setDuration(0);
-    setCurrentTrack(item);
-    setIsPlaying((prev) => {
-      if (currentTrack && currentTrack.id === item.id) {
-        return !prev;
-      }
-      return true;
+    play({
+      id: item.id,
+      title: item.title,
+      artist: item.subtitle || profile?.display_name || 'Profil',
+      url: item.url,
+      cover_url: item.cover_url,
+      item_type: item.source,
     });
   }
 
   function seekInCurrent(clientX: number, width: number) {
-    const el = audioRef.current;
-    if (!el || !duration) return;
+    if (!duration) return;
     const ratio = Math.min(Math.max(clientX / width, 0), 1);
-    const next = ratio * duration;
-    el.currentTime = next;
-    setCurrentTime(next);
-    setIsPlaying(true);
-    void el.play();
+    seek(ratio);
   }
-
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el || !currentTrack) return;
-    el.src = currentTrack.url;
-    const run = async () => {
-      try {
-        if (isPlaying) {
-          await el.play();
-        } else {
-          el.pause();
-        }
-      } catch (err) {
-        console.error('Audio play error:', err);
-        setPlayerError('Nepodařilo se spustit audio.');
-      }
-    };
-    run();
-  }, [currentTrack, isPlaying]);
 
   function formatTime(sec: number) {
     if (!sec || Number.isNaN(sec)) return '0:00';
@@ -328,15 +362,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
-      <audio
-        ref={audioRef}
-        className="hidden"
-        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
-        onLoadedMetadata={(e) => setDuration((e.target as HTMLAudioElement).duration || 0)}
-        onEnded={() => setIsPlaying(false)}
-        onPause={() => setIsPlaying(false)}
-        onPlay={() => setIsPlaying(true)}
-      />
       {playerError && (
         <div className="fixed top-3 right-3 z-50 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-sm text-red-100 shadow-lg">
           {playerError}

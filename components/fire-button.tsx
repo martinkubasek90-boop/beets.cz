@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type FireButtonProps = {
-  itemType: "beat" | "project" | "acapella";
+  itemType: "beat" | "project";
   itemId: string;
   className?: string;
 };
