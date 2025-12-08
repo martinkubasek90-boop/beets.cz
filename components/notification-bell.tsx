@@ -37,6 +37,7 @@ export function NotificationBell({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Notification[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
@@ -47,8 +48,10 @@ export function NotificationBell({ className }: { className?: string }) {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) {
         setItems([]);
+        setUserId(null);
         return;
       }
+      setUserId(authData.user.id);
       const { data, error: err } = await supabase
         .from("notifications")
         .select("id,title,body,read,created_at,item_type,item_id")
@@ -70,6 +73,39 @@ export function NotificationBell({ className }: { className?: string }) {
     const t = setInterval(fetchNotifications, 30000);
     return () => clearInterval(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`notifications-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          const newItem: Notification = {
+            id: payload.new.id,
+            title: payload.new.title ?? null,
+            body: payload.new.body ?? null,
+            read: payload.new.read ?? false,
+            created_at: payload.new.created_at ?? null,
+            item_type: payload.new.item_type ?? null,
+            item_id: payload.new.item_id ?? null,
+          };
+          setItems((prev) => [newItem, ...prev.filter((n) => n.id !== newItem.id)].slice(0, 20));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void channel.unsubscribe();
+    };
+  }, [supabase, userId]);
 
   useEffect(() => {
     if (open) void fetchNotifications();
