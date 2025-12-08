@@ -2088,6 +2088,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     {projectSaving ? 'Ukládám…' : 'Uložit změny'}
                   </button>
                   <button
+                    type="button"
+                    disabled={projectSaving}
+                    onClick={async () => {
+                      if (!editingProject || !confirm('Opravdu chcete projekt smazat?')) return;
+                      setProjectSaving(true);
+                      setProjectsError(null);
+                      try {
+                        const { error } = await supabase.from('projects').delete().eq('id', editingProject.id);
+                        if (error) throw error;
+                        setProjects((prev) => prev.filter((p) => p.id !== editingProject.id));
+                        setEditingProject(null);
+                      } catch (err) {
+                        console.error('Chyba při mazání projektu:', err);
+                        setProjectsError('Projekt se nepodařilo smazat.');
+                      } finally {
+                        setProjectSaving(false);
+                      }
+                    }}
+                    className="rounded-full border border-red-400 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+                  >
+                    Smazat projekt
+                  </button>
+                  <button
                     onClick={() => setEditingProject(null)}
                     className="rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
                   >
