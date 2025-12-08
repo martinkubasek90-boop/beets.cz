@@ -48,6 +48,7 @@ type CollabThread = {
   title: string;
   status: string;
   updated_at: string | null;
+  participants: string[];
 };
 
 type CollabMessage = {
@@ -167,6 +168,16 @@ function formatRelativeTime(iso?: string | null) {
   return date.toLocaleDateString('cs-CZ');
 }
 
+function buildCollabLabel(names?: string[]) {
+  const filtered = (names ?? []).filter(Boolean);
+  const uniqueNames = Array.from(new Set(filtered));
+  if (uniqueNames.length === 0) return 'Spolupráce';
+  if (uniqueNames.length === 1) return `Spolupráce ${uniqueNames[0]}`;
+  if (uniqueNames.length === 2) return `Spolupráce ${uniqueNames[0]} a ${uniqueNames[1]}`;
+  const last = uniqueNames.pop();
+  return `Spolupráce ${uniqueNames.join(', ')} a ${last}`;
+}
+
 export default function ProfileClient() {
   const supabase = createClient();
   const router = useRouter();
@@ -175,6 +186,7 @@ export default function ProfileClient() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     hardware: '',
@@ -300,6 +312,7 @@ export default function ProfileClient() {
 
         setEmail(user.email ?? null);
         setUserId(user.id);
+        setIsLoggedIn(true);
 
         const { data, error: profileError } = await supabase
           .from('profiles')
@@ -659,9 +672,13 @@ function handleFieldChange(field: keyof Profile, value: string) {
           title: t.title as string,
           status: t.status as string,
           updated_at: t.updated_at as string | null,
+          participants: [],
         });
 
-        const combinedMap = new Map<string, { id: string; title: string; status: string; updated_at: string | null }>();
+        const combinedMap = new Map<
+          string,
+          { id: string; title: string; status: string; updated_at: string | null; participants: string[] }
+        >();
         (byCreator.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
         (byParticipant.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
 
@@ -700,7 +717,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
           const threadNames = new Map<string, string[]>();
           (participants ?? []).forEach((p: any) => {
             if (!p.thread_id || !p.user_id) return;
-            if (p.user_id === userId) return;
             const partnerName = nameMap[p.user_id] || p.user_id;
             if (!threadNames.has(p.thread_id)) {
               threadNames.set(p.thread_id, []);
@@ -711,18 +727,23 @@ function handleFieldChange(field: keyof Profile, value: string) {
             }
           });
           const currentUserName = profile.display_name || 'Ty';
-          setCollabThreads(
-            merged.map((thread) => {
-              const partners = threadNames.get(thread.id) ?? [];
-              const partnerLabel = partners.length ? partners.join(' • ') : 'někým';
-              return {
-                ...thread,
-                title: `Spolupráce ${currentUserName} a ${partnerLabel}`,
-              };
-            })
-          );
+          const finalThreads = merged.map((thread) => {
+            const partners = threadNames.get(thread.id) ?? [];
+            const participants = [currentUserName, ...partners.filter((name) => name !== currentUserName)];
+            return {
+              ...thread,
+              participants,
+            };
+          });
+          setCollabThreads(finalThreads);
         } else {
-          setCollabThreads(merged);
+          const currentUserName = profile.display_name || 'Ty';
+          setCollabThreads(
+            merged.map((thread) => ({
+              ...thread,
+              participants: [currentUserName],
+            }))
+          );
         }
       } catch (err) {
         console.error('Chyba načítání spoluprací:', err);
@@ -1216,9 +1237,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setCreatingThread(true);
     setCollabThreadsError(null);
     try {
-      const { data: partner, error: partnerErr } = await supabase
-        .from('profiles')
-        .select('id')
+    const { data: partner, error: partnerErr } = await supabase
+      .from('profiles')
+      .select('id, display_name')
         .ilike('display_name', newThreadPartner.trim())
         .limit(1)
         .maybeSingle();
@@ -1275,8 +1296,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
         console.error('Notifikace partnera se nepodařila:', err);
       }
 
+      const ownerName = profile.display_name || 'Ty';
+      const partnerName = partner.display_name?.trim() || newThreadPartner.trim() || 'Partner';
+      const participants = Array.from(new Set([ownerName, partnerName].filter(Boolean)));
       setCollabThreads((prev) => [
-        { id: threadId, title: newThreadTitle.trim(), status: 'active', updated_at: new Date().toISOString() },
+        {
+          id: threadId,
+          title: newThreadTitle.trim(),
+          status: 'active',
+          updated_at: new Date().toISOString(),
+          participants,
+        },
         ...prev,
       ]);
       setNewThreadTitle('');
@@ -1709,6 +1739,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
   const activeThread = selectedThreadId
     ? collabThreads.find((t) => t.id === selectedThreadId) ?? null
     : null;
+  const activeThreadLabel = activeThread ? buildCollabLabel(activeThread.participants) : '';
 
   if (loading) {
     return (
@@ -2380,98 +2411,95 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {projects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="h-16 w-16 overflow-hidden rounded border border-white/10 bg-black/30">
-                          {resolveProjectCoverUrl(project.cover_url) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={resolveProjectCoverUrl(project.cover_url) || undefined}
-                              alt={project.title || 'Projektová grafika'}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-[11px] uppercase tracking-[0.08em] text-white">
-                              {project.title?.slice(0, 2).toUpperCase() || 'PR'}
-                            </div>
-                          )}
-                        </div>
+                  {projects.map((project) => {
+                    const projectStyle = project.cover_url
+                      ? {
+                          backgroundImage:
+                            'linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.9)), url(' +
+                            (resolveProjectCoverUrl(project.cover_url) || '') +
+                            ')',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }
+                      : undefined;
+                    return (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)]"
+                        style={projectStyle}
+                      >
                         <div>
                           <p className="font-semibold">{project.title}</p>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {project.description || 'Bez popisu'}
                           </p>
                         </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
-                        <span>Projekt</span>
-                        <button
-                          onClick={() => {
-                            setEditingProject(project);
-                            setProjectEditTitle(project.title || '');
-                            setProjectEditDescription(project.description || '');
-                            const tracks = Array.isArray(project.tracks_json)
-                              ? project.tracks_json.map((t: any) => {
-                                  const path = t.path || null;
-                                  const urlFallback =
-                                    path && (!t.url || t.url.startsWith('http') === false)
-                                      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                      : '';
-                                  return {
-                                    name: t.name || '',
-                                    url: t.url || urlFallback,
-                                    path,
-                                  };
-                                })
-                              : [];
-                            setProjectEditTracks(
-                              tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                            );
-                          }}
-                          className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                        >
-                          Upravit
-                        </button>
-                        <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
-                          <label className="text-[var(--mpc-muted)]">Přístup</label>
-                          <select
-                            value={project.access_mode || 'public'}
-                            onChange={(e) => handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')}
-                            className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
+                        <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
+                          <span>Projekt</span>
+                          <button
+                            onClick={() => {
+                              setEditingProject(project);
+                              setProjectEditTitle(project.title || '');
+                              setProjectEditDescription(project.description || '');
+                              const tracks = Array.isArray(project.tracks_json)
+                                ? project.tracks_json.map((t: any) => {
+                                    const path = t.path || null;
+                                    const urlFallback =
+                                      path && (!t.url || t.url.startsWith('http') === false)
+                                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                        : '';
+                                    return {
+                                      name: t.name || '',
+                                      url: t.url || urlFallback,
+                                      path,
+                                    };
+                                  })
+                                : [];
+                              setProjectEditTracks(
+                                tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                              );
+                            }}
+                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                           >
-                            <option value="public">Veřejný</option>
-                            <option value="request">Na žádost</option>
-                            <option value="private">Soukromý</option>
-                          </select>
-                        </div>
-                        {projectGrantsError && (
-                          <p className="text-[11px] text-red-300">{projectGrantsError}</p>
-                        )}
-                        {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
-                          <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
-                            <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
-                            <div className="space-y-1">
-                              {projectGrants[project.id].map((g) => (
-                                <div key={g.id} className="flex items-center justify-between">
-                                  <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
-                                  <button
-                                    onClick={() => void handleRevokeGrant(project.id, g.id)}
-                                    className="text-[10px] text-red-300 hover:text-white"
-                                  >
-                                    Odebrat
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
+                            Upravit
+                          </button>
+                          <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
+                            <label className="text-[var(--mpc-muted)]">Přístup</label>
+                            <select
+                              value={project.access_mode || 'public'}
+                              onChange={(e) => handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')}
+                              className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
+                            >
+                              <option value="public">Veřejný</option>
+                              <option value="request">Na žádost</option>
+                              <option value="private">Soukromý</option>
+                            </select>
                           </div>
-                        )}
+                          {projectGrantsError && (
+                            <p className="text-[11px] text-red-300">{projectGrantsError}</p>
+                          )}
+                          {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
+                            <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
+                              <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
+                              <div className="space-y-1">
+                                {projectGrants[project.id].map((g) => (
+                                  <div key={g.id} className="flex items-center justify-between">
+                                    <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
+                                    <button
+                                      onClick={() => void handleRevokeGrant(project.id, g.id)}
+                                      className="text-[10px] text-red-300 hover:text-white"
+                                    >
+                                      Odebrat
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2602,6 +2630,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   ) : (
                     collabThreads.map((thread) => {
                       const isActive = thread.id === selectedThreadId;
+                      const displayTitle = buildCollabLabel(thread.participants);
                       return (
                         <button
                           type="button"
@@ -2615,7 +2644,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>
-                              <p className="font-semibold text-[var(--mpc-light)]">{thread.title}</p>
+                              <p className="font-semibold text-[var(--mpc-light)]">{displayTitle}</p>
                               <p className="text-[11px] text-[var(--mpc-muted)]">
                                 {formatRelativeTime(thread.updated_at)}
                               </p>
@@ -2637,7 +2666,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     <div className="space-y-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-semibold">{activeThread.title}</p>
+                          <p className="text-base font-semibold">{activeThreadLabel}</p>
                           <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                             Status: {activeThread.status}
                           </p>
