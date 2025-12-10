@@ -155,6 +155,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [startingCall, setStartingCall] = useState(false);
+  const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string; caller_name?: string | null } | null>(null);
   const {
     current: currentTrack,
     isPlaying,
@@ -892,6 +893,19 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         item_type: 'call',
         item_id: data?.id,
       });
+      setTimeout(async () => {
+        const { data: callRow } = await supabase.from('calls').select('status').eq('id', data?.id).maybeSingle();
+        if (callRow?.status === 'ringing') {
+          await sendNotificationSafe(supabase, {
+            user_id: profileId,
+            type: 'missed_call',
+            title: 'Zmeškaný hovor',
+            body: profile?.display_name || 'Uživatel',
+            item_type: 'call',
+            item_id: data?.id,
+          });
+        }
+      }, 10_000);
       router.push(`/call/${data?.id}?room=${encodeURIComponent(roomName)}&caller=${currentUserId}&callee=${profileId}`);
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
