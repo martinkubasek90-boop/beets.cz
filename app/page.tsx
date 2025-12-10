@@ -308,6 +308,16 @@ export default function Home() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setIsLoggedIn(!!data.session);
+      if (data.session?.user?.id) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .maybeSingle();
+        setCurrentRole((prof?.role as UserRole) ?? null);
+      } else {
+        setCurrentRole(null);
+      }
     };
     checkSession();
   }, [supabase]);
