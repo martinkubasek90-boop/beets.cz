@@ -22,6 +22,14 @@ const cityPositions: Record<string, { x: number; y: number }> = {
   pardubice: { x: 62, y: 44 },
   'ceske budejovice': { x: 55, y: 72 },
   zlin: { x: 75, y: 68 },
+  bratislava: { x: 84, y: 78 },
+  kosice: { x: 94, y: 58 },
+  zilina: { x: 86, y: 64 },
+  nitra: { x: 86, y: 72 },
+  trnava: { x: 83, y: 74 },
+  presov: { x: 94, y: 54 },
+  'banska bystrica': { x: 86, y: 69 },
+  trencin: { x: 81, y: 68 },
 };
 
 function normalizeCity(city?: string | null) {
@@ -81,7 +89,7 @@ export default function OfflinePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold uppercase tracking-[0.18em]">Beets × Offline</h1>
-            <p className="text-[12px] text-[var(--mpc-muted,#9aa3b5)]">Kdo je kde v ČR</p>
+            <p className="text-[12px] text-[var(--mpc-muted,#9aa3b5)]">Kdo je kde v Česku a na Slovensku</p>
           </div>
           <Link
             href="/"
@@ -134,7 +142,7 @@ export default function OfflinePage() {
         <section className="rounded-2xl border border-white/10 bg-[var(--mpc-panel,#0b0f16)] p-5 shadow-[0_16px_34px_rgba(0,0,0,0.45)]">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">Podle města</h2>
-            <span classname="text-[12px] text-[var(--mpc-muted)]">Seřazeno abecedně</span>
+            <span className="text-[12px] text-[var(--mpc-muted)]">Seřazeno abecedně</span>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {Object.entries(grouped)
