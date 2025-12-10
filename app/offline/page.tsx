@@ -162,11 +162,11 @@ export default function OfflinePage() {
             {loading && <span className="text-[12px] text-[var(--mpc-muted)]">Načítám…</span>}
           </div>
           <div
-            className="relative h-[420px] overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,122,0,0.08),transparent_40%),linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a)]"
+            className="relative h-[460px] overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.06),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,122,0,0.08),transparent_40%),linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a)]"
             style={{
               backgroundImage:
                 'radial-gradient(circle at 20% 25%, rgba(255,255,255,0.05), transparent 35%), radial-gradient(circle at 75% 60%, rgba(255,122,0,0.08), transparent 40%), linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a), url(\"/map-cz-sk.svg\")',
-              backgroundSize: 'cover, cover, cover, 82%',
+              backgroundSize: 'cover, cover, cover, contain',
               backgroundRepeat: 'no-repeat, no-repeat, no-repeat, no-repeat',
               backgroundPosition: 'center',
             }}
