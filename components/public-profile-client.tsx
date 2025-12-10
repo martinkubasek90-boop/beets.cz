@@ -851,6 +851,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.artist || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
+  const statusColor = isLoggedIn ? 'bg-emerald-500' : 'bg-red-500';
+  const statusLabel = isLoggedIn ? 'Přihlášený' : 'Nepřihlášený';
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
