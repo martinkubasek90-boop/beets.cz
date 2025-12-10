@@ -17,6 +17,7 @@ type Profile = {
   avatar_url: string | null;
   banner_url: string | null;
   city?: string | null;
+  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
 };
 
 type BeatItem = {
@@ -238,6 +239,7 @@ export default function ProfileClient() {
     avatar_url: null,
     banner_url: null,
     city: null,
+    role: 'creator',
   });
   const [editCity, setEditCity] = useState<string>('');
 
@@ -260,6 +262,13 @@ export default function ProfileClient() {
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
+
+  const currentRole = profile.role ?? 'creator';
+  const isSuperAdmin = currentRole === 'superadmin';
+  const isAdmin = currentRole === 'admin' || isSuperAdmin;
+  const isMcOnly = currentRole === 'mc';
+  const canUpload = !isMcOnly;
+  const canWriteArticles = isAdmin;
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
@@ -518,7 +527,7 @@ export default function ProfileClient() {
 
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url, city')
+          .select('display_name, hardware, bio, avatar_url, banner_url, city, role')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -532,6 +541,7 @@ export default function ProfileClient() {
             avatar_url: data.avatar_url ?? null,
             banner_url: (data as any).banner_url ?? null,
             city: (data as any).city ?? null,
+            role: (data as any).role ?? 'creator',
           });
           setEditCity((data as any).city ?? '');
         }
@@ -1134,6 +1144,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
             avatar_url: profile.avatar_url,
             banner_url: profile.banner_url,
             city: editCity.trim() || null,
+            role: profile.role ?? 'creator',
           },
           { onConflict: 'id' }
         );
@@ -1924,18 +1935,22 @@ function handleFieldChange(field: keyof Profile, value: string) {
             <a href="#collabs" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
               {t('profile.tab.collabs', 'Spolupráce')}
             </a>
-            <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.stream', 'Stream')}
-            </Link>
+            {(isAdmin || !isMcOnly) && (
+              <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.stream', 'Stream')}
+              </Link>
+            )}
             <a href="#messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
               {t('profile.tab.messages', 'Zprávy')}
             </a>
             <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
               Moje fórum
             </a>
-            <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.posts', 'Moje články')}
-            </a>
+            {canWriteArticles && (
+              <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.posts', 'Moje články')}
+              </a>
+            )}
           </div>
         </div>
       </section>
@@ -2969,6 +2984,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </Link>
             </div>
 
+            {canWriteArticles && (
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
               <div className="flex items-center justify-between">
                 <div>
@@ -3070,33 +3086,37 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
           {/* Pravý sloupec: akce */}
           <div className="space-y-4" id="profile-settings">
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-              <button
-                onClick={() => toggleSection('beatUpload')}
-                className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
-              >
-                {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
-              </button>
-              {openSections.beatUpload && (
-                <div className="mt-4">
-                  <BeatUploadForm />
+            {canUpload && (
+              <>
+                <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                  <button
+                    onClick={() => toggleSection('beatUpload')}
+                    className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
+                  >
+                    {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
+                  </button>
+                  {openSections.beatUpload && (
+                    <div className="mt-4">
+                      <BeatUploadForm />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-              <button
-                onClick={() => toggleSection('projectUpload')}
-                className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-              >
-                {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
-              </button>
-              {openSections.projectUpload && (
-                <div className="mt-4">
-                  <ProjectUploadForm />
+                <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                  <button
+                    onClick={() => toggleSection('projectUpload')}
+                    className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                  >
+                    {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
+                  </button>
+                  {openSections.projectUpload && (
+                    <div className="mt-4">
+                      <ProjectUploadForm />
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </>
+            )}
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
               <button
