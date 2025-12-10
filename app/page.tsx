@@ -548,8 +548,22 @@ export default function Home() {
     const playable = beats.filter((b) => b.audio_url);
     if (playable.length <= 1) {
       setOnEnded(null);
+      setOnNext?.(null);
+      setOnPrev?.(null);
       return;
     }
+    setOnNext?.(() => {
+      const idx = playable.findIndex((b) => b.id === beat.id);
+      const nextIdx = idx === -1 ? 0 : (idx + 1) % playable.length;
+      const next = playable[nextIdx];
+      if (next?.audio_url) handlePlay(next.audio_url, next);
+    });
+    setOnPrev?.(() => {
+      const idx = playable.findIndex((b) => b.id === beat.id);
+      const prevIdx = idx === -1 ? playable.length - 1 : (idx - 1 + playable.length) % playable.length;
+      const prev = playable[prevIdx];
+      if (prev?.audio_url) handlePlay(prev.audio_url, prev);
+    });
     setOnEnded(() => {
       const idx = playable.findIndex((b) => b.id === beat.id);
       if (idx === -1) {
@@ -593,8 +607,39 @@ export default function Home() {
       typeof idx === 'number' ? idx : tracksList.findIndex((t) => (t as any).id === track.id);
     if (startIdx === -1 || tracksList.length <= startIdx + 1) {
       setOnEnded(null);
+      setOnNext?.(null);
+      setOnPrev?.(null);
       return;
     }
+    const playByIndex = (i: number) => {
+      const next = tracksList[i];
+      const nextUrl = (next as any)?.url as string | undefined;
+      if (nextUrl) {
+        handlePlayProjectTrack(project, { id: next.id ?? `${project.id}-${i + 1}`, title: next.title, url: nextUrl }, i);
+      }
+    };
+    setOnNext?.(() => {
+      let i = startIdx + 1;
+      while (i < tracksList.length) {
+        const n = tracksList[i];
+        if ((n as any)?.url) {
+          playByIndex(i);
+          return;
+        }
+        i++;
+      }
+    });
+    setOnPrev?.(() => {
+      let i = startIdx - 1;
+      while (i >= 0) {
+        const n = tracksList[i];
+        if ((n as any)?.url) {
+          playByIndex(i);
+          return;
+        }
+        i--;
+      }
+    });
     setOnEnded(() => {
       for (let i = startIdx + 1; i < tracksList.length; i++) {
         const next = tracksList[i];
