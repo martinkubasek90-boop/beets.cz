@@ -999,7 +999,16 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               {t('publicProfile.nav.collabs', 'Spolupráce')}
             </a>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            {currentUserId && currentUserId !== profileId && (
+              <button
+                onClick={handleStartCall}
+                disabled={startingCall}
+                className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+              >
+                {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+              </button>
+            )}
             <a
               href="#message-form"
               className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
