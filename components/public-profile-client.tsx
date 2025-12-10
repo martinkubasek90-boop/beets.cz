@@ -128,6 +128,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
+  const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -586,6 +587,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   async function handleSendMessage(e: FormEvent) {
     e.preventDefault();
     setMessageError(null);
+    setMessageSuccess(null);
     if (!messageBody.trim()) {
       setMessageError('Zpráva je prázdná.');
       return;
@@ -607,6 +609,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const { error } = await supabase.from('messages').insert(payload);
       if (error) throw error;
       setMessageBody('');
+      setMessageSuccess('Zpráva odeslána.');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessageError('Nepodařilo se odeslat zprávu.');
@@ -1395,11 +1398,14 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
               />
             </div>
-              {messageError && <p className="text-sm text-red-300">{messageError}</p>}
-              <button
-                type="submit"
-                disabled={sendingMessage}
-                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white disabled:opacity-60"
+            {messageSuccess && (
+              <p className="text-sm text-green-300">{messageSuccess}</p>
+            )}
+            {messageError && <p className="text-sm text-red-300">{messageError}</p>}
+            <button
+              type="submit"
+              disabled={sendingMessage}
+              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white disabled:opacity-60"
               >
                 {sendingMessage ? t('publicProfile.message.sending', 'Odesílám…') : t('publicProfile.message.send', 'Odeslat zprávu')}
               </button>

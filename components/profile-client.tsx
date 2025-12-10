@@ -199,6 +199,7 @@ export default function ProfileClient() {
   const [profilesById, setProfilesById] = useState<Record<string, string>>({});
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
+  const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
@@ -1473,11 +1474,13 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
     setSendingMessage(true);
     setMessagesError(null);
+    setMessageSuccess(null);
     try {
       const targetUserId = await resolveRecipientId(newMessage.to, newMessage.toUserId);
       await sendDirectMessage(targetUserId, newMessage.to.trim(), newMessage.body.trim());
       setNewMessage({ to: '', toUserId: '', body: '' });
       setExpandedThread(targetUserId);
+      setMessageSuccess('Zpráva odeslána.');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
@@ -3022,6 +3025,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
               {messagesLoading && (
                 <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>
+              )}
+              {messageSuccess && (
+                <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
+                  {messageSuccess}
+                </div>
               )}
               {messagesError && (
                 <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
