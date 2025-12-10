@@ -12,6 +12,10 @@ async function sendNotificationSafe(
   supabase: ReturnType<typeof createClient>,
   payload: { user_id: string; type: string; title?: string | null; body?: string | null; item_type?: string | null; item_id?: string | null }
 ) {
+  // basic guard to avoid invalid UUID errors
+  if (!payload?.user_id || typeof payload.user_id !== 'string' || !payload.user_id.match(/^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$/)) {
+    return;
+  }
   try {
     const res = await fetch('/api/notifications', {
       method: 'POST',

@@ -24,6 +24,7 @@ export default function CallPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const apiRef = useRef<any>(null);
+  const [scriptReady, setScriptReady] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -93,9 +94,12 @@ export default function CallPage({ params }: { params: { id: string } }) {
   }, [call, supabase, userId]);
 
   useEffect(() => {
-    if (!call || typeof window === 'undefined') return;
+    if (!call || typeof window === 'undefined' || !scriptReady) return;
     const init = () => {
-      if (!window || !(window as any).JitsiMeetExternalAPI) return;
+      if (!window || !(window as any).JitsiMeetExternalAPI) {
+        setError('Jitsi se nepodařilo načíst. Zkus stránku obnovit.');
+        return;
+      }
       if (!containerRef.current) return;
       if (apiRef.current) {
         apiRef.current.dispose();
@@ -116,7 +120,7 @@ export default function CallPage({ params }: { params: { id: string } }) {
         apiRef.current = null;
       }
     };
-  }, [call]);
+  }, [call, scriptReady]);
 
   if (error) {
     return (
@@ -142,7 +146,7 @@ export default function CallPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="min-h-screen bg-[#0c0f16] text-white">
-      <Script src={`https://${domain}/external_api.js`} />
+      <Script src={`https://${domain}/external_api.js`} onLoad={() => setScriptReady(true)} />
       <header className="border-b border-white/10 bg-black/60 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <div>
