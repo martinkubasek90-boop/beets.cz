@@ -325,6 +325,17 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const {
+    play: gpPlay,
+    toggle: gpToggle,
+    seek: gpSeek,
+    current: gpCurrent,
+    isPlaying: gpIsPlaying,
+    currentTime: gpTime,
+    duration: gpDuration,
+    setOnNext: gpSetOnNext,
+    setOnPrev: gpSetOnPrev,
+  } = useGlobalPlayer();
   const beatPlayerTracks = useMemo<PlayerTrack[]>(
     () =>
       beats
