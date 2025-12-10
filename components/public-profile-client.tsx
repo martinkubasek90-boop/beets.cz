@@ -35,6 +35,7 @@ type PublicProfile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
+  last_seen_at?: string | null;
 };
 
 type Beat = {
