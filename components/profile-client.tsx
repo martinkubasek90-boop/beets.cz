@@ -237,7 +237,9 @@ export default function ProfileClient() {
     bio: '',
     avatar_url: null,
     banner_url: null,
+    city: null,
   });
+  const [editCity, setEditCity] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1131,12 +1133,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
             bio: profile.bio.trim() || null,
             avatar_url: profile.avatar_url,
             banner_url: profile.banner_url,
+            city: editCity.trim() || null,
           },
           { onConflict: 'id' }
         );
 
       if (upsertError) throw upsertError;
 
+      setProfile((prev) => ({ ...prev, city: editCity.trim() || null }));
       setSuccess('Profil byl uložen.');
     } catch (err) {
       const message =
@@ -3155,6 +3159,19 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         }
                         className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                         placeholder="MPC, SP-404, Ableton, mikrofon…"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                        Město
+                      </label>
+                      <input
+                        type="text"
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        placeholder="Praha, Brno, Bratislava…"
                       />
                     </div>
 

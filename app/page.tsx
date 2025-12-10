@@ -927,7 +927,7 @@ export default function Home() {
             </Link>
           </nav>
           <div className="flex items-center gap-3 text-right">
-            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-[var(--mpc-muted)]">
+            <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-[var(--mpc-muted)]">
               <button
                 onClick={() => setLang('cs')}
                 className={`rounded-full px-2 py-1 ${lang === 'cs' ? 'bg-[var(--mpc-accent)] text-white' : 'hover:text-white'}`}
