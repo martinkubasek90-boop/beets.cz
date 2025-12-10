@@ -121,6 +121,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [showCollabForm, setShowCollabForm] = useState(false);
   const [collabSubject, setCollabSubject] = useState('');
   const [collabMessage, setCollabMessage] = useState('');
+  const [collabFile, setCollabFile] = useState<File | null>(null);
+  const [collabFileError, setCollabFileError] = useState<string | null>(null);
   const [collabRequestState, setCollabRequestState] = useState<'idle' | 'sending' | 'success'>('idle');
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
 
@@ -528,9 +530,35 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         if (msgErr) throw msgErr;
       }
 
+      // Volitelný soubor
+      if (collabFile) {
+        try {
+          setCollabFileError(null);
+          const safe = collabFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+          const path = `${currentUserId}/collabs/${Date.now()}-${safe}`;
+          const { error: upErr } = await supabase.storage.from('collabs').upload(path, collabFile, { upsert: true });
+          if (upErr) throw upErr;
+          const { data: pub } = supabase.storage.from('collabs').getPublicUrl(path);
+          const publicUrl = pub?.publicUrl;
+          if (publicUrl) {
+            const { error: fileErr } = await supabase
+              .from('collab_files')
+              .insert({ thread_id: threadId, user_id: currentUserId, file_url: publicUrl, file_name: collabFile.name });
+            if (fileErr) throw fileErr;
+          }
+        } catch (err) {
+          const message =
+            err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+              ? (err as any).message
+              : 'Nepodařilo se nahrát soubor.';
+          setCollabFileError(message);
+        }
+      }
+
       setCollabRequestState('success');
       setCollabSubject('');
       setCollabMessage('');
+      setCollabFile(null);
       setShowCollabForm(false);
       setCollabsReload((prev) => prev + 1);
       void fetch(`/api/notifications`, {
@@ -1225,6 +1253,23 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 rows={3}
                 className="mb-2 w-full rounded border border-[var(--mpc-dark)] bg-black/70 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
               />
+              <div className="mb-2">
+                <label className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Přiložit soubor (volitelné)</label>
+                <div className="mt-1 flex flex-wrap items-center gap-3">
+                  <label className="cursor-pointer rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)]">
+                    Vybrat soubor
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setCollabFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {collabFile && (
+                    <span className="text-[11px] text-[var(--mpc-muted)]">{collabFile.name}</span>
+                  )}
+                </div>
+                {collabFileError && <p className="mt-1 text-[11px] text-red-300">{collabFileError}</p>}
+              </div>
               {collabRequestError && <p className="mb-1 text-[11px] text-red-300">{collabRequestError}</p>}
               {collabRequestState === 'success' && (
                 <p className="mb-1 text-[11px] text-green-300">Žádost byla odeslána.</p>

@@ -696,7 +696,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
           const threadNames = new Map<string, string[]>();
           (participants ?? []).forEach((p: any) => {
             if (!p.thread_id || !p.user_id) return;
-            const partnerName = nameMap[p.user_id] || p.user_id;
+            const partnerName = nameMap[p.user_id] || null;
+            if (!partnerName) return; // nechceme zobrazovat UUID
             if (!threadNames.has(p.thread_id)) {
               threadNames.set(p.thread_id, []);
             }
@@ -707,7 +708,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           });
           const currentUserName = profile.display_name || 'Ty';
           const finalThreads = merged.map((thread) => {
-            const partners = threadNames.get(thread.id) ?? [];
+            const partners = (threadNames.get(thread.id) ?? []).filter(Boolean);
             const participants = [currentUserName, ...partners.filter((name) => name !== currentUserName)];
             return {
               ...thread,
