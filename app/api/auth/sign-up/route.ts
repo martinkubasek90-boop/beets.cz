@@ -2,7 +2,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  const { email, password } = await request.json();
+  const { email, password, persona } = await request.json();
 
   if (!email || !password) {
     return NextResponse.json(
@@ -10,6 +10,8 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+
+  const role = persona === "beatmaker" ? "creator" : persona === "rapper" ? "mc" : null;
 
   const supabase = await createServerClient();
 
@@ -19,6 +21,7 @@ export async function POST(request: Request) {
     email,
     password,
     options: {
+      data: role ? { role } : undefined,
       emailRedirectTo: `${
         process.env.NEXT_PUBLIC_SITE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL
       }/auth/confirm`,

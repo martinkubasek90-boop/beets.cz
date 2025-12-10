@@ -22,6 +22,7 @@ export function SignUpForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [persona, setPersona] = useState<"beatmaker" | "rapper" | "">("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +38,11 @@ export function SignUpForm({
       setIsLoading(false);
       return;
     }
+    if (!persona) {
+      setError("Vyber, zda jsi Beatmaker nebo Rapper.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/auth/sign-up", {
@@ -44,7 +50,7 @@ export function SignUpForm({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, persona }),
       });
 
       const data = await response.json();
@@ -56,6 +62,7 @@ export function SignUpForm({
       setEmail("");
       setPassword("");
       setRepeatPassword("");
+      setPersona("");
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Došlo k chybě při registraci.");
@@ -110,6 +117,33 @@ export function SignUpForm({
                   value={repeatPassword}
                   onChange={(e) => setRepeatPassword(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label>Jsem</Label>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-2 text-sm text-white/80">
+                    <input
+                      type="radio"
+                      name="persona"
+                      value="beatmaker"
+                      checked={persona === "beatmaker"}
+                      onChange={() => setPersona("beatmaker")}
+                      required
+                    />
+                    Beatmaker
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-white/80">
+                    <input
+                      type="radio"
+                      name="persona"
+                      value="rapper"
+                      checked={persona === "rapper"}
+                      onChange={() => setPersona("rapper")}
+                      required
+                    />
+                    Rapper
+                  </label>
+                </div>
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               {success && <p className="text-sm text-green-600">{success}</p>}
