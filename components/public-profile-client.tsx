@@ -892,7 +892,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         item_type: 'call',
         item_id: data?.id,
       });
-      router.push(`/call/${data?.id}`);
+      router.push(`/call/${data?.id}?room=${encodeURIComponent(roomName)}&caller=${currentUserId}&callee=${profileId}`);
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
       setMessageError('Nepodařilo se zahájit hovor.');
