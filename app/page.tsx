@@ -138,6 +138,8 @@ type BlogPost = {
   embed_url?: string | null;
 };
 
+type UserRole = 'superadmin' | 'admin' | 'creator' | 'mc' | null;
+
 const dummyBlog: BlogPost[] = [
   {
     id: 1,
@@ -198,6 +200,7 @@ export default function Home() {
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [currentRole, setCurrentRole] = useState<UserRole>(null);
   const [currentTrack, setCurrentTrack] = useState<{ id: number | string; title: string; artist: string; user_id?: string | null; url: string; cover_url?: string | null } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
