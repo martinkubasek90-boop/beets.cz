@@ -848,12 +848,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     return `${m}:${s}`;
   }
 
+  const isOwner = currentUserId && currentUserId === profileId;
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.artist || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
-  const statusColor = isLoggedIn ? 'bg-emerald-500' : 'bg-red-500';
-  const statusLabel = isLoggedIn ? 'Přihlášený' : 'Nepřihlášený';
+  const statusColor = isOwner && isLoggedIn ? 'bg-emerald-500' : 'bg-red-500';
+  const statusLabel = isOwner && isLoggedIn ? 'Přihlášený' : 'Offline';
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
@@ -879,6 +880,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .select('id')
         .single();
       if (error) throw error;
+      if (!data?.id) throw new Error('Hovor se nepodařilo založit.');
       await sendNotificationSafe(supabase, {
         user_id: profileId,
         type: 'call_incoming',
@@ -958,18 +960,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       {profile?.bio || t('profile.noBio', 'Profil zatím nemá popis.')}
                     </span>
                   </div>
-                  {isLoggedIn && currentUserId !== profileId && (
-                    <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-[var(--mpc-accent)]/60 bg-black/60 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
-                      <span className="text-[13px] font-semibold tracking-[0.08em]">Zavolat:</span>
-                      <button
-                        onClick={handleStartCall}
-                        disabled={startingCall}
-                        className="rounded-full bg-[var(--mpc-accent)] px-3 py-1 text-[13px] font-semibold text-black hover:scale-105 disabled:opacity-60"
-                      >
-                        {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
