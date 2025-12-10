@@ -12,6 +12,7 @@ type ProfilePoint = {
 };
 
 const cityPositions: Record<string, { x: number; y: number }> = {
+  // Česko
   praha: { x: 54, y: 50 },
   brno: { x: 71, y: 70 },
   ostrava: { x: 82, y: 46 },
@@ -22,6 +23,32 @@ const cityPositions: Record<string, { x: number; y: number }> = {
   pardubice: { x: 62, y: 44 },
   'ceske budejovice': { x: 55, y: 72 },
   zlin: { x: 75, y: 68 },
+  karlovyvary: { x: 38, y: 50 },
+  usti: { x: 50, y: 32 },
+  chomutov: { x: 46, y: 40 },
+  teplice: { x: 49, y: 35 },
+  most: { x: 47, y: 37 },
+  litomerice: { x: 52, y: 36 },
+  jablonec: { x: 58, y: 30 },
+  jicin: { x: 59, y: 34 },
+  trutnov: { x: 62, y: 32 },
+  jihlava: { x: 63, y: 60 },
+  trebon: { x: 56, y: 75 },
+  tabor: { x: 57, y: 66 },
+  pribram: { x: 52, y: 58 },
+  kladno: { x: 51, y: 52 },
+  mlada: { x: 55, y: 45 },
+  kutnahora: { x: 58, y: 48 },
+  znojmo: { x: 66, y: 78 },
+  havirov: { x: 84, y: 48 },
+  karvina: { x: 86, y: 46 },
+  frydek: { x: 83, y: 50 },
+  opava: { x: 80, y: 45 },
+  prerov: { x: 73, y: 58 },
+  prostejov: { x: 71, y: 60 },
+  kromeriz: { x: 72, y: 63 },
+  ceskalipa: { x: 54, y: 30 },
+  // Slovensko
   bratislava: { x: 84, y: 78 },
   kosice: { x: 94, y: 58 },
   zilina: { x: 86, y: 64 },
@@ -30,11 +57,34 @@ const cityPositions: Record<string, { x: number; y: number }> = {
   presov: { x: 94, y: 54 },
   'banska bystrica': { x: 86, y: 69 },
   trencin: { x: 81, y: 68 },
+  poprad: { x: 92, y: 50 },
+  martin: { x: 87, y: 61 },
+  komarno: { x: 88, y: 78 },
+  prievidza: { x: 83, y: 66 },
 };
 
 function normalizeCity(city?: string | null) {
   if (!city) return '';
   return city.trim().toLowerCase();
+}
+
+// deterministický fallback pro libovolné město v rámci CZ/SK bounding boxu
+function hashCityToCoord(city: string) {
+  const norm = normalizeCity(city) || 'nezname';
+  let hash = 0;
+  for (let i = 0; i < norm.length; i++) {
+    hash = (hash * 31 + norm.charCodeAt(i)) >>> 0;
+  }
+  const x = 42 + (hash % 55); // 42–97 %
+  const y = 25 + ((hash >> 5) % 60); // 25–85 %
+  return { x, y };
+}
+
+function resolveCityPosition(city?: string | null) {
+  const norm = normalizeCity(city);
+  if (norm && cityPositions[norm]) return cityPositions[norm];
+  if (!norm) return { x: 52, y: 52 };
+  return hashCityToCoord(norm);
 }
 
 export default function OfflinePage() {
@@ -76,7 +126,7 @@ export default function OfflinePage() {
   const grouped = useMemo(() => {
     const map: Record<string, ProfilePoint[]> = {};
     profiles.forEach((p) => {
-      const key = normalizeCity(p.city) || 'neznamé';
+      const key = normalizeCity(p.city) || 'nezname';
       if (!map[key]) map[key] = [];
       map[key].push(p);
     });
@@ -111,31 +161,41 @@ export default function OfflinePage() {
             </div>
             {loading && <span className="text-[12px] text-[var(--mpc-muted)]">Načítám…</span>}
           </div>
-          <div className="relative h-[380px] overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,122,0,0.08),transparent_40%),linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a)]">
+          <div
+            className="relative h-[420px] overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.08),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,122,0,0.08),transparent_40%),linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a)]"
+            style={{
+              backgroundImage:
+                'radial-gradient(circle at 20% 25%, rgba(255,255,255,0.05), transparent 35%), radial-gradient(circle at 75% 60%, rgba(255,122,0,0.08), transparent 40%), linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a), url(\"/map-cz-sk.svg\")',
+              backgroundSize: 'cover, cover, cover, 82%',
+              backgroundRepeat: 'no-repeat, no-repeat, no-repeat, no-repeat',
+              backgroundPosition: 'center',
+            }}
+          >
             <div className="absolute inset-0 pointer-events-none" />
-            {profiles
-              .filter((p) => normalizeCity(p.city) in cityPositions)
-              .map((p) => {
-                const pos = cityPositions[normalizeCity(p.city)];
-                const initials = p.name
-                  .split(' ')
-                  .map((s) => s[0])
-                  .join('')
-                  .slice(0, 2)
-                  .toUpperCase();
-                return (
-                  <div
-                    key={p.id}
-                    className="absolute flex items-center gap-2 rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
-                    style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
-                  >
-                    <span className="h-6 w-6 rounded-full bg-[var(--mpc-accent)] text-center text-[11px] font-bold text-black">
-                      {p.avatar_url ? '' : initials}
-                    </span>
-                    <span className="max-w-[140px] truncate">{p.name}</span>
+            {profiles.map((p) => {
+              const pos = resolveCityPosition(p.city);
+              const initials = p.name
+                .split(' ')
+                .map((s) => s[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+              return (
+                <div
+                  key={p.id}
+                  className="absolute flex items-center gap-2 rounded-full border border-white/20 bg-black/70 px-2 py-1 text-[12px] shadow-[0_8px_20px_rgba(0,0,0,0.4)]"
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%`, transform: 'translate(-50%, -50%)' }}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-center text-[11px] font-bold text-black">
+                    {p.avatar_url ? '' : initials}
+                  </span>
+                  <div className="max-w-[160px] truncate">
+                    <div className="truncate text-white">{p.name}</div>
+                    {p.city && <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">{p.city}</div>}
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
           </div>
         </section>
 
