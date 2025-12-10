@@ -153,6 +153,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [startingCall, setStartingCall] = useState(false);
   const {
     current: currentTrack,
     isPlaying,
@@ -854,6 +855,47 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const statusColor = isLoggedIn ? 'bg-emerald-500' : 'bg-red-500';
   const statusLabel = isLoggedIn ? 'Přihlášený' : 'Nepřihlášený';
 
+  async function handleStartCall() {
+    if (!isLoggedIn || !currentUserId) {
+      setMessageError('Musíš být přihlášen pro volání.');
+      return;
+    }
+    if (profileId === currentUserId) {
+      setMessageError('Nemůžeš volat sám sobě.');
+      return;
+    }
+    setMessageError(null);
+    setStartingCall(true);
+    try {
+      const roomName = `beets-call-${crypto.randomUUID()}`;
+      const { data, error } = await supabase
+        .from('calls')
+        .insert({
+          caller_id: currentUserId,
+          callee_id: profileId,
+          room_name: roomName,
+          status: 'ringing',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      await sendNotificationSafe(supabase, {
+        user_id: profileId,
+        type: 'call_incoming',
+        title: 'Příchozí hovor',
+        body: profile?.display_name || 'Uživatel',
+        item_type: 'call',
+        item_id: data?.id,
+      });
+      router.push(`/call/${data?.id}`);
+    } catch (err) {
+      console.error('Chyba při startu hovoru:', err);
+      setMessageError('Nepodařilo se zahájit hovor.');
+    } finally {
+      setStartingCall(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
       {playerError && (
@@ -895,6 +937,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                     <span className="text-2xl font-black uppercase tracking-[0.12em] md:text-3xl">
                       {heroName}
                     </span>
+                    <div className="flex items-center gap-1 text-[12px] text-white/90">
+                      <span className={`inline-flex h-3 w-3 rounded-full ${statusColor}`} aria-hidden />
+                      <span>{statusLabel}</span>
+                    </div>
                   </div>
                   <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
                     <span className="text-[13px] font-semibold tracking-[0.08em]">
@@ -912,6 +958,18 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       {profile?.bio || t('profile.noBio', 'Profil zatím nemá popis.')}
                     </span>
                   </div>
+                  {isLoggedIn && currentUserId !== profileId && (
+                    <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-[var(--mpc-accent)]/60 bg-black/60 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
+                      <span className="text-[13px] font-semibold tracking-[0.08em]">Zavolat:</span>
+                      <button
+                        onClick={handleStartCall}
+                        disabled={startingCall}
+                        className="rounded-full bg-[var(--mpc-accent)] px-3 py-1 text-[13px] font-semibold text-black hover:scale-105 disabled:opacity-60"
+                      >
+                        {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
