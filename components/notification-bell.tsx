@@ -12,6 +12,7 @@ type Notification = {
   created_at: string | null;
   item_type?: string | null;
   item_id?: string | null;
+  source?: 'notifications' | 'message' | 'request' | 'call';
 };
 
 function relativeTime(iso?: string | null) {
@@ -59,7 +60,99 @@ export function NotificationBell({ className }: { className?: string }) {
         .order("created_at", { ascending: false })
         .limit(20);
       if (err) throw err;
-      setItems((data as Notification[]) ?? []);
+
+      const base = ((data as Notification[]) ?? []).map((n) => ({ ...n, source: "notifications" as const }));
+
+      const extras: Notification[] = [];
+
+      // fallback: nepřečtené přímé zprávy (kdyby notifikace chyběla)
+      const { data: messages } = await supabase
+        .from("messages")
+        .select("id,from_name,body,created_at,unread")
+        .eq("to_user_id", authData.user.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      (messages ?? []).forEach((m: any) => {
+        extras.push({
+          id: `msg-${m.id}`,
+          title: m.from_name || "Nová zpráva",
+          body: m.body || null,
+          read: m.unread === false,
+          created_at: m.created_at,
+          item_type: "message",
+          item_id: String(m.id),
+          source: "message",
+        });
+      });
+
+      // žádosti o přístup k projektům, které patří uživateli
+      const { data: ownedProjects } = await supabase.from("projects").select("id,title").eq("user_id", authData.user.id);
+      const ownedIds = (ownedProjects ?? []).map((p: any) => p.id);
+      if (ownedIds.length) {
+        const { data: reqs } = await supabase
+          .from("project_access_requests")
+          .select("id,project_id,requester_id,created_at,status")
+          .in("project_id", ownedIds)
+          .order("created_at", { ascending: false })
+          .limit(50);
+        const requesterIds = Array.from(new Set((reqs ?? []).map((r: any) => r.requester_id).filter(Boolean)));
+        let requesterNames: Record<string, string> = {};
+        if (requesterIds.length) {
+          const { data: profs } = await supabase.from("profiles").select("id,display_name").in("id", requesterIds);
+          requesterNames = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p.display_name || "Uživatel"]));
+        }
+        const projectNames = Object.fromEntries((ownedProjects ?? []).map((p: any) => [p.id, p.title || "Projekt"]));
+        (reqs ?? []).forEach((r: any) => {
+          extras.push({
+            id: `req-${r.id}`,
+            title: "Žádost o přístup",
+            body: `${requesterNames[r.requester_id] || "Uživatel"} žádá o přístup k ${projectNames[r.project_id] || "projektu"}`,
+            read: r.status && r.status !== "pending" ? true : false,
+            created_at: r.created_at,
+            item_type: "project",
+            item_id: String(r.project_id),
+            source: "request",
+          });
+        });
+      }
+
+      // hovory – zobrazíme záznamy, kde je uživatel volaný nebo volající a stav není accepted
+      const { data: calls } = await supabase
+        .from("calls")
+        .select("id,caller_id,callee_id,status,created_at")
+        .or(`caller_id.eq.${authData.user.id},callee_id.eq.${authData.user.id}`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      (calls ?? [])
+        .filter((c: any) => c.status && c.status !== "accepted")
+        .forEach((c: any) => {
+          const isCaller = c.caller_id === authData.user.id;
+          extras.push({
+            id: `call-${c.id}`,
+            title: c.status === "missed" ? "Zmeškaný hovor" : "Příchozí hovor",
+            body: isCaller ? "Druhá strana nereaguje" : "Někdo ti volá",
+            read: c.status === "accepted",
+            created_at: c.created_at,
+            item_type: "call",
+            item_id: String(c.id),
+            source: "call",
+          });
+        });
+
+      const mergedMap = new Map<string, Notification>();
+      [...extras, ...base].forEach((n) => {
+        const existing = mergedMap.get(n.id);
+        if (!existing || (existing.created_at || "") < (n.created_at || "")) {
+          mergedMap.set(n.id, n);
+        }
+      });
+      const merged = Array.from(mergedMap.values()).sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+
+      setItems(merged.slice(0, 40));
     } catch (err: any) {
       console.error("Chyba načítání notifikací:", err);
       setError("Nepodařilo se načíst notifikace.");
