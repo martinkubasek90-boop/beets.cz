@@ -853,8 +853,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.artist || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
-  const statusColor = isOwner && isLoggedIn ? 'bg-emerald-500' : 'bg-red-500';
-  const statusLabel = isOwner && isLoggedIn ? 'Přihlášený' : 'Offline';
+  const lastSeenMs = profile?.last_seen_at ? new Date(profile.last_seen_at).getTime() : 0;
+  const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
+  const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
+  const statusLabel = isOnline ? 'Online' : 'Offline';
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {

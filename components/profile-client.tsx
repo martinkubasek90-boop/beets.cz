@@ -384,6 +384,24 @@ export default function ProfileClient() {
     return map;
   }, [projects, profile.display_name]);
 
+  // Heartbeat pro last_seen_at každých 60 s
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    const ping = async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      await supabase
+        .from('profiles')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', auth.user.id);
+    };
+    void ping();
+    timer = setInterval(ping, 60_000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [supabase]);
+
   const startPlayerTrack = useCallback(
     (track: PlayerTrack) => {
       if (!track.url) return;
