@@ -1685,24 +1685,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
         </div>
       </section>
 
-      {/* Stream přesunut na samostatnou stránku /stream */}
-      <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
-        <div className="mx-auto max-w-6xl flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1 text-sm uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-            <span>{t('profile.stream.heading', 'Stream')}</span>
-            <p className="text-[var(--mpc-light)] text-base font-semibold">
-              {t('profile.stream.next', 'Další stream je k dispozici na stránce streamu.')}
-            </p>
-          </div>
-          <Link
-            href="/stream"
-            className="inline-flex items-center justify-center rounded-full border border-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
-          >
-            {t('profile.stream.open', 'Otevřít stream')}
-          </Link>
-        </div>
-      </section>
-
       {/* Tabs */}
       <section className="mt-3 border-b border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/60 py-3 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4">
