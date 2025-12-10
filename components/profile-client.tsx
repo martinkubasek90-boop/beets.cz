@@ -16,6 +16,7 @@ type Profile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
+  city?: string | null;
 };
 
 type BeatItem = {
@@ -515,7 +516,7 @@ export default function ProfileClient() {
 
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url')
+          .select('display_name, hardware, bio, avatar_url, banner_url, city')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -528,7 +529,9 @@ export default function ProfileClient() {
             bio: data.bio ?? '',
             avatar_url: data.avatar_url ?? null,
             banner_url: (data as any).banner_url ?? null,
+            city: (data as any).city ?? null,
           });
+          setEditCity((data as any).city ?? '');
         }
       } catch (err) {
         const message =
