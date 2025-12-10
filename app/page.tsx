@@ -605,28 +605,16 @@ export default function Home() {
     });
   }
 
-  function renderTrackBars(seedA: number | string, seedB: number | string, bars = 50) {
-    const seedStr = `${seedA}-${seedB}`;
-    let hash = 0;
-    for (let i = 0; i < seedStr.length; i++) {
-      hash = (hash * 31 + seedStr.charCodeAt(i)) >>> 0;
-    }
-    return Array.from({ length: bars }).map((_, idx) => {
-      hash = (hash * 1664525 + 1013904223) >>> 0;
-      const height = 10 + (hash % 50);
-      const opacity = idx / bars <= 0.9 ? 0.9 : 0.5;
-      return (
-        <span
-          key={idx}
-          className="w-[3px] rounded-sm"
-          style={{
-            height,
-            background: 'linear-gradient(180deg,#00e096,#00b07a)',
-            opacity,
-          }}
+  function renderTrackBars(seedA: number | string, seedB: number | string) {
+    const pct = projectTrackProgress(`${seedA}-${seedB}`);
+    return (
+      <div className="h-2 w-full overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-black/40">
+        <div
+          className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
+          style={{ width: `${pct}%` }}
         />
-      );
-    });
+      </div>
+    );
   }
 
   function togglePlayPause() {
@@ -1138,8 +1126,8 @@ export default function Home() {
                                 {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
                               </button>
                             </div>
-                            <div className="flex h-10 items-end gap-[2px] rounded bg-black/30 px-2">
-                              {renderTrackBars(project.id, t.id, 60)}
+                            <div className="flex items-center rounded bg-black/30 px-2 py-2">
+                              {renderTrackBars(project.id, t.id)}
                             </div>
                           </div>
                         ))}
