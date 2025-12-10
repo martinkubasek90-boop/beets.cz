@@ -826,8 +826,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
     };
 
-    setOnNext(() => handleNext);
-    setOnPrev(() => handlePrev);
+    setOnNext(handleNext);
+    setOnPrev(handlePrev);
     return () => {
       setOnNext(null);
       setOnPrev(null);
