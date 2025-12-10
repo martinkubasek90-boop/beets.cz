@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, FormEvent, ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, FormEvent, ChangeEvent, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -37,10 +37,43 @@ type ProjectItem = {
   tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
 };
 
+type PlayerMeta = {
+  projectId?: string;
+  trackIndex?: number;
+};
+
+type PlayerTrack = {
+  id: string;
+  title: string;
+  url: string;
+  cover_url?: string | null;
+  artist?: string | null;
+  item_type: 'beat' | 'project';
+  meta?: PlayerMeta;
+};
+
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
   if (cover.startsWith('http')) return cover;
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${cover}`;
+};
+
+const normalizeProjectTracks = (raw?: ProjectItem['tracks_json']) => {
+  if (!Array.isArray(raw)) return [] as { name: string; url: string }[];
+  return raw
+    .map((t, idx) => {
+      const url =
+        t?.url && t.url.startsWith('http')
+          ? t.url
+          : t?.path
+            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${t.path}`
+            : '';
+      return {
+        name: t?.name || `Track ${idx + 1}`,
+        url,
+      };
+    })
+    .filter((t) => Boolean(t.url));
 };
 
 type CollabThread = {
@@ -66,6 +99,27 @@ type CollabFile = {
   user_id: string;
   created_at: string | null;
 };
+
+async function sendNotificationSafe(
+  supabase: ReturnType<typeof createClient>,
+  payload: { user_id: string; type: string; title?: string | null; body?: string | null; item_type?: string | null; item_id?: string | null }
+) {
+  try {
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('API notification failed');
+    return;
+  } catch (err) {
+    try {
+      await supabase.from('notifications').insert({ ...payload, read: false });
+    } catch (inner) {
+      console.warn('Notifikaci se nepodařilo uložit:', inner);
+    }
+  }
+}
 
 type ProjectAccessRequest = {
   id: string;
@@ -271,7 +325,151 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
-  const { play: gpPlay, toggle: gpToggle, seek: gpSeek, current: gpCurrent, isPlaying: gpIsPlaying, currentTime: gpTime, duration: gpDuration } = useGlobalPlayer();
+  const beatPlayerTracks = useMemo<PlayerTrack[]>(
+    () =>
+      beats
+        .filter((beat) => Boolean(beat.audio_url))
+        .map((beat) => ({
+          id: `beat-${beat.id}`,
+          title: beat.title,
+          url: beat.audio_url || '',
+          cover_url: beat.cover_url ?? null,
+          artist: profile.display_name || 'Profil',
+          item_type: 'beat' as const,
+        })),
+    [beats, profile.display_name]
+  );
+
+  const projectPlayerTracksMap = useMemo<Record<string, PlayerTrack[]>>(() => {
+    const map: Record<string, PlayerTrack[]> = {};
+    projects.forEach((project) => {
+      const tracks: PlayerTrack[] = [];
+      normalizeProjectTracks(project.tracks_json).forEach((track, idx) => {
+        tracks.push({
+          id: `project-${project.id}-${idx}`,
+          title: track.name,
+          url: track.url,
+          cover_url: project.cover_url ?? null,
+          artist: profile.display_name || project.title || 'Projekt',
+          item_type: 'project',
+          meta: { projectId: project.id, trackIndex: idx },
+        });
+      });
+      if (tracks.length === 0 && project.project_url) {
+        tracks.push({
+          id: `project-${project.id}`,
+          title: project.title || 'Projekt',
+          url: project.project_url,
+          cover_url: project.cover_url ?? null,
+          artist: profile.display_name || project.title || 'Projekt',
+          item_type: 'project',
+          meta: { projectId: project.id, trackIndex: -1 },
+        });
+      }
+      if (tracks.length) {
+        map[project.id] = tracks;
+      }
+    });
+    return map;
+  }, [projects, profile.display_name]);
+
+  const startPlayerTrack = useCallback(
+    (track: PlayerTrack) => {
+      if (!track.url) return;
+      gpPlay({
+        id: track.id,
+        title: track.title,
+        url: track.url,
+        cover_url: track.cover_url || undefined,
+        artist: track.artist || profile.display_name || 'Profil',
+        item_type: track.item_type,
+        meta: track.meta,
+      });
+    },
+    [gpPlay, profile.display_name]
+  );
+
+  useEffect(() => {
+    if (!gpSetOnNext || !gpSetOnPrev) return;
+
+    const cycleTracks = (items: PlayerTrack[], direction: 1 | -1) => {
+      if (!items.length) return;
+      const currentId = gpCurrent?.id;
+      const idx = items.findIndex((item) => item.id === currentId);
+      const nextIndex =
+        idx === -1
+          ? direction === 1
+            ? 0
+            : items.length - 1
+          : (idx + direction + items.length) % items.length;
+      startPlayerTrack(items[nextIndex]);
+    };
+
+    const handleNext = () => {
+      if (!gpCurrent) {
+        if (beatPlayerTracks.length) {
+          startPlayerTrack(beatPlayerTracks[0]);
+        }
+        return;
+      }
+      if (gpCurrent.item_type === 'beat') {
+        cycleTracks(beatPlayerTracks, 1);
+        return;
+      }
+      if (gpCurrent.item_type === 'project') {
+        const projectId = gpCurrent.meta?.projectId;
+        if (projectId) {
+          const queue = projectPlayerTracksMap[projectId];
+          if (queue?.length) {
+            cycleTracks(queue, 1);
+            return;
+          }
+        }
+      }
+    };
+
+    const handlePrev = () => {
+      if (!gpCurrent) {
+        if (beatPlayerTracks.length) {
+          startPlayerTrack(beatPlayerTracks[beatPlayerTracks.length - 1]);
+        }
+        return;
+      }
+      if (gpCurrent.item_type === 'beat') {
+        cycleTracks(beatPlayerTracks, -1);
+        return;
+      }
+      if (gpCurrent.item_type === 'project') {
+        const projectId = gpCurrent.meta?.projectId;
+        if (projectId) {
+          const queue = projectPlayerTracksMap[projectId];
+          if (queue?.length) {
+            cycleTracks(queue, -1);
+            return;
+          }
+        }
+      }
+    };
+
+    gpSetOnNext(() => handleNext);
+    gpSetOnPrev(() => handlePrev);
+
+    return () => {
+      gpSetOnNext(null);
+      gpSetOnPrev(null);
+    };
+  }, [beatPlayerTracks, gpCurrent, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
+  const {
+    play: gpPlay,
+    toggle: gpToggle,
+    seek: gpSeek,
+    current: gpCurrent,
+    isPlaying: gpIsPlaying,
+    currentTime: gpTime,
+    duration: gpDuration,
+    setOnNext: gpSetOnNext,
+    setOnPrev: gpSetOnPrev,
+  } = useGlobalPlayer();
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
@@ -948,12 +1146,13 @@ function handleFieldChange(field: keyof Profile, value: string) {
       return;
     }
     setCurrentBeat(beat);
-    gpPlay({
+    startPlayerTrack({
       id: trackId,
       title: beat.title,
       artist: profile.display_name || 'Neznámý',
       url: beat.audio_url,
-      cover_url: beat.cover_url ?? undefined,
+      cover_url: beat.cover_url ?? null,
+      item_type: 'beat',
     });
   }
 
@@ -1049,22 +1248,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
       setProjectRequests((prev) => prev.filter((r) => r.id !== req.id));
       setProjectRequestsError(null);
-      try {
-        await fetch("/api/notifications", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: req.requester_id,
-            type: approve ? "project_request_approved" : "project_request_denied",
-            title: approve ? "Žádost schválena" : "Žádost zamítnuta",
-            body: `Žádost o přístup k ${req.project_title || "projektu"} byla ${approve ? "schválena" : "zamítnuta"}.`,
-            item_type: "project",
-            item_id: String(req.project_id),
-          }),
-        });
-      } catch (notifyErr) {
-        console.warn("Nepodařilo se poslat notifikaci o žádosti o přístup:", notifyErr);
-      }
+      await sendNotificationSafe(supabase, {
+        user_id: req.requester_id,
+        type: approve ? 'project_request_approved' : 'project_request_denied',
+        title: approve ? 'Žádost schválena' : 'Žádost zamítnuta',
+        body: `Žádost o přístup k ${req.project_title || 'projektu'} byla ${approve ? 'schválena' : 'zamítnuta'}.`,
+        item_type: 'project',
+        item_id: String(req.project_id),
+      });
     } catch (err) {
       console.error('Chyba při schválení/odmítnutí žádosti:', err);
       setProjectRequestsError('Nepodařilo se aktualizovat žádost.');
@@ -1167,22 +1358,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (partErr) throw partErr;
 
       // Notifikace pro partnera
-      try {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: partner.id,
-            type: 'collab_created',
-            title: 'Nová spolupráce',
-            body: newThreadTitle.trim(),
-            item_type: 'collab_thread',
-            item_id: threadId,
-          }),
-        });
-      } catch (err) {
-        console.error('Notifikace partnera se nepodařila:', err);
-      }
+      await sendNotificationSafe(supabase, {
+        user_id: partner.id,
+        type: 'collab_created',
+        title: 'Nová spolupráce',
+        body: newThreadTitle.trim(),
+        item_type: 'collab_thread',
+        item_id: threadId,
+      });
 
       const ownerName = profile.display_name || 'Ty';
       const partnerName = partner.display_name?.trim() || newThreadPartner.trim() || 'Partner';
@@ -1323,17 +1506,13 @@ function handleFieldChange(field: keyof Profile, value: string) {
             .filter((uid) => uid && uid !== userId) || [];
         await Promise.all(
           targets.map((uid) =>
-            fetch('/api/notifications', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                user_id: uid,
-                type: 'collab_message',
-                title: 'Nová zpráva ve spolupráci',
-                body: collabMessageBody.trim(),
-                item_type: 'collab_thread',
-                item_id: selectedThreadId,
-              }),
+            sendNotificationSafe(supabase, {
+              user_id: uid,
+              type: 'collab_message',
+              title: 'Nová zpráva ve spolupráci',
+              body: collabMessageBody.trim(),
+              item_type: 'collab_thread',
+              item_id: selectedThreadId,
             })
           )
         );
@@ -1425,22 +1604,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
     setMessages((prev) => [{ ...created, unread: false }, ...prev]);
 
-    try {
-      await fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: targetUserId,
-          type: 'direct_message',
-          title: payload.from_name || 'Nová zpráva',
-          body: payload.body,
-          item_type: 'message',
-          item_id: created.id ? String(created.id) : undefined,
-        }),
-      });
-    } catch (notifyErr) {
-      console.warn('Notifikační webhook selhal:', notifyErr);
-    }
+    await sendNotificationSafe(supabase, {
+      user_id: targetUserId,
+      type: 'direct_message',
+      title: payload.from_name || 'Nová zpráva',
+      body: payload.body,
+      item_type: 'message',
+      item_id: created.id ? String(created.id) : undefined,
+    });
 
     return created;
   }

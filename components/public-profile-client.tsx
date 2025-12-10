@@ -8,6 +8,27 @@ import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
 
+async function sendNotificationSafe(
+  supabase: ReturnType<typeof createClient>,
+  payload: { user_id: string; type: string; title?: string | null; body?: string | null; item_type?: string | null; item_id?: string | null }
+) {
+  try {
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('API notification failed');
+    return;
+  } catch (err) {
+    try {
+      await supabase.from('notifications').insert({ ...payload, read: false });
+    } catch (inner) {
+      console.warn('Notifikaci se nepodařilo uložit:', inner);
+    }
+  }
+}
+
 type PublicProfile = {
   display_name: string;
   hardware: string;
@@ -562,17 +583,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setCollabFile(null);
       setShowCollabForm(false);
       setCollabsReload((prev) => prev + 1);
-      void fetch(`/api/notifications`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: profileId,
-          type: 'collab_created',
-          title: 'Nová žádost o spolupráci',
-          body: collabSubject.trim(),
-          item_type: 'collab_thread',
-          item_id: threadId,
-        }),
+      void sendNotificationSafe(supabase, {
+        user_id: profileId,
+        type: 'collab_created',
+        title: 'Nová žádost o spolupráci',
+        body: collabSubject.trim(),
+        item_type: 'collab_thread',
+        item_id: threadId,
       });
     } catch (err) {
       const message =
@@ -610,6 +627,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       if (error) throw error;
       setMessageBody('');
       setMessageSuccess('Zpráva odeslána.');
+      void sendNotificationSafe(supabase, {
+        user_id: profileId,
+        type: 'direct_message',
+        title: payload.from_name || 'Nová zpráva',
+        body: payload.body,
+        item_type: 'message',
+      });
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessageError('Nepodařilo se odeslat zprávu.');
