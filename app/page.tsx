@@ -228,6 +228,8 @@ export default function Home() {
     duration: gpDuration,
     seek: gpSeek,
     setOnEnded,
+    setOnNext,
+    setOnPrev,
   } = useGlobalPlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
