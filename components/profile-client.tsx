@@ -1104,6 +1104,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
+  const handleTogglePostPublished = async (postId: number, published: boolean) => {
+    try {
+      const { error } = await supabase.from('posts').update({ published }).eq('id', postId);
+      if (error) throw error;
+      setMyPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, published } : p))
+      );
+      setMyPostsError(null);
+    } catch (err) {
+      console.error('Chyba při změně publikace:', err);
+      setMyPostsError('Nepodařilo se změnit publikaci článku.');
+    }
+  };
+
   // Spolupráce – vytvoření vlákna
   const handleCreateCollabThread = async () => {
     if (!userId || !newThreadTitle.trim() || !newThreadPartner.trim()) return;
@@ -2781,28 +2795,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           <p className="text-[11px] text-[var(--mpc-muted)]">{post.date}</p>
                         </div>
                         <div className="flex flex-col gap-2 text-[11px]">
-                          <button
-                            onClick={async () => {
-                              try {
-                                const { error } = await supabase
-                                  .from('posts')
-                                  .update({ published: true })
-                                  .eq('id', post.id);
-                                if (error) throw error;
-                                setMyPosts((prev) =>
-                                  prev.map((p) =>
-                                    p.id === post.id ? { ...p, published: true } : p
-                                  )
-                                );
-                              } catch (err) {
-                                console.error('Chyba publikace:', err);
-                                setMyPostsError('Nepodařilo se publikovat článek. Zkontroluj sloupec published v tabulce.');
-                              }
-                            }}
-                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                          >
-                            {post.published ? 'Publikováno' : 'Publikovat'}
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => void handleTogglePostPublished(post.id, true)}
+                              className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                            >
+                              {post.published ? 'Publikováno' : 'Publikovat'}
+                            </button>
+                            <button
+                              onClick={() => void handleTogglePostPublished(post.id, false)}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-red-400 hover:text-red-300"
+                            >
+                              Schovat
+                            </button>
+                          </div>
                           <button
                             onClick={() => {
                               setEditingPostId(post.id);
