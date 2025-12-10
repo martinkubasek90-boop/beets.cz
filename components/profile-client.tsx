@@ -3006,9 +3006,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                    {messages.length} {t('profile.messages.count', 'konverzací')}
-                  </p>
+                  {directThreads.some((t) => t.unread) && (
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
+                    </p>
+                  )}
                 </div>
               </div>
 
