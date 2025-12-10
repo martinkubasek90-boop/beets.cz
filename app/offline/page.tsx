@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 type ProfilePoint = {
   id: string;
   name: string;
-  city?: string | null;
+  region?: string | null;
   avatar_url?: string | null;
 };
 
