@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import 'leaflet/dist/leaflet.css';
 import { createClient } from '@/lib/supabase/client';
 
 type ProfilePoint = {
@@ -11,13 +12,13 @@ type ProfilePoint = {
   avatar_url?: string | null;
 };
 
-type RegionShape = {
-  id: string; // normalized klíč
+type RegionDef = {
+  id: string;
   label: string;
-  center: { x: number; y: number };
-  scale: number;
-  fill: string;
-  stroke: string;
+  lat: number;
+  lng: number;
+  color: string;
+  border: string;
 };
 
 const normalizeRegion = (region?: string | null) =>
@@ -28,242 +29,221 @@ const normalizeRegion = (region?: string | null) =>
     .replace(/\s+/g, '')
     .replace(/-/g, '');
 
-// Stylizované tvary – používáme jednu šablonu a pozicujeme ji transformací, aby nevznikal chaos
-const shapePath = 'M -70 -40 L 70 -40 L 95 0 L 40 70 L -30 70 L -90 10 Z';
+const regions: RegionDef[] = [
+  { id: 'karlovarskykraj', label: 'Karlovarský kraj', lat: 50.22, lng: 12.88, color: '#f6f2ff', border: '#e1007a' },
+  { id: 'plzenskykraj', label: 'Plzeňský kraj', lat: 49.75, lng: 13.38, color: '#f2ecff', border: '#e1007a' },
+  { id: 'usteckykraj', label: 'Ústecký kraj', lat: 50.55, lng: 13.95, color: '#f7e3f4', border: '#e1007a' },
+  { id: 'libereckykraj', label: 'Liberecký kraj', lat: 50.7, lng: 15.05, color: '#f3e1f4', border: '#e1007a' },
+  { id: 'kralovehradeckykraj', label: 'Královéhradecký kraj', lat: 50.33, lng: 15.8, color: '#f0e3f5', border: '#e1007a' },
+  { id: 'pardubickykraj', label: 'Pardubický kraj', lat: 49.95, lng: 16.25, color: '#ede1f4', border: '#e1007a' },
+  { id: 'hlavnimestopraha', label: 'Hlavní město Praha', lat: 50.08, lng: 14.44, color: '#fbeeff', border: '#e1007a' },
+  { id: 'stredoceskykraj', label: 'Středočeský kraj', lat: 49.87, lng: 14.9, color: '#f5e7f9', border: '#e1007a' },
+  { id: 'jihoceskykraj', label: 'Jihočeský kraj', lat: 49.05, lng: 14.45, color: '#eee6f8', border: '#e1007a' },
+  { id: 'vysocina', label: 'Vysočina', lat: 49.4, lng: 15.5, color: '#efe9fa', border: '#e1007a' },
+  { id: 'jihomoravskykraj', label: 'Jihomoravský kraj', lat: 49.08, lng: 16.65, color: '#ede9f9', border: '#e1007a' },
+  { id: 'olomouckykraj', label: 'Olomoucký kraj', lat: 49.75, lng: 17.2, color: '#f5e6f7', border: '#e1007a' },
+  { id: 'zlinskykraj', label: 'Zlínský kraj', lat: 49.2, lng: 17.75, color: '#f1e9fb', border: '#e1007a' },
+  { id: 'moravskoslezskykraj', label: 'Moravskoslezský kraj', lat: 49.8, lng: 18.2, color: '#f6e6f5', border: '#e1007a' },
+  { id: 'bratislavskykraj', label: 'Bratislavský kraj', lat: 48.25, lng: 17.25, color: '#d9ddff', border: '#5649ff' },
+  { id: 'trnavskykraj', label: 'Trnavský kraj', lat: 48.45, lng: 17.75, color: '#d7dcff', border: '#5649ff' },
+  { id: 'trencianskykraj', label: 'Trenčiansky kraj', lat: 48.85, lng: 18.05, color: '#d3d7ff', border: '#5649ff' },
+  { id: 'nitrianskykraj', label: 'Nitriansky kraj', lat: 48.2, lng: 18.3, color: '#d2d7ff', border: '#5649ff' },
+  { id: 'zilinskykraj', label: 'Žilinský kraj', lat: 49.1, lng: 19.2, color: '#cfd4ff', border: '#5649ff' },
+  { id: 'banskobystrickykraj', label: 'Banskobystrický kraj', lat: 48.6, lng: 19.5, color: '#cbd2ff', border: '#5649ff' },
+  { id: 'presovskykraj', label: 'Prešovský kraj', lat: 49.0, lng: 21.2, color: '#ffcad2', border: '#e1007a' },
+  { id: 'kosickykraj', label: 'Košický kraj', lat: 48.6, lng: 21.3, color: '#cde8c7', border: '#0a8f5c' },
+];
 
-const regions: RegionShape[] = [
-  { label: 'Karlovarský kraj', center: { x: 140, y: 250 }, scale: 0.9, fill: '#f1f0f5', stroke: '#e1007a' },
-  { label: 'Plzeňský kraj', center: { x: 210, y: 260 }, scale: 1, fill: '#ece6f2', stroke: '#e1007a' },
-  { label: 'Ústecký kraj', center: { x: 250, y: 170 }, scale: 1, fill: '#f8e6f5', stroke: '#e1007a' },
-  { label: 'Liberecký kraj', center: { x: 340, y: 160 }, scale: 0.95, fill: '#f3e1f4', stroke: '#e1007a' },
-  { label: 'Královéhradecký kraj', center: { x: 370, y: 210 }, scale: 1, fill: '#efe1f4', stroke: '#e1007a' },
-  { label: 'Pardubický kraj', center: { x: 320, y: 240 }, scale: 0.95, fill: '#eadff3', stroke: '#e1007a' },
-  { label: 'Středočeský kraj', center: { x: 250, y: 240 }, scale: 1.05, fill: '#efe6f6', stroke: '#e1007a' },
-  { label: 'Hlavní město Praha', center: { x: 260, y: 215 }, scale: 0.45, fill: '#e6e0f4', stroke: '#e1007a' },
-  { label: 'Jihočeský kraj', center: { x: 230, y: 330 }, scale: 1.05, fill: '#e7e2f5', stroke: '#e1007a' },
-  { label: 'Vysočina', center: { x: 320, y: 320 }, scale: 0.95, fill: '#e2def2', stroke: '#e1007a' },
-  { label: 'Jihomoravský kraj', center: { x: 330, y: 380 }, scale: 1, fill: '#dbd8f0', stroke: '#e1007a' },
-  { label: 'Olomoucký kraj', center: { x: 400, y: 300 }, scale: 0.95, fill: '#e1def3', stroke: '#e1007a' },
-  { label: 'Zlínský kraj', center: { x: 430, y: 340 }, scale: 0.9, fill: '#e6dff2', stroke: '#e1007a' },
-  { label: 'Moravskoslezský kraj', center: { x: 440, y: 240 }, scale: 1, fill: '#e7deef', stroke: '#e1007a' },
-  // Slovensko
-  { label: 'Bratislavský kraj', center: { x: 520, y: 380 }, scale: 0.9, fill: '#c8c8ff', stroke: '#7426ff' },
-  { label: 'Trnavský kraj', center: { x: 500, y: 350 }, scale: 0.9, fill: '#b7c3ff', stroke: '#7426ff' },
-  { label: 'Trenčiansky kraj', center: { x: 520, y: 320 }, scale: 0.9, fill: '#aabaff', stroke: '#7426ff' },
-  { label: 'Nitriansky kraj', center: { x: 560, y: 360 }, scale: 0.9, fill: '#9eb0ff', stroke: '#7426ff' },
-  { label: 'Žilinský kraj', center: { x: 540, y: 280 }, scale: 0.95, fill: '#94a7ff', stroke: '#7426ff' },
-  { label: 'Banskobystrický kraj', center: { x: 580, y: 320 }, scale: 1.05, fill: '#8a9dff', stroke: '#7426ff' },
-  { label: 'Prešovský kraj', center: { x: 640, y: 280 }, scale: 0.95, fill: '#f7b2b5', stroke: '#e1007a' },
-  { label: 'Košický kraj', center: { x: 650, y: 340 }, scale: 1, fill: '#c9d7aa', stroke: '#008c4a' },
-].map((r) => ({ ...r, id: normalizeRegion(r.label) }));
+const jitterFromId = (id: string) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
+  const rand = () => (((h = (h ^ (h << 13)) ^ (h >> 17) ^ (h << 5)) >>> 0) % 1000) / 1000;
+  return { lat: (rand() - 0.5) * 0.2, lng: (rand() - 0.5) * 0.3 };
+};
 
-const baseMarkerColor = '#ff6fb7';
+const makeHex = (lat: number, lng: number, r = 0.4) => {
+  const coords = [];
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i + Math.PI / 6;
+    coords.push([lat + r * Math.sin(angle), lng + r * Math.cos(angle)]);
+  }
+  coords.push(coords[0]);
+  return coords;
+};
 
 export default function OfflinePage() {
-  const supabase = createClient();
   const [profiles, setProfiles] = useState<ProfilePoint[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [filterRegion, setFilterRegion] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { data, error: err } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, region')
-          .not('region', 'is', null)
-          .not('region', 'eq', '')
-          .limit(300);
-        if (err) throw err;
-        const mapped =
-          (data as any[] | null)?.map((p) => ({
-            id: p.id as string,
-            name: (p.display_name as string) || 'Bez jména',
-            region: p.region as string | null,
-            avatar_url: p.avatar_url as string | null,
-          })) ?? [];
-        setProfiles(mapped);
-      } catch (err: any) {
-        console.error('Chyba načítání mapy:', err);
-        setError('Nepodařilo se načíst profily pro mapu.');
-      } finally {
-        setLoading(false);
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, region, avatar_url')
+        .not('region', 'is', null);
+      if (!error && data) {
+        setProfiles(
+          data.map((p: any) => ({
+            id: p.id,
+            name: p.display_name ?? 'Neznámý',
+            region: p.region,
+            avatar_url: p.avatar_url,
+          }))
+        );
       }
     };
-    void load();
-  }, [supabase]);
+    load();
+  }, []);
 
-  const grouped = useMemo(() => {
-    const map: Record<string, ProfilePoint[]> = {};
+  useEffect(() => {
+    let map: any;
+    let layerGroup: any;
+    import('leaflet').then((L) => {
+      map = L.map('offline-map', {
+        zoomControl: false,
+        attributionControl: false,
+        center: [49.3, 16.0],
+        zoom: 6.2,
+      });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        opacity: 0.25,
+      }).addTo(map);
+
+      layerGroup = L.layerGroup().addTo(map);
+
+      const regionMap: Record<string, RegionDef> = {};
+      regions.forEach((r) => {
+        const hex = makeHex(r.lat, r.lng, 0.45);
+        const polygon = L.polygon(hex, {
+          color: r.border,
+          weight: 3,
+          fillColor: r.color,
+          fillOpacity: 0.9,
+        })
+          .on('click', () => setFilterRegion(r.id))
+          .addTo(layerGroup);
+        polygon.bindTooltip(r.label, { permanent: true, direction: 'center', className: 'map-label' });
+        regionMap[r.id] = r;
+      });
+
+      profiles.forEach((p) => {
+        const regId = normalizeRegion(p.region);
+        const region = regionMap[regId];
+        if (!region) return;
+        const jitter = jitterFromId(p.id);
+        const lat = region.lat + jitter.lat;
+        const lng = region.lng + jitter.lng;
+        const marker = L.circleMarker([lat, lng], {
+          radius: 7,
+          color: region.border,
+          weight: 2,
+          fillOpacity: 0.9,
+          fillColor: '#0f1117',
+        }).addTo(layerGroup);
+        marker.bindTooltip(p.name, { permanent: false, direction: 'top' });
+      });
+    });
+    return () => {
+      import('leaflet').then(() => {
+        if (map) map.remove();
+        if (layerGroup) layerGroup.clearLayers();
+      });
+    };
+  }, [profiles]);
+
+  const counts = useMemo(() => {
+    const map: Record<string, number> = {};
+    regions.forEach((r) => {
+      map[r.id] = 0;
+    });
     profiles.forEach((p) => {
-      const key = normalizeRegion(p.region) || 'nezname';
-      if (!map[key]) map[key] = [];
-      map[key].push(p);
+      const id = normalizeRegion(p.region);
+      if (map[id] !== undefined) map[id] += 1;
     });
     return map;
   }, [profiles]);
 
   const filteredProfiles = useMemo(() => {
-    if (!selectedRegion) return profiles;
-    return profiles.filter((p) => normalizeRegion(p.region) === selectedRegion);
-  }, [profiles, selectedRegion]);
-
-  const selectedLabel =
-    selectedRegion ? regions.find((r) => r.id === selectedRegion)?.label ?? 'Vybraný kraj' : 'Všechny kraje';
+    if (!filterRegion) return profiles;
+    return profiles.filter((p) => normalizeRegion(p.region) === filterRegion);
+  }, [profiles, filterRegion]);
 
   return (
-    <main className="min-h-screen bg-[var(--mpc-deck,#06080f)] text-white">
-      <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold uppercase tracking-[0.18em]">Mapa scény</h1>
-            <p className="text-[12px] text-[var(--mpc-muted,#9aa3b5)]">
-              {filteredProfiles.length} profilů {selectedRegion ? 'v kraji' : 'celkem'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedRegion && (
-              <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                {selectedLabel}
-              </span>
-            )}
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-16 pt-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-white">Mapa scény</h1>
+        <Link href="/" className="text-sm text-[var(--mpc-accent)] hover:underline">
+          Zpět
+        </Link>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
+        <div className="flex items-center justify-between text-sm text-white/60">
+          <span>{profiles.length} profilů celkem</span>
+          {filterRegion && (
             <button
-              onClick={() => setSelectedRegion(null)}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
+              onClick={() => setFilterRegion(null)}
+              className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80 hover:border-white/50"
             >
-              Zpět
+              Zrušit filtr
             </button>
-          </div>
+          )}
         </div>
+        <div id="offline-map" className="mt-3 h-[520px] w-full rounded-xl border border-white/10" />
+      </div>
 
-        {error && <p className="text-sm text-red-300">{error}</p>}
+      <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
+        <div className="flex items-center justify-between text-sm text-white/70">
+          <span>Podle kraje</span>
+          <span className="text-xs text-white/50">Klikni na kraj pro filtr</span>
+        </div>
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+          {regions.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setFilterRegion(r.id)}
+              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                filterRegion === r.id
+                  ? 'border-[var(--mpc-accent)] bg-white/5 text-white'
+                  : 'border-white/10 bg-white/0 text-white/80 hover:border-white/30'
+              }`}
+            >
+              <span>{r.label}</span>
+              <span className="text-xs text-white/60">{counts[r.id] ?? 0} profilů</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-        <section className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#0f1627] via-[#0b101d] to-[#0f182d] p-5 shadow-[0_18px_40px_rgba(0,0,0,0.45)]">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-white">Mapa krajů</h2>
-              <p className="text-[12px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                {filteredProfiles.length} profilů {selectedRegion ? 'v kraji' : 'celkem'}
-              </p>
-            </div>
-            {loading && <span className="text-[12px] text-[var(--mpc-muted)]">Načítám…</span>}
-          </div>
-
-          <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[radial-gradient(circle_at_30%_30%,rgba(255,255,255,0.06),transparent_45%),radial-gradient(circle_at_80%_60%,rgba(255,122,0,0.08),transparent_40%),linear-gradient(135deg,#0b0f18,#0a121f,#0c1a2a)]">
-            <svg viewBox="0 0 720 480" className="w-full">
-              <defs>
-                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#000" floodOpacity="0.4" />
-                </filter>
-              </defs>
-              {regions.map((r) => {
-                const isActive = selectedRegion ? selectedRegion === r.id : false;
-                return (
-                  <g
-                    key={r.id}
-                    transform={`translate(${r.center.x} ${r.center.y}) scale(${r.scale})`}
-                    onClick={() => setSelectedRegion(isActive ? null : r.id)}
-                    className="cursor-pointer"
-                  >
-                    <path
-                      d={shapePath}
-                      fill={r.fill}
-                      stroke={r.stroke}
-                      strokeWidth={isActive ? 6 : 4}
-                      filter="url(#shadow)"
-                      className="transition duration-150 hover:brightness-110"
-                    />
-                    <text
-                      x={0}
-                      y={6}
-                      textAnchor="middle"
-                      className="select-none text-[12px] font-semibold"
-                      fill="#6c5a77"
-                    >
-                      {r.label}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {filteredProfiles.map((p) => {
-                const reg = regions.find((rg) => normalizeRegion(rg.label) === normalizeRegion(p.region));
-                if (!reg) return null;
-                const isActive = selectedRegion ? normalizeRegion(p.region) === selectedRegion : true;
-                const scale = reg.scale;
-                const px = reg.center.x;
-                const py = reg.center.y;
-                return (
-                  <g key={p.id} transform={`translate(${px} ${py})`} className="cursor-pointer">
-                    <circle r={9} fill={isActive ? baseMarkerColor : '#ff9acb'} stroke="#111" strokeWidth={2} />
-                    <rect
-                      x={12}
-                      y={-10}
-                      rx={10}
-                      ry={10}
-                      width={200}
-                      height={24}
-                      fill="#0b0b0b"
-                      stroke="#111"
-                      strokeWidth={1}
-                      opacity={0.8}
-                    />
-                    <text x={112} y={6} textAnchor="middle" fill="#fff" className="text-[11px]">
-                      {p.name}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-white/10 bg-[var(--mpc-panel,#0b0f16)] p-5 shadow-[0_16px_34px_rgba(0,0,0,0.45)]">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Podle kraje</h2>
-            <span className="text-[12px] text-[var(--mpc-muted)]">Klikni na kraj pro filtr</span>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {regions.map((r) => {
-              const key = r.id;
-              const list = grouped[key] || [];
-              const isActive = selectedRegion === key;
-              if (selectedRegion && !isActive) return null;
-              return (
-                <div
-                  key={r.id}
-                  className={`rounded-xl border p-3 ${isActive ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10' : 'border-white/10 bg-black/30'}`}
-                >
-                  <div className="mb-2 flex items-center justify-between">
-                    <button
-                      className="text-left text-sm font-semibold uppercase tracking-[0.1em] text-white hover:text-[var(--mpc-accent)]"
-                      onClick={() => setSelectedRegion(isActive ? null : key)}
-                    >
-                      {r.label}
-                    </button>
-                    <span className="text-[12px] text-[var(--mpc-muted)]">{list.length} profilů</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {list.slice(0, 10).map((p) => (
-                      <span
-                        key={p.id}
-                        className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[12px] text-white hover:border-[var(--mpc-accent)]"
-                      >
-                        {p.name}
-                      </span>
-                    ))}
-                    {list.length > 10 && (
-                      <span className="text-[12px] text-[var(--mpc-muted)]">+{list.length - 10} dalších</span>
-                    )}
-                  </div>
+      <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
+        <div className="flex items-center justify-between text-sm text-white/70">
+          <span>Profily</span>
+          <span className="text-xs text-white/50">
+            {filterRegion
+              ? `Kraj: ${regions.find((r) => r.id === filterRegion)?.label ?? 'neznámý'}`
+              : 'Všechny profily'}
+          </span>
+        </div>
+        {filteredProfiles.length === 0 ? (
+          <p className="text-sm text-white/60">Žádné profily k zobrazení.</p>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2">
+            {filteredProfiles.map((p) => (
+              <div key={p.id} className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-xs font-semibold text-black">
+                  {p.name.slice(0, 2).toUpperCase()}
                 </div>
-              );
-            })}
+                <div className="flex flex-col">
+                  <span className="font-semibold">{p.name}</span>
+                  <span className="text-xs text-white/60">
+                    {regions.find((r) => r.id === normalizeRegion(p.region))?.label ?? 'Neznámý kraj'}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
+        )}
       </div>
     </main>
   );
