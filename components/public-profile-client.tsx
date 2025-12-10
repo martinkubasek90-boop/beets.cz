@@ -155,6 +155,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [startingCall, setStartingCall] = useState(false);
+  const [processingCall, setProcessingCall] = useState(false);
   const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string; caller_name?: string | null } | null>(null);
   const {
     current: currentTrack,
@@ -859,6 +860,86 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
   const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
   const statusLabel = isOnline ? 'Online' : 'Offline';
+
+  // Realtime příchozí hovory
+  useEffect(() => {
+    if (!currentUserId) return;
+    const channel = supabase
+      .channel(`calls-incoming-${currentUserId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${currentUserId}` },
+        async (payload) => {
+          const newRow = payload.new as any;
+          if (!newRow?.id || !newRow?.room_name) return;
+          let callerName: string | null = null;
+          try {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('display_name')
+              .eq('id', newRow.caller_id)
+              .maybeSingle();
+            callerName = prof?.display_name ?? null;
+          } catch {
+            callerName = null;
+          }
+          setIncomingCall({
+            id: newRow.id as string,
+            room_name: newRow.room_name as string,
+            caller_id: newRow.caller_id as string,
+            caller_name: callerName,
+          });
+        }
+      )
+      .subscribe();
+    return () => {
+      void channel.unsubscribe();
+    };
+  }, [currentUserId, supabase]);
+
+  const handleAcceptIncoming = async () => {
+    if (!incomingCall || !currentUserId) return;
+    setProcessingCall(true);
+    try {
+      await supabase
+        .from('calls')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', incomingCall.id);
+      router.push(
+        `/call/${incomingCall.id}?room=${encodeURIComponent(incomingCall.room_name)}&caller=${incomingCall.caller_id}&callee=${currentUserId}`
+      );
+    } catch (err) {
+      console.error('Chyba při přijmutí hovoru:', err);
+      setPlayerError('Nepodařilo se přijmout hovor.');
+    } finally {
+      setProcessingCall(false);
+      setIncomingCall(null);
+    }
+  };
+
+  const handleRejectIncoming = async () => {
+    if (!incomingCall || !currentUserId) {
+      setIncomingCall(null);
+      return;
+    }
+    setProcessingCall(true);
+    try {
+      await supabase.from('calls').update({ status: 'rejected' }).eq('id', incomingCall.id);
+      await sendNotificationSafe(supabase, {
+        user_id: incomingCall.caller_id,
+        type: 'missed_call',
+        title: 'Zmeškaný hovor',
+        body: profile?.display_name || 'Uživatel',
+        item_type: 'call',
+        item_id: incomingCall.id,
+      });
+    } catch (err) {
+      console.error('Chyba při odmítnutí hovoru:', err);
+    } finally {
+      setProcessingCall(false);
+      setIncomingCall(null);
+    }
+  };
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
