@@ -3088,7 +3088,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </button>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Pravý sloupec: akce */}
           <div className="space-y-4" id="profile-settings">
