@@ -3090,6 +3090,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
             </div>
           )}
 
+          {/* konec levého sloupce */}
+          </div>
+
           {/* Pravý sloupec: akce */}
           <div className="space-y-4" id="profile-settings">
             {canUpload && (
