@@ -587,14 +587,16 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setCollabFile(null);
       setShowCollabForm(false);
       setCollabsReload((prev) => prev + 1);
-      void sendNotificationSafe(supabase, {
-        user_id: profileId,
-        type: 'collab_created',
-        title: 'Nová žádost o spolupráci',
-        body: collabSubject.trim(),
-        item_type: 'collab_thread',
-        item_id: threadId,
-      });
+      if (profileId) {
+        void sendNotificationSafe(supabase, {
+          user_id: profileId,
+          type: 'collab_created',
+          title: 'Nová žádost o spolupráci',
+          body: collabSubject.trim(),
+          item_type: 'collab_thread',
+          item_id: threadId,
+        });
+      }
     } catch (err) {
       const message =
         err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
@@ -631,13 +633,15 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       if (error) throw error;
       setMessageBody('');
       setMessageSuccess('Zpráva odeslána.');
-      void sendNotificationSafe(supabase, {
-        user_id: profileId,
-        type: 'direct_message',
-        title: payload.from_name || 'Nová zpráva',
-        body: payload.body,
-        item_type: 'message',
-      });
+      if (profileId) {
+        void sendNotificationSafe(supabase, {
+          user_id: profileId,
+          type: 'direct_message',
+          title: payload.from_name || 'Nová zpráva',
+          body: payload.body,
+          item_type: 'message',
+        });
+      }
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessageError('Nepodařilo se odeslat zprávu.');
@@ -925,14 +929,16 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     setProcessingCall(true);
     try {
       await supabase.from('calls').update({ status: 'rejected' }).eq('id', incomingCall.id);
-      await sendNotificationSafe(supabase, {
-        user_id: incomingCall.caller_id,
-        type: 'missed_call',
-        title: 'Zmeškaný hovor',
-        body: profile?.display_name || 'Uživatel',
-        item_type: 'call',
-        item_id: incomingCall.id,
-      });
+      if (incomingCall.caller_id) {
+        await sendNotificationSafe(supabase, {
+          user_id: incomingCall.caller_id,
+          type: 'missed_call',
+          title: 'Zmeškaný hovor',
+          body: profile?.display_name || 'Uživatel',
+          item_type: 'call',
+          item_id: incomingCall.id,
+        });
+      }
     } catch (err) {
       console.error('Chyba při odmítnutí hovoru:', err);
     } finally {
@@ -966,27 +972,29 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .single();
       if (error) throw error;
       if (!data?.id) throw new Error('Hovor se nepodařilo založit.');
-      await sendNotificationSafe(supabase, {
-        user_id: profileId,
-        type: 'call_incoming',
-        title: 'Příchozí hovor',
-        body: profile?.display_name || 'Uživatel',
-        item_type: 'call',
-        item_id: data?.id,
-      });
-      setTimeout(async () => {
-        const { data: callRow } = await supabase.from('calls').select('status').eq('id', data?.id).maybeSingle();
-        if (callRow?.status === 'ringing') {
-          await sendNotificationSafe(supabase, {
-            user_id: profileId,
-            type: 'missed_call',
-            title: 'Zmeškaný hovor',
-            body: profile?.display_name || 'Uživatel',
-            item_type: 'call',
-            item_id: data?.id,
-          });
-        }
-      }, 10_000);
+      if (profileId) {
+        await sendNotificationSafe(supabase, {
+          user_id: profileId,
+          type: 'call_incoming',
+          title: 'Příchozí hovor',
+          body: profile?.display_name || 'Uživatel',
+          item_type: 'call',
+          item_id: data?.id,
+        });
+        setTimeout(async () => {
+          const { data: callRow } = await supabase.from('calls').select('status').eq('id', data?.id).maybeSingle();
+          if (callRow?.status === 'ringing') {
+            await sendNotificationSafe(supabase, {
+              user_id: profileId,
+              type: 'missed_call',
+              title: 'Zmeškaný hovor',
+              body: profile?.display_name || 'Uživatel',
+              item_type: 'call',
+              item_id: data?.id,
+            });
+          }
+        }, 10_000);
+      }
       router.push(`/call/${data?.id}?room=${encodeURIComponent(roomName)}&caller=${currentUserId}&callee=${profileId}`);
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
