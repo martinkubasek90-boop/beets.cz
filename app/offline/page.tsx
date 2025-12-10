@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import 'leaflet/dist/leaflet.css';
+import type { LatLngExpression } from 'leaflet';
 import { createClient } from '@/lib/supabase/client';
 
 type ProfilePoint = {
@@ -61,8 +62,8 @@ const jitterFromId = (id: string) => {
   return { lat: (rand() - 0.5) * 0.2, lng: (rand() - 0.5) * 0.3 };
 };
 
-const makeHex = (lat: number, lng: number, r = 0.4) => {
-  const coords = [];
+const makeHex = (lat: number, lng: number, r = 0.4): [number, number][] => {
+  const coords: [number, number][] = [];
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 3) * i + Math.PI / 6;
     coords.push([lat + r * Math.sin(angle), lng + r * Math.cos(angle)]);
@@ -115,7 +116,7 @@ export default function OfflinePage() {
       const regionMap: Record<string, RegionDef> = {};
       regions.forEach((r) => {
         const hex = makeHex(r.lat, r.lng, 0.45);
-        const polygon = L.polygon(hex, {
+        const polygon = L.polygon(hex as L.LatLngExpression[], {
           color: r.border,
           weight: 3,
           fillColor: r.color,
