@@ -459,17 +459,6 @@ export default function ProfileClient() {
       gpSetOnPrev(null);
     };
   }, [beatPlayerTracks, gpCurrent, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
-  const {
-    play: gpPlay,
-    toggle: gpToggle,
-    seek: gpSeek,
-    current: gpCurrent,
-    isPlaying: gpIsPlaying,
-    currentTime: gpTime,
-    duration: gpDuration,
-    setOnNext: gpSetOnNext,
-    setOnPrev: gpSetOnPrev,
-  } = useGlobalPlayer();
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
