@@ -245,9 +245,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const loadCollabs = async () => {
       if (!currentUserId || currentUserId !== profileId) {
         setCollabs([]);
-        setCollabsError('Spolupráce tohoto profilu jsou soukromé.');
-        return;
-      }
+        setCollabsError('Spolupráce tohoto profilu jsou soukromé. Žádost o spolupráci může poslat pouze registrovaný uživatel.');
+      return;
+    }
       const fields = `
         id,
         title,
@@ -374,7 +374,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const loadCollabs = useCallback(async () => {
     if (!currentUserId || currentUserId !== profileId) {
       setCollabs([]);
-      setCollabsError('Spolupráce tohoto profilu jsou soukromé.');
+      setCollabsError('Spolupráce tohoto profilu jsou soukromé. Žádost o spolupráci může poslat pouze registrovaný uživatel.');
       return;
     }
     const fields = `
