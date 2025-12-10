@@ -11,66 +11,46 @@ type ProfilePoint = {
   avatar_url?: string | null;
 };
 
-const cityPositions: Record<string, { x: number; y: number }> = {
+const regionPositions: Record<string, { x: number; y: number }> = {
   // Česko
-  praha: { x: 54, y: 50 },
-  brno: { x: 71, y: 70 },
-  ostrava: { x: 82, y: 46 },
-  plzen: { x: 44, y: 58 },
-  liberec: { x: 56, y: 28 },
-  olomouc: { x: 72, y: 55 },
-  hradec: { x: 61, y: 38 },
-  pardubice: { x: 62, y: 44 },
-  'ceske budejovice': { x: 55, y: 72 },
-  zlin: { x: 75, y: 68 },
-  karlovyvary: { x: 38, y: 50 },
-  usti: { x: 50, y: 32 },
-  chomutov: { x: 46, y: 40 },
-  teplice: { x: 49, y: 35 },
-  most: { x: 47, y: 37 },
-  litomerice: { x: 52, y: 36 },
-  jablonec: { x: 58, y: 30 },
-  jicin: { x: 59, y: 34 },
-  trutnov: { x: 62, y: 32 },
-  jihlava: { x: 63, y: 60 },
-  trebon: { x: 56, y: 75 },
-  tabor: { x: 57, y: 66 },
-  pribram: { x: 52, y: 58 },
-  kladno: { x: 51, y: 52 },
-  mlada: { x: 55, y: 45 },
-  kutnahora: { x: 58, y: 48 },
-  znojmo: { x: 66, y: 78 },
-  havirov: { x: 84, y: 48 },
-  karvina: { x: 86, y: 46 },
-  frydek: { x: 83, y: 50 },
-  opava: { x: 80, y: 45 },
-  prerov: { x: 73, y: 58 },
-  prostejov: { x: 71, y: 60 },
-  kromeriz: { x: 72, y: 63 },
-  ceskalipa: { x: 54, y: 30 },
+  hlavnimestopraha: { x: 54, y: 50 },
+  stredocesky: { x: 57, y: 55 },
+  jihocesky: { x: 55, y: 70 },
+  plzensky: { x: 45, y: 62 },
+  karlovarsky: { x: 40, y: 56 },
+  ustecky: { x: 50, y: 40 },
+  liberecky: { x: 56, y: 34 },
+  kralovehradecky: { x: 60, y: 40 },
+  pardubicky: { x: 62, y: 48 },
+  vysocina: { x: 60, y: 60 },
+  jihomoravsky: { x: 70, y: 72 },
+  olomoucky: { x: 72, y: 52 },
+  zlinsky: { x: 76, y: 60 },
+  moravskoslezsky: { x: 82, y: 50 },
   // Slovensko
-  bratislava: { x: 84, y: 78 },
-  kosice: { x: 94, y: 58 },
-  zilina: { x: 86, y: 64 },
-  nitra: { x: 86, y: 72 },
-  trnava: { x: 83, y: 74 },
-  presov: { x: 94, y: 54 },
-  'banska bystrica': { x: 86, y: 69 },
-  trencin: { x: 81, y: 68 },
-  poprad: { x: 92, y: 50 },
-  martin: { x: 87, y: 61 },
-  komarno: { x: 88, y: 78 },
-  prievidza: { x: 83, y: 66 },
+  bratislavsky: { x: 84, y: 78 },
+  trnavsky: { x: 82, y: 72 },
+  trenciansky: { x: 82, y: 64 },
+  nitriansky: { x: 86, y: 72 },
+  zilinsky: { x: 84, y: 60 },
+  banskobystricky: { x: 86, y: 66 },
+  presovsky: { x: 92, y: 56 },
+  kosicky: { x: 94, y: 60 },
 };
 
-function normalizeCity(city?: string | null) {
-  if (!city) return '';
-  return city.trim().toLowerCase();
+function normalizeRegion(region?: string | null) {
+  if (!region) return '';
+  return region
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/-/g, '');
 }
 
-// deterministický fallback pro libovolné město v rámci CZ/SK bounding boxu
-function hashCityToCoord(city: string) {
-  const norm = normalizeCity(city) || 'nezname';
+// deterministický fallback pro libovolný kraj v rámci CZ/SK bounding boxu
+function hashRegionToCoord(region: string) {
+  const norm = normalizeRegion(region) || 'nezname';
   let hash = 0;
   for (let i = 0; i < norm.length; i++) {
     hash = (hash * 31 + norm.charCodeAt(i)) >>> 0;
@@ -80,11 +60,11 @@ function hashCityToCoord(city: string) {
   return { x, y };
 }
 
-function resolveCityPosition(city?: string | null) {
-  const norm = normalizeCity(city);
-  if (norm && cityPositions[norm]) return cityPositions[norm];
+function resolveRegionPosition(region?: string | null) {
+  const norm = normalizeRegion(region);
+  if (norm && regionPositions[norm]) return regionPositions[norm];
   if (!norm) return { x: 52, y: 52 };
-  return hashCityToCoord(norm);
+  return hashRegionToCoord(norm);
 }
 
 export default function OfflinePage() {
@@ -100,16 +80,16 @@ export default function OfflinePage() {
       try {
         const { data, error: err } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url, city')
-          .not('city', 'is', null)
-          .not('city', 'eq', '')
+          .select('id, display_name, avatar_url, region')
+          .not('region', 'is', null)
+          .not('region', 'eq', '')
           .limit(200);
         if (err) throw err;
         const mapped =
           (data as any[] | null)?.map((p) => ({
             id: p.id as string,
             name: (p.display_name as string) || 'Bez jména',
-            city: p.city as string | null,
+            region: p.region as string | null,
             avatar_url: p.avatar_url as string | null,
           })) ?? [];
         setProfiles(mapped);
@@ -126,7 +106,7 @@ export default function OfflinePage() {
   const grouped = useMemo(() => {
     const map: Record<string, ProfilePoint[]> = {};
     profiles.forEach((p) => {
-      const key = normalizeCity(p.city) || 'nezname';
+      const key = normalizeRegion(p.region) || 'nezname';
       if (!map[key]) map[key] = [];
       map[key].push(p);
     });
@@ -156,7 +136,7 @@ export default function OfflinePage() {
             <div>
               <h2 className="text-lg font-semibold text-white">Mapa scény</h2>
               <p className="text-[12px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                {profiles.length} profilů s městem
+                {profiles.length} profilů s krajem
               </p>
             </div>
             {loading && <span className="text-[12px] text-[var(--mpc-muted)]">Načítám…</span>}
@@ -173,7 +153,7 @@ export default function OfflinePage() {
           >
             <div className="absolute inset-0 pointer-events-none" />
             {profiles.map((p) => {
-              const pos = resolveCityPosition(p.city);
+              const pos = resolveRegionPosition(p.region);
               const initials = p.name
                 .split(' ')
                 .map((s) => s[0])
@@ -191,7 +171,7 @@ export default function OfflinePage() {
                   </span>
                   <div className="max-w-[160px] truncate">
                     <div className="truncate text-white">{p.name}</div>
-                    {p.city && <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">{p.city}</div>}
+                    {p.region && <div className="text-[10px] uppercase tracking-[0.2em] text-white/70">{p.region}</div>}
                   </div>
                 </div>
               );
@@ -201,16 +181,18 @@ export default function OfflinePage() {
 
         <section className="rounded-2xl border border-white/10 bg-[var(--mpc-panel,#0b0f16)] p-5 shadow-[0_16px_34px_rgba(0,0,0,0.45)]">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">Podle města</h2>
+            <h2 className="text-lg font-semibold text-white">Podle kraje</h2>
             <span className="text-[12px] text-[var(--mpc-muted)]">Seřazeno abecedně</span>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {Object.entries(grouped)
               .sort(([a], [b]) => a.localeCompare(b))
-              .map(([city, list]) => (
-                <div key={city} className="rounded-xl border border-white/10 bg-black/30 p-3">
+              .map(([regionKey, list]) => {
+                const label = list[0]?.region || regionKey || 'Neznámé';
+                return (
+                <div key={regionKey} className="rounded-xl border border-white/10 bg-black/30 p-3">
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold uppercase tracking-[0.1em]">{city || 'Neznámé'}</span>
+                    <span className="text-sm font-semibold uppercase tracking-[0.1em]">{label}</span>
                     <span className="text-[12px] text-[var(--mpc-muted)]">{list.length} profilů</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -227,7 +209,8 @@ export default function OfflinePage() {
                     )}
                   </div>
                 </div>
-              ))}
+              );
+              })}
           </div>
         </section>
       </div>

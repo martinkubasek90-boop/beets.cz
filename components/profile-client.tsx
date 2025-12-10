@@ -16,7 +16,7 @@ type Profile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
-  city?: string | null;
+  region?: string | null;
   role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
 };
 
@@ -238,10 +238,10 @@ export default function ProfileClient() {
     bio: '',
     avatar_url: null,
     banner_url: null,
-    city: null,
+    region: null,
     role: 'creator',
   });
-  const [editCity, setEditCity] = useState<string>('');
+  const [editRegion, setEditRegion] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -527,7 +527,7 @@ export default function ProfileClient() {
 
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url, city, role')
+          .select('display_name, hardware, bio, avatar_url, banner_url, region, role')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -540,10 +540,10 @@ export default function ProfileClient() {
             bio: data.bio ?? '',
             avatar_url: data.avatar_url ?? null,
             banner_url: (data as any).banner_url ?? null,
-            city: (data as any).city ?? null,
+            region: (data as any).region ?? null,
             role: (data as any).role ?? 'creator',
           });
-          setEditCity((data as any).city ?? '');
+          setEditRegion((data as any).region ?? '');
         }
       } catch (err) {
         const message =
@@ -1123,6 +1123,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setError(null);
     setSuccess(null);
 
+    if (!editRegion.trim()) {
+      setError('Vyber prosím kraj.');
+      setSaving(false);
+      return;
+    }
+
     try {
       const {
         data: { user },
@@ -1143,7 +1149,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
             bio: profile.bio.trim() || null,
             avatar_url: profile.avatar_url,
             banner_url: profile.banner_url,
-            city: editCity.trim() || null,
+            region: editRegion.trim() || null,
             role: profile.role ?? 'creator',
           },
           { onConflict: 'id' }
@@ -1151,7 +1157,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
       if (upsertError) throw upsertError;
 
-      setProfile((prev) => ({ ...prev, city: editCity.trim() || null }));
+      setProfile((prev) => ({ ...prev, region: editRegion.trim() || null }));
       setSuccess('Profil byl uložen.');
     } catch (err) {
       const message =
@@ -3184,15 +3190,38 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                        Město
+                        Kraj (povinné)
                       </label>
-                      <input
-                        type="text"
-                        value={editCity}
-                        onChange={(e) => setEditCity(e.target.value)}
+                      <select
+                        value={editRegion}
+                        onChange={(e) => setEditRegion(e.target.value)}
                         className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="Praha, Brno, Bratislava…"
-                      />
+                        required
+                      >
+                        <option value="">Vyber kraj…</option>
+                        <option value="Hlavní město Praha">Hlavní město Praha</option>
+                        <option value="Středočeský kraj">Středočeský kraj</option>
+                        <option value="Jihočeský kraj">Jihočeský kraj</option>
+                        <option value="Plzeňský kraj">Plzeňský kraj</option>
+                        <option value="Karlovarský kraj">Karlovarský kraj</option>
+                        <option value="Ústecký kraj">Ústecký kraj</option>
+                        <option value="Liberecký kraj">Liberecký kraj</option>
+                        <option value="Královéhradecký kraj">Královéhradecký kraj</option>
+                        <option value="Pardubický kraj">Pardubický kraj</option>
+                        <option value="Kraj Vysočina">Kraj Vysočina</option>
+                        <option value="Jihomoravský kraj">Jihomoravský kraj</option>
+                        <option value="Olomoucký kraj">Olomoucký kraj</option>
+                        <option value="Zlínský kraj">Zlínský kraj</option>
+                        <option value="Moravskoslezský kraj">Moravskoslezský kraj</option>
+                        <option value="Bratislavský kraj">Bratislavský kraj</option>
+                        <option value="Trnavský kraj">Trnavský kraj</option>
+                        <option value="Trenčiansky kraj">Trenčiansky kraj</option>
+                        <option value="Nitriansky kraj">Nitriansky kraj</option>
+                        <option value="Žilinský kraj">Žilinský kraj</option>
+                        <option value="Banskobystrický kraj">Banskobystrický kraj</option>
+                        <option value="Prešovský kraj">Prešovský kraj</option>
+                        <option value="Košický kraj">Košický kraj</option>
+                      </select>
                     </div>
 
                     <div>
