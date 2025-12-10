@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Script from 'next/script';
 import { createClient } from '@/lib/supabase/client';
 
@@ -18,6 +18,7 @@ const domain = process.env.NEXT_PUBLIC_JITSI_DOMAIN || 'meet.jit.si';
 export default function CallPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [call, setCall] = useState<CallRecord | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,37 +27,57 @@ export default function CallPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const load = async () => {
+      const roomFromUrl = searchParams.get('room');
+      const callerFromUrl = searchParams.get('caller');
+      const calleeFromUrl = searchParams.get('callee');
+
       const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
-        setError('Musíš být přihlášen.');
-        return;
+      const authedUser = auth.user;
+      if (authedUser) {
+        setUserId(authedUser.id);
       }
-      setUserId(auth.user.id);
+
       const { data, error: err } = await supabase
         .from('calls')
         .select('id,room_name,caller_id,callee_id,status')
         .eq('id', params.id)
-        .single();
-      if (err || !data) {
-        setError('Hovor nebyl nalezen.');
+        .maybeSingle();
+
+      if (data) {
+        if (authedUser && data.caller_id !== authedUser.id && data.callee_id !== authedUser.id) {
+          setError('K tomuto hovoru nemáš přístup.');
+          return;
+        }
+        if (authedUser && data.status === 'ringing' && data.callee_id === authedUser.id) {
+          await supabase
+            .from('calls')
+            .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+            .eq('id', data.id);
+          data.status = 'accepted';
+        }
+        setCall(data as CallRecord);
         return;
       }
-      if (data.caller_id !== auth.user.id && data.callee_id !== auth.user.id) {
-        setError('K tomuto hovoru nemáš přístup.');
-        return;
+
+      // Fallback: pokud se nenašel záznam, ale v URL je room+caller+callee a aktuální user (pokud je) je účastník
+      if (roomFromUrl && callerFromUrl && calleeFromUrl) {
+        if (!authedUser || authedUser.id === callerFromUrl || authedUser.id === calleeFromUrl) {
+          setCall({
+            id: params.id,
+            room_name: roomFromUrl,
+            caller_id: callerFromUrl,
+            callee_id: calleeFromUrl,
+            status: 'accepted',
+          });
+          return;
+        }
       }
-      // Pokud callee otevírá stále zvonící hovor, přijmi ho
-      if (data.status === 'ringing' && data.callee_id === auth.user.id) {
-        await supabase
-          .from('calls')
-          .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-          .eq('id', data.id);
-        data.status = 'accepted';
-      }
-      setCall(data as CallRecord);
+
+      const msg = err?.message ? `Hovor nebyl nalezen: ${err.message}` : 'Hovor nebyl nalezen.';
+      setError(msg);
     };
     void load();
-  }, [params.id, supabase]);
+  }, [params.id, searchParams, supabase]);
 
   // Aktualizuj status na ended při zavření
   useEffect(() => {
