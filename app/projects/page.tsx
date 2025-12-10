@@ -40,7 +40,7 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [authorFilter, setAuthorFilter] = useState<string>("all");
 
-  const { play, toggle, seek, current, isPlaying, currentTime, duration } = useGlobalPlayer();
+  const { play, toggle, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));

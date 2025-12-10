@@ -1028,15 +1028,17 @@ export default function Home() {
             <p className="max-w-3xl text-[var(--mpc-muted)]">
               {t(
                 'hero.subtitle',
-                'Platforma pro beatmakery. Nahrávej, sdílej akapely, domlouvej spolupráce. Bez reklam a nesmyslů, jen hudba.'
+                'Platforma pro CZ/SK beatmakery. Nahrávej instrumentály a domlouvej spolupráce.'
               )}
+              <br />
+              {t('hero.subtitle2', 'Bez reklam a nesmyslů, jen hudba.')}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 href="/komunita"
                 className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-6 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
               >
-                Více o komunitě
+                Více o platformě
               </Link>
             </div>
           </div>
