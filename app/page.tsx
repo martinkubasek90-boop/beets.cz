@@ -1264,7 +1264,8 @@ export default function Home() {
             </div>
           )}
 
-          {isLoggedIn && (
+          {/* Blog přidání skryto */}
+          {false && isLoggedIn && (
             <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_12px_28px_rgba(0,0,0,0.35)] backdrop-blur space-y-4">
               <div className="flex items-center justify-center">
                 <button
