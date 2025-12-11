@@ -32,54 +32,59 @@ export default function CallPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const load = async () => {
-      const roomFromUrl = searchParams.get('room');
-      const callerFromUrl = searchParams.get('caller');
-      const calleeFromUrl = searchParams.get('callee');
+      try {
+        const roomFromUrl = searchParams.get('room');
+        const callerFromUrl = searchParams.get('caller');
+        const calleeFromUrl = searchParams.get('callee');
 
-      const { data: auth } = await supabase.auth.getUser();
-      const authedUser = auth.user;
-      if (authedUser) {
-        setUserId(authedUser.id);
-      }
+        const { data: auth } = await supabase.auth.getUser();
+        const authedUser = auth.user;
+        if (authedUser) {
+          setUserId(authedUser.id);
+        }
 
-      const { data, error: err } = await supabase
-        .from('calls')
-        .select('id,room_name,caller_id,callee_id,status')
-        .eq('id', params.id)
-        .maybeSingle();
+        const { data, error: err } = await supabase
+          .from('calls')
+          .select('id,room_name,caller_id,callee_id,status')
+          .eq('id', params.id)
+          .maybeSingle();
 
-      if (data) {
-        if (authedUser && data.caller_id !== authedUser.id && data.callee_id !== authedUser.id) {
-          setError('K tomuto hovoru nemáš přístup.');
+        if (data) {
+          if (authedUser && data.caller_id !== authedUser.id && data.callee_id !== authedUser.id) {
+            setError('K tomuto hovoru nemáš přístup.');
+            return;
+          }
+          if (authedUser && data.status === 'ringing' && data.callee_id === authedUser.id) {
+            await supabase
+              .from('calls')
+              .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+              .eq('id', data.id);
+            data.status = 'accepted';
+          }
+          setCall(data as CallRecord);
           return;
         }
-        if (authedUser && data.status === 'ringing' && data.callee_id === authedUser.id) {
-          await supabase
-            .from('calls')
-            .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-            .eq('id', data.id);
-          data.status = 'accepted';
-        }
-        setCall(data as CallRecord);
-        return;
-      }
 
-      // Fallback: pokud se nenašel záznam, ale v URL je room+caller+callee a aktuální user (pokud je) je účastník
-      if (roomFromUrl && callerFromUrl && calleeFromUrl) {
-        if (!authedUser || authedUser.id === callerFromUrl || authedUser.id === calleeFromUrl) {
-          setCall({
-            id: params.id,
-            room_name: roomFromUrl,
-            caller_id: callerFromUrl,
-            callee_id: calleeFromUrl,
-            status: 'accepted',
-          });
-          return;
+        // Fallback: pokud se nenašel záznam, ale v URL je room+caller+callee a aktuální user (pokud je) je účastník
+        if (roomFromUrl && callerFromUrl && calleeFromUrl) {
+          if (!authedUser || authedUser.id === callerFromUrl || authedUser.id === calleeFromUrl) {
+            setCall({
+              id: params.id,
+              room_name: roomFromUrl,
+              caller_id: callerFromUrl,
+              callee_id: calleeFromUrl,
+              status: 'accepted',
+            });
+            return;
+          }
         }
-      }
 
-      const msg = err?.message ? `Hovor nebyl nalezen: ${err.message}` : 'Hovor nebyl nalezen.';
-      setError(msg);
+        const msg = err?.message ? `Hovor nebyl nalezen: ${err.message}` : 'Hovor nebyl nalezen.';
+        setError(msg);
+      } catch (e: any) {
+        console.error('Chyba při načítání hovoru:', e);
+        setError('Nepodařilo se načíst hovor. Zkus to prosím znovu.');
+      }
     };
     void load();
   }, [params.id, searchParams, supabase]);
