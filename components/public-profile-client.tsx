@@ -1032,8 +1032,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.15),transparent_30%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-10 md:py-12">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative h-24 w-24 overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] shadow-[0_10px_30px_rgba(0,0,0,0.35)] md:h-28 md:w-28">
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+              <div className="relative h-20 w-20 overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] shadow-[0_10px_30px_rgba(0,0,0,0.35)] sm:h-24 sm:w-24 md:h-28 md:w-28">
                 {profile?.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -1049,7 +1049,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               </div>
               <div className="space-y-2">
                 <div className="flex flex-col gap-2">
-                  <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/75 px-4 py-2 text-white shadow-[0_8px_18px_rgba(0,0,0,0.35)] backdrop-blur">
+                  <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-black/70 bg-black/75 px-4 py-2 text-white shadow-[0_8px_18px_rgba(0,0,0,0.35)] backdrop-blur sm:justify-start">
                     <span className="text-2xl font-black uppercase tracking-[0.12em] md:text-3xl">
                       {heroName}
                     </span>
@@ -1058,7 +1058,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       <span>{statusLabel}</span>
                     </div>
                   </div>
-                  <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
+                  <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur sm:justify-start">
                     <span className="text-[13px] font-semibold tracking-[0.08em]">
                       {t('profile.hardware', 'Hardware')}:
                     </span>
@@ -1066,7 +1066,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       {profile?.hardware || t('profile.noHardware', 'Profil uživatele platformy.')}
                     </span>
                   </div>
-                  <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
+                  <div className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur sm:justify-start">
                     <span className="text-[13px] font-semibold tracking-[0.08em]">
                       {t('profile.bioLabel', 'Bio')}:
                     </span>
@@ -1087,8 +1087,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
       
       <section className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-        <div className="mb-4 flex flex-wrap items-center gap-6 text-sm uppercase tracking-[0.15em] text-[var(--mpc-muted)] border-b border-[var(--mpc-dark)] pb-3">
-          <div className="flex items-center gap-4">
+        <div className="mb-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] text-[var(--mpc-muted)] border-b border-[var(--mpc-dark)] pb-3 md:text-sm">
+          <div className="flex items-center gap-3">
             <Link
               href="/"
               className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
