@@ -212,7 +212,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           .eq('id', profileId)
           .maybeSingle();
 
-        let profileData = profileDataFull;
+        let profileData = profileDataFull as any;
         if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
           const { data: fallback, error: fbError } = await supabase
             .from('profiles')
@@ -220,7 +220,15 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             .eq('id', profileId)
             .maybeSingle();
           if (fbError) throw fbError;
-          profileData = fallback;
+          profileData = fallback
+            ? {
+                ...fallback,
+                seeking_signals: [],
+                offering_signals: [],
+                seeking_custom: null,
+                offering_custom: null,
+              }
+            : null;
         } else if (profileErr) {
           throw profileErr;
         }
