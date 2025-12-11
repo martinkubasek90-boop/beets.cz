@@ -286,6 +286,9 @@ export default function ProfileClient() {
   const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [myAccessRequests, setMyAccessRequests] = useState<ProjectAccessRequest[]>([]);
+  const [myAccessRequestsError, setMyAccessRequestsError] = useState<string | null>(null);
+  const [myAccessRequestsLoading, setMyAccessRequestsLoading] = useState(false);
   const [projectGrants, setProjectGrants] = useState<Record<string, ProjectAccessGrant[]>>({});
   const [projectGrantsError, setProjectGrantsError] = useState<string | null>(null);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
@@ -1014,11 +1017,56 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
 
+    const loadMyAccessRequests = async () => {
+      if (!userId) return;
+      setMyAccessRequestsLoading(true);
+      setMyAccessRequestsError(null);
+      try {
+        const { data, error } = await supabase
+          .from('project_access_requests')
+          .select('id, project_id, status, message, created_at, projects!inner(id,title,user_id)')
+          .eq('requester_id', userId)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+
+        const projIds = Array.from(new Set(((data as any[]) ?? []).map((r) => r.project_id).filter(Boolean) as string[]));
+        let nameMap: Record<string, string> = {};
+        if (projIds.length) {
+          const { data: projects, error: projErr } = await supabase
+            .from('projects')
+            .select('id,title')
+            .in('id', projIds);
+          if (projErr) throw projErr;
+          nameMap = Object.fromEntries((projects as any[]).map((p) => [p.id, p.title || 'Projekt']));
+        }
+
+        const mapped: ProjectAccessRequest[] =
+          (data as any[]).map((row) => ({
+            id: row.id,
+            project_id: row.project_id,
+            status: row.status,
+            message: row.message,
+            requester_id: userId,
+            requester_name: profile.display_name || null,
+            project_title: nameMap[row.project_id] || row.projects?.title || null,
+            created_at: row.created_at,
+          })) ?? [];
+        setMyAccessRequests(mapped);
+      } catch (err) {
+        console.error('Chyba načítání mých žádostí:', err);
+        setMyAccessRequests([]);
+        setMyAccessRequestsError('Nepodařilo se načíst tvoje žádosti.');
+      } finally {
+        setMyAccessRequestsLoading(false);
+      }
+    };
+
     loadBeatsProjectsCollabs();
     loadMessages();
     loadMyPosts();
     loadMyForum();
     loadProjectRequests();
+    loadMyAccessRequests();
 
     const loadCollabThreads = async () => {
       setCollabThreadsLoading(true);
@@ -3038,6 +3086,42 @@ function handleFieldChange(field: keyof Profile, value: string) {
               )}
             </div>
             </>
+            )}
+            {isMcOnly && (
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje žádosti o přístup</h3>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      Přehled toho, kam ses hlásil
+                    </p>
+                  </div>
+                </div>
+                {myAccessRequestsLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám žádosti…</p>}
+                {myAccessRequestsError && (
+                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+                    {myAccessRequestsError}
+                  </div>
+                )}
+                {myAccessRequests.length === 0 ? (
+                  <p className="text-[12px] text-[var(--mpc-muted)]">Zatím jsi neposlal žádnou žádost.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {myAccessRequests.map((req) => (
+                      <div key={req.id} className="flex flex-col gap-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold">{req.project_title || req.project_id}</p>
+                            <p className="text-[11px] text-[var(--mpc-muted)]">Status: {req.status}</p>
+                          </div>
+                          <p className="text-[11px] text-[var(--mpc-muted)]">{formatRelativeTime(req.created_at)}</p>
+                        </div>
+                        {req.message && <p className="text-[12px] text-[var(--mpc-light)]">„{req.message}“</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="collabs">
               <div className="mb-4 flex items-center justify-between">
