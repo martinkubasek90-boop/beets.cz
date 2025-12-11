@@ -90,17 +90,17 @@ export function MainNav() {
     };
   }, [supabase]);
 
-  const acceptCall = async () => {
+  const acceptCall = () => {
     if (!incomingCall) return;
-    try {
-      await supabase.from('calls').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', incomingCall.id);
-    } catch (err) {
-      console.error('Chyba při přijetí hovoru:', err);
-    } finally {
-      window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
-      setIncomingCall(null);
-      setCallerName(null);
-    }
+    // Otevři nejdřív okno (mobilní prohlížeče blokují popup po await)
+    window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
+    void supabase
+      .from('calls')
+      .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+      .eq('id', incomingCall.id)
+      .catch((err) => console.error('Chyba při přijetí hovoru:', err));
+    setIncomingCall(null);
+    setCallerName(null);
   };
 
   const declineCall = async () => {

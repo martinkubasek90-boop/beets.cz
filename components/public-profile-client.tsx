@@ -995,6 +995,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     setStartingCall(true);
     try {
       const roomName = buildRoomName(profileId, currentUserId);
+      // Otevřeme okno hned (kvůli mobilům), zbytek dořešíme na pozadí
+      const url = `https://meet.jit.si/${roomName}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
       const { data, error } = await supabase
         .from('calls')
         .insert({
@@ -1006,8 +1009,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .select('id')
         .single();
       if (error) throw error;
-      const url = `https://meet.jit.si/${roomName}`;
-      window.open(url, '_blank', 'noopener,noreferrer');
       // Pošli notifikaci příjemci
       await sendNotificationSafe(supabase, {
         user_id: profileId,
