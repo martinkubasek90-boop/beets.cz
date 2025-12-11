@@ -168,14 +168,22 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const derivedItemType =
     typeof current?.id === "string" && String(current.id).startsWith("project-") ? "project" : "beat";
   const fireItemId = current ? String(current.id) : null;
+  const formatTime = (sec: number) => {
+    if (!sec || Number.isNaN(sec)) return "0:00";
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60)
+      .toString()
+      .padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
   return (
     <Ctx.Provider value={value}>
       {children}
       {current && (
         <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/85 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-4 py-3 text-sm">
-            <div className="flex items-center gap-3">
+          <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-3 py-3 text-sm sm:flex-row sm:items-center sm:gap-4 sm:px-4">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               {current.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -198,7 +206,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 <p className="text-[11px] text-[var(--mpc-muted)]">{current.artist}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full justify-center sm:w-auto sm:justify-start">
               <button
                 onClick={() => onPrevRef.current?.()}
                 disabled={!onPrevRef.current}
@@ -221,12 +229,12 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
               </button>
               <button
                 onClick={pause}
-                className="text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
+                className="hidden text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white sm:inline"
               >
                 Stop
               </button>
             </div>
-            <div className="flex-1 min-w-[220px]">
+            <div className="flex-1 min-w-[220px] w-full">
               <div
                 className="h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
                 onClick={(e) => {
@@ -240,8 +248,8 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 />
               </div>
               <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
-                <span>{Math.floor(currentTime)} s</span>
-                <span>{duration ? Math.floor(duration) : "--"} s</span>
+                <span>{formatTime(currentTime)}</span>
+                <span>{duration ? formatTime(duration) : "--"}</span>
               </div>
             </div>
           </div>

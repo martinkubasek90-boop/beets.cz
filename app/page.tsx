@@ -1028,8 +1028,8 @@ export default function Home() {
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
             </Link>
           </nav>
-          <div className="flex items-center gap-3 text-right">
-            <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-[var(--mpc-muted)]">
+          <div className="flex items-center gap-2 text-right flex-wrap justify-end">
+            <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-[var(--mpc-muted)]">
               <button
                 onClick={() => setLang('cs')}
                 className={`rounded-full px-2 py-1 ${lang === 'cs' ? 'bg-[var(--mpc-accent)] text-white' : 'hover:text-white'}`}
@@ -1075,11 +1075,11 @@ export default function Home() {
           }}
         >
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_85%,rgba(243,116,51,0.28),rgba(243,116,51,0)_40%)]" />
-          <div className="relative flex flex-col items-center gap-4 text-center">
-            <h1 className="font-['Space_Grotesk'] text-[clamp(2rem,3vw+1rem,3.4rem)] font-black uppercase leading-tight tracking-[0.08em] text-white">
+            <div className="relative flex flex-col items-center gap-3 text-center sm:gap-4">
+            <h1 className="font-['Space_Grotesk'] text-[2.2rem] sm:text-[clamp(2rem,3vw+1rem,3.4rem)] font-black uppercase leading-tight tracking-[0.08em] text-white">
               {t('hero.title', 'Beets.cz')}
             </h1>
-            <p className="max-w-3xl text-[var(--mpc-muted)]">
+            <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {subtitleCleaned}
               <br />
               {t('hero.subtitle2', 'Bez reklam a nesmyslů, jen hudba.')}
@@ -1087,7 +1087,7 @@ export default function Home() {
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 href="/komunita"
-                className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-6 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
+                className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
               >
                 Více o platformě
               </Link>
@@ -1615,11 +1615,11 @@ export default function Home() {
               <span>⚠</span> {beatsError}
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
             {visibleBeats.map((beat) => (
               <div
                 key={beat.id}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto"
               >
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
