@@ -97,8 +97,7 @@ export function MainNav() {
     void supabase
       .from('calls')
       .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-      .eq('id', incomingCall.id)
-      .catch((err) => console.error('Chyba při přijetí hovoru:', err));
+      .eq('id', incomingCall.id);
     setIncomingCall(null);
     setCallerName(null);
   };
