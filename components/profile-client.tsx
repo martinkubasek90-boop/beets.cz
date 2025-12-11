@@ -496,9 +496,9 @@ export default function ProfileClient() {
       }
     };
 
-    gpSetOnNext(() => handleNext);
-    gpSetOnPrev(() => handlePrev);
-    gpSetOnEnded(() => handleNext);
+    gpSetOnNext(handleNext);
+    gpSetOnPrev(handlePrev);
+    gpSetOnEnded(handleNext);
 
     return () => {
       gpSetOnNext(null);
