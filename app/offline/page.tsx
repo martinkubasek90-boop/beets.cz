@@ -61,8 +61,8 @@ const jitterFromId = (id: string) => {
   return { lat: (rand() - 0.5) * 0.2, lng: (rand() - 0.5) * 0.3 };
 };
 
-const makeHex = (lat: number, lng: number, r = 0.4) => {
-  const coords = [];
+const makeHex = (lat: number, lng: number, r = 0.4): [number, number][] => {
+  const coords: [number, number][] = [];
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI / 3) * i + Math.PI / 6;
     coords.push([lat + r * Math.sin(angle), lng + r * Math.cos(angle)]);
