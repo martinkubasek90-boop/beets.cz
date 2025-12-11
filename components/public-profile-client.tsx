@@ -820,6 +820,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   useEffect(() => {
     if (!setOnNext || !setOnPrev || !setOnEnded) return;
+    if (currentTrack?.item_type === 'project' && projectQueueRef.current?.projectId === currentTrack?.meta?.projectId) {
+      return;
+    }
     const cycleTracks = (items: CurrentTrack[], direction: 1 | -1) => {
       if (!items.length) return;
       const currentId = currentTrack?.id;

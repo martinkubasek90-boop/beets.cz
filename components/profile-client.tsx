@@ -3461,11 +3461,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
             </div>
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
-              {!blogFormOpen && (
-                <div className="text-center text-[11px] text-[var(--mpc-muted)]">
-                  Formulář pro článek otevřeš tlačítkem výše v sekci Moje články.
-                </div>
-              )}
               {blogFormOpen && (
                 <form className="space-y-3" onSubmit={handleCreateBlogPost}>
                   <div className="grid gap-3 md:grid-cols-2">
