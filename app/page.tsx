@@ -1393,7 +1393,7 @@ export default function Home() {
           <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
             <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Video</h2>
           </div>
-          <div className="mx-auto flex w-[80%] max-w-5xl flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)]">
+          <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] sm:w-[90%] md:w-[80%]">
             <div className="relative w-full" style={{ paddingTop: '39.375%' }}>
               <iframe
                 key={videoItems[videoIndex].id}
