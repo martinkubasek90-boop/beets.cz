@@ -176,7 +176,7 @@ export default function ProjectsPage() {
   }, [projectsVisible, search, authorFilter]);
 
   const handlePlay = (project: Project, track: ProjectTrack, idx: number) => {
-    if (!track.url) return;
+    if (!track.url || !setOnNext || !setOnPrev || !setOnEnded) return;
     const tracks = (project.tracks_json || []).map((t: any, i: number) => ({ track: t as ProjectTrack, idx: i })).filter((t) => t.track?.url);
     const playFromQueue = (targetIdx: number, queue: { track: ProjectTrack; idx: number }[]) => {
       const item = queue[targetIdx];
