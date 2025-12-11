@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Script from "next/script";
-import { NotificationBell } from "@/components/notification-bell";
 import { GlobalPlayerProvider } from "@/components/global-player-provider";
 import "./globals.css";
 
@@ -42,11 +41,6 @@ export default function RootLayout({
         >
           <GlobalPlayerProvider>
             <div className="relative min-h-screen pb-24">
-              <div className="pointer-events-none fixed right-4 top-4 z-40">
-                <div className="pointer-events-auto">
-                  <NotificationBell />
-                </div>
-              </div>
               {children}
             </div>
           </GlobalPlayerProvider>
