@@ -42,6 +42,7 @@ type AcapellaItem = {
   mood: string | null;
   audio_url: string | null;
   cover_url?: string | null;
+  access_mode?: 'public' | 'request' | 'private' | null;
 };
 
 type ProjectItem = {
@@ -403,6 +404,17 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [openAcapellaMenuId, setOpenAcapellaMenuId] = useState<number | null>(null);
+  const [editingAcapellaId, setEditingAcapellaId] = useState<number | null>(null);
+  const [editAcapellaTitle, setEditAcapellaTitle] = useState('');
+  const [editAcapellaBpm, setEditAcapellaBpm] = useState('');
+  const [editAcapellaMood, setEditAcapellaMood] = useState('');
+  const [editAcapellaCoverUrl, setEditAcapellaCoverUrl] = useState('');
+  const [editAcapellaCoverFile, setEditAcapellaCoverFile] = useState<File | null>(null);
+  const [editAcapellaAccess, setEditAcapellaAccess] = useState<'public' | 'request' | 'private'>('public');
+  const [acapellaSaving, setAcapellaSaving] = useState(false);
+  const [deletingAcapellaId, setDeletingAcapellaId] = useState<number | null>(null);
+  const [updatingAcapellaAccessId, setUpdatingAcapellaAccessId] = useState<number | null>(null);
   const [tabsOpen, setTabsOpen] = useState(false);
   const {
     play: gpPlay,
@@ -780,7 +792,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (currentRole === 'mc') {
         const { data, error } = await supabase
           .from('acapellas')
-          .select('id, title, bpm, mood, audio_url, cover_url')
+          .select('id, title, bpm, mood, audio_url, cover_url, access_mode')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
@@ -1484,6 +1496,102 @@ function handleFieldChange(field: keyof Profile, value: string) {
       item_type: 'acapella',
     });
   }
+
+  function startEditAcapella(item: AcapellaItem) {
+    setEditingAcapellaId(item.id);
+    setEditAcapellaTitle(item.title || '');
+    setEditAcapellaBpm(item.bpm ? String(item.bpm) : '');
+    setEditAcapellaMood(item.mood || '');
+    setEditAcapellaCoverUrl(item.cover_url || '');
+    setEditAcapellaCoverFile(null);
+    setEditAcapellaAccess((item.access_mode as any) || 'public');
+    setOpenAcapellaMenuId(null);
+  }
+
+  async function handleSaveAcapella() {
+    if (!editingAcapellaId || !userId) return;
+    setAcapellaSaving(true);
+    try {
+      let coverUrl = editAcapellaCoverUrl.trim() || null;
+      if (editAcapellaCoverFile) {
+        const safe = editAcapellaCoverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const path = `${userId}/acapellas/covers/${Date.now()}-${safe}`;
+        const { error: uploadErr } = await supabase.storage.from('acapella_covers').upload(path, editAcapellaCoverFile, { upsert: true });
+        if (uploadErr) throw uploadErr;
+        const { data: pub } = supabase.storage.from('acapella_covers').getPublicUrl(path);
+        coverUrl = pub.publicUrl;
+      }
+
+      const payload: Partial<AcapellaItem> = {
+        title: editAcapellaTitle.trim() || 'Untitled',
+        bpm: editAcapellaBpm ? Number(editAcapellaBpm) : null,
+        mood: editAcapellaMood.trim() || null,
+        cover_url: coverUrl,
+        access_mode: editAcapellaAccess,
+      };
+
+      const { error } = await supabase
+        .from('acapellas')
+        .update(payload)
+        .eq('id', editingAcapellaId)
+        .eq('user_id', userId);
+      if (error) throw error;
+
+      setAcapellas((prev) =>
+        prev.map((a) =>
+          a.id === editingAcapellaId
+            ? { ...a, ...payload }
+            : a
+        )
+      );
+      setEditingAcapellaId(null);
+      setEditAcapellaCoverFile(null);
+    } catch (err) {
+      console.error('Chyba při ukládání akapely:', err);
+      setPlayerMessage('Nepodařilo se uložit akapelu.');
+    } finally {
+      setAcapellaSaving(false);
+    }
+  }
+
+  async function handleDeleteAcapella(id: number) {
+    if (!userId || !confirm('Opravdu smazat tuto akapelu?')) return;
+    setDeletingAcapellaId(id);
+    try {
+      const { error } = await supabase.from('acapellas').delete().eq('id', id).eq('user_id', userId);
+      if (error) throw error;
+      setAcapellas((prev) => prev.filter((a) => a.id !== id));
+      if (editingAcapellaId === id) {
+        setEditingAcapellaId(null);
+      }
+      setOpenAcapellaMenuId(null);
+    } catch (err) {
+      console.error('Chyba při mazání akapely:', err);
+      setPlayerMessage('Nepodařilo se smazat akapelu.');
+    } finally {
+      setDeletingAcapellaId(null);
+    }
+  }
+
+  const handleUpdateAcapellaAccess = async (id: number, mode: 'public' | 'request' | 'private') => {
+    if (!userId) return;
+    setUpdatingAcapellaAccessId(id);
+    try {
+      const { error } = await supabase
+        .from('acapellas')
+        .update({ access_mode: mode })
+        .eq('id', id)
+        .eq('user_id', userId);
+      if (error) throw error;
+      setAcapellas((prev) => prev.map((a) => (a.id === id ? { ...a, access_mode: mode } : a)));
+      setOpenAcapellaMenuId(null);
+    } catch (err) {
+      console.error('Chyba při změně přístupu akapely:', err);
+      setPlayerMessage('Nepodařilo se uložit přístup akapely.');
+    } finally {
+      setUpdatingAcapellaAccessId(null);
+    }
+  };
 
   async function handleDeleteBeat(id: number) {
     if (!confirm('Opravdu smazat tento beat?')) return;
@@ -2388,6 +2496,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               <p className="text-[12px] text-[var(--mpc-muted)]">
                                 {item.bpm ? `${item.bpm} BPM` : '—'} · {item.mood || '—'}
                               </p>
+                              <div className="mt-1 flex items-center gap-2 text-[10px]">
+                                <span
+                                  className={`rounded-full border px-2 py-[2px] uppercase tracking-[0.12em] ${
+                                    item.access_mode === 'request'
+                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                      : item.access_mode === 'private'
+                                        ? 'border-red-500/30 bg-red-500/10 text-red-100'
+                                        : 'border-white/15 bg-white/5 text-[var(--mpc-muted)]'
+                                  }`}
+                                >
+                                  {item.access_mode === 'request'
+                                    ? 'Na žádost'
+                                    : item.access_mode === 'private'
+                                      ? 'Soukromá'
+                                      : 'Veřejná'}
+                                </span>
+                                {updatingAcapellaAccessId === item.id && (
+                                  <span className="text-[var(--mpc-accent)]">Ukládám…</span>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-2">
                               <button
@@ -2399,8 +2527,140 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               >
                                 {isCurrent && gpIsPlaying ? '▮▮' : '▶'}
                               </button>
+                              <div className="relative">
+                                <button
+                                  onClick={() =>
+                                    setOpenAcapellaMenuId((prev) => (prev === item.id ? null : item.id))
+                                  }
+                                  className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                >
+                                  •••
+                                </button>
+                                {openAcapellaMenuId === item.id && (
+                                  <div className="absolute right-0 top-10 z-20 min-w-[170px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+                                    <button
+                                      onClick={() => startEditAcapella(item)}
+                                      className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
+                                    >
+                                      Upravit akapelu
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleUpdateAcapellaAccess(
+                                          item.id,
+                                          item.access_mode === 'request' ? 'public' : 'request'
+                                        )
+                                      }
+                                      disabled={updatingAcapellaAccessId === item.id}
+                                      className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] disabled:opacity-60"
+                                    >
+                                      {item.access_mode === 'request' ? 'Zpřístupnit veřejně' : 'Přístup na žádost'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteAcapella(item.id)}
+                                      disabled={deletingAcapellaId === item.id}
+                                      className="block w-full px-3 py-2 text-left text-red-400 hover:bg-[var(--mpc-deck)] disabled:opacity-60"
+                                    >
+                                      {deletingAcapellaId === item.id ? 'Mažu…' : 'Smazat akapelu'}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          {editingAcapellaId === item.id && (
+                            <div className="mt-3 space-y-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-3">
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    Název
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editAcapellaTitle}
+                                    onChange={(e) => setEditAcapellaTitle(e.target.value)}
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    BPM
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={editAcapellaBpm}
+                                    onChange={(e) => setEditAcapellaBpm(e.target.value)}
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    Mood
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editAcapellaMood}
+                                    onChange={(e) => setEditAcapellaMood(e.target.value)}
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    Cover URL
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editAcapellaCoverUrl}
+                                    onChange={(e) => setEditAcapellaCoverUrl(e.target.value)}
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    Nahrát nový cover
+                                  </label>
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={(e) => setEditAcapellaCoverFile(e.target.files?.[0] ?? null)}
+                                    className="mt-1 w-full text-[12px] text-[var(--mpc-light)]"
+                                  />
+                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Nahraje se do bucketu akapel.</p>
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                    Přístup
+                                  </label>
+                                  <select
+                                    value={editAcapellaAccess}
+                                    onChange={(e) => setEditAcapellaAccess(e.target.value as 'public' | 'request' | 'private')}
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  >
+                                    <option value="public">Veřejná</option>
+                                    <option value="request">Na žádost</option>
+                                    <option value="private">Soukromá</option>
+                                  </select>
+                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">"Na žádost" skryje přímé stahování, nejdřív musíš schválit.</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={handleSaveAcapella}
+                                  disabled={acapellaSaving}
+                                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-white disabled:opacity-60"
+                                >
+                                  {acapellaSaving ? 'Ukládám…' : 'Uložit akapelu'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingAcapellaId(null)}
+                                  className="rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                >
+                                  Zrušit
+                                </button>
+                              </div>
+                            </div>
+                          )}
                           <div
                             className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
                             onClick={(e) => {
