@@ -144,6 +144,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+  const [tabsOpen, setTabsOpen] = useState(false);
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
   const [collabsError, setCollabsError] = useState<string | null>(null);
