@@ -1615,8 +1615,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         })}
       </div>
     )}
+
       {/* Spolupráce */}
-        <div id="collabs-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+      <div id="collabs-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold text-[var(--mpc-light)]">{t('publicProfile.collabs.title', 'Spolupráce')}</h2>
