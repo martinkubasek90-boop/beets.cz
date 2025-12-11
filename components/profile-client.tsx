@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, FormEvent, ChangeEvent, useCallback } from 'react';
+import { useEffect, useMemo, useState, FormEvent, ChangeEvent, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -125,7 +125,7 @@ async function sendNotificationSafe(
     });
     if (!res.ok) throw new Error('API notification failed');
     return;
-  } catch (err) {
+  } catch {
     try {
       await supabase.from('notifications').insert({ ...payload, read: false });
     } catch (inner) {
@@ -239,7 +239,6 @@ export default function ProfileClient() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     hardware: '',
@@ -562,7 +561,6 @@ export default function ProfileClient() {
 
         setEmail(user.email ?? null);
         setUserId(user.id);
-        setIsLoggedIn(true);
 
         // Nejprve zkusíme načíst nová pole; pokud nejsou ve schématu (prod), spadneme do fallbacku
         let data: any | null = null;

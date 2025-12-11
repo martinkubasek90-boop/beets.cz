@@ -24,7 +24,7 @@ async function sendNotificationSafe(
     });
     if (!res.ok) throw new Error('API notification failed');
     return;
-  } catch (err) {
+  } catch {
     try {
       await supabase.from('notifications').insert({ ...payload, read: false });
     } catch (inner) {
@@ -59,6 +59,8 @@ type ProjectTrack = {
   name: string;
   url?: string | null;
   path?: string | null;
+  id?: string;
+  meta?: { projectId: string; trackIndex: number };
 };
 
 type Project = {
@@ -165,8 +167,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [startingCall, setStartingCall] = useState(false);
-  const [processingCall, setProcessingCall] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string; caller_name?: string | null } | null>(null);
   const {
     current: currentTrack,
     isPlaying,
@@ -181,7 +181,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   } = useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
       .from('projects')
       .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
@@ -199,7 +199,139 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     }
     setProjects((data as Project[]) ?? []);
     setProjectsError(null);
-  };
+  }, [profileId, supabase]);
+
+  const loadCollabs = useCallback(async () => {
+    if (!currentUserId || currentUserId !== profileId) {
+      setCollabs([]);
+      setCollabsError('Spolupráce tohoto profilu jsou soukromé. Žádost o spolupráci může poslat pouze registrovaný uživatel.');
+      return;
+    }
+    const fields = `
+      id,
+      title,
+      status,
+      result_audio_url,
+      result_cover_url,
+      updated_at
+    `;
+    try {
+      const creatorPromise = supabase
+        .from('collab_threads')
+        .select(fields)
+        .eq('created_by', profileId)
+        .order('updated_at', { ascending: false });
+      const participantIdsPromise = supabase
+        .from('collab_participants')
+        .select('thread_id')
+        .eq('user_id', profileId);
+
+      const [byCreator, participantIds] = await Promise.all([creatorPromise, participantIdsPromise]);
+      if (byCreator.error) throw byCreator.error;
+      if (participantIds.error) throw participantIds.error;
+
+      const participantThreadIds = Array.from(
+        new Set(
+          ((participantIds.data as any[]) ?? [])
+            .map((row) => row.thread_id)
+            .filter(Boolean)
+        )
+      );
+
+      const participantThreadsResult =
+        participantThreadIds.length > 0
+          ? await supabase
+              .from('collab_threads')
+              .select(fields)
+              .in('id', participantThreadIds)
+              .order('updated_at', { ascending: false })
+          : { data: [], error: null };
+
+      if (participantThreadsResult.error) throw participantThreadsResult.error;
+
+      const mergedThreads = new Map<string, Collaboration>();
+      const collect = (items: any[] = []) => {
+        items.forEach((thread) => {
+          if (!thread?.id) return;
+          mergedThreads.set(thread.id, {
+            id: thread.id,
+            title: thread.title || 'Spolupráce',
+            status: thread.status ?? null,
+            bpm: null,
+            mood: null,
+            audio_url: thread.result_audio_url ?? null,
+            cover_url: thread.result_cover_url ?? null,
+            partners: [],
+            updated_at: thread.updated_at ?? null,
+          });
+        });
+      };
+
+      collect(byCreator.data as any[]);
+      collect(participantThreadsResult.data as any[]);
+
+      const threadIds = Array.from(mergedThreads.keys());
+      if (threadIds.length) {
+        const { data: participants, error: participantsErr } = await supabase
+          .from('collab_participants')
+          .select('thread_id,user_id')
+          .in('thread_id', threadIds);
+        if (participantsErr) throw participantsErr;
+        const userIds = Array.from(new Set((participants ?? []).map((p: any) => p.user_id).filter(Boolean)));
+        let nameMap: Record<string, string> = {};
+        if (userIds.length) {
+          const { data: profiles, error: profileErr } = await supabase
+            .from('profiles')
+            .select('id,display_name')
+            .in('id', userIds);
+          if (profileErr) throw profileErr;
+          if (profiles) {
+            nameMap = Object.fromEntries(
+              (profiles as any[]).map((p) => [p.id, (p.display_name as string) || ''])
+            );
+          }
+        }
+
+        const threadNames = new Map<string, string[]>();
+        (participants ?? []).forEach((p: any) => {
+          const thread = mergedThreads.get(p.thread_id);
+          if (!thread) return;
+          const displayName = nameMap[p.user_id] || p.user_id;
+          if (!threadNames.has(p.thread_id)) {
+            threadNames.set(p.thread_id, []);
+          }
+          const list = threadNames.get(p.thread_id)!;
+          if (!list.includes(displayName)) {
+            list.push(displayName);
+          }
+        });
+
+        const ownerName = profile?.display_name || 'Ty';
+        setCollabs(
+          Array.from(mergedThreads.values()).map((thread) => {
+            const partners = threadNames.get(thread.id) ?? [];
+            const partnerLabel = partners.length ? partners.filter((name) => name !== ownerName) : [];
+            const partnerDisplay = partnerLabel.length ? partnerLabel.join(' • ') : 'někým';
+            return {
+              ...thread,
+              title: `Spolupráce ${ownerName} a ${partnerDisplay}`,
+            };
+          })
+        );
+      } else {
+        setCollabs(Array.from(mergedThreads.values()));
+      }
+      setCollabsError(null);
+    } catch (err) {
+      const message =
+        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+          ? (err as any).message
+          : 'Neznámá chyba';
+      console.error('Chyba načítání spoluprací:', err);
+      setCollabs([]);
+      setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
+    }
+  }, [currentUserId, profile?.display_name, profileId, supabase]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -275,118 +407,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
     };
 
-    const loadCollabs = async () => {
-      if (!currentUserId || currentUserId !== profileId) {
-        setCollabs([]);
-        setCollabsError('Spolupráce tohoto profilu jsou soukromé. Žádost o spolupráci může poslat pouze registrovaný uživatel.');
-      return;
-    }
-      const fields = `
-        id,
-        title,
-        status,
-        result_audio_url,
-        result_cover_url,
-        updated_at
-      `;
-      try {
-        const creatorPromise = supabase
-          .from('collab_threads')
-          .select(fields)
-          .eq('created_by', profileId)
-          .order('updated_at', { ascending: false });
-        const participantIdsPromise = supabase
-          .from('collab_participants')
-          .select('thread_id')
-          .eq('user_id', profileId);
-
-        const [byCreator, participantIds] = await Promise.all([creatorPromise, participantIdsPromise]);
-        if (byCreator.error) throw byCreator.error;
-        if (participantIds.error) throw participantIds.error;
-
-        const participantThreadIds = Array.from(
-          new Set(
-            ((participantIds.data as any[]) ?? [])
-              .map((row) => row.thread_id)
-              .filter(Boolean)
-          )
-        );
-
-        const participantThreadsResult =
-          participantThreadIds.length > 0
-            ? await supabase
-                .from('collab_threads')
-                .select(fields)
-                .in('id', participantThreadIds)
-                .order('updated_at', { ascending: false })
-            : { data: [], error: null };
-
-        if (participantThreadsResult.error) throw participantThreadsResult.error;
-
-        const mergedThreads = new Map<string, Collaboration>();
-        const collect = (items: any[] = []) => {
-          items.forEach((thread) => {
-            if (!thread?.id) return;
-            mergedThreads.set(thread.id, {
-              id: thread.id,
-              title: thread.title || 'Spolupráce',
-              status: thread.status ?? null,
-              bpm: null,
-              mood: null,
-              audio_url: thread.result_audio_url ?? null,
-              cover_url: thread.result_cover_url ?? null,
-              partners: [],
-              updated_at: thread.updated_at ?? null,
-            });
-          });
-        };
-        collect(byCreator.data as any[]);
-        collect(participantThreadsResult.data as any[]);
-
-        const threadIds = Array.from(mergedThreads.keys());
-        if (threadIds.length) {
-          const { data: participants, error: participantsErr } = await supabase
-            .from('collab_participants')
-            .select('thread_id,user_id')
-            .in('thread_id', threadIds);
-          if (participantsErr) throw participantsErr;
-          const userIds = Array.from(new Set((participants ?? []).map((p: any) => p.user_id).filter(Boolean)));
-          let nameMap: Record<string, string> = {};
-          if (userIds.length) {
-            const { data: profiles, error: profileErr } = await supabase
-              .from('profiles')
-              .select('id,display_name')
-              .in('id', userIds);
-            if (profileErr) throw profileErr;
-            if (profiles) {
-              nameMap = Object.fromEntries(
-                (profiles as any[]).map((p) => [p.id, (p.display_name as string) || ''])
-              );
-            }
-          }
-          (participants ?? []).forEach((p: any) => {
-            const thread = mergedThreads.get(p.thread_id);
-            if (!thread) return;
-            const displayName = nameMap[p.user_id] || p.user_id;
-            if (!thread.partners.includes(displayName)) {
-              thread.partners.push(displayName);
-            }
-          });
-        }
-
-        setCollabs(Array.from(mergedThreads.values()));
-        setCollabsError(null);
-      } catch (err) {
-        const message =
-          err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-            ? (err as any).message
-            : 'Neznámá chyba';
-        console.error('Chyba načítání spoluprací:', err);
-        setCollabs([]);
-        setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
-      }
-    };
-
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession();
       const uid = data.session?.user?.id;
@@ -402,147 +422,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     loadBeats();
     loadProjects();
     loadCollabs();
-  }, [profileId, supabase, router]);
-
-  const loadCollabs = useCallback(async () => {
-    if (!currentUserId || currentUserId !== profileId) {
-      setCollabs([]);
-      setCollabsError('Spolupráce tohoto profilu jsou soukromé. Žádost o spolupráci může poslat pouze registrovaný uživatel.');
-      return;
-    }
-    const fields = `
-      id,
-      title,
-      status,
-      result_audio_url,
-      result_cover_url,
-      updated_at
-    `;
-    try {
-      const creatorPromise = supabase
-        .from('collab_threads')
-        .select(fields)
-        .eq('created_by', profileId)
-        .order('updated_at', { ascending: false });
-      const participantIdsPromise = supabase
-        .from('collab_participants')
-        .select('thread_id')
-        .eq('user_id', profileId);
-
-      const [byCreator, participantIds] = await Promise.all([creatorPromise, participantIdsPromise]);
-      if (byCreator.error) throw byCreator.error;
-      if (participantIds.error) throw participantIds.error;
-
-      const participantThreadIds = Array.from(
-        new Set(
-          ((participantIds.data as any[]) ?? [])
-            .map((row) => row.thread_id)
-            .filter(Boolean)
-        )
-      );
-
-      const participantThreadsResult =
-        participantThreadIds.length > 0
-          ? await supabase
-              .from('collab_threads')
-              .select(fields)
-              .in('id', participantThreadIds)
-              .order('updated_at', { ascending: false })
-          : { data: [], error: null };
-
-      if (participantThreadsResult.error) throw participantThreadsResult.error;
-
-      const mergedThreads = new Map<string, Collaboration>();
-      const collect = (items: any[] = []) => {
-        items.forEach((thread) => {
-          if (!thread?.id) return;
-          mergedThreads.set(thread.id, {
-            id: thread.id,
-            title: thread.title || 'Spolupráce',
-            status: thread.status ?? null,
-            bpm: null,
-            mood: null,
-            audio_url: thread.result_audio_url ?? null,
-            cover_url: thread.result_cover_url ?? null,
-            partners: [],
-            updated_at: thread.updated_at ?? null,
-          });
-        });
-      };
-      collect(byCreator.data as any[]);
-      collect(participantThreadsResult.data as any[]);
-
-      const threadIds = Array.from(mergedThreads.keys());
-      if (threadIds.length) {
-        const { data: participants, error: participantsErr } = await supabase
-          .from('collab_participants')
-          .select('thread_id,user_id')
-          .in('thread_id', threadIds);
-        if (participantsErr) throw participantsErr;
-
-        const userIds = Array.from(
-          new Set((participants ?? []).map((p: any) => p.user_id).filter(Boolean))
-        );
-        let nameMap: Record<string, string> = {};
-        if (userIds.length) {
-          const { data: profiles, error: profileErr } = await supabase
-            .from('profiles')
-            .select('id,display_name')
-            .in('id', userIds);
-          if (profileErr) throw profileErr;
-          if (profiles) {
-            nameMap = Object.fromEntries(
-              (profiles as any[]).map((p) => [p.id, (p.display_name as string) || ''])
-            );
-          }
-        }
-
-        const threadNames = new Map<string, string[]>();
-        (participants ?? []).forEach((p: any) => {
-          const thread = mergedThreads.get(p.thread_id);
-          if (!thread) return;
-          const displayName = nameMap[p.user_id] || p.user_id;
-          if (!threadNames.has(p.thread_id)) {
-            threadNames.set(p.thread_id, []);
-          }
-          const list = threadNames.get(p.thread_id)!;
-          if (!list.includes(displayName)) {
-            list.push(displayName);
-          }
-        });
-
-        const ownerName = profile?.display_name || 'Ty';
-        setCollabs(
-          Array.from(mergedThreads.values()).map((thread) => {
-            const partners = threadNames.get(thread.id) ?? [];
-            const partnerLabel = partners.length ? partners.filter((name) => name !== ownerName) : [];
-            const partnerDisplay = partnerLabel.length ? partnerLabel.join(' • ') : 'někým';
-            return {
-              ...thread,
-              title: `Spolupráce ${ownerName} a ${partnerDisplay}`,
-            };
-          })
-        );
-      } else {
-        setCollabs(Array.from(mergedThreads.values()));
-      }
-      setCollabsError(null);
-    } catch (err) {
-      const message =
-        err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-          ? (err as any).message
-          : 'Neznámá chyba';
-      console.error('Chyba načítání spoluprací:', err);
-      setCollabs([]);
-      setCollabsError('Nepodařilo se načíst spolupráce: ' + message);
-    }
-  }, [currentUserId, profileId, supabase]);
-
-  useEffect(() => {
-    if (currentUserId) {
-      loadCollabs();
-    }
-  }, [currentUserId, loadCollabs, collabsReload]);
+  }, [profileId, supabase, router, loadProjects, loadCollabs]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
@@ -948,7 +828,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     return `${m}:${s}`;
   }
 
-  const isOwner = currentUserId && currentUserId === profileId;
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.artist || profile?.display_name || null;
@@ -957,88 +836,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
   const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
   const statusLabel = isOnline ? 'Online' : 'Offline';
-
-  // Realtime příchozí hovory
-  useEffect(() => {
-    if (!currentUserId) return;
-    const channel = supabase
-      .channel(`calls-incoming-${currentUserId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${currentUserId}` },
-        async (payload) => {
-          const newRow = payload.new as any;
-          if (!newRow?.id || !newRow?.room_name) return;
-          let callerName: string | null = null;
-          try {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('display_name')
-              .eq('id', newRow.caller_id)
-              .maybeSingle();
-            callerName = prof?.display_name ?? null;
-          } catch {
-            callerName = null;
-          }
-          setIncomingCall({
-            id: newRow.id as string,
-            room_name: newRow.room_name as string,
-            caller_id: newRow.caller_id as string,
-            caller_name: callerName,
-          });
-        }
-      )
-      .subscribe();
-    return () => {
-      void channel.unsubscribe();
-    };
-  }, [currentUserId, supabase]);
-
-  const handleAcceptIncoming = async () => {
-    if (!incomingCall || !currentUserId) return;
-    setProcessingCall(true);
-    try {
-      await supabase
-        .from('calls')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
-        .eq('id', incomingCall.id);
-      router.push(
-        `/call/${incomingCall.id}?room=${encodeURIComponent(incomingCall.room_name)}&caller=${incomingCall.caller_id}&callee=${currentUserId}`
-      );
-    } catch (err) {
-      console.error('Chyba při přijmutí hovoru:', err);
-      setPlayerError('Nepodařilo se přijmout hovor.');
-    } finally {
-      setProcessingCall(false);
-      setIncomingCall(null);
-    }
-  };
-
-  const handleRejectIncoming = async () => {
-    if (!incomingCall || !currentUserId) {
-      setIncomingCall(null);
-      return;
-    }
-    setProcessingCall(true);
-    try {
-      await supabase.from('calls').update({ status: 'rejected' }).eq('id', incomingCall.id);
-      if (incomingCall.caller_id) {
-        await sendNotificationSafe(supabase, {
-          user_id: incomingCall.caller_id,
-          type: 'missed_call',
-          title: 'Zmeškaný hovor',
-          body: profile?.display_name || 'Uživatel',
-          item_type: 'call',
-          item_id: incomingCall.id,
-        });
-      }
-    } catch (err) {
-      console.error('Chyba při odmítnutí hovoru:', err);
-    } finally {
-      setProcessingCall(false);
-      setIncomingCall(null);
-    }
-  };
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
@@ -1439,13 +1236,25 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 )}
 
                 {(() => {
+                  const playableIdx = tracks.findIndex((t) => t.url);
                   const primary =
-                    tracks.find((t) => t.url) ||
-                    (project.project_url
-                      ? { id: `project-${project.id}`, name: project.title, url: project.project_url, meta: { projectId: project.id, trackIndex: -1 } }
-                      : null);
+                    playableIdx >= 0
+                      ? {
+                          ...tracks[playableIdx],
+                          id: `project-${project.id}-${playableIdx}`,
+                          meta: { projectId: project.id, trackIndex: playableIdx },
+                        }
+                      : project.project_url
+                        ? {
+                            id: `project-${project.id}`,
+                            name: project.title,
+                            url: project.project_url,
+                            meta: { projectId: project.id, trackIndex: -1 },
+                          }
+                        : null;
                   if (!primary) return null;
                   const isCurrent = currentTrack?.id === primary.id;
+                  const primaryMeta = primary.meta ?? { projectId: project.id, trackIndex: playableIdx >= 0 ? playableIdx : -1 };
                   const progressPct = isCurrent && duration ? Math.min((currentTime / duration) * 100, 100) : 0;
                   return (
                     <div className="mt-4 w-full rounded-2xl border border-white/10 bg-black/40 p-3">
@@ -1459,7 +1268,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                               source: 'project',
                               cover_url: project.cover_url,
                               subtitle: profile?.display_name || null,
-                              meta: primary.meta ?? { projectId: project.id, trackIndex: primary.meta?.trackIndex ?? 0 },
+                              meta: primaryMeta,
                             })
                           }
                           className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
@@ -1610,11 +1419,14 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                   </div>
                 )}
               </div>
+              </div>
             </div>
           );
         })}
       </div>
     )}
+
+    </div>
 
     {/* Spolupráce */}
     <div id="collabs-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">

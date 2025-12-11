@@ -141,8 +141,6 @@ type BlogPost = {
   embed_url?: string | null;
 };
 
-type UserRole = 'superadmin' | 'admin' | 'creator' | 'mc' | null;
-
 const dummyBlog: BlogPost[] = [
   {
     id: 1,
@@ -204,7 +202,6 @@ export default function Home() {
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [currentRole, setCurrentRole] = useState<UserRole>(null);
   const [currentTrack, setCurrentTrack] = useState<{ id: number | string; title: string; artist: string; user_id?: string | null; url: string; cover_url?: string | null } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
@@ -213,10 +210,9 @@ export default function Home() {
   const [volume, setVolume] = useState(0.9);
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
-  const [peaksMap, setPeaksMap] = useState<Record<number, number[]>>({});
   const [videoIndex, setVideoIndex] = useState(0);
   const [forumError, setForumError] = useState<string | null>(null);
-  const { lang, setLang } = useLanguage('cs');
+  const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
   const subtitleRaw = t(
     'hero.subtitle',
@@ -251,10 +247,6 @@ export default function Home() {
   } = useGlobalPlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     setCurrentTrack(gpCurrent ? { ...gpCurrent } : null);
@@ -325,22 +317,12 @@ export default function Home() {
       }
     };
     void loadArtists();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setIsLoggedIn(!!data.session);
-      if (data.session?.user?.id) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', data.session.user.id)
-          .maybeSingle();
-        setCurrentRole((prof?.role as UserRole) ?? null);
-      } else {
-        setCurrentRole(null);
-      }
     };
     checkSession();
   }, [supabase]);
@@ -724,10 +706,6 @@ export default function Home() {
 
   function togglePlayPause() {
     gpToggle();
-  }
-
-  function playableBeats() {
-    return beats.filter((b) => b.audio_url);
   }
 
   function handleNext() {
@@ -1509,11 +1487,14 @@ export default function Home() {
                   className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
                 >
                   <div
-                    className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
-                  >
-                    {artist.avatar_url ? (
+                  className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
+                >
+                  {artist.avatar_url ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                    ) : (
+                    </>
+                  ) : (
                       <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
                         {artist.initials}
                       </div>

@@ -37,11 +37,10 @@ export default function ProjectsPage() {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const [requesting, setRequesting] = useState<Record<number, boolean>>({});
   const [myRequests, setMyRequests] = useState<Record<number, "pending" | "approved" | "denied">>({});
-  const [myGrants, setMyGrants] = useState<Set<number>>(new Set());
   const [search, setSearch] = useState("");
   const [authorFilter, setAuthorFilter] = useState<string>("all");
 
-  const { play, toggle, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const { play, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
   const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
 
   useEffect(() => {
@@ -73,7 +72,7 @@ export default function ProjectsPage() {
 
         // grants a requesty
         let grants = new Set<number>();
-        let requests: Record<number, "pending" | "approved" | "denied"> = {};
+        const requests: Record<number, "pending" | "approved" | "denied"> = {};
         if (userId) {
           const { data: g } = await supabase.from("project_access_grants").select("project_id").eq("user_id", userId);
           if (g) grants = new Set(g.map((x: any) => x.project_id as number));
@@ -88,7 +87,6 @@ export default function ProjectsPage() {
             });
           }
         }
-        setMyGrants(grants);
         setMyRequests(requests);
 
         const userIds = Array.from(new Set(rows.map((p) => p.user_id).filter(Boolean) as string[]));
@@ -254,7 +252,7 @@ export default function ProjectsPage() {
           console.warn("Nepodařilo se poslat notifikaci o žádosti o přístup:", notifyErr);
         }
       }
-    } catch (e) {
+    } catch {
       alert("Nepodařilo se odeslat žádost.");
     } finally {
       setRequesting((prev) => ({ ...prev, [projectId]: false }));

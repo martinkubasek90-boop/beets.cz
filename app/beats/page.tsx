@@ -26,7 +26,7 @@ const dummyBeats: Beat[] = [
 
 export default function BeatsPage() {
   const supabase = createClient();
-  const { play, pause, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
+  const { play, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
