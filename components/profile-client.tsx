@@ -60,6 +60,7 @@ type PlayerTrack = {
 
 const SEEKING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'GRAFIKA', 'VIDEO', 'STUDIO'];
 const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', 'GRAFIKA', 'VIDEO'];
+const SIGNAL_CACHE_KEY = 'beets-signals-cache';
 
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
@@ -279,6 +280,22 @@ export default function ProfileClient() {
   const [offeringCustom, setOfferingCustom] = useState('');
   const toggleSignal = (value: string, list: string[], setter: (next: string[]) => void) => {
     setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
+  const loadCachedSignals = () => {
+    if (typeof window === 'undefined') return null;
+    const raw = window.localStorage.getItem(SIGNAL_CACHE_KEY);
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        seeking_signals: (parsed?.seeking_signals as string[]) || [],
+        offering_signals: (parsed?.offering_signals as string[]) || [],
+        seeking_custom: (parsed?.seeking_custom as string) || '',
+        offering_custom: (parsed?.offering_custom as string) || '',
+      };
+    } catch {
+      return null;
+    }
   };
 
   const currentRole = profile.role ?? 'creator';
@@ -571,6 +588,17 @@ export default function ProfileClient() {
         }
 
         if (data) {
+          const cachedSignals = loadCachedSignals();
+          const hasDbSignals =
+            Array.isArray((data as any).seeking_signals) ||
+            Array.isArray((data as any).offering_signals) ||
+            Boolean((data as any).seeking_custom) ||
+            Boolean((data as any).offering_custom);
+          const mergedSeeking = hasDbSignals ? (data as any).seeking_signals ?? [] : cachedSignals?.seeking_signals ?? [];
+          const mergedOffering = hasDbSignals ? (data as any).offering_signals ?? [] : cachedSignals?.offering_signals ?? [];
+          const mergedSeekingCustom = hasDbSignals ? (data as any).seeking_custom ?? '' : cachedSignals?.seeking_custom ?? '';
+          const mergedOfferingCustom = hasDbSignals ? (data as any).offering_custom ?? '' : cachedSignals?.offering_custom ?? '';
+
           setProfile({
             display_name: data.display_name ?? '',
             hardware: data.hardware ?? '',
@@ -579,16 +607,16 @@ export default function ProfileClient() {
             banner_url: (data as any).banner_url ?? null,
             region: (data as any).region ?? null,
             role: (data as any).role ?? 'creator',
-            seeking_signals: (data as any).seeking_signals ?? [],
-            offering_signals: (data as any).offering_signals ?? [],
-            seeking_custom: (data as any).seeking_custom ?? '',
-            offering_custom: (data as any).offering_custom ?? '',
+            seeking_signals: mergedSeeking,
+            offering_signals: mergedOffering,
+            seeking_custom: mergedSeekingCustom,
+            offering_custom: mergedOfferingCustom,
           });
           setEditRegion((data as any).region ?? '');
-          setSeekingSignals(((data as any).seeking_signals as string[] | null) ?? []);
-          setOfferingSignals(((data as any).offering_signals as string[] | null) ?? []);
-          setSeekingCustom((data as any).seeking_custom ?? '');
-          setOfferingCustom((data as any).offering_custom ?? '');
+          setSeekingSignals(mergedSeeking);
+          setOfferingSignals(mergedOffering);
+          setSeekingCustom(mergedSeekingCustom);
+          setOfferingCustom(mergedOfferingCustom);
         }
       } catch (err) {
         const message =
@@ -1207,6 +1235,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (upsertError && typeof upsertError.message === 'string' && upsertError.message.includes('column')) {
         // Prod schéma ještě nemá nové sloupce – zkusíme uložit bez nich
         fallbackUsed = true;
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(
+            SIGNAL_CACHE_KEY,
+            JSON.stringify({
+              seeking_signals: seekingSignals,
+              offering_signals: offeringSignals,
+              seeking_custom: seekingCustom.trim(),
+              offering_custom: offeringCustom.trim(),
+            })
+          );
+        }
         const { error: fallbackError } = await supabase
           .from('profiles')
           .upsert(
@@ -1235,11 +1274,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
         seeking_custom: seekingCustom.trim() || null,
         offering_custom: offeringCustom.trim() || null,
       }));
-      setSuccess(
-        fallbackUsed
-          ? 'Profil byl uložen, ale signály Hledám/Nabízím zatím nejsou v této verzi databáze dostupné.'
-          : 'Profil byl uložen.'
-      );
+      if (!fallbackUsed && typeof window !== 'undefined') {
+        window.localStorage.removeItem(SIGNAL_CACHE_KEY);
+      }
+      setSuccess('Profil byl uložen.');
     } catch (err) {
       const message =
         err instanceof Error
