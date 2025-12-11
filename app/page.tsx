@@ -216,7 +216,7 @@ export default function Home() {
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
   const subtitleRaw = t(
     'hero.subtitle',
-    'Platforma pro CZ/SK beatmakery. Nahrávej instrumentály a domlouvej spolupráce.'
+    'Platforma pro CZ/SK beatmakery a rapery. Nahrávej instrumentály, sdílej akapely, domlouvej spolupráce.'
   );
   const subtitleCleaned = subtitleRaw.replace(/\s*Bez reklam.*$/i, '').trim();
   const beatList = beats.length ? beats : dummyBeats;
@@ -1679,8 +1679,6 @@ export default function Home() {
           <div className="flex flex-wrap gap-3">
             <a href="https://beets.cz/podminky">Podmínky</a>
             <a href="https://beets.cz/zpracovani-osobnich-udaju">Zpracování osobních údajů</a>
-            <a href="#">O projektu</a>
-            <a href="#">Instagram</a>
           </div>
         </div>
       </footer>
