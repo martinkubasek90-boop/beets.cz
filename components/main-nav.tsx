@@ -63,7 +63,7 @@ export function MainNav() {
           ))}
         </nav>
         <div className="flex items-center gap-2 text-right flex-wrap justify-end">
-          <NotificationBell className="hidden md:inline-flex" />
+          {isLoggedIn && <NotificationBell className="hidden md:inline-flex" />}
           {isLoggedIn ? (
             <Link
               href="/profile"
@@ -89,10 +89,12 @@ export function MainNav() {
                   {link.label}
                 </Link>
               ))}
-              <div className="flex items-center justify-between">
-                <span className="text-[11px]">Notifikace</span>
-                <NotificationBell />
-              </div>
+              {isLoggedIn && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px]">Notifikace</span>
+                  <NotificationBell />
+                </div>
+              )}
               {isLoggedIn ? (
                 <Link
                   href="/profile"

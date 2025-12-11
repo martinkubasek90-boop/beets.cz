@@ -191,8 +191,12 @@ export default function OfflinePage() {
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-16 pt-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-white">Mapa scény</h1>
-        <Link href="/" className="text-sm text-[var(--mpc-accent)] hover:underline">
-          Zpět
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
+        >
+          <span className="text-[14px]">←</span>
+          <span>Zpět</span>
         </Link>
       </div>
 
@@ -243,21 +247,6 @@ export default function OfflinePage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
-        <div className="flex items-center justify-between text-sm text-white/60">
-          <span>{profiles.length} profilů celkem</span>
-          {filterRegion && (
-            <button
-              onClick={() => setFilterRegion(null)}
-              className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80 hover:border-white/50"
-            >
-              Zrušit filtr
-            </button>
-          )}
-        </div>
-        <div id="offline-map" className="mt-3 h-[360px] w-full rounded-xl border border-white/10" />
-      </div>
-
       <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
         <div className="flex items-center justify-between text-sm text-white/70">
           <span>Profily</span>
@@ -286,6 +275,21 @@ export default function OfflinePage() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
+        <div className="flex items-center justify-between text-sm text-white/60">
+          <span>{profiles.length} profilů celkem</span>
+          {filterRegion && (
+            <button
+              onClick={() => setFilterRegion(null)}
+              className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/80 hover:border-white/50"
+            >
+              Zrušit filtr
+            </button>
+          )}
+        </div>
+        <div id="offline-map" className="mt-3 h-[360px] w-full rounded-xl border border-white/10" />
       </div>
     </main>
   );
