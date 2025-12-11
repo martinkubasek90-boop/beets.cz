@@ -730,35 +730,41 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const startTrack = useCallback(
     (track: CurrentTrack) => {
-      if (!track.url) return;
-      setPlayerError(null);
-      play(buildPlayerTrack(track));
-      if (track.source === 'project' && track.meta?.projectId) {
-        const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
-        const currentIdx = queue.findIndex((t) => t.id === track.id);
-        const playFromQueue = (idx: number) => {
-          const nextTrack = queue[idx];
-          if (!nextTrack?.url) return;
-          play(buildPlayerTrack(nextTrack));
-        };
-        if (queue.length) {
+    if (!track.url) return;
+    setPlayerError(null);
+    play(buildPlayerTrack(track));
+    if (track.source === 'project' && track.meta?.projectId) {
+      const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
+      const currentIdx = queue.findIndex((t) => t.id === track.id);
+      const playFromQueue = (idx: number) => {
+        const nextTrack = queue[idx];
+        if (!nextTrack?.url) return;
+        play(buildPlayerTrack(nextTrack));
+      };
+      if (queue.length) {
+        if (setOnNext) {
           setOnNext(() => {
             const next = queue.length ? (currentIdx + 1) % queue.length : -1;
             if (next >= 0) playFromQueue(next);
           });
+        }
+        if (setOnPrev) {
           setOnPrev(() => {
             const prev = queue.length ? (currentIdx - 1 + queue.length) % queue.length : -1;
             if (prev >= 0) playFromQueue(prev);
           });
+        }
+        if (setOnEnded) {
           setOnEnded(() => {
             const next = queue.length ? (currentIdx + 1) % queue.length : -1;
             if (next >= 0) playFromQueue(next);
           });
         }
       }
-    },
-    [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
-  );
+    }
+  },
+  [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
+);
 
   function handlePlayTrack(track: CurrentTrack) {
     if (!track.url) {
