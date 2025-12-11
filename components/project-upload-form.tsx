@@ -10,6 +10,10 @@ type ProjectUploadFormProps = {
 export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps) {
   const supabase = createClient();
   const MAX_TRACKS = 30;
+  const labelClass = 'block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-200';
+  const inputClass =
+    'mt-1 w-full rounded-lg border border-white/15 bg-white/95 px-3 py-2 text-sm text-black shadow-sm outline-none focus:border-[var(--mpc-accent)]';
+  const helperClass = 'mt-1 text-[11px] text-neutral-500';
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -168,68 +172,58 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl w-full mx-auto">
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Název projektu
-        </label>
+        <label className={labelClass}>Název projektu</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+          className={inputClass}
           placeholder="Např. Beton Stories EP"
         />
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Popis projektu
-        </label>
+        <label className={labelClass}>Popis projektu</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+          className={`${inputClass} min-h-[96px]`}
           rows={3}
           placeholder="Počet beatů, mood, hosté…"
         />
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Přístup k projektu
-        </label>
+        <label className={labelClass}>Přístup k projektu</label>
         <select
           value={accessMode}
           onChange={(e) => setAccessMode(e.target.value as 'public' | 'request' | 'private')}
-          className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+          className={inputClass}
         >
           <option value="public">Veřejný</option>
           <option value="request">Na žádost (doporučeno)</option>
           <option value="private">Soukromý (jen udělené přístupy)</option>
         </select>
-        <p className="mt-1 text-[11px] text-neutral-600">
-          U „na žádost“ mohou uživatelé poslat žádost o náhled; přehrání bude možné až po schválení.
-        </p>
+        <p className={helperClass}>U „na žádost“ mohou uživatelé poslat žádost o náhled; přehrání bude možné až po schválení.</p>
       </div>
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-            Audio soubory (WAV / MP3)
-          </label>
+          <label className={labelClass}>Audio soubory (WAV / MP3)</label>
         </div>
-        <p className="text-[11px] text-neutral-600">Můžeš nahrát více souborů a každému dát název. {tracks.length}/{MAX_TRACKS}</p>
+        <p className={helperClass}>Můžeš nahrát více souborů a každému dát název. {tracks.length}/{MAX_TRACKS}</p>
         <div className="space-y-3">
           {tracks.map((track, idx) => (
-            <div key={idx} className="rounded-lg border border-neutral-800 bg-neutral-100 p-3 space-y-2">
+            <div key={idx} className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <label className="text-[11px] uppercase tracking-[0.12em] text-neutral-700">Soubor #{idx + 1}</label>
+                <label className="text-[11px] uppercase tracking-[0.12em] text-neutral-200">Soubor #{idx + 1}</label>
                 {tracks.length > 1 && (
                   <button
                     type="button"
                     onClick={() => removeTrackRow(idx)}
-                    className="text-[11px] text-red-600 hover:underline"
+                    className="text-[11px] text-red-400 hover:underline"
                   >
                     Odebrat
                   </button>
@@ -239,13 +233,13 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
                 type="file"
                 accept=".wav,.mp3,audio/wav,audio/mpeg"
                 onChange={(e) => handleTrackFileChange(idx, e)}
-                className="block w-full text-sm text-neutral-800"
+                className="block w-full text-sm text-neutral-200"
               />
               <input
                 type="text"
                 value={track.name}
                 onChange={(e) => handleTrackNameChange(idx, e.target.value)}
-                className="w-full rounded border border-neutral-700 bg-white px-3 py-2 text-sm text-black outline-none"
+                className={inputClass}
                 placeholder="Název skladby (volitelné)"
               />
             </div>
@@ -267,18 +261,14 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Cover projektu (PGM / JPG / PNG / WEBP, volitelné)
-        </label>
+        <label className={labelClass}>Cover projektu (PGM / JPG / PNG / WEBP, volitelné)</label>
         <input
           type="file"
           accept=".pgm,.jpg,.jpeg,.png,.webp,image/x-portable-graymap,image/jpeg,image/png,image/webp"
           onChange={handleCoverFileChange}
           className="mt-1 block w-full text-sm text-neutral-800"
         />
-        <p className="mt-1 text-[11px] text-neutral-600">
-          Obrázek se uloží jako public URL k projektu.
-        </p>
+        <p className={helperClass}>Obrázek se uloží jako public URL k projektu.</p>
       </div>
 
       {error && <p className="text-[11px] text-red-500">{error}</p>}

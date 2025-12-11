@@ -9,6 +9,10 @@ type BeatUploadFormProps = {
 
 export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
   const supabase = createClient();
+  const labelClass = 'block text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-200';
+  const inputClass =
+    'mt-1 w-full rounded-lg border border-white/15 bg-white/95 px-3 py-2 text-sm text-black shadow-sm outline-none focus:border-[var(--mpc-accent)]';
+  const helperClass = 'mt-1 text-[11px] text-neutral-500';
 
   const [title, setTitle] = useState('');
   const [bpm, setBpm] = useState('');
@@ -166,86 +170,70 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-xl w-full mx-auto">
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Název beatu
-        </label>
+        <label className={labelClass}>Název beatu</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+          className={inputClass}
           placeholder="Např. Panel Story"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-            BPM
-          </label>
+          <label className={labelClass}>BPM</label>
           <input
             type="number"
             value={bpm}
             onChange={(e) => setBpm(e.target.value)}
-            className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+            className={inputClass}
             placeholder="Např. 96"
           />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-            Mood / vibe
-          </label>
+          <label className={labelClass}>Mood / vibe</label>
           <input
             type="text"
             value={mood}
             onChange={(e) => setMood(e.target.value)}
-            className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+            className={inputClass}
             placeholder="Boom bap, dark, lo-fi…"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Audio soubor (WAV / MP3)
-        </label>
+        <label className={labelClass}>Audio soubor (WAV / MP3)</label>
         <input
           type="file"
           accept=".wav,audio/wav,.mp3,audio/mpeg"
           onChange={handleFileChange}
           className="mt-1 block w-full text-sm text-neutral-800"
         />
-        <p className="mt-1 text-[11px] text-neutral-600">
-          Stačí jeden formát – WAV nebo MP3. Velikost drž raději při zemi kvůli limitům.
-        </p>
+        <p className={helperClass}>Stačí jeden formát – WAV nebo MP3. Velikost drž raději při zemi kvůli limitům.</p>
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          Cover beatu (PGM / JPG / PNG / WEBP)
-        </label>
+        <label className={labelClass}>Cover beatu (PGM / JPG / PNG / WEBP)</label>
         <input
           type="file"
           accept=".pgm,.jpg,.jpeg,.png,.webp,image/x-portable-graymap,image/jpeg,image/png,image/webp"
           onChange={handleCoverChange}
           className="mt-1 block w-full text-sm text-neutral-800"
         />
-        <p className="mt-1 text-[11px] text-neutral-600">
-          Volitelné – obrázek se uloží k beatu jako public URL.
-        </p>
+        <p className={helperClass}>Volitelné – obrázek se uloží k beatu jako public URL.</p>
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-neutral-700">
-          nebo externí URL (SoundCloud / YouTube)
-        </label>
+        <label className={labelClass}>nebo externí URL (SoundCloud / YouTube)</label>
         <input
           type="url"
           value={externalUrl}
           onChange={(e) => setExternalUrl(e.target.value)}
-          className="mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm text-black outline-none"
+          className={inputClass}
           placeholder="https://…"
         />
       </div>
