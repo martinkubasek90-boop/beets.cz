@@ -97,8 +97,9 @@ export default function OfflinePage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, display_name, region, avatar_url')
-        .not('region', 'is', null);
+        .select('id, display_name, region, avatar_url, role')
+        .not('region', 'is', null)
+        .neq('role', 'mc');
       if (!error && data) {
         setProfiles(
           data.map((p: any) => ({

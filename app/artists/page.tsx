@@ -103,6 +103,12 @@ export default function ArtistsPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
+              href="/accapelas"
+              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
+            >
+              Rappers
+            </Link>
+            <Link
               href="/offline"
               className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
             >
