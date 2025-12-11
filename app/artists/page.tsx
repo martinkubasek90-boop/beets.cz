@@ -50,7 +50,8 @@ export default function ArtistsPage() {
       try {
         const { data: profiles, error } = await supabase
           .from('profiles')
-          .select('id, display_name, avatar_url')
+          .select('id, display_name, avatar_url, role')
+          .neq('role', 'mc')
           .limit(50);
         if (error || !profiles || profiles.length === 0) {
           setArtists(fallbackArtists);
