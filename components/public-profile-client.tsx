@@ -141,6 +141,13 @@ type CurrentTrack = {
   meta?: TrackMeta;
 };
 
+function buildRoomName(a: string, b: string) {
+  const sorted = [a, b].sort();
+  return `beets-${sorted[0]}-${sorted[1]}`;
+}
+
+const COMMUNITY_ROOM = 'beets-community-main';
+
 export default function PublicProfileClient({ profileId }: { profileId: string }) {
   const supabase = createClient();
   const router = useRouter();
@@ -493,11 +500,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       return;
     }
     setCollabRequestError(null);
-    setCollabRequestState('sending');
-    try {
-      const [myThreads, partnerThreads] = await Promise.all([
-        supabase.from('collab_participants').select('thread_id').eq('user_id', currentUserId),
-        supabase.from('collab_participants').select('thread_id').eq('user_id', profileId),
+        setCollabRequestState('sending');
+        try {
+          const [myThreads, partnerThreads] = await Promise.all([
+            supabase.from('collab_participants').select('thread_id').eq('user_id', currentUserId),
+            supabase.from('collab_participants').select('thread_id').eq('user_id', profileId),
       ]);
       const mySet = new Set((myThreads.data ?? []).map((r: any) => r.thread_id));
       const existing = (partnerThreads.data ?? []).find((r: any) => mySet.has(r.thread_id));
@@ -922,6 +929,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const statusLabel = isOnline ? 'Online' : 'Offline';
   const isMcOnly = profile?.role === 'mc';
 
+  const handleCommunityCall = () => {
+    window.open(`https://meet.jit.si/${COMMUNITY_ROOM}`, '_blank', 'noopener,noreferrer');
+  };
+
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
       setMessageError('Musíš být přihlášen pro volání.');
@@ -934,46 +945,12 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     setMessageError(null);
     setStartingCall(true);
     try {
-      const roomName = `beets-call-${crypto.randomUUID()}`;
-      const { data, error } = await supabase
-        .from('calls')
-        .insert({
-          caller_id: currentUserId,
-          callee_id: profileId,
-          room_name: roomName,
-          status: 'ringing',
-        })
-        .select('id')
-        .single();
-      if (error) throw error;
-      if (!data?.id) throw new Error('Hovor se nepodařilo založit.');
-      if (profileId) {
-        await sendNotificationSafe(supabase, {
-          user_id: profileId,
-          type: 'call_incoming',
-          title: 'Příchozí hovor',
-          body: profile?.display_name || 'Uživatel',
-          item_type: 'call',
-          item_id: data?.id,
-        });
-        setTimeout(async () => {
-          const { data: callRow } = await supabase.from('calls').select('status').eq('id', data?.id).maybeSingle();
-          if (callRow?.status === 'ringing') {
-            await sendNotificationSafe(supabase, {
-              user_id: profileId,
-              type: 'missed_call',
-              title: 'Zmeškaný hovor',
-              body: profile?.display_name || 'Uživatel',
-              item_type: 'call',
-              item_id: data?.id,
-            });
-          }
-        }, 10_000);
-      }
-      router.push(`/call/${data?.id}?room=${encodeURIComponent(roomName)}&caller=${currentUserId}&callee=${profileId}`);
+      const roomName = buildRoomName(profileId, currentUserId);
+      const url = `https://meet.jit.si/${roomName}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
-      setMessageError('Nepodařilo se zahájit hovor.');
+      setMessageError('Nepodařilo se otevřít hovor.');
     } finally {
       setStartingCall(false);
     }
@@ -1134,24 +1111,30 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           )}
         </div>
         <div className="ml-auto flex items-center gap-3">
-            {currentUserId && currentUserId !== profileId && (
-              <button
-                onClick={handleStartCall}
-                disabled={startingCall}
-                className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-              >
-                {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
-              </button>
-            )}
-            <a
-              href="#message-form"
-              className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
+          <button
+            onClick={handleCommunityCall}
+            className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+          >
+            Komunitní call
+          </button>
+          {currentUserId && currentUserId !== profileId && (
+            <button
+              onClick={handleStartCall}
+              disabled={startingCall}
+              className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
             >
-              {t('publicProfile.sendMessage', 'Poslat zprávu')}
-            </a>
-          </div>
+              {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+            </button>
+          )}
+          <a
+            href="#message-form"
+            className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
+          >
+            {t('publicProfile.sendMessage', 'Poslat zprávu')}
+          </a>
         </div>
-        {tabsOpen && (
+      </div>
+      {tabsOpen && (
           <div className="md:hidden grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)]">
             <a href={isMcOnly ? '#acapellas-section' : '#beats-section'} className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
               {t('publicProfile.nav.all', 'Vše')}
