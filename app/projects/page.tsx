@@ -342,7 +342,16 @@ export default function ProjectsPage() {
 
                 <div className="flex flex-col items-center gap-3 text-center">
                   <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                    {project.cover_url ? (
+                    {project.user_id ? (
+                      <Link href={`/u/${project.user_id}`} className="block h-full w-full">
+                        {project.cover_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="grid h-full w-full place-items-center">{project.title.slice(0, 2)}</span>
+                        )}
+                      </Link>
+                    ) : project.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
                     ) : (

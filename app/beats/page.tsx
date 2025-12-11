@@ -177,7 +177,18 @@ export default function BeatsPage() {
             >
               <div className="flex flex-col items-center gap-4">
                 <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
-                  {beat.cover_url ? (
+                  {beat.user_id ? (
+                    <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
+                      {beat.cover_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="grid h-full w-full place-items-center bg-gradient-to-br from-[var(--mpc-accent)] to-[var(--mpc-accent-2,#f37433)] text-xl font-black text-white">
+                          {beat.title.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </Link>
+                  ) : beat.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
                   ) : (
