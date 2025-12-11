@@ -151,6 +151,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [collabFileError, setCollabFileError] = useState<string | null>(null);
   const [collabRequestState, setCollabRequestState] = useState<'idle' | 'sending' | 'success'>('idle');
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
+  const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -730,41 +731,55 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const startTrack = useCallback(
     (track: CurrentTrack) => {
-    if (!track.url) return;
-    setPlayerError(null);
-    play(buildPlayerTrack(track));
-    if (track.source === 'project' && track.meta?.projectId) {
-      const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
-      const currentIdx = queue.findIndex((t) => t.id === track.id);
-      const playFromQueue = (idx: number) => {
-        const nextTrack = queue[idx];
-        if (!nextTrack?.url) return;
-        play(buildPlayerTrack(nextTrack));
-      };
-      if (queue.length) {
-        if (setOnNext) {
-          setOnNext(() => {
-            const next = queue.length ? (currentIdx + 1) % queue.length : -1;
-            if (next >= 0) playFromQueue(next);
-          });
+      if (!track.url) return;
+      setPlayerError(null);
+
+      // Pokud jde o projektový track a máme dostupné next/prev/ended, nastavíme frontu
+      if (track.source === 'project' && track.meta?.projectId && setOnNext && setOnPrev && setOnEnded) {
+        const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
+        if (!queue.length) {
+          play(buildPlayerTrack(track));
+          return;
         }
-        if (setOnPrev) {
-          setOnPrev(() => {
-            const prev = queue.length ? (currentIdx - 1 + queue.length) % queue.length : -1;
-            if (prev >= 0) playFromQueue(prev);
-          });
-        }
-        if (setOnEnded) {
-          setOnEnded(() => {
-            const next = queue.length ? (currentIdx + 1) % queue.length : -1;
-            if (next >= 0) playFromQueue(next);
-          });
-        }
+        const initialIdx = Math.max(queue.findIndex((t) => t.id === track.id), 0);
+        const playFromQueue = (idx: number) => {
+          const nextTrack = queue[idx];
+          if (!nextTrack?.url) return;
+          projectQueueRef.current = { projectId: track.meta!.projectId as string, queue, idx };
+          play(buildPlayerTrack(nextTrack));
+        };
+
+        playFromQueue(initialIdx);
+
+        setOnNext(() => {
+          const q = projectQueueRef.current;
+          const qQueue = q?.queue ?? queue;
+          if (!qQueue.length) return;
+          const next = ((q?.idx ?? initialIdx) + 1) % qQueue.length;
+          playFromQueue(next);
+        });
+        setOnPrev(() => {
+          const q = projectQueueRef.current;
+          const qQueue = q?.queue ?? queue;
+          if (!qQueue.length) return;
+          const prev = ((q?.idx ?? initialIdx) - 1 + qQueue.length) % qQueue.length;
+          playFromQueue(prev);
+        });
+        setOnEnded(() => {
+          const q = projectQueueRef.current;
+          const qQueue = q?.queue ?? queue;
+          if (!qQueue.length) return;
+          const next = ((q?.idx ?? initialIdx) + 1) % qQueue.length;
+          playFromQueue(next);
+        });
+        return;
       }
-    }
-  },
-  [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
-);
+
+      // Fallback: standard přehrání
+      play(buildPlayerTrack(track));
+    },
+    [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
+  );
 
   function handlePlayTrack(track: CurrentTrack) {
     if (!track.url) {
