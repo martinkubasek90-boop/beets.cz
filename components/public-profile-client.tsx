@@ -1311,11 +1311,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               {projectsError}
             </div>
           )}
-          {projects.length === 0 ? (
+          {projects.filter((p) => p.access_mode !== 'private').length === 0 ? (
             <p className="text-sm text-[var(--mpc-muted)]">Žádné projekty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
-              {projects.map((project) => {
+              {projects.filter((p) => p.access_mode !== 'private').map((project) => {
                 const tracks = normalizeProjectTracks(project.tracks_json);
                 return (
                   <div
