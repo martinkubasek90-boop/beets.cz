@@ -348,6 +348,7 @@ export default function ProfileClient() {
     isPlaying: gpIsPlaying,
     currentTime: gpTime,
     duration: gpDuration,
+    setOnEnded: gpSetOnEnded,
     setOnNext: gpSetOnNext,
     setOnPrev: gpSetOnPrev,
   } = useGlobalPlayer();
@@ -497,12 +498,14 @@ export default function ProfileClient() {
 
     gpSetOnNext(() => handleNext);
     gpSetOnPrev(() => handlePrev);
+    gpSetOnEnded(() => handleNext);
 
     return () => {
       gpSetOnNext(null);
       gpSetOnPrev(null);
+      gpSetOnEnded(null);
     };
-  }, [beatPlayerTracks, gpCurrent, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
+  }, [beatPlayerTracks, gpCurrent, gpSetOnEnded, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {

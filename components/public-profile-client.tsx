@@ -169,6 +169,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     play,
     toggle,
     seek,
+    setOnEnded,
     setOnNext,
     setOnPrev,
   } = useGlobalPlayer();
@@ -768,7 +769,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   }
 
   useEffect(() => {
-    if (!setOnNext || !setOnPrev) return;
+    if (!setOnNext || !setOnPrev || !setOnEnded) return;
     const cycleTracks = (items: CurrentTrack[], direction: 1 | -1) => {
       if (!items.length) return;
       const currentId = currentTrack?.id;
@@ -836,14 +837,17 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
     setOnNext(handleNext);
     setOnPrev(handlePrev);
+    setOnEnded(() => handleNext);
     return () => {
       setOnNext(null);
       setOnPrev(null);
+      setOnEnded(null);
     };
   }, [
     beatTracks,
     collabTracks,
     currentTrack,
+    setOnEnded,
     projectTracksMap,
     setOnNext,
     setOnPrev,
