@@ -10,6 +10,7 @@ import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
 import AcapellaUploadForm from './acapella-upload-form';
 import { useGlobalPlayer } from './global-player-provider';
+import { NotificationBell } from './notification-bell';
 
 type Profile = {
   display_name: string;
@@ -2287,6 +2288,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   {t('profile.tab.posts', 'Moje články')}
                 </a>
               )}
+              <NotificationBell />
             </div>
             <button
               onClick={() => setTabsOpen((p) => !p)}
@@ -2330,6 +2332,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   {t('profile.tab.posts', 'Moje články')}
                 </a>
               )}
+              <NotificationBell />
             </div>
           )}
         </div>
