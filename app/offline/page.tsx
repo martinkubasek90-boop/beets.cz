@@ -54,6 +54,23 @@ const regions: RegionDef[] = [
   { id: 'kosickykraj', label: 'Košický kraj', lat: 48.6, lng: 21.3, color: '#cde8c7', border: '#0a8f5c' },
 ];
 
+const czRegionIds = new Set([
+  'karlovarskykraj',
+  'plzenskykraj',
+  'usteckykraj',
+  'libereckykraj',
+  'kralovehradeckykraj',
+  'pardubickykraj',
+  'hlavnimestopraha',
+  'stredoceskykraj',
+  'jihoceskykraj',
+  'vysocina',
+  'jihomoravskykraj',
+  'olomouckykraj',
+  'zlinskykraj',
+  'moravskoslezskykraj',
+]);
+
 const jitterFromId = (id: string) => {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
@@ -105,6 +122,7 @@ export default function OfflinePage() {
         attributionControl: false,
         center: [49.3, 16.0],
         zoom: 6.2,
+        scrollWheelZoom: false,
       });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         opacity: 0.25,
@@ -178,6 +196,53 @@ export default function OfflinePage() {
         </Link>
       </div>
 
+      <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
+        <div className="flex items-center justify-between text-sm text-white/70">
+          <span>Podle kraje</span>
+          <span className="text-xs text-white/50">Klikni na kraj pro filtr</span>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-[12px] uppercase tracking-[0.12em] text-white/60">Česká republika</p>
+            <div className="grid grid-cols-1 gap-2">
+              {regions.filter((r) => czRegionIds.has(r.id)).map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setFilterRegion(r.id)}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    filterRegion === r.id
+                      ? 'border-[var(--mpc-accent)] bg-white/5 text-white'
+                      : 'border-white/10 bg-white/0 text-white/80 hover:border-white/30'
+                  }`}
+                >
+                  <span>{r.label}</span>
+                  <span className="text-xs text-white/60">{counts[r.id] ?? 0} profilů</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[12px] uppercase tracking-[0.12em] text-white/60">Slovensko</p>
+            <div className="grid grid-cols-1 gap-2">
+              {regions.filter((r) => !czRegionIds.has(r.id)).map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setFilterRegion(r.id)}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
+                    filterRegion === r.id
+                      ? 'border-[var(--mpc-accent)] bg-white/5 text-white'
+                      : 'border-white/10 bg-white/0 text-white/80 hover:border-white/30'
+                  }`}
+                >
+                  <span>{r.label}</span>
+                  <span className="text-xs text-white/60">{counts[r.id] ?? 0} profilů</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
         <div className="flex items-center justify-between text-sm text-white/60">
           <span>{profiles.length} profilů celkem</span>
@@ -190,30 +255,7 @@ export default function OfflinePage() {
             </button>
           )}
         </div>
-        <div id="offline-map" className="mt-3 h-[520px] w-full rounded-xl border border-white/10" />
-      </div>
-
-      <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
-        <div className="flex items-center justify-between text-sm text-white/70">
-          <span>Podle kraje</span>
-          <span className="text-xs text-white/50">Klikni na kraj pro filtr</span>
-        </div>
-        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-          {regions.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => setFilterRegion(r.id)}
-              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition ${
-                filterRegion === r.id
-                  ? 'border-[var(--mpc-accent)] bg-white/5 text-white'
-                  : 'border-white/10 bg-white/0 text-white/80 hover:border-white/30'
-              }`}
-            >
-              <span>{r.label}</span>
-              <span className="text-xs text-white/60">{counts[r.id] ?? 0} profilů</span>
-            </button>
-          ))}
-        </div>
+        <div id="offline-map" className="mt-3 h-[360px] w-full rounded-xl border border-white/10" />
       </div>
 
       <div className="grid gap-3 rounded-2xl border border-white/10 bg-[#0c0f16] p-4 shadow-lg">
