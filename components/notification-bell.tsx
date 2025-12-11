@@ -256,7 +256,15 @@ export function NotificationBell({ className }: { className?: string }) {
     <div className={cn("relative", className)}>
       <button
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => {
+          setOpen((prev) => {
+            const next = !prev;
+            if (!prev && next) {
+              void markAllRead();
+            }
+            return next;
+          });
+        }}
         className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white hover:border-[var(--mpc-accent)]"
         title="Notifikace"
       >
@@ -272,14 +280,7 @@ export function NotificationBell({ className }: { className?: string }) {
         <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-white/10 bg-[var(--mpc-panel,#0b0f15)] p-3 shadow-[0_12px_40px_rgba(0,0,0,0.45)]">
           <div className="mb-2 flex items-center justify-between text-sm text-[var(--mpc-light)]">
             <span>Notifikace</span>
-            <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
-              {loading ? <span>Načítám…</span> : null}
-              {unread > 0 && (
-                <button onClick={markAllRead} className="underline hover:text-white">
-                  Označit jako přečtené
-                </button>
-              )}
-            </div>
+            {loading ? <span className="text-[11px] text-[var(--mpc-muted)]">Načítám…</span> : null}
           </div>
           {error && <p className="mb-2 text-[12px] text-red-400">{error}</p>}
           {items.length === 0 ? (
