@@ -1149,19 +1149,27 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               <span className="text-[14px]">←</span>
               <span>Zpět</span>
             </Link>
-            <a href="#beats-section" className="font-semibold text-white relative pb-2">
-              {t('publicProfile.nav.all', 'Vše')}
-              <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
-            </a>
-            <a href="#beats-section" className="hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.beats', 'Beaty')}
-            </a>
-            <a href="#projects-section" className="hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.projects', 'Projekty')}
-            </a>
-            <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.collabs', 'Spolupráce')}
-            </a>
+            <button
+              onClick={() => setTabsOpen((p) => !p)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
+            >
+              Menu <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
+            </button>
+            <div className="hidden items-center gap-3 md:flex">
+              <a href="#beats-section" className="font-semibold text-white relative pb-2">
+                {t('publicProfile.nav.all', 'Vše')}
+                <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
+              </a>
+              <a href="#beats-section" className="hover:text-[var(--mpc-light)]">
+                {t('publicProfile.nav.beats', 'Beaty')}
+              </a>
+              <a href="#projects-section" className="hover:text-[var(--mpc-light)]">
+                {t('publicProfile.nav.projects', 'Projekty')}
+              </a>
+              <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
+                {t('publicProfile.nav.collabs', 'Spolupráce')}
+              </a>
+            </div>
           </div>
           <div className="ml-auto flex items-center gap-3">
             {currentUserId && currentUserId !== profileId && (
@@ -1181,6 +1189,22 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </a>
           </div>
         </div>
+        {tabsOpen && (
+          <div className="md:hidden grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)]">
+            <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
+              {t('publicProfile.nav.all', 'Vše')}
+            </a>
+            <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+              {t('publicProfile.nav.beats', 'Beaty')}
+            </a>
+            <a href="#projects-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+              {t('publicProfile.nav.projects', 'Projekty')}
+            </a>
+            <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+              {t('publicProfile.nav.collabs', 'Spolupráce')}
+            </a>
+          </div>
+        )}
 
         {/* Beaty */}
         <div id="beats-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
