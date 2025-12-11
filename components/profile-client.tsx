@@ -2377,30 +2377,30 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </div>
             )}
             {!isMcOnly && (
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
-                    {t('profile.beats.title', 'Moje beaty')}
-                  </h2>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
+                      {t('profile.beats.title', 'Moje beaty')}
+                    </h2>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
+                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
+                    <span className="text-[var(--mpc-dark)]">•</span>
+                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
-                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
-                  <span className="text-[var(--mpc-dark)]">•</span>
-                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
-                </div>
-              </div>
-              {beatsError && (
-                <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
-                  {beatsError}
-                </div>
-              )}
-              {beats.length === 0 ? (
+                {beatsError && (
+                  <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
+                    {beatsError}
+                  </div>
+                )}
+                {beats.length === 0 ? (
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-6 text-sm text-[var(--mpc-muted)]">
                   Zatím žádné beaty. Nahraj první beat a ukaž se.
                 </div>
-              ) : (
+                ) : (
                 <div className="space-y-3">
                   {beats.map((beat) => (
                     <div
@@ -2579,7 +2579,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
             )}
 
-            {editingProject && (
+            {!isMcOnly && editingProject && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
@@ -2860,6 +2860,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
               </div>
             )}
 
+            {!isMcOnly && (
+            <>
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -3035,7 +3037,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </div>
               )}
             </div>
-
+            </>
+            )}
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="collabs">
               <div className="mb-4 flex items-center justify-between">
                 <div>
