@@ -547,13 +547,28 @@ export default function ProfileClient() {
         setUserId(user.id);
         setIsLoggedIn(true);
 
-        const { data, error: profileError } = await supabase
+        // Nejprve zkusíme načíst nová pole; pokud nejsou ve schématu (prod), spadneme do fallbacku
+        let data: any | null = null;
+        const baseSelect =
+          'display_name, hardware, bio, avatar_url, banner_url, region, role, seeking_signals, offering_signals, seeking_custom, offering_custom';
+        const { data: fullData, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url, region, role, seeking_signals, offering_signals, seeking_custom, offering_custom')
+          .select(baseSelect)
           .eq('id', user.id)
           .maybeSingle();
-
-        if (profileError) throw profileError;
+        if (profileError && typeof profileError.message === 'string' && profileError.message.includes('column')) {
+          const { data: fallbackData, error: fbError } = await supabase
+            .from('profiles')
+            .select('display_name, hardware, bio, avatar_url, banner_url, region, role')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (fbError) throw fbError;
+          data = fallbackData;
+        } else if (profileError) {
+          throw profileError;
+        } else {
+          data = fullData;
+        }
 
         if (data) {
           setProfile({

@@ -204,13 +204,27 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   useEffect(() => {
     const loadData = async () => {
       try {
-        const { data: profileData, error: profileErr } = await supabase
+        const selectBase =
+          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom';
+        const { data: profileDataFull, error: profileErr } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom')
+          .select(selectBase)
           .eq('id', profileId)
           .maybeSingle();
 
-        if (profileErr) throw profileErr;
+        let profileData = profileDataFull;
+        if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
+          const { data: fallback, error: fbError } = await supabase
+            .from('profiles')
+            .select('display_name, hardware, bio, avatar_url, banner_url')
+            .eq('id', profileId)
+            .maybeSingle();
+          if (fbError) throw fbError;
+          profileData = fallback;
+        } else if (profileErr) {
+          throw profileErr;
+        }
+
         if (profileData) {
           setProfile({
             display_name: profileData.display_name ?? 'Uživatel',
