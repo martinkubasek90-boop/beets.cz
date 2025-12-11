@@ -141,6 +141,12 @@ type CurrentTrack = {
   meta?: TrackMeta;
 };
 
+type IncomingCall = {
+  id: string;
+  room_name: string;
+  caller_id: string;
+};
+
 function buildRoomName(a: string, b: string) {
   const sorted = [a, b].sort();
   return `beets-${sorted[0]}-${sorted[1]}`;
@@ -187,6 +193,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [startingCall, setStartingCall] = useState(false);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [incomingCallerName, setIncomingCallerName] = useState<string | null>(null);
   const {
     current: currentTrack,
     isPlaying,
@@ -484,7 +492,40 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
     loadSession();
     loadData();
-  }, [loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
+    // Realtime příchozí hovory
+    const channel = supabase
+      .channel('calls-listener')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${currentUserId}` },
+        async (payload) => {
+          const row: any = payload.new;
+          if (!row || row.status !== 'ringing' || row.callee_id !== currentUserId) return;
+          setIncomingCall({ id: row.id, room_name: row.room_name, caller_id: row.caller_id });
+          if (row.caller_id) {
+            const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', row.caller_id).maybeSingle();
+            setIncomingCallerName(prof?.display_name || null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'calls', filter: `callee_id=eq.${currentUserId}` },
+        (payload) => {
+          const row: any = payload.new;
+          if (!row || !incomingCall || row.id !== incomingCall.id) return;
+          if (row.status && row.status !== 'ringing') {
+            setIncomingCall(null);
+            setIncomingCallerName(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId, incomingCall, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
@@ -946,8 +987,28 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     setStartingCall(true);
     try {
       const roomName = buildRoomName(profileId, currentUserId);
+      const { data, error } = await supabase
+        .from('calls')
+        .insert({
+          room_name: roomName,
+          caller_id: currentUserId,
+          callee_id: profileId,
+          status: 'ringing',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
       const url = `https://meet.jit.si/${roomName}`;
       window.open(url, '_blank', 'noopener,noreferrer');
+      // Pošli notifikaci příjemci
+      await sendNotificationSafe(supabase, {
+        user_id: profileId,
+        type: 'call_incoming',
+        title: 'Příchozí hovor',
+        body: profile?.display_name || 'Uživatel',
+        item_type: 'call',
+        item_id: data?.id || roomName,
+      });
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
       setMessageError('Nepodařilo se otevřít hovor.');
@@ -955,6 +1016,34 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setStartingCall(false);
     }
   }
+
+  const acceptIncomingCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase
+        .from('calls')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při označení hovoru jako přijatého:', err);
+    } finally {
+      window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
+
+  const declineIncomingCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase.from('calls').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při odmítnutí hovoru:', err);
+    } finally {
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
@@ -1134,11 +1223,31 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           </a>
         </div>
       </div>
+      {incomingCall && (
+        <div className="mt-4 rounded-xl border border-[var(--mpc-accent)]/40 bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.45)]">
+          <p className="text-sm font-semibold text-white">Volá ti {incomingCallerName || 'uživatel'}.</p>
+          <p className="text-xs text-[var(--mpc-muted)]">Chceš hovor přijmout?</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={acceptIncomingCall}
+              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(255,75,129,0.35)]"
+            >
+              Přijmout
+            </button>
+            <button
+              onClick={declineIncomingCall}
+              className="rounded-full border border-white/20 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white hover:border-red-400 hover:text-red-200"
+            >
+              Položit
+            </button>
+          </div>
+        </div>
+      )}
       {tabsOpen && (
-          <div className="md:hidden grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)]">
-            <a href={isMcOnly ? '#acapellas-section' : '#beats-section'} className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
-              {t('publicProfile.nav.all', 'Vše')}
-            </a>
+        <div className="md:hidden grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)]">
+          <a href={isMcOnly ? '#acapellas-section' : '#beats-section'} className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
+            {t('publicProfile.nav.all', 'Vše')}
+          </a>
             {isMcOnly ? (
               <a href="#acapellas-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                 {t('publicProfile.nav.collabs', 'Akapely')}
