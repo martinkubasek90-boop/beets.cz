@@ -69,7 +69,8 @@ export function MainNav() {
               href="/profile"
               className="inline-flex items-center rounded-full border border-white/20 bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)]"
             >
-              Můj profil
+              <span className="md:hidden">Profil</span>
+              <span className="hidden md:inline">Můj profil</span>
             </Link>
           ) : (
             <Link

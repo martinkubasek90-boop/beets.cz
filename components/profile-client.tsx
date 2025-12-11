@@ -1967,8 +1967,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
-          {/* Levý sloupec: releasy */}
-          <div className="space-y-6">
+          {/* Levý sloupec: releasy (na mobilu za akcemi) */}
+          <div className="space-y-6 order-2 lg:order-1">
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -3106,8 +3106,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
           {/* konec levého sloupce */}
           </div>
 
-          {/* Pravý sloupec: akce */}
-          <div className="space-y-4" id="profile-settings">
+          {/* Pravý sloupec: akce (na mobilu nahoře) */}
+          <div className="space-y-4 order-1 lg:order-2" id="profile-settings">
             {canUpload && (
               <>
                 <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">

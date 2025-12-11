@@ -191,7 +191,7 @@ export default function ProjectsPage() {
         cover_url: project.cover_url,
         user_id: project.user_id || undefined,
         item_type: "project",
-        meta: { projectId: project.id, trackIndex: item.idx },
+        meta: { projectId: String(project.id), trackIndex: item.idx },
       });
     };
 
