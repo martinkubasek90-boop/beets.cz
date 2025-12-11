@@ -1,3 +1,7 @@
+"use client";
+
+import { MainNav } from "@/components/main-nav";
+
 export const metadata = {
   title: 'Spolupráce | BEETS.CZ',
   description: 'Jak fungují spolupráce na BEETS.CZ a proč dává smysl je řešit přímo na platformě.',
@@ -52,6 +56,7 @@ const reasons = [
 export default function CollabsPage() {
   return (
     <main className="min-h-screen bg-black text-white" id="collabs">
+      <MainNav />
       <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-12">
         <div className="flex justify-end">
           <a

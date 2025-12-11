@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '../../lib/supabase/client';
+import { MainNav } from '@/components/main-nav';
 
 type ArtistCard = {
   id: string | number;
@@ -92,6 +93,7 @@ export default function ArtistsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
+      <MainNav />
       <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

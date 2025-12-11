@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { FireButton } from '@/components/fire-button';
 import { useGlobalPlayer } from '@/components/global-player-provider';
+import { MainNav } from '@/components/main-nav';
 
 type Beat = {
   id: number | string;
@@ -113,6 +114,7 @@ export default function BeatsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
+      <MainNav />
       <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

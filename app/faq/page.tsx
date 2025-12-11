@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { MainNav } from "@/components/main-nav";
 
 const faqs = [
   {
@@ -146,6 +149,7 @@ const faqs = [
 export default function FaqPage() {
   return (
     <main className="min-h-screen bg-black text-white">
+      <MainNav />
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
         <header className="space-y-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
