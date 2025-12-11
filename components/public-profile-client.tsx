@@ -971,6 +971,14 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const isMcOnly = profile?.role === 'mc';
 
   const handleCommunityCall = () => {
+    void supabase
+      .channel('community-call')
+      .send({
+        type: 'broadcast',
+        event: 'community-call',
+        payload: { room: COMMUNITY_ROOM, fromName: profile?.display_name || null },
+      })
+      .catch((err) => console.warn('Community call broadcast failed:', err));
     window.open(`https://meet.jit.si/${COMMUNITY_ROOM}`, '_blank', 'noopener,noreferrer');
   };
 

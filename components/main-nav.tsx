@@ -22,6 +22,7 @@ export function MainNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string } | null>(null);
   const [callerName, setCallerName] = useState<string | null>(null);
+  const [communityInvite, setCommunityInvite] = useState<{ room: string; from?: string | null } | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -73,6 +74,22 @@ export function MainNav() {
     };
   }, [incomingCall, supabase, userId]);
 
+  // Broadcast komunitních callů – dorazí všem online
+  useEffect(() => {
+    const channel = supabase
+      .channel('community-call-global')
+      .on('broadcast', { event: 'community-call' }, (payload) => {
+        const data: any = payload.payload;
+        if (!data?.room) return;
+        setCommunityInvite({ room: String(data.room), from: data.fromName || null });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
   const acceptCall = async () => {
     if (!incomingCall) return;
     try {
@@ -96,6 +113,16 @@ export function MainNav() {
       setIncomingCall(null);
       setCallerName(null);
     }
+  };
+
+  const acceptCommunity = () => {
+    if (!communityInvite) return;
+    window.open(`https://meet.jit.si/${communityInvite.room}`, '_blank', 'noopener,noreferrer');
+    setCommunityInvite(null);
+  };
+
+  const declineCommunity = () => {
+    setCommunityInvite(null);
   };
 
   return (
@@ -197,6 +224,28 @@ export function MainNav() {
               className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-white hover:border-red-400 hover:text-red-200"
             >
               Položit
+            </button>
+          </div>
+        </div>
+      )}
+      {communityInvite && (
+        <div className="fixed bottom-20 right-4 left-4 z-30 mx-auto max-w-md rounded-2xl border border-white/20 bg-black/85 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:left-auto sm:right-6 sm:bottom-24">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Komunitní call</p>
+          <p className="mt-1 text-base font-semibold">
+            {communityInvite.from ? `${communityInvite.from} spouští community call` : 'Community call je živý'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={acceptCommunity}
+              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+            >
+              Připojit
+            </button>
+            <button
+              onClick={declineCommunity}
+              className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-white hover:border-red-400 hover:text-red-200"
+            >
+              Zavřít
             </button>
           </div>
         </div>
