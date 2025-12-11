@@ -120,7 +120,7 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <Label>Jsem</Label>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <label className="flex items-center gap-2 text-sm text-white/80">
                     <input
                       type="radio"
