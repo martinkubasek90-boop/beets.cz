@@ -39,8 +39,14 @@ export function NotificationBell({ className }: { className?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Notification[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [lastReadAt, setLastReadAt] = useState<number | null>(null);
 
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
+
+  useEffect(() => {
+    const stored = typeof window !== "undefined" ? window.localStorage.getItem("beets-last-read") : null;
+    if (stored) setLastReadAt(Number(stored));
+  }, []);
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -152,7 +158,14 @@ export function NotificationBell({ className }: { className?: string }) {
         return tb - ta;
       });
 
-      setItems(merged.slice(0, 40));
+      const nowReadThreshold = lastReadAt;
+      const mapped = merged.slice(0, 40).map((n) => {
+        const created = n.created_at ? new Date(n.created_at).getTime() : 0;
+        const derivedRead = nowReadThreshold ? created <= nowReadThreshold : false;
+        return { ...n, read: n.read || derivedRead };
+      });
+
+      setItems(mapped);
     } catch (err: any) {
       console.error("Chyba načítání notifikací:", err);
       setError("Nepodařilo se načíst notifikace.");
@@ -222,9 +235,17 @@ export function NotificationBell({ className }: { className?: string }) {
         if (err) throw err;
       }
 
+      // označ i zprávy jako přečtené v DB
+      await supabase.from("messages").update({ unread: false }).eq("to_user_id", authData.user.id);
+
       // Označ jako přečtené i lokální extra položky (messages / requests / calls),
       // které nejsou v tabulce notifications.
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      const ts = Date.now();
+      setLastReadAt(ts);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("beets-last-read", String(ts));
+      }
     } catch (err: any) {
       console.error("Chyba při označení přečtených:", err);
       setError("Nepodařilo se označit jako přečtené.");
