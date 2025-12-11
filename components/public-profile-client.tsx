@@ -739,6 +739,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
         if (!queue.length) {
           play(buildPlayerTrack(track));
+          setOnNext && setOnNext(null);
+          setOnPrev && setOnPrev(null);
+          setOnEnded && setOnEnded(null);
           return;
         }
         const initialIdx = Math.max(queue.findIndex((t) => t.id === track.id), 0);
@@ -777,6 +780,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
       // Fallback: standard přehrání
       play(buildPlayerTrack(track));
+      setOnNext && setOnNext(null);
+      setOnPrev && setOnPrev(null);
+      setOnEnded && setOnEnded(null);
     },
     [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
   );
