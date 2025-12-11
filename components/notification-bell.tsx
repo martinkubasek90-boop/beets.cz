@@ -209,14 +209,21 @@ export function NotificationBell({ className }: { className?: string }) {
     try {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) return;
-      const unreadIds = items.filter((n) => !n.read).map((n) => n.id);
-      if (unreadIds.length === 0) return;
-      const { error: err } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .in("id", unreadIds)
-        .eq("user_id", authData.user.id);
-      if (err) throw err;
+      const unreadNotificationIds = items
+        .filter((n) => !n.read && n.source === "notifications")
+        .map((n) => n.id);
+
+      if (unreadNotificationIds.length > 0) {
+        const { error: err } = await supabase
+          .from("notifications")
+          .update({ read: true })
+          .in("id", unreadNotificationIds)
+          .eq("user_id", authData.user.id);
+        if (err) throw err;
+      }
+
+      // Označ jako přečtené i lokální extra položky (messages / requests / calls),
+      // které nejsou v tabulce notifications.
       setItems((prev) => prev.map((n) => ({ ...n, read: true })));
     } catch (err: any) {
       console.error("Chyba při označení přečtených:", err);
