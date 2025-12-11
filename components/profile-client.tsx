@@ -279,6 +279,7 @@ export default function ProfileClient() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | null>('creator');
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
   const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
@@ -616,6 +617,8 @@ export default function ProfileClient() {
 
         setEmail(user.email ?? null);
         setUserId(user.id);
+        const metaRole = (user.user_metadata as any)?.role ?? 'creator';
+        setDefaultRole(metaRole as any);
 
         // Nejprve zkusíme načíst nová pole; pokud nejsou ve schématu (prod), spadneme do fallbacku
         let data: any | null = null;
@@ -659,7 +662,7 @@ export default function ProfileClient() {
             avatar_url: data.avatar_url ?? null,
             banner_url: (data as any).banner_url ?? null,
             region: (data as any).region ?? null,
-            role: (data as any).role ?? 'creator',
+            role: (data as any).role ?? (metaRole as any),
             seeking_signals: mergedSeeking,
             offering_signals: mergedOffering,
             seeking_custom: mergedSeekingCustom,
@@ -670,6 +673,22 @@ export default function ProfileClient() {
           setOfferingSignals(mergedOffering);
           setSeekingCustom(mergedSeekingCustom);
           setOfferingCustom(mergedOfferingCustom);
+        } else {
+          // Pokud profil neexistuje, založ ho s rolí z metadata
+          try {
+            await supabase.from('profiles').insert({
+              id: user.id,
+              display_name: user.email?.split('@')[0] || null,
+              role: metaRole,
+            });
+            setProfile((prev) => ({
+              ...prev,
+              display_name: user.email?.split('@')[0] || '',
+              role: metaRole as any,
+            }));
+          } catch (insertErr) {
+            console.warn('Nepodařilo se založit profil:', insertErr);
+          }
         }
       } catch (err) {
         const message =
@@ -1296,7 +1315,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         avatar_url: profile.avatar_url,
         banner_url: profile.banner_url,
         region: editRegion.trim() || null,
-        role: profile.role ?? 'creator',
+        role: profile.role ?? defaultRole ?? 'creator',
         seeking_signals: seekingSignals,
         offering_signals: offeringSignals,
         seeking_custom: seekingCustom.trim() || null,
