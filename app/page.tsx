@@ -17,6 +17,7 @@ type Beat = {
   audio_url: string | null;
   cover_url?: string | null;
   monthlyFires?: number;
+  created_at?: string | null;
 };
 
 type Artist = {
