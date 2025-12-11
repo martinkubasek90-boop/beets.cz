@@ -1615,7 +1615,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         })}
       </div>
     )}
-
       </div>
 
       {/* Spolupráce */}
