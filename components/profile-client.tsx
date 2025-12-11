@@ -3092,9 +3092,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje žádosti o přístup</h3>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Přehled toho, kam ses hlásil
-                    </p>
                   </div>
                 </div>
                 {myAccessRequestsLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám žádosti…</p>}
