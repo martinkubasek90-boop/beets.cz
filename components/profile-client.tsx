@@ -1184,25 +1184,46 @@ function handleFieldChange(field: keyof Profile, value: string) {
         throw userError ?? new Error('Uživatel není přihlášen.');
       }
 
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: user.id,
-            display_name: profile.display_name.trim() || null,
-            hardware: profile.hardware.trim() || null,
-            bio: profile.bio.trim() || null,
-            avatar_url: profile.avatar_url,
-            banner_url: profile.banner_url,
-            region: editRegion.trim() || null,
-            role: profile.role ?? 'creator',
-            seeking_signals: seekingSignals,
-            offering_signals: offeringSignals,
-            seeking_custom: seekingCustom.trim() || null,
-            offering_custom: offeringCustom.trim() || null,
-          },
-          { onConflict: 'id' }
-        );
+      let fallbackUsed = false;
+      let upsertError: any = null;
+      const fullPayload = {
+        id: user.id,
+        display_name: profile.display_name.trim() || null,
+        hardware: profile.hardware.trim() || null,
+        bio: profile.bio.trim() || null,
+        avatar_url: profile.avatar_url,
+        banner_url: profile.banner_url,
+        region: editRegion.trim() || null,
+        role: profile.role ?? 'creator',
+        seeking_signals: seekingSignals,
+        offering_signals: offeringSignals,
+        seeking_custom: seekingCustom.trim() || null,
+        offering_custom: offeringCustom.trim() || null,
+      };
+
+      const { error: firstError } = await supabase.from('profiles').upsert(fullPayload, { onConflict: 'id' });
+      upsertError = firstError;
+
+      if (upsertError && typeof upsertError.message === 'string' && upsertError.message.includes('column')) {
+        // Prod schéma ještě nemá nové sloupce – zkusíme uložit bez nich
+        fallbackUsed = true;
+        const { error: fallbackError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: user.id,
+              display_name: profile.display_name.trim() || null,
+              hardware: profile.hardware.trim() || null,
+              bio: profile.bio.trim() || null,
+              avatar_url: profile.avatar_url,
+              banner_url: profile.banner_url,
+              region: editRegion.trim() || null,
+              role: profile.role ?? 'creator',
+            },
+            { onConflict: 'id' }
+          );
+        upsertError = fallbackError;
+      }
 
       if (upsertError) throw upsertError;
 
@@ -1214,7 +1235,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
         seeking_custom: seekingCustom.trim() || null,
         offering_custom: offeringCustom.trim() || null,
       }));
-      setSuccess('Profil byl uložen.');
+      setSuccess(
+        fallbackUsed
+          ? 'Profil byl uložen, ale signály Hledám/Nabízím zatím nejsou v této verzi databáze dostupné.'
+          : 'Profil byl uložen.'
+      );
     } catch (err) {
       const message =
         err instanceof Error
