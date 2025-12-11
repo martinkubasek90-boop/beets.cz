@@ -76,7 +76,8 @@ export function MainNav() {
               href="/auth/login"
               className="inline-flex items-center rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
             >
-              Přihlásit se
+              <span className="md:hidden">Login</span>
+              <span className="hidden md:inline">Přihlásit se</span>
             </Link>
           )}
         </div>
@@ -104,7 +105,7 @@ export function MainNav() {
                   href="/auth/login"
                   className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
                 >
-                  Přihlásit se
+                  Login
                 </Link>
               )}
             </div>
