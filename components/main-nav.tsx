@@ -35,7 +35,7 @@ export function MainNav() {
   return (
     <header className="sticky top-0 z-20 bg-black/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 relative">
-        <div className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-[conic-gradient(from_90deg,var(--mpc-accent),var(--mpc-accent-2),var(--mpc-accent))] text-xs font-black text-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
             B
           </div>
@@ -43,7 +43,7 @@ export function MainNav() {
             <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Beat komunita</p>
             <p className="text-sm font-bold uppercase tracking-[0.08em] text-white">Beets.cz</p>
           </div>
-        </div>
+        </Link>
         <button
           onClick={() => setNavOpen((prev) => !prev)}
           className="md:hidden rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white"
