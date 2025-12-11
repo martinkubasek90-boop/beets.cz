@@ -39,14 +39,13 @@ export function NotificationBell({ className }: { className?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Notification[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [lastReadAt, setLastReadAt] = useState<number | null>(null);
+  const [lastReadAt, setLastReadAt] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const stored = window.localStorage.getItem("beets-last-read");
+    return stored ? Number(stored) : null;
+  });
 
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
-
-  useEffect(() => {
-    const stored = typeof window !== "undefined" ? window.localStorage.getItem("beets-last-read") : null;
-    if (stored) setLastReadAt(Number(stored));
-  }, []);
 
   const fetchNotifications = async () => {
     setLoading(true);
