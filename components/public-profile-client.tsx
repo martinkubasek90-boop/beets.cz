@@ -40,6 +40,10 @@ type PublicProfile = {
   avatar_url: string | null;
   banner_url: string | null;
   last_seen_at?: string | null;
+  seeking_signals?: string[] | null;
+  offering_signals?: string[] | null;
+  seeking_custom?: string | null;
+  offering_custom?: string | null;
 };
 
 type Beat = {
@@ -201,7 +205,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       try {
         const { data: profileData, error: profileErr } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url')
+          .select('display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom')
           .eq('id', profileId)
           .maybeSingle();
 
@@ -213,6 +217,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             bio: profileData.bio ?? '',
             avatar_url: profileData.avatar_url ?? null,
             banner_url: (profileData as any).banner_url ?? null,
+            seeking_signals: (profileData as any).seeking_signals ?? [],
+            offering_signals: (profileData as any).offering_signals ?? [],
+            seeking_custom: (profileData as any).seeking_custom ?? null,
+            offering_custom: (profileData as any).offering_custom ?? null,
           });
         } else {
           setProfile(null);
@@ -672,6 +680,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const projectTracksMap = useMemo<Record<string, CurrentTrack[]>>(() => {
     const map: Record<string, CurrentTrack[]> = {};
     projects.forEach((project) => {
+      if (project.access_mode === 'private') return;
       const tracks: CurrentTrack[] = [];
       normalizeProjectTracks(project.tracks_json).forEach((track, idx) => {
         if (!track.url) return;
@@ -1127,6 +1136,42 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       {profile?.bio || t('profile.noBio', 'Profil zatím nemá popis.')}
                     </span>
                   </div>
+                  {(profile?.seeking_signals?.length || profile?.seeking_custom) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Hledám:</span>
+                      {profile?.seeking_signals?.map((opt) => (
+                        <span
+                          key={`seeking-${opt}`}
+                          className="rounded-full border border-[var(--mpc-accent)]/70 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] shadow-[0_8px_18px_rgba(243,116,51,0.25)]"
+                        >
+                          {opt}
+                        </span>
+                      ))}
+                      {profile?.seeking_custom && (
+                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
+                          {profile.seeking_custom}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {(profile?.offering_signals?.length || profile?.offering_custom) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Nabízím:</span>
+                      {profile?.offering_signals?.map((opt) => (
+                        <span
+                          key={`offering-${opt}`}
+                          className="rounded-full border border-emerald-400/60 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.25)]"
+                        >
+                          {opt}
+                        </span>
+                      ))}
+                      {profile?.offering_custom && (
+                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
+                          {profile.offering_custom}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1432,6 +1477,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                           source: 'project',
                                           cover_url: project.cover_url,
                                           subtitle: profile?.display_name || null,
+                                          meta: { projectId: project.id, trackIndex: idx },
                                         })
                                       }
                                       disabled={!t.url}
@@ -1474,6 +1520,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                                   source: 'project',
                                   cover_url: project.cover_url,
                                   subtitle: profile?.display_name || null,
+                                  meta: { projectId: project.id, trackIndex: -1 },
                                 })
                               }
                               className="text-[11px] text-[var(--mpc-accent)] hover:text-white"

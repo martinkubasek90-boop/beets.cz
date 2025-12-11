@@ -18,6 +18,10 @@ type Profile = {
   banner_url: string | null;
   region?: string | null;
   role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
+  seeking_signals?: string[] | null;
+  offering_signals?: string[] | null;
+  seeking_custom?: string | null;
+  offering_custom?: string | null;
 };
 
 type BeatItem = {
@@ -53,6 +57,9 @@ type PlayerTrack = {
   item_type: 'beat' | 'project';
   meta?: PlayerMeta;
 };
+
+const SEEKING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'GRAFIKA', 'VIDEO', 'STUDIO'];
+const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', 'GRAFIKA', 'VIDEO'];
 
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
@@ -240,6 +247,10 @@ export default function ProfileClient() {
     banner_url: null,
     region: null,
     role: 'creator',
+    seeking_signals: [],
+    offering_signals: [],
+    seeking_custom: '',
+    offering_custom: '',
   });
   const [editRegion, setEditRegion] = useState<string>('');
 
@@ -262,6 +273,13 @@ export default function ProfileClient() {
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
+  const [seekingSignals, setSeekingSignals] = useState<string[]>([]);
+  const [offeringSignals, setOfferingSignals] = useState<string[]>([]);
+  const [seekingCustom, setSeekingCustom] = useState('');
+  const [offeringCustom, setOfferingCustom] = useState('');
+  const toggleSignal = (value: string, list: string[], setter: (next: string[]) => void) => {
+    setter(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  };
 
   const currentRole = profile.role ?? 'creator';
   const isSuperAdmin = currentRole === 'superadmin';
@@ -531,7 +549,7 @@ export default function ProfileClient() {
 
         const { data, error: profileError } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url, region, role')
+          .select('display_name, hardware, bio, avatar_url, banner_url, region, role, seeking_signals, offering_signals, seeking_custom, offering_custom')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -546,8 +564,16 @@ export default function ProfileClient() {
             banner_url: (data as any).banner_url ?? null,
             region: (data as any).region ?? null,
             role: (data as any).role ?? 'creator',
+            seeking_signals: (data as any).seeking_signals ?? [],
+            offering_signals: (data as any).offering_signals ?? [],
+            seeking_custom: (data as any).seeking_custom ?? '',
+            offering_custom: (data as any).offering_custom ?? '',
           });
           setEditRegion((data as any).region ?? '');
+          setSeekingSignals(((data as any).seeking_signals as string[] | null) ?? []);
+          setOfferingSignals(((data as any).offering_signals as string[] | null) ?? []);
+          setSeekingCustom((data as any).seeking_custom ?? '');
+          setOfferingCustom((data as any).offering_custom ?? '');
         }
       } catch (err) {
         const message =
@@ -1155,13 +1181,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
             banner_url: profile.banner_url,
             region: editRegion.trim() || null,
             role: profile.role ?? 'creator',
+            seeking_signals: seekingSignals,
+            offering_signals: offeringSignals,
+            seeking_custom: seekingCustom.trim() || null,
+            offering_custom: offeringCustom.trim() || null,
           },
           { onConflict: 'id' }
         );
 
       if (upsertError) throw upsertError;
 
-      setProfile((prev) => ({ ...prev, region: editRegion.trim() || null }));
+      setProfile((prev) => ({
+        ...prev,
+        region: editRegion.trim() || null,
+        seeking_signals: seekingSignals,
+        offering_signals: offeringSignals,
+        seeking_custom: seekingCustom.trim() || null,
+        offering_custom: offeringCustom.trim() || null,
+      }));
       setSuccess('Profil byl uložen.');
     } catch (err) {
       const message =
@@ -1913,6 +1950,42 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       <span className="text-[13px] font-medium tracking-[0.06em] text-white/90">
                         {profile.hardware}
                       </span>
+                    </div>
+                  )}
+                  {(profile.seeking_signals?.length || profile.seeking_custom) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Hledám:</span>
+                      {profile.seeking_signals?.map((opt) => (
+                        <span
+                          key={`seeking-${opt}`}
+                          className="rounded-full border border-[var(--mpc-accent)]/70 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)] shadow-[0_8px_18px_rgba(243,116,51,0.25)]"
+                        >
+                          {opt}
+                        </span>
+                      ))}
+                      {profile.seeking_custom && (
+                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
+                          {profile.seeking_custom}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {(profile.offering_signals?.length || profile.offering_custom) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80">Nabízím:</span>
+                      {profile.offering_signals?.map((opt) => (
+                        <span
+                          key={`offering-${opt}`}
+                          className="rounded-full border border-emerald-400/60 bg-black/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-emerald-200 shadow-[0_8px_18px_rgba(16,185,129,0.25)]"
+                        >
+                          {opt}
+                        </span>
+                      ))}
+                      {profile.offering_custom && (
+                        <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] font-semibold text-white">
+                          {profile.offering_custom}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -3282,6 +3355,78 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       </select>
                     </div>
 
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                            Hledám
+                          </label>
+                          <span className="text-[11px] text-[var(--mpc-muted)]">Vyber vše, co platí</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {SEEKING_OPTIONS.map((opt) => {
+                            const active = seekingSignals.includes(opt);
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => toggleSignal(opt, seekingSignals, setSeekingSignals)}
+                                className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+                                  active
+                                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)]'
+                                    : 'border-[var(--mpc-dark)] bg-[var(--mpc-deck)] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="text"
+                          value={seekingCustom}
+                          onChange={(e) => setSeekingCustom(e.target.value)}
+                          placeholder="Jiné – napiš vlastní popis"
+                          className="mt-2 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                            Nabízím
+                          </label>
+                          <span className="text-[11px] text-[var(--mpc-muted)]">Vyber vše, co nabízíš</span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {OFFERING_OPTIONS.map((opt) => {
+                            const active = offeringSignals.includes(opt);
+                            return (
+                              <button
+                                key={opt}
+                                type="button"
+                                onClick={() => toggleSignal(opt, offeringSignals, setOfferingSignals)}
+                                className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] transition ${
+                                  active
+                                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)]'
+                                    : 'border-[var(--mpc-dark)] bg-[var(--mpc-deck)] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]'
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="text"
+                          value={offeringCustom}
+                          onChange={(e) => setOfferingCustom(e.target.value)}
+                          placeholder="Jiné – napiš vlastní popis"
+                          className="mt-2 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        />
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
                         Krátké info o sobě
@@ -3669,5 +3814,5 @@ function handleFieldChange(field: keyof Profile, value: string) {
         </div>
       </section>
     </main>
-  );
+);
 }
