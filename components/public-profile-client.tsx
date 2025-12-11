@@ -7,6 +7,7 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
+import { FireButton } from './fire-button';
 
 async function sendNotificationSafe(
   supabase: ReturnType<typeof createClient>,
@@ -1419,22 +1420,25 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                             </p>
                           </div>
                         </div>
-                        <button
-                          onClick={() =>
-                            handlePlayTrack({
-                              id: `beat-${beat.id}`,
-                              title: beat.title,
-                              url: beat.audio_url || '',
-                              source: 'beat',
-                              cover_url: beat.cover_url,
-                              subtitle: profile?.display_name || null,
-                            })
-                          }
-                          disabled={!beat.audio_url}
-                          className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
-                        >
-                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() =>
+                              handlePlayTrack({
+                                id: `beat-${beat.id}`,
+                                title: beat.title,
+                                url: beat.audio_url || '',
+                                source: 'beat',
+                                cover_url: beat.cover_url,
+                                subtitle: profile?.display_name || null,
+                              })
+                            }
+                            disabled={!beat.audio_url}
+                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                          >
+                            {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                          </button>
+                          <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+                        </div>
                       </div>
                       <div
                         className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
@@ -1520,6 +1524,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
                     </p>
+                    <div className="flex justify-center pt-2">
+                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
+                    </div>
                   </div>
                 </div>
 
