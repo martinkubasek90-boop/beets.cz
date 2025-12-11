@@ -1050,7 +1050,18 @@ export default function Home() {
               >
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
-                    {project.cover_url ? (
+                    {project.user_id ? (
+                      <Link href={`/u/${project.user_id}`} className="block h-full w-full">
+                        {project.cover_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                            NO COVER
+                          </div>
+                        )}
+                      </Link>
+                    ) : project.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
                     ) : (
