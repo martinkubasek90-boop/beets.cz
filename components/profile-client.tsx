@@ -2843,156 +2843,165 @@ function handleFieldChange(field: keyof Profile, value: string) {
             </div>
 
             {profile.role !== 'mc' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-forum">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje fórum</h3>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                    Tvé kategorie, podkategorie a vlákna
-                  </p>
+              <div
+                className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3"
+                id="my-forum"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje fórum</h3>
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      Tvé kategorie, podkategorie a vlákna
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {myForumLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
-              {myForumError && (
-                <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                  {myForumError}
+                {myForumLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
+                {myForumError && (
+                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+                    {myForumError}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
+                    <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Kategorie / subkategorie</div>
+                    {myForumCategories.length === 0 ? (
+                      <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné kategorie.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {myForumCategories.map((cat) => (
+                          <div
+                            key={cat.id}
+                            className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
+                          >
+                            <div>
+                              <p className="font-semibold">{cat.name}</p>
+                              <p className="text-[11px] text-[var(--mpc-muted)]">{cat.description || 'Bez popisu'}</p>
+                            </div>
+                            <div className="flex flex-col gap-1 text-[11px]">
+                              <button
+                                onClick={async () => {
+                                  const name = prompt('Upravit název kategorie', cat.name) ?? cat.name;
+                                  const desc = prompt('Upravit popis', cat.description || '') ?? cat.description;
+                                  try {
+                                    const { error } = await supabase
+                                      .from('forum_categories')
+                                      .update({ name, description: desc || null })
+                                      .eq('id', cat.id)
+                                      .eq('user_id', userId);
+                                    if (error) throw error;
+                                    setMyForumCategories((prev) =>
+                                      prev.map((c) => (c.id === cat.id ? { ...c, name, description: desc || null } : c))
+                                    );
+                                  } catch (err) {
+                                    console.error('Chyba při úpravě kategorie:', err);
+                                    setMyForumError('Nepodařilo se upravit kategorii.');
+                                  }
+                                }}
+                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Upravit
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('forum_categories')
+                                      .delete()
+                                      .eq('id', cat.id)
+                                      .eq('user_id', userId);
+                                    if (error) throw error;
+                                    setMyForumCategories((prev) => prev.filter((c) => c.id !== cat.id));
+                                  } catch (err) {
+                                    console.error('Chyba při mazání kategorie:', err);
+                                    setMyForumError('Nepodařilo se smazat kategorii.');
+                                  }
+                                }}
+                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
+                              >
+                                Smazat
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
+                    <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Vlákna</div>
+                    {myForumThreads.length === 0 ? (
+                      <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {myForumThreads.map((thr) => (
+                          <div
+                            key={thr.id}
+                            className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
+                          >
+                            <div>
+                              <p className="font-semibold">{thr.title}</p>
+                              <p className="text-[11px] text-[var(--mpc-muted)]">Kategorie: {thr.category_id}</p>
+                            </div>
+                            <div className="flex flex-col gap-1 text-[11px]">
+                              <button
+                                onClick={async () => {
+                                  const title = prompt('Upravit název vlákna', thr.title) ?? thr.title;
+                                  try {
+                                    const { error } = await supabase
+                                      .from('forum_threads')
+                                      .update({ title })
+                                      .eq('id', thr.id)
+                                      .eq('user_id', userId);
+                                    if (error) throw error;
+                                    setMyForumThreads((prev) => prev.map((t) => (t.id === thr.id ? { ...t, title } : t)));
+                                  } catch (err) {
+                                    console.error('Chyba při úpravě vlákna:', err);
+                                    setMyForumError('Nepodařilo se upravit vlákno.');
+                                  }
+                                }}
+                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Upravit
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const { error } = await supabase
+                                      .from('forum_threads')
+                                      .delete()
+                                      .eq('id', thr.id)
+                                      .eq('user_id', userId);
+                                    if (error) throw error;
+                                    setMyForumThreads((prev) => prev.filter((t) => t.id !== thr.id));
+                                  } catch (err) {
+                                    console.error('Chyba při mazání vlákna:', err);
+                                    setMyForumError('Nepodařilo se smazat vlákno.');
+                                  }
+                                }}
+                                className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
+                              >
+                                Smazat
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Link
+                  href="/forum"
+                  className="inline-flex w-full items-center justify-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                >
+                  Otevřít fórum
+                </Link>
               </div>
             )}
 
-              <div className="space-y-3">
-                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
-                  <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Kategorie / subkategorie</div>
-                  {myForumCategories.length === 0 ? (
-                    <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné kategorie.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {myForumCategories.map((cat) => (
-                        <div key={cat.id} className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]">
-                          <div>
-                            <p className="font-semibold">{cat.name}</p>
-                            <p className="text-[12px] text-[var(--mpc-muted)]">{cat.description || 'Bez popisu'}</p>
-                            {cat.parent_id && <p className="text-[11px] text-[var(--mpc-muted)]">Subkategorie</p>}
-                          </div>
-                          <div className="flex flex-col gap-1 text-[11px]">
-                            <button
-                              onClick={async () => {
-                                const name = prompt('Upravit název kategorie', cat.name) ?? cat.name;
-                                const desc = prompt('Upravit popis', cat.description || '') ?? cat.description;
-                                try {
-                                  const { error } = await supabase
-                                    .from('forum_categories')
-                                    .update({ name, description: desc || null })
-                                    .eq('id', cat.id)
-                                    .eq('user_id', userId);
-                                  if (error) throw error;
-                                  setMyForumCategories((prev) =>
-                                    prev.map((c) => (c.id === cat.id ? { ...c, name, description: desc || null } : c))
-                                  );
-                                } catch (err) {
-                                  console.error('Chyba při úpravě kategorie:', err);
-                                  setMyForumError('Nepodařilo se upravit kategorii.');
-                                }
-                              }}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                            >
-                              Upravit
-                            </button>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const { error } = await supabase
-                                    .from('forum_categories')
-                                    .delete()
-                                    .eq('id', cat.id)
-                                    .eq('user_id', userId);
-                                  if (error) throw error;
-                                  setMyForumCategories((prev) => prev.filter((c) => c.id !== cat.id));
-                                } catch (err) {
-                                  console.error('Chyba při mazání kategorie:', err);
-                                  setMyForumError('Nepodařilo se smazat kategorii.');
-                                }
-                              }}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
-                            >
-                              Smazat
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-3">
-                  <div className="mb-2 text-sm font-semibold text-[var(--mpc-light)]">Vlákna</div>
-                  {myForumThreads.length === 0 ? (
-                    <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {myForumThreads.map((thr) => (
-                        <div key={thr.id} className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]">
-                          <div>
-                            <p className="font-semibold">{thr.title}</p>
-                            <p className="text-[11px] text-[var(--mpc-muted)]">Kategorie: {thr.category_id}</p>
-                          </div>
-                          <div className="flex flex-col gap-1 text-[11px]">
-                            <button
-                              onClick={async () => {
-                                const title = prompt('Upravit název vlákna', thr.title) ?? thr.title;
-                                try {
-                                  const { error } = await supabase
-                                    .from('forum_threads')
-                                    .update({ title })
-                                    .eq('id', thr.id)
-                                    .eq('user_id', userId);
-                                  if (error) throw error;
-                                  setMyForumThreads((prev) => prev.map((t) => (t.id === thr.id ? { ...t, title } : t)));
-                                } catch (err) {
-                                  console.error('Chyba při úpravě vlákna:', err);
-                                  setMyForumError('Nepodařilo se upravit vlákno.');
-                                }
-                              }}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                            >
-                              Upravit
-                            </button>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const { error } = await supabase
-                                    .from('forum_threads')
-                                    .delete()
-                                    .eq('id', thr.id)
-                                    .eq('user_id', userId);
-                                  if (error) throw error;
-                                  setMyForumThreads((prev) => prev.filter((t) => t.id !== thr.id));
-                                } catch (err) {
-                                  console.error('Chyba při mazání vlákna:', err);
-                                  setMyForumError('Nepodařilo se smazat vlákno.');
-                                }
-                              }}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-red-300 hover:border-red-400 hover:text-white"
-                            >
-                              Smazat
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <Link
-                href="/forum"
-                className="inline-flex w-full items-center justify-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-              >
-                Otevřít fórum
-              </Link>
-            </div>
-
             {canWriteArticles && (
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje články</h3>

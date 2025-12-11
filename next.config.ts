@@ -1,8 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Disable component caching to allow dynamic routes (e.g., blog detail) to fetch data at runtime.
-  cacheComponents: false,
+  cacheComponents: true,
+  turbopack: {
+    // Nutí Next najít kořen v tomto projektu (kvůli více lockfile v nadřazených složkách)
+    root: __dirname,
+  },
 };
 
 export default nextConfig;
