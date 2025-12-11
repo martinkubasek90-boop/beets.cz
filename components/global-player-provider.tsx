@@ -15,7 +15,7 @@ type Track = {
   url: string;
   cover_url?: string | null;
   user_id?: string | null;
-  item_type?: 'beat' | 'project' | 'collab';
+  item_type?: 'beat' | 'project' | 'collab' | 'acapella';
   meta?: TrackMeta;
 };
 

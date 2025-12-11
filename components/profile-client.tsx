@@ -8,6 +8,7 @@ import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
 import ProjectUploadForm from './project-upload-form';
+import AcapellaUploadForm from './acapella-upload-form';
 import { useGlobalPlayer } from './global-player-provider';
 
 type Profile = {
@@ -25,6 +26,15 @@ type Profile = {
 };
 
 type BeatItem = {
+  id: number;
+  title: string;
+  bpm: number | null;
+  mood: string | null;
+  audio_url: string | null;
+  cover_url?: string | null;
+};
+
+type AcapellaItem = {
   id: number;
   title: string;
   bpm: number | null;
@@ -54,7 +64,7 @@ type PlayerTrack = {
   url: string;
   cover_url?: string | null;
   artist?: string | null;
-  item_type: 'beat' | 'project';
+  item_type: 'beat' | 'project' | 'acapella';
   meta?: PlayerMeta;
 };
 
@@ -231,6 +241,15 @@ function buildCollabLabel(names?: string[]) {
   return `Spolupráce ${uniqueNames.join(', ')} a ${last}`;
 }
 
+function formatTime(sec?: number) {
+  if (!sec || Number.isNaN(sec)) return '0:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${m}:${s}`;
+}
+
 export default function ProfileClient() {
   const supabase = createClient();
   const router = useRouter();
@@ -262,6 +281,8 @@ export default function ProfileClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
+  const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
+  const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [projectGrants, setProjectGrants] = useState<Record<string, ProjectAccessGrant[]>>({});
@@ -302,6 +323,7 @@ export default function ProfileClient() {
   const isAdmin = currentRole === 'admin' || isSuperAdmin;
   const isMcOnly = currentRole === 'mc';
   const canUpload = !isMcOnly;
+  const canUploadAcapellas = currentRole === 'mc';
   const canWriteArticles = isAdmin;
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
@@ -355,6 +377,7 @@ export default function ProfileClient() {
     profile: false,
     beatUpload: false,
     projectUpload: false,
+    acapellaUpload: false,
     messages: false,
   });
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
@@ -366,6 +389,7 @@ export default function ProfileClient() {
   const [projectEditCover, setProjectEditCover] = useState<{ url?: string; file?: File | null }>({});
   const [projectSaving, setProjectSaving] = useState(false);
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
+  const [currentAcapella, setCurrentAcapella] = useState<AcapellaItem | null>(null);
   const [playerMessage, setPlayerMessage] = useState<string | null>(null);
   const [openBeatMenuId, setOpenBeatMenuId] = useState<number | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<number | null>(null);
@@ -400,6 +424,21 @@ export default function ProfileClient() {
           item_type: 'beat' as const,
         })),
     [beats, profile.display_name]
+  );
+
+  const acapellaPlayerTracks = useMemo<PlayerTrack[]>(
+    () =>
+      acapellas
+        .filter((item) => Boolean(item.audio_url))
+        .map((item) => ({
+          id: `acapella-${item.id}`,
+          title: item.title,
+          url: item.audio_url || '',
+          cover_url: item.cover_url ?? null,
+          artist: profile.display_name || 'Profil',
+          item_type: 'acapella' as const,
+        })),
+    [acapellas, profile.display_name]
   );
 
   const projectPlayerTracksMap = useMemo<Record<string, PlayerTrack[]>>(() => {
@@ -487,6 +526,10 @@ export default function ProfileClient() {
 
     const handleNext = () => {
       if (!gpCurrent) {
+        if (acapellaPlayerTracks.length) {
+          startPlayerTrack(acapellaPlayerTracks[0]);
+          return;
+        }
         if (beatPlayerTracks.length) {
           startPlayerTrack(beatPlayerTracks[0]);
         }
@@ -494,6 +537,10 @@ export default function ProfileClient() {
       }
       if (gpCurrent.item_type === 'beat') {
         cycleTracks(beatPlayerTracks, 1);
+        return;
+      }
+      if (gpCurrent.item_type === 'acapella') {
+        cycleTracks(acapellaPlayerTracks, 1);
         return;
       }
       if (gpCurrent.item_type === 'project') {
@@ -510,6 +557,10 @@ export default function ProfileClient() {
 
     const handlePrev = () => {
       if (!gpCurrent) {
+        if (acapellaPlayerTracks.length) {
+          startPlayerTrack(acapellaPlayerTracks[acapellaPlayerTracks.length - 1]);
+          return;
+        }
         if (beatPlayerTracks.length) {
           startPlayerTrack(beatPlayerTracks[beatPlayerTracks.length - 1]);
         }
@@ -517,6 +568,10 @@ export default function ProfileClient() {
       }
       if (gpCurrent.item_type === 'beat') {
         cycleTracks(beatPlayerTracks, -1);
+        return;
+      }
+      if (gpCurrent.item_type === 'acapella') {
+        cycleTracks(acapellaPlayerTracks, -1);
         return;
       }
       if (gpCurrent.item_type === 'project') {
@@ -540,7 +595,7 @@ export default function ProfileClient() {
       gpSetOnPrev(null);
       gpSetOnEnded(null);
     };
-  }, [beatPlayerTracks, gpCurrent, gpSetOnEnded, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
+  }, [acapellaPlayerTracks, beatPlayerTracks, gpCurrent, gpSetOnEnded, gpSetOnNext, gpSetOnPrev, projectPlayerTracksMap, startPlayerTrack]);
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
@@ -694,11 +749,33 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }));
   }
 
-  // Načtení uživatelských beatů a projektů
+  // Načtení uživatelských beatů/projektů nebo akapel
   useEffect(() => {
     if (!userId) return;
 
     const loadBeatsProjectsCollabs = async () => {
+      if (currentRole === 'mc') {
+        const { data, error } = await supabase
+          .from('acapellas')
+          .select('id, title, bpm, mood, audio_url, cover_url')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Chyba při načítání akapel:', error);
+          setAcapellasError('Nepodařilo se načíst tvoje akapely.');
+        } else {
+          setAcapellas((data as AcapellaItem[]) ?? []);
+          setAcapellasError(null);
+        }
+        setBeats([]);
+        setProjects([]);
+        setBeatsError(null);
+        setProjectsError(null);
+        setProjectGrants({});
+        return;
+      }
+
       // načti beaty
       const { data: beatData, error: beatErr } = await supabase
         .from('beats')
@@ -775,7 +852,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
         console.error('Chyba při načítání projektů:', projectErr);
         setProjectsError('Nepodařilo se načíst tvoje projekty.');
       }
-
     };
 
     const loadMessages = async () => {
@@ -1040,7 +1116,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       }
     };
     loadCollabThreads();
-  }, [supabase, userId, profile.display_name]);
+  }, [currentRole, supabase, userId, profile.display_name]);
 
   // Stream embed byl přesunut na samostatnou stránku /stream
 
@@ -1290,7 +1366,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
-  function toggleSection(key: 'profile' | 'beatUpload' | 'projectUpload') {
+  function toggleSection(key: 'profile' | 'beatUpload' | 'projectUpload' | 'acapellaUpload') {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
@@ -1315,6 +1391,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
       url: beat.audio_url,
       cover_url: beat.cover_url ?? null,
       item_type: 'beat',
+    });
+  }
+
+  function handlePlayAcapella(item: AcapellaItem) {
+    if (!item.audio_url) {
+      setPlayerMessage('Tato akapela nemá nahraný audio soubor.');
+      return;
+    }
+    setPlayerMessage(null);
+    const trackId = `acapella-${item.id}`;
+    if (gpCurrent?.id === trackId) {
+      gpToggle();
+      setCurrentAcapella(item);
+      return;
+    }
+    setCurrentAcapella(item);
+    startPlayerTrack({
+      id: trackId,
+      title: item.title,
+      artist: profile.display_name || 'Neznámý',
+      url: item.audio_url,
+      cover_url: item.cover_url ?? null,
+      item_type: 'acapella',
     });
   }
 
@@ -1384,6 +1483,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
       console.error('Chyba při ukládání beatu:', err);
       setPlayerMessage('Nepodařilo se uložit beat.');
     }
+  }
+
+  function seekAcapella(item: AcapellaItem, clientX: number, width: number) {
+    if (!currentAcapella || currentAcapella.id !== item.id || !gpDuration) return;
+    const ratio = Math.min(Math.max(clientX / width, 0), 1);
+    gpSeek(ratio);
   }
 
   const handleProjectRequestDecision = async (req: ProjectAccessRequest, approve: boolean) => {
@@ -2086,14 +2191,18 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
                 {t('profile.tab.all', 'Vše')}
               </a>
-              <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.beats', 'Beaty')}
-              </a>
-              <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.projects', 'Projekty')}
-              </a>
-              <a href="#collabs" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.collabs', 'Spolupráce')}
+              {!isMcOnly && (
+                <>
+                  <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                    {t('profile.tab.beats', 'Beaty')}
+                  </a>
+                  <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                    {t('profile.tab.projects', 'Projekty')}
+                  </a>
+                </>
+              )}
+              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
               </a>
               {(isAdmin || !isMcOnly) && (
                 <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
@@ -2125,14 +2234,18 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <a href="#feed" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
                 {t('profile.tab.all', 'Vše')}
               </a>
-              <a href="#beats-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('profile.tab.beats', 'Beaty')}
-              </a>
-              <a href="#projects-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('profile.tab.projects', 'Projekty')}
-              </a>
-              <a href="#collabs" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('profile.tab.collabs', 'Spolupráce')}
+              {!isMcOnly && (
+                <>
+                  <a href="#beats-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                    {t('profile.tab.beats', 'Beaty')}
+                  </a>
+                  <a href="#projects-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                    {t('profile.tab.projects', 'Projekty')}
+                  </a>
+                </>
+              )}
+              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
               </a>
               {(isAdmin || !isMcOnly) && (
                 <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
@@ -2160,6 +2273,91 @@ function handleFieldChange(field: keyof Profile, value: string) {
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
+            {isMcOnly && (
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Moje akapely</h2>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{acapellas.length} {t('profile.items', 'položek')}</p>
+                  </div>
+                </div>
+                {acapellasError && (
+                  <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
+                    {acapellasError}
+                  </div>
+                )}
+                {acapellas.length === 0 ? (
+                  <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-6 text-sm text-[var(--mpc-muted)]">
+                    Zatím žádné akapely. Nahraj první akapelu a ukaž se.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {acapellas.map((item) => {
+                      const trackId = `acapella-${item.id}`;
+                      const isCurrent = currentAcapella?.id === item.id && gpCurrent?.id === trackId;
+                      const progressPct = isCurrent && gpDuration ? `${Math.min((gpTime / gpDuration) * 100, 100)}%` : '0%';
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)]"
+                          style={
+                            item.cover_url
+                              ? {
+                                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${item.cover_url})`,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                  borderRadius: '16px',
+                                  overflow: 'hidden',
+                                }
+                              : undefined
+                          }
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">{item.title}</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">
+                                {item.bpm ? `${item.bpm} BPM` : '—'} · {item.mood || '—'}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handlePlayAcapella(item)}
+                                disabled={!item.audio_url}
+                                className={`flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mpc-accent)] text-[var(--mpc-light)] transition ${
+                                  isCurrent && gpIsPlaying ? 'bg-[var(--mpc-accent)]' : 'bg-transparent'
+                                } disabled:opacity-40`}
+                              >
+                                {isCurrent && gpIsPlaying ? '▮▮' : '▶'}
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                            onClick={(e) => {
+                              const width = e.currentTarget.getBoundingClientRect().width;
+                              if (!width) return;
+                              seekAcapella(item, e.clientX - e.currentTarget.getBoundingClientRect().left, width);
+                            }}
+                          >
+                            <div
+                              className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                              style={{ width: progressPct }}
+                            />
+                          </div>
+                          {isCurrent && (
+                            <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                              <span>{formatTime(gpTime)}</span>
+                              <span>{formatTime(gpDuration)}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            {!isMcOnly && (
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -2359,6 +2557,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                 </div>
               )}
             </div>
+
+            )}
 
             {editingProject && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
@@ -3299,35 +3499,54 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
           {/* Pravý sloupec: akce (na mobilu nahoře) */}
           <div className="space-y-4 order-1 lg:order-2" id="profile-settings">
-            {canUpload && (
+            {(canUpload || canUploadAcapellas) && (
               <>
-                <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                  <button
-                    onClick={() => toggleSection('beatUpload')}
-                    className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
-                  >
-                    {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
-                  </button>
-                  {openSections.beatUpload && (
-                    <div className="mt-4">
-                      <BeatUploadForm />
+                {canUploadAcapellas && (
+                  <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                    <button
+                      onClick={() => toggleSection('acapellaUpload')}
+                      className="w-full rounded-full bg-gradient-to-r from-[#1b8bff] to-[#4dc0ff] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(27,139,255,0.35)] transition hover:brightness-105"
+                    >
+                      {openSections.acapellaUpload ? 'Schovat formulář' : 'Nahrát akapely'}
+                    </button>
+                    {openSections.acapellaUpload && (
+                      <div className="mt-4">
+                        <AcapellaUploadForm />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {canUpload && (
+                  <>
+                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                      <button
+                        onClick={() => toggleSection('beatUpload')}
+                        className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
+                      >
+                        {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
+                      </button>
+                      {openSections.beatUpload && (
+                        <div className="mt-4">
+                          <BeatUploadForm />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                  <button
-                    onClick={() => toggleSection('projectUpload')}
-                    className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                  >
-                    {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
-                  </button>
-                  {openSections.projectUpload && (
-                    <div className="mt-4">
-                      <ProjectUploadForm />
+                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                      <button
+                        onClick={() => toggleSection('projectUpload')}
+                        className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                      >
+                        {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
+                      </button>
+                      {openSections.projectUpload && (
+                        <div className="mt-4">
+                          <ProjectUploadForm />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </>
             )}
 

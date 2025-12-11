@@ -44,9 +44,19 @@ type PublicProfile = {
   offering_signals?: string[] | null;
   seeking_custom?: string | null;
   offering_custom?: string | null;
+  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
 };
 
 type Beat = {
+  id: number;
+  title: string;
+  bpm: number | null;
+  mood: string | null;
+  audio_url: string | null;
+  cover_url?: string | null;
+};
+
+type Acapella = {
   id: number;
   title: string;
   bpm: number | null;
@@ -124,7 +134,7 @@ type TrackMeta = {
 type CurrentTrack = {
   id: string;
   title: string;
-  source: 'beat' | 'project' | 'collab';
+  source: 'beat' | 'project' | 'collab' | 'acapella';
   url: string;
   cover_url?: string | null;
   subtitle?: string | null;
@@ -142,6 +152,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const [beats, setBeats] = useState<Beat[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
+  const [acapellas, setAcapellas] = useState<Acapella[]>([]);
+  const [acapellasError, setAcapellasError] = useState<string | null>(null);
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -150,7 +162,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
   const [collabsError, setCollabsError] = useState<string | null>(null);
-  const [collabsReload, setCollabsReload] = useState(0);
+  // collabsReload zůstává kvůli případnému budoucímu refreshi, nyní ho nepoužíváme
+  const _collabsReload = 0;
   const [showCollabForm, setShowCollabForm] = useState(false);
   const [collabSubject, setCollabSubject] = useState('');
   const [collabMessage, setCollabMessage] = useState('');
@@ -180,6 +193,38 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     setOnPrev,
   } = useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
+
+  const loadBeats = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('beats')
+      .select('id, title, bpm, mood, audio_url, cover_url')
+      .eq('user_id', profileId)
+      .order('id', { ascending: false })
+      .limit(10);
+    if (error) {
+      console.error('Chyba načítání beatů:', error);
+      setBeatsError('Nepodařilo se načíst beaty.');
+    } else {
+      setBeats((data as Beat[]) ?? []);
+      setBeatsError(null);
+    }
+  }, [profileId, supabase]);
+
+  const loadAcapellas = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('acapellas')
+      .select('id, title, bpm, mood, audio_url, cover_url')
+      .eq('user_id', profileId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) {
+      console.error('Chyba načítání akapel:', error);
+      setAcapellasError('Nepodařilo se načíst akapely.');
+    } else {
+      setAcapellas((data as Acapella[]) ?? []);
+      setAcapellasError(null);
+    }
+  }, [profileId, supabase]);
 
   const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
@@ -337,7 +382,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const loadData = async () => {
       try {
         const selectBase =
-          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom';
+          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role';
         const { data: profileDataFull, error: profileErr } = await supabase
           .from('profiles')
           .select(selectBase)
@@ -376,7 +421,20 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             offering_signals: (profileData as any).offering_signals ?? [],
             seeking_custom: (profileData as any).seeking_custom ?? null,
             offering_custom: (profileData as any).offering_custom ?? null,
+            role: (profileData as any).role ?? null,
           });
+          const mcOnly = (profileData as any)?.role === 'mc';
+          if (mcOnly) {
+            await loadAcapellas();
+            setBeats([]);
+            setProjects([]);
+            setBeatsError(null);
+            setProjectsError(null);
+          } else {
+            await loadBeats();
+            await loadProjects();
+            await loadCollabs();
+          }
         } else {
           setProfile(null);
           setProfileError('Profil nenalezen.');
@@ -419,10 +477,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
     loadSession();
     loadData();
-    loadBeats();
-    loadProjects();
-    loadCollabs();
-  }, [profileId, supabase, router, loadProjects, loadCollabs]);
+  }, [loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
@@ -503,7 +558,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setCollabMessage('');
       setCollabFile(null);
       setShowCollabForm(false);
-      setCollabsReload((prev) => prev + 1);
       if (profileId) {
         void sendNotificationSafe(supabase, {
           user_id: profileId,
@@ -579,6 +633,19 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         subtitle: profile?.display_name ?? null,
       }));
   }, [beats, profile?.display_name]);
+
+  const acapellaTracks = useMemo<CurrentTrack[]>(() => {
+    return acapellas
+      .filter((item) => Boolean(item.audio_url))
+      .map((item) => ({
+        id: `acapella-${item.id}`,
+        title: item.title,
+        url: item.audio_url || '',
+        source: 'acapella',
+        cover_url: item.cover_url ?? null,
+        subtitle: profile?.display_name ?? null,
+      }));
+  }, [acapellas, profile?.display_name]);
 
   const projectTracksMap = useMemo<Record<string, CurrentTrack[]>>(() => {
     const map: Record<string, CurrentTrack[]> = {};
@@ -750,6 +817,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
     const handleNext = () => {
       if (!currentTrack) {
+        if (acapellaTracks.length) {
+          startTrack(acapellaTracks[0]);
+          return;
+        }
         if (beatTracks.length) {
           startTrack(beatTracks[0]);
         }
@@ -757,6 +828,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
       if (currentTrack.item_type === 'beat') {
         cycleTracks(beatTracks, 1);
+        return;
+      }
+      if (currentTrack.item_type === 'acapella') {
+        cycleTracks(acapellaTracks, 1);
         return;
       }
       if (currentTrack.item_type === 'project') {
@@ -776,6 +851,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
     const handlePrev = () => {
       if (!currentTrack) {
+        if (acapellaTracks.length) {
+          startTrack(acapellaTracks[acapellaTracks.length - 1]);
+          return;
+        }
         if (beatTracks.length) {
           startTrack(beatTracks[beatTracks.length - 1]);
         }
@@ -783,6 +862,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       }
       if (currentTrack.item_type === 'beat') {
         cycleTracks(beatTracks, -1);
+        return;
+      }
+      if (currentTrack.item_type === 'acapella') {
+        cycleTracks(acapellaTracks, -1);
         return;
       }
       if (currentTrack.item_type === 'project') {
@@ -809,6 +892,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setOnEnded(null);
     };
   }, [
+    acapellaTracks,
     beatTracks,
     collabTracks,
     currentTrack,
@@ -836,6 +920,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
   const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
   const statusLabel = isOnline ? 'Online' : 'Offline';
+  const isMcOnly = profile?.role === 'mc';
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
@@ -1006,20 +1091,31 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       
       <section className="mx-auto max-w-6xl px-4 py-8 space-y-6">
         <div className="mb-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] text-[var(--mpc-muted)] border-b border-[var(--mpc-dark)] pb-3 md:text-sm">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
-            >
-              <span className="text-[14px]">←</span>
-              <span>Zpět</span>
-            </Link>
-            <button
-              onClick={() => setTabsOpen((p) => !p)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
-            >
-              Menu <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
-            </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
+          >
+            <span className="text-[14px]">←</span>
+            <span>Zpět</span>
+          </Link>
+          <button
+            onClick={() => setTabsOpen((p) => !p)}
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
+          >
+            Menu <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
+          </button>
+          {isMcOnly ? (
+            <div className="hidden items-center gap-3 md:flex">
+              <a href="#acapellas-section" className="font-semibold text-white relative pb-2">
+                {t('publicProfile.nav.all', 'Vše')}
+                <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
+              </a>
+              <a href="#acapellas-section" className="hover:text-[var(--mpc-light)]">
+                {t('publicProfile.nav.collabs', 'Akapely')}
+              </a>
+            </div>
+          ) : (
             <div className="hidden items-center gap-3 md:flex">
               <a href="#beats-section" className="font-semibold text-white relative pb-2">
                 {t('publicProfile.nav.all', 'Vše')}
@@ -1035,8 +1131,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 {t('publicProfile.nav.collabs', 'Spolupráce')}
               </a>
             </div>
-          </div>
-          <div className="ml-auto flex items-center gap-3">
+          )}
+        </div>
+        <div className="ml-auto flex items-center gap-3">
             {currentUserId && currentUserId !== profileId && (
               <button
                 onClick={handleStartCall}
@@ -1056,21 +1153,122 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         </div>
         {tabsOpen && (
           <div className="md:hidden grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)]">
-            <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
+            <a href={isMcOnly ? '#acapellas-section' : '#beats-section'} className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
               {t('publicProfile.nav.all', 'Vše')}
             </a>
-            <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.beats', 'Beaty')}
-            </a>
-            <a href="#projects-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.projects', 'Projekty')}
-            </a>
-            <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-              {t('publicProfile.nav.collabs', 'Spolupráce')}
-            </a>
+            {isMcOnly ? (
+              <a href="#acapellas-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {t('publicProfile.nav.collabs', 'Akapely')}
+              </a>
+            ) : (
+              <>
+                <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('publicProfile.nav.beats', 'Beaty')}
+                </a>
+                <a href="#projects-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('publicProfile.nav.projects', 'Projekty')}
+                </a>
+                <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('publicProfile.nav.collabs', 'Spolupráce')}
+                </a>
+              </>
+            )}
           </div>
         )}
 
+        {isMcOnly ? (
+          <div id="acapellas-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Akapely</h2>
+                <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{acapellas.length} {t('profile.items', 'položek')}</p>
+              </div>
+            </div>
+            {acapellasError && (
+              <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
+                {acapellasError}
+              </div>
+            )}
+            {acapellas.length === 0 ? (
+              <p className="text-sm text-[var(--mpc-muted)]">Žádné akapely k zobrazení.</p>
+            ) : (
+              <div className="space-y-3">
+                {acapellas.map((item) => {
+                  const trackId = `acapella-${item.id}`;
+                  const isCurrent = currentTrack?.id === trackId;
+                  const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
+                    >
+                      <div
+                        className="relative overflow-hidden rounded-xl border border-white/5 p-4"
+                        style={{
+                          background: 'linear-gradient(135deg, #090012 0%, #0a3a70 55%, #ff007a 100%)',
+                        }}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                              {item.cover_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={item.cover_url} alt={item.title} className="h-full w-full object-cover" />
+                              ) : (
+                                <span>{item.title.slice(0, 2)}</span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-base font-semibold text-white">{item.title}</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">
+                                {item.bpm ? `${item.bpm} BPM` : '—'} · {item.mood || '—'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              handlePlayTrack({
+                                id: trackId,
+                                title: item.title,
+                                url: item.audio_url || '',
+                                source: 'acapella',
+                                cover_url: item.cover_url,
+                                subtitle: profile?.display_name || null,
+                              })
+                            }
+                            disabled={!item.audio_url}
+                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                          >
+                            {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                          </button>
+                        </div>
+                        <div
+                          className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                          onClick={(e) => {
+                            if (!isCurrent) return;
+                            handleTrackProgressClick(trackId, e);
+                          }}
+                        >
+                          <div
+                            className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+                            style={{ width: progressPct }}
+                          />
+                        </div>
+                        {isCurrent && (
+                          <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                            <span>{formatTime(currentTime)}</span>
+                            <span>{formatTime(duration)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         {/* Beaty */}
         <div id="beats-section" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
           <div className="mb-4 flex items-center justify-between">
@@ -1579,6 +1777,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </div>
           )}
         </div>
+        </>
+        )}
 
         {/* Poslat zprávu */}
         <div id="message-form" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
