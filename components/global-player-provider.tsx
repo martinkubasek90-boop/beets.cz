@@ -63,6 +63,11 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       setIsPlaying(false);
       if (onEndedRef.current) {
         onEndedRef.current();
+        return;
+      }
+      // Fallback: pokud není explicitně nastaveno onEnded, zkuste next
+      if (onNextRef.current) {
+        onNextRef.current();
       }
     };
     el.addEventListener("timeupdate", onTime);
