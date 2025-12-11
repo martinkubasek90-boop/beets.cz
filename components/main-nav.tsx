@@ -209,7 +209,7 @@ export function MainNav() {
         )}
       </div>
       {incomingCall && (
-        <div className="fixed bottom-4 right-4 left-4 z-30 mx-auto max-w-md rounded-2xl border border-[var(--mpc-accent)]/50 bg-black/85 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:left-auto sm:right-6 sm:bottom-6">
+        <div className="fixed inset-x-4 bottom-8 z-30 mx-auto max-w-lg rounded-2xl border border-[var(--mpc-accent)]/60 bg-black/90 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:bottom-10 sm:left-1/2 sm:-translate-x-1/2">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Příchozí hovor</p>
           <p className="mt-1 text-base font-semibold">{callerName || 'Uživatel'} volá…</p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -229,7 +229,7 @@ export function MainNav() {
         </div>
       )}
       {communityInvite && (
-        <div className="fixed bottom-20 right-4 left-4 z-30 mx-auto max-w-md rounded-2xl border border-white/20 bg-black/85 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:left-auto sm:right-6 sm:bottom-24">
+        <div className="fixed inset-x-4 bottom-24 z-30 mx-auto max-w-lg rounded-2xl border border-white/25 bg-black/90 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:left-1/2 sm:-translate-x-1/2">
           <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Komunitní call</p>
           <p className="mt-1 text-base font-semibold">
             {communityInvite.from ? `${communityInvite.from} spouští community call` : 'Community call je živý'}
