@@ -214,11 +214,12 @@ export default function Home() {
   const [forumError, setForumError] = useState<string | null>(null);
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
-  const subtitleRaw = t(
-    'hero.subtitle',
-    'Platforma pro CZ/SK beatmakery a rapery. Nahrávej instrumentály, sdílej akapely, domlouvej spolupráce.'
-  );
-  const subtitleCleaned = subtitleRaw.replace(/\s*Bez reklam.*$/i, '').trim();
+  const subtitleDefault =
+    'Platforma pro CZ/SK beatmakery a rapery. Nahrávej instrumentály, sdílej akapely, domlouvej spolupráce.';
+  const subtitleRaw = t('hero.subtitle', subtitleDefault);
+  const subtitleCleaned = (subtitleRaw.includes('CZ/SK') ? subtitleRaw : subtitleDefault)
+    .replace(/\s*Bez reklam.*$/i, '')
+    .trim();
   const beatList = beats.length ? beats : dummyBeats;
   const beatsPerPage = 3;
   const beatTotalPages = Math.max(1, Math.ceil(beatList.length / beatsPerPage));
