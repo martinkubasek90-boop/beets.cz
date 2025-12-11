@@ -5,7 +5,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import { useGlobalPlayer } from "../../components/global-player-provider";
 import { FireButton } from "../../components/fire-button";
@@ -42,6 +42,7 @@ export default function ProjectsPage() {
   const [authorFilter, setAuthorFilter] = useState<string>("all");
 
   const { play, toggle, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -176,16 +177,49 @@ export default function ProjectsPage() {
 
   const handlePlay = (project: Project, track: ProjectTrack, idx: number) => {
     if (!track.url) return;
-    const trackId = `project-${project.id}-${idx}`;
-    play({
-      id: trackId,
-      title: track.name || `Track ${idx + 1}`,
-      artist: project.author_name || "Neznámý autor",
-      url: track.url,
-      cover_url: project.cover_url,
-      user_id: project.user_id || undefined,
-      item_type: "project",
-    });
+    const tracks = (project.tracks_json || []).map((t: any, i: number) => ({ track: t as ProjectTrack, idx: i })).filter((t) => t.track?.url);
+    const playFromQueue = (targetIdx: number, queue: { track: ProjectTrack; idx: number }[]) => {
+      const item = queue[targetIdx];
+      if (!item?.track?.url) return;
+      projectQueueRef.current = { project, playable: queue, currentIdx: targetIdx };
+      const trackId = `project-${project.id}-${item.idx}`;
+      play({
+        id: trackId,
+        title: item.track.name || `Track ${item.idx + 1}`,
+        artist: project.author_name || "Neznámý autor",
+        url: item.track.url,
+        cover_url: project.cover_url,
+        user_id: project.user_id || undefined,
+        item_type: "project",
+        meta: { projectId: project.id, trackIndex: item.idx },
+      });
+    };
+
+    const currentIdx = tracks.findIndex((t) => t.idx === idx);
+    if (tracks.length) {
+      playFromQueue(Math.max(currentIdx, 0), tracks);
+      setOnNext(() => {
+        const q = projectQueueRef.current;
+        const queue = q?.playable ?? tracks;
+        if (!queue.length) return;
+        const next = ((q?.currentIdx ?? currentIdx ?? 0) + 1) % queue.length;
+        playFromQueue(next, queue);
+      });
+      setOnPrev(() => {
+        const q = projectQueueRef.current;
+        const queue = q?.playable ?? tracks;
+        if (!queue.length) return;
+        const prev = ((q?.currentIdx ?? currentIdx ?? 0) - 1 + queue.length) % queue.length;
+        playFromQueue(prev, queue);
+      });
+      setOnEnded(() => {
+        const q = projectQueueRef.current;
+        const queue = q?.playable ?? tracks;
+        if (!queue.length) return;
+        const next = ((q?.currentIdx ?? currentIdx ?? 0) + 1) % queue.length;
+        playFromQueue(next, queue);
+      });
+    }
   };
 
   const requestAccess = async (projectId: number) => {
