@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,7 @@ export function NotificationBell({ className }: { className?: string }) {
     const stored = window.localStorage.getItem("beets-last-read");
     return stored ? Number(stored) : null;
   });
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
@@ -217,6 +218,21 @@ export function NotificationBell({ className }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [open]);
+
   const markAllRead = async () => {
     try {
       const { data: authData } = await supabase.auth.getUser();
@@ -252,7 +268,7 @@ export function NotificationBell({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative", className)} ref={containerRef}>
       <button
         type="button"
         onClick={() => {
