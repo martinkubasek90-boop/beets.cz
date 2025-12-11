@@ -790,17 +790,38 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
     const loadBeatsProjectsCollabs = async () => {
       if (currentRole === 'mc') {
-        const { data, error } = await supabase
-          .from('acapellas')
-          .select('id, title, bpm, mood, audio_url, cover_url, access_mode')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+        let acapellaData: AcapellaItem[] | null = null;
+        try {
+          const { data, error } = await supabase
+            .from('acapellas')
+            .select('id, title, bpm, mood, audio_url, cover_url, access_mode')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Chyba při načítání akapel:', error);
-          setAcapellasError('Nepodařilo se načíst tvoje akapely.');
-        } else {
-          setAcapellas((data as AcapellaItem[]) ?? []);
+          if (error) throw error;
+          acapellaData = (data as AcapellaItem[]) ?? [];
+        } catch (err: any) {
+          const message = typeof err?.message === 'string' ? err.message : '';
+          // Fallback pro schéma bez sloupce access_mode
+          if (message.toLowerCase().includes('access_mode') || message.toLowerCase().includes('column')) {
+            const { data, error: fallbackErr } = await supabase
+              .from('acapellas')
+              .select('id, title, bpm, mood, audio_url, cover_url')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: false });
+            if (!fallbackErr) {
+              acapellaData = (data as AcapellaItem[]) ?? [];
+            } else {
+              console.error('Chyba při načítání akapel (fallback):', fallbackErr);
+              setAcapellasError('Nepodařilo se načíst tvoje akapely.');
+            }
+          } else {
+            console.error('Chyba při načítání akapel:', err);
+            setAcapellasError('Nepodařilo se načíst tvoje akapely.');
+          }
+        }
+        if (acapellaData) {
+          setAcapellas(acapellaData);
           setAcapellasError(null);
         }
         setBeats([]);
