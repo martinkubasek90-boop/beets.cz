@@ -1,5 +1,3 @@
-"use client";
-
 import { MainNav } from "@/components/main-nav";
 
 export const metadata = {
