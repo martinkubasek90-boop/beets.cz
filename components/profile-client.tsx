@@ -2641,7 +2641,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                     <option value="request">Na žádost</option>
                                     <option value="private">Soukromá</option>
                                   </select>
-                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">"Na žádost" skryje přímé stahování, nejdřív musíš schválit.</p>
+                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">&quot;Na žádost&quot; skryje přímé stahování, nejdřív musíš schválit.</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
