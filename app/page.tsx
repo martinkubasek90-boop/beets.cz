@@ -199,6 +199,7 @@ export default function Home() {
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [isSavingPost, setIsSavingPost] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
+  const [beatPage, setBeatPage] = useState(0);
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -221,6 +222,15 @@ export default function Home() {
     'Platforma pro CZ/SK beatmakery. Nahrávej instrumentály a domlouvej spolupráce.'
   );
   const subtitleCleaned = subtitleRaw.replace(/\s*Bez reklam.*$/i, '').trim();
+  const beatList = beats.length ? beats : dummyBeats;
+  const beatsPerPage = 3;
+  const beatTotalPages = Math.max(1, Math.ceil(beatList.length / beatsPerPage));
+  const visibleBeats = beatList.length
+    ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
+        const start = beatPage * beatsPerPage;
+        return beatList[(start + idx) % beatList.length];
+      })
+    : [];
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
@@ -415,6 +425,10 @@ export default function Home() {
 
     loadBeats();
   }, [supabase]);
+
+  useEffect(() => {
+    setBeatPage(0);
+  }, [beats.length]);
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -1602,7 +1616,7 @@ export default function Home() {
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {beats.map((beat) => (
+            {visibleBeats.map((beat) => (
               <div
                 key={beat.id}
                 className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
@@ -1684,6 +1698,22 @@ export default function Home() {
               </div>
             ))}
           </div>
+          {beatList.length > beatsPerPage && (
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setBeatPage((prev) => (prev - 1 + beatTotalPages) % beatTotalPages)}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+              >
+                ←
+              </button>
+              <button
+                onClick={() => setBeatPage((prev) => (prev + 1) % beatTotalPages)}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+              >
+                →
+              </button>
+            </div>
+          )}
         </section>
 
         {/* INFO */}
