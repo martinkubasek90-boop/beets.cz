@@ -216,6 +216,11 @@ export default function Home() {
   const [forumError, setForumError] = useState<string | null>(null);
   const { lang, setLang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
+  const subtitleRaw = t(
+    'hero.subtitle',
+    'Platforma pro CZ/SK beatmakery. Nahrávej instrumentály a domlouvej spolupráce.'
+  );
+  const subtitleCleaned = subtitleRaw.replace(/\s*Bez reklam.*$/i, '').trim();
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
@@ -1061,10 +1066,7 @@ export default function Home() {
               {t('hero.title', 'Beets.cz')}
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)]">
-              {t(
-                'hero.subtitle',
-                'Platforma pro CZ/SK beatmakery. Nahrávej instrumentály a domlouvej spolupráce.'
-              )}
+              {subtitleCleaned}
               <br />
               {t('hero.subtitle2', 'Bez reklam a nesmyslů, jen hudba.')}
             </p>
