@@ -1677,7 +1677,8 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm">
           <div>© {yearToShow} MPC Showroom CZ · CZ / SK Beat Community</div>
           <div className="flex flex-wrap gap-3">
-            <a href="#">Podmínky</a>
+            <a href="https://beets.cz/podminky">Podmínky</a>
+            <a href="https://beets.cz/zpracovani-osobnich-udaju">Zpracování osobních údajů</a>
             <a href="#">O projektu</a>
             <a href="#">Instagram</a>
           </div>
