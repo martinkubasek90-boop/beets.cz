@@ -340,6 +340,7 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [tabsOpen, setTabsOpen] = useState(false);
   const {
     play: gpPlay,
     toggle: gpToggle,
@@ -1924,7 +1925,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       {/* Tabs */}
       <section className="mt-3 border-b border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/60 py-3 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.15em] md:text-sm">
+          <div className="flex items-center justify-between gap-3">
             <Link
               href="/"
               className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
@@ -1932,35 +1933,76 @@ function handleFieldChange(field: keyof Profile, value: string) {
               <span className="text-[14px]">←</span>
               <span>Zpět</span>
             </Link>
-            <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
-              {t('profile.tab.all', 'Vše')}
-            </a>
-            <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.beats', 'Beaty')}
-            </a>
-            <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.projects', 'Projekty')}
-            </a>
-            <a href="#collabs" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.collabs', 'Spolupráce')}
-            </a>
-            {(isAdmin || !isMcOnly) && (
-              <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.stream', 'Stream')}
-              </Link>
-            )}
-            <a href="#messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              {t('profile.tab.messages', 'Zprávy')}
-            </a>
-            <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-              Moje fórum
-            </a>
-            {canWriteArticles && (
-              <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                {t('profile.tab.posts', 'Moje články')}
+            <button
+              onClick={() => setTabsOpen((p) => !p)}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
+            >
+              Menu
+              <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
+            </button>
+            <div className="hidden flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] md:flex md:text-sm">
+              <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
+                {t('profile.tab.all', 'Vše')}
               </a>
-            )}
+              <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.beats', 'Beaty')}
+              </a>
+              <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.projects', 'Projekty')}
+              </a>
+              <a href="#collabs" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.collabs', 'Spolupráce')}
+              </a>
+              {(isAdmin || !isMcOnly) && (
+                <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.stream', 'Stream')}
+                </Link>
+              )}
+              <a href="#messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                {t('profile.tab.messages', 'Zprávy')}
+              </a>
+              <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                Moje fórum
+              </a>
+              {canWriteArticles && (
+                <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.posts', 'Moje články')}
+                </a>
+              )}
+            </div>
           </div>
+          {tabsOpen && (
+            <div className="mt-3 grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)] md:hidden">
+              <a href="#feed" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
+                {t('profile.tab.all', 'Vše')}
+              </a>
+              <a href="#beats-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {t('profile.tab.beats', 'Beaty')}
+              </a>
+              <a href="#projects-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {t('profile.tab.projects', 'Projekty')}
+              </a>
+              <a href="#collabs" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {t('profile.tab.collabs', 'Spolupráce')}
+              </a>
+              {(isAdmin || !isMcOnly) && (
+                <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.stream', 'Stream')}
+                </Link>
+              )}
+              <a href="#messages" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                {t('profile.tab.messages', 'Zprávy')}
+              </a>
+              <a href="#my-forum" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                Moje fórum
+              </a>
+              {canWriteArticles && (
+                <a href="#my-posts" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.posts', 'Moje články')}
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
