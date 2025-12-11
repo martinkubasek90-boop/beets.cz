@@ -1440,7 +1440,7 @@ export default function Home() {
                 <Link
                   href="/forum"
                   key={cat.id}
-                  className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-left shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] transition"
+                  className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-center shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] transition"
                 >
                   <span className="rounded-full bg-[var(--mpc-accent)]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)]">
                     {cat.name}
