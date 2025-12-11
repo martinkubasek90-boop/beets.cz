@@ -16,6 +16,7 @@ type Beat = {
   mood: string | null;
   audio_url: string | null;
   cover_url?: string | null;
+  monthlyFires?: number;
 };
 
 type Artist = {
@@ -332,11 +333,14 @@ export default function Home() {
       try {
         setIsLoadingBeats(true);
 
+        const startOfMonth = new Date();
+        startOfMonth.setUTCDate(1);
+        startOfMonth.setUTCHours(0, 0, 0, 0);
+
         const { data, error } = await supabase
           .from('beats')
           .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at')
-          .order('id', { ascending: false })
-          .limit(3);
+          .limit(12);
 
         if (error) {
           setBeatsError(`Nepodařilo se načíst beaty ze Supabase: ${error.message}. Zobrazuji lokální demo data.`);
@@ -344,6 +348,9 @@ export default function Home() {
           setBeatAuthorNames({});
         } else if (data && data.length > 0) {
           const ids = Array.from(new Set((data as any[]).map((b) => b.user_id).filter(Boolean) as string[]));
+          const beatIds = Array.from(new Set((data as any[]).map((b) => b.id).filter(Boolean)));
+
+          // Jména autorů
           let profileNames: Record<string, string> = {};
           if (ids.length) {
             const { data: profiles } = await supabase.from('profiles').select('id, display_name').in('id', ids);
@@ -352,10 +359,37 @@ export default function Home() {
               setBeatAuthorNames(profileNames);
             }
           }
+
+          // Měsíční ohně pro každého beatu
+          let firesMap: Record<string, number> = {};
+          if (beatIds.length) {
+            const { data: fires } = await supabase
+              .from('fires')
+              .select('item_id, created_at')
+              .eq('item_type', 'beat')
+              .in('item_id', beatIds.map(String))
+              .gte('created_at', startOfMonth.toISOString());
+            firesMap = (fires ?? []).reduce<Record<string, number>>((acc, row: any) => {
+              const id = String(row.item_id);
+              acc[id] = (acc[id] || 0) + 1;
+              return acc;
+            }, {});
+          }
+
           const mappedBeats = (data as any[]).map((b) => ({
             ...b,
             artist: b.user_id ? profileNames[b.user_id] || b.artist || '' : b.artist || '',
+            monthlyFires: firesMap[String(b.id)] || 0,
           })) as Beat[];
+
+          mappedBeats.sort((a, b) => {
+            const fireDiff = (b.monthlyFires || 0) - (a.monthlyFires || 0);
+            if (fireDiff !== 0) return fireDiff;
+            const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return bDate - aDate;
+          });
+
           setBeats(mappedBeats);
           setBeatsError(null);
         } else {
@@ -1556,7 +1590,7 @@ export default function Home() {
         {/* BEATS */}
         <section className="w-full py-8" id="beats">
           <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
-            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Nejnovější beaty</h2>
+            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">TOP beaty</h2>
             {isLoadingBeats && <p className="text-[12px] text-[var(--mpc-muted)]">Načítám beaty…</p>}
           </div>
           {beatsError && (
