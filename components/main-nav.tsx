@@ -19,11 +19,15 @@ export function MainNav() {
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string } | null>(null);
+  const [callerName, setCallerName] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setIsLoggedIn(!!data.session);
+      setUserId(data.session?.user?.id ?? null);
     };
     checkSession();
   }, [supabase]);
@@ -31,6 +35,68 @@ export function MainNav() {
   useEffect(() => {
     setNavOpen(false);
   }, [pathname]);
+
+  // Realtime příchozí hovory (globální popup)
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel('calls-listener-nav')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        async (payload) => {
+          const row: any = payload.new;
+          if (!row || row.status !== 'ringing') return;
+          setIncomingCall({ id: row.id, room_name: row.room_name, caller_id: row.caller_id });
+          if (row.caller_id) {
+            const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', row.caller_id).maybeSingle();
+            setCallerName(prof?.display_name || null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        (payload) => {
+          const row: any = payload.new;
+          if (!row || !incomingCall || row.id !== incomingCall.id) return;
+          if (row.status && row.status !== 'ringing') {
+            setIncomingCall(null);
+            setCallerName(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [incomingCall, supabase, userId]);
+
+  const acceptCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase.from('calls').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při přijetí hovoru:', err);
+    } finally {
+      window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
+      setIncomingCall(null);
+      setCallerName(null);
+    }
+  };
+
+  const declineCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase.from('calls').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při odmítnutí hovoru:', err);
+    } finally {
+      setIncomingCall(null);
+      setCallerName(null);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-20 bg-black/70 backdrop-blur">
@@ -115,6 +181,26 @@ export function MainNav() {
           </div>
         )}
       </div>
+      {incomingCall && (
+        <div className="fixed bottom-4 right-4 left-4 z-30 mx-auto max-w-md rounded-2xl border border-[var(--mpc-accent)]/50 bg-black/85 p-4 text-sm text-white shadow-[0_15px_40px_rgba(0,0,0,0.55)] backdrop-blur sm:left-auto sm:right-6 sm:bottom-6">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Příchozí hovor</p>
+          <p className="mt-1 text-base font-semibold">{callerName || 'Uživatel'} volá…</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={acceptCall}
+              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+            >
+              Přijmout
+            </button>
+            <button
+              onClick={declineCall}
+              className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.15em] text-white hover:border-red-400 hover:text-red-200"
+            >
+              Položit
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
