@@ -150,6 +150,38 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
           buttonUrl: link || undefined,
         }),
       };
+    case 'collab_created':
+      return {
+        subject: `Nová spolupráce: ${threadTitle}`,
+        text: `${from} tě zve ke spolupráci „${threadTitle}“.${friendlyPreview}`,
+        html: renderTemplate({
+          heading: 'Nová spolupráce',
+          intro: `${from} tě zve ke spolupráci „${threadTitle}“.`,
+          preview,
+          buttonLabel: link ? 'Otevřít spolupráci' : undefined,
+          buttonUrl: link || undefined,
+        }),
+      };
+    case 'project_request_approved':
+      return {
+        subject: `Žádost schválena: ${projectTitle}`,
+        text: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena.`,
+        html: renderTemplate({
+          heading: 'Žádost schválena',
+          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena.`,
+          buttonLabel: link ? 'Otevřít projekt' : undefined,
+          buttonUrl: link || undefined,
+        }),
+      };
+    case 'project_request_denied':
+      return {
+        subject: `Žádost zamítnuta: ${projectTitle}`,
+        text: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta.`,
+        html: renderTemplate({
+          heading: 'Žádost zamítnuta',
+          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta.`,
+        }),
+      };
     case 'missed_call':
       return {
         subject: `Zmeškaný hovor od ${from}`,
@@ -165,7 +197,14 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
     default:
       return {
         subject: 'Nová aktivita',
-        text: 'Na profilu máš novou aktivitu.',
+        text: data?.message ? String(data.message) : 'Na profilu máš novou aktivitu.',
+        html: renderTemplate({
+          heading: 'Nová aktivita',
+          intro: data?.message ? String(data.message) : 'Na profilu máš novou aktivitu.',
+          preview,
+          buttonLabel: link ? 'Otevřít' : undefined,
+          buttonUrl: link || undefined,
+        }),
       };
   }
 }
