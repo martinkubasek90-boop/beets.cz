@@ -1729,6 +1729,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
         body: `Žádost o přístup k ${req.project_title || 'projektu'} byla ${approve ? 'schválena' : 'zamítnuta'}.`,
         item_type: 'project',
         item_id: String(req.project_id),
+        senderId: userId,
+        data: { from: profile.display_name || email || 'Neznámý' },
       });
     } catch (err) {
       console.error('Chyba při schválení/odmítnutí žádosti:', err);
@@ -1839,6 +1841,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
         body: newThreadTitle.trim(),
         item_type: 'collab_thread',
         item_id: threadId,
+        senderId: userId,
+        data: { from: ownerName },
       });
 
       const ownerName = profile.display_name || 'Ty';
@@ -1987,6 +1991,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
               body: collabMessageBody.trim(),
               item_type: 'collab_thread',
               item_id: selectedThreadId,
+              senderId: userId,
+              data: { from: profile.display_name || email || 'Neznámý' },
             })
           )
         );
