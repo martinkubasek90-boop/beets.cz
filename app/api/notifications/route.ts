@@ -9,6 +9,7 @@ type NotificationPayload = {
   targetUserId?: string;
   targetUserIds?: string[];
   targetEmail?: string;
+  user_id?: string;
   data?: Record<string, any>;
   itemId?: string | number;
   itemType?: string;
