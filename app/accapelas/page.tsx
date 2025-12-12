@@ -84,7 +84,7 @@ export default function AccapelasPage() {
       } catch (err: any) {
         console.error('Chyba při načítání akapel:', err);
         setAcapellas(dummyAcapellas);
-        setError('Nepodařilo se načíst akapely. Zobrazuji demo.');
+        setError(null);
       } finally {
         setLoading(false);
       }

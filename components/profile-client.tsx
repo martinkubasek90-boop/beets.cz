@@ -2570,6 +2570,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               >
                                 {isCurrent && gpIsPlaying ? '▮▮' : '▶'}
                               </button>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Přístup</span>
+                                <select
+                                  value={item.access_mode || 'public'}
+                                  onChange={(e) =>
+                                    handleUpdateAcapellaAccess(
+                                      item.id,
+                                      e.target.value as 'public' | 'request' | 'private'
+                                    )
+                                  }
+                                  disabled={updatingAcapellaAccessId === item.id}
+                                  className="h-8 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-2 text-[11px] text-[var(--mpc-light)] outline-none hover:border-[var(--mpc-accent)]"
+                                >
+                                  <option value="public">Veřejná</option>
+                                  <option value="request">Na žádost</option>
+                                  <option value="private">Soukromá</option>
+                                </select>
+                              </div>
                               <div className="relative">
                                 <button
                                   onClick={() =>
