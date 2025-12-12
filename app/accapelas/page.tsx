@@ -29,12 +29,20 @@ export default function AccapelasPage() {
   const supabase = createClient();
   const { play, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
   const [acapellas, setAcapellas] = useState<Acapella[]>(dummyAcapellas);
+  const [userId, setUserId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
   const [bpmFilter, setBpmFilter] = useState('');
   const [moodFilter, setMoodFilter] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requesting, setRequesting] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    supabase.auth.getUser().then((res) => {
+      setUserId(res.data.user?.id ?? null);
+    });
+  }, [supabase]);
 
   useEffect(() => {
     const load = async () => {
@@ -159,6 +167,40 @@ export default function AccapelasPage() {
     });
   };
 
+  const requestAccess = async (item: Acapella) => {
+    if (!userId) {
+      alert('Pro odeslání žádosti se přihlas.');
+      return;
+    }
+    if (!item.user_id) {
+      alert('Autor akapely není známý.');
+      return;
+    }
+    setRequesting((prev) => ({ ...prev, [String(item.id)]: true }));
+    try {
+      // jen notifikace, ukládání žádostí řeší server
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: item.user_id,
+          senderId: userId,
+          type: 'project_access_request', // znovupoužijeme existující šablonu
+          title: 'Žádost o přístup k akapele',
+          body: `${item.title} (akapelka) – žádost o přístup`,
+          item_type: 'acapella',
+          item_id: String(item.id),
+        }),
+      });
+      alert('Žádost o přístup byla odeslána.');
+    } catch (err) {
+      console.error('Chyba při odesílání žádosti o akapelu:', err);
+      alert('Nepodařilo se odeslat žádost.');
+    } finally {
+      setRequesting((prev) => ({ ...prev, [String(item.id)]: false }));
+    }
+  };
+
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
       <MainNav />
@@ -261,18 +303,19 @@ export default function AccapelasPage() {
                             : 'border-white/15 bg-white/5 text-[var(--mpc-muted)]'
                       }`}
                     >
-                      {item.access_mode === 'request'
-                        ? 'Na žádost'
-                        : item.access_mode === 'private'
-                          ? 'Soukromá'
-                          : 'Veřejná'}
+                    {item.access_mode === 'request'
+                      ? 'Na žádost'
+                      : item.access_mode === 'private'
+                        ? 'Soukromá'
+                        : 'Veřejná'}
                     </span>
                     {item.access_mode === 'request' && (
                       <button
-                        onClick={() => alert('Žádost o přístup byla odeslána.')}
+                        onClick={() => requestAccess(item)}
+                        disabled={requesting[String(item.id)]}
                         className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-[var(--mpc-accent)] hover:text-black"
                       >
-                        Požádat o přístup
+                        {requesting[String(item.id)] ? 'Odesílám…' : 'Požádat o přístup'}
                       </button>
                     )}
                   </div>
