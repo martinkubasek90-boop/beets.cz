@@ -2,7 +2,15 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/lib/email';
 
-type EventType = 'direct_message' | 'project_access_request' | 'collab_request' | 'collab_message' | 'missed_call';
+type EventType =
+  | 'direct_message'
+  | 'project_access_request'
+  | 'project_request_approved'
+  | 'project_request_denied'
+  | 'collab_request'
+  | 'collab_created'
+  | 'collab_message'
+  | 'missed_call';
 
 type NotificationPayload = {
   type: EventType;
