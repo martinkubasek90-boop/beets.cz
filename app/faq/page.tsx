@@ -43,6 +43,27 @@ const faqs = [
     ],
   },
   {
+    title: "Akapely",
+    items: [
+      {
+        q: "Jak nahrát akapelu?",
+        a: "V profilu (role MC) klikni na „Nahrát akapelu“, vyplň název, BPM, mood a nahraj audio. Můžeš přidat cover obrázek.",
+      },
+      {
+        q: "Jak fungují režimy přístupu (veřejná / na žádost / soukromá)?",
+        a: "Veřejná: kdokoli ji vidí a přehraje. Na žádost: uživatel pošle žádost, autor ji schválí/odmítne. Soukromá: vidí jen autor a schválení uživatelé.",
+      },
+      {
+        q: "Jak někdo požádá o přístup k akapele?",
+        a: "Na stránce akapel mají přihlášení uživatelé u akapel v režimu „na žádost“ tlačítko „Požádat o přístup“. Odeslání vytvoří notifikaci autorovi (a e-mail, pokud je SMTP nastaveno).",
+      },
+      {
+        q: "Proč nevidím akapely na /accapelas?",
+        a: "Ověř, že v tabulce acapellas existuje sloupec access_mode (text). Pokud chybí, přidej ho a nasad. Stránka má fallback, ale pro filtrování je sloupec potřeba.",
+      },
+    ],
+  },
+  {
     title: "Nahrávání projektů",
     items: [
       {
@@ -80,7 +101,24 @@ const faqs = [
       },
       {
         q: "Dostanu upozornění na nové zprávy?",
-        a: "Ano, na profilu je zvoneček s notifikacemi. Notifikace se generují při nových zprávách, spolupracích a žádostech o přístup.",
+        a: "Ano, na profilu je zvoneček s notifikacemi. Notifikace se generují při nových zprávách, spolupracích, žádostech o přístup k projektům/akapelám a zmeškaných hovorech.",
+      },
+    ],
+  },
+  {
+    title: "Notifikace a e-maily",
+    items: [
+      {
+        q: "Jaké události posílají e-mail?",
+        a: "Nová zpráva, nová žádost o přístup (projekt/akapela), nová spolupráce, nová zpráva ve spolupráci, zmeškaný hovor. Vždy se používá tmavá šablona s logem BEETS.CZ.",
+      },
+      {
+        q: "Co musím nastavit pro SMTP?",
+        a: "V .env / Vercel Environment doplň SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, NOTIFY_EMAIL_FROM. Na Supabase nic dalšího není třeba, pokud už funguje login/reset e-mailem.",
+      },
+      {
+        q: "Kde uvidím notifikace v aplikaci?",
+        a: "V profilu pod zvonečkem. Žádosti o přístup k projektům/akapelám se zobrazí autorovi; příchozí zprávy a hovory také.",
       },
     ],
   },
