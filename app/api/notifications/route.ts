@@ -108,7 +108,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `Dostal(a) jsi novou zprávu od ${from}.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová zpráva',
-          intro: `Dostal(a) jsi novou zprávu od <strong>${from}</strong>.`,
+          intro: `Dostal(a) jsi novou zprávu od ${from}.`,
           preview,
           buttonLabel: link ? 'Otevřít zprávy' : undefined,
           buttonUrl: link || undefined,
@@ -120,7 +120,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `${requester} požádal(a) o přístup k projektu "${projectTitle}".${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Žádost o přístup k projektu',
-          intro: `<strong>${requester}</strong> požádal(a) o přístup k projektu „${projectTitle}“.`,
+          intro: `${requester} požádal(a) o přístup k projektu „${projectTitle}“.`,
           preview,
           buttonLabel: link ? 'Otevřít projekt' : undefined,
           buttonUrl: link || undefined,
@@ -132,7 +132,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `${requester} chce zahájit spolupráci „${threadTitle}“.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová spolupráce',
-          intro: `<strong>${requester}</strong> chce zahájit spolupráci „${threadTitle}“.`,
+          intro: `${requester} chce zahájit spolupráci „${threadTitle}“.`,
           preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
@@ -144,7 +144,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `Ve vlákně „${threadTitle}“ přistála nová zpráva od ${from}.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová zpráva ve spolupráci',
-          intro: `Ve vlákně „${threadTitle}“ přistála nová zpráva od <strong>${from}</strong>.`,
+          intro: `Ve vlákně „${threadTitle}“ přistála nová zpráva od ${from}.`,
           preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
@@ -156,7 +156,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `Zmeškal(a) jsi hovor od ${from}. ${data.roomName ? `Místnost: ${data.roomName}.` : ''}`,
         html: renderTemplate({
           heading: 'Zmeškaný hovor',
-          intro: `Zmeškal(a) jsi hovor od <strong>${from}</strong>.`,
+          intro: `Zmeškal(a) jsi hovor od ${from}.`,
           preview: data.roomName ? `Místnost: ${data.roomName}` : undefined,
           buttonLabel: link ? 'Připojit se' : undefined,
           buttonUrl: link || undefined,
