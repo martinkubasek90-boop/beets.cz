@@ -122,10 +122,19 @@ type CollabFile = {
   created_at: string | null;
 };
 
-async function sendNotificationSafe(
-  supabase: ReturnType<typeof createClient>,
-  payload: { user_id: string; type: string; title?: string | null; body?: string | null; item_type?: string | null; item_id?: string | null }
-) {
+type NotifyPayload = {
+  user_id: string;
+  type: string;
+  title?: string | null;
+  body?: string | null;
+  item_type?: string | null;
+  item_id?: string | null;
+  targetEmail?: string | null;
+  senderId?: string | null;
+  data?: Record<string, any>;
+};
+
+async function sendNotificationSafe(supabase: ReturnType<typeof createClient>, payload: NotifyPayload) {
   if (!payload?.user_id || typeof payload.user_id !== 'string' || !payload.user_id.match(/^[0-9a-fA-F-]{8}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{4}-[0-9a-fA-F-]{12}$/)) {
     return;
   }
@@ -139,7 +148,8 @@ async function sendNotificationSafe(
     return;
   } catch {
     try {
-      await supabase.from('notifications').insert({ ...payload, read: false });
+      const { user_id, type, title, body, item_type, item_id } = payload;
+      await supabase.from('notifications').insert({ user_id, type, title, body, item_type, item_id, read: false });
     } catch (inner) {
       console.warn('Notifikaci se nepodařilo uložit:', inner);
     }
@@ -2075,6 +2085,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
       body: payload.body,
       item_type: 'message',
       item_id: created.id ? String(created.id) : undefined,
+      senderId: userId,
+      data: { from: payload.from_name, body: payload.body },
     });
 
     return created;

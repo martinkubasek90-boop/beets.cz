@@ -93,7 +93,7 @@ function renderTemplate({
 }
 
 function buildEmail(type: EventType, data: Record<string, any> = {}): EmailContent {
-  const from = data.from ?? data.fromName ?? 'uživatel';
+  const from = data.from ?? data.fromName ?? data.from_name ?? data.sender ?? data.senderName ?? 'uživatel';
   const projectTitle = data.projectTitle ?? 'projekt';
   const requester = data.requesterName ?? from;
   const threadTitle = data.threadTitle ?? 'Spolupráce';
@@ -232,7 +232,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No recipients resolved' }, { status: 400 });
   }
 
-  const contentCache = buildEmail(type, { ...data });
+  const enrichedData = { ...data };
+  if (!enrichedData.from && !enrichedData.fromName && !enrichedData.from_name && service && senderId) {
+    try {
+      const { data: senderProfile } = await service.from('profiles').select('display_name').eq('id', senderId).maybeSingle();
+      if (senderProfile?.display_name) {
+        enrichedData.from = senderProfile.display_name;
+      }
+    } catch (err) {
+      console.warn('Nepodařilo se načíst jméno odesílatele:', err);
+    }
+  }
+
+  const contentCache = buildEmail(type, enrichedData);
   const results: Array<{ userId: string | null; emailSent: boolean; inserted: boolean }> = [];
 
   async function notifyOne(userId: string | null, fallbackEmail?: string | null) {
@@ -274,7 +286,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const content = buildEmail(type, { ...data, targetName: displayName });
+    const content = buildEmail(type, { ...enrichedData, targetName: displayName });
     if (email) {
       const result = await sendEmail({
         to: email,
