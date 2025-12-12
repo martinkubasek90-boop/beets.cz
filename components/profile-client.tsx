@@ -2558,7 +2558,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                   •••
                                 </button>
                                 {openAcapellaMenuId === item.id && (
-                                  <div className="absolute right-0 top-10 z-20 min-w-[170px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+                                  <div className="absolute right-0 top-10 z-50 min-w-[180px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_18px_36px_rgba(0,0,0,0.55)]">
                                     <button
                                       onClick={() => startEditAcapella(item)}
                                       className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
