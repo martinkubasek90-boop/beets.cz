@@ -1607,6 +1607,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
   const handleUpdateAcapellaAccess = async (id: number, mode: 'public' | 'request' | 'private') => {
     if (!userId) return;
     setUpdatingAcapellaAccessId(id);
+    // Optimisticky přepni, aby se odznak hned přepsal
+    const prev = acapellas;
+    setAcapellas((prevList) => prevList.map((a) => (a.id === id ? { ...a, access_mode: mode } : a)));
+    setOpenAcapellaMenuId(null);
     try {
       const { error } = await supabase
         .from('acapellas')
@@ -1614,10 +1618,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
         .eq('id', id)
         .eq('user_id', userId);
       if (error) throw error;
-      setAcapellas((prev) => prev.map((a) => (a.id === id ? { ...a, access_mode: mode } : a)));
-      setOpenAcapellaMenuId(null);
     } catch (err) {
       console.error('Chyba při změně přístupu akapely:', err);
+      // vrať původní stav při chybě
+      setAcapellas(prev);
       setPlayerMessage('Nepodařilo se uložit přístup akapely.');
     } finally {
       setUpdatingAcapellaAccessId(null);
