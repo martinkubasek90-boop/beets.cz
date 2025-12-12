@@ -1834,6 +1834,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (partErr) throw partErr;
 
       // Notifikace pro partnera
+      const ownerName = profile.display_name || 'Ty';
       await sendNotificationSafe(supabase, {
         user_id: partner.id,
         type: 'collab_created',
@@ -1845,7 +1846,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
         data: { from: ownerName },
       });
 
-      const ownerName = profile.display_name || 'Ty';
       const partnerName = partner.display_name?.trim() || newThreadPartner.trim() || 'Partner';
       const participants = Array.from(new Set([ownerName, partnerName].filter(Boolean)));
       setCollabThreads((prev) => [
