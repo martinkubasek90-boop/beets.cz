@@ -178,7 +178,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON payload', detail: err?.message }, { status: 400 });
   }
 
-  const { type, targetUserId, targetUserIds, targetEmail, data = {}, itemId, itemType, threadId, senderId, fanOutCollab } = payload || {};
+  const {
+    type,
+    targetUserId,
+    targetUserIds,
+    targetEmail,
+    user_id: legacyUserId,
+    data = {},
+    itemId,
+    itemType,
+    threadId,
+    senderId,
+    fanOutCollab,
+  } = payload || {};
   if (!type) {
     return NextResponse.json({ error: 'Missing type' }, { status: 400 });
   }
@@ -194,7 +206,8 @@ export async function POST(req: Request) {
 
   const explicitEmail = targetEmail || (data as any)?.targetEmail || (data as any)?.email || null;
   const recipients = new Set<string>();
-  if (targetUserId) recipients.add(targetUserId);
+  const normalizedTargetId = targetUserId || legacyUserId;
+  if (normalizedTargetId) recipients.add(normalizedTargetId);
   (targetUserIds || []).filter(Boolean).forEach((id) => recipients.add(id));
 
   if (fanOutCollab && service && threadId) {
