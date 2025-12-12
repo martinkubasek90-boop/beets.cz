@@ -183,11 +183,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing type' }, { status: 400 });
   }
 
-  const hasServiceEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    process.env.SERVICE_ROLE_KEY;
+  const hasServiceEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && serviceKey);
   const service = hasServiceEnv
-    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey!)
     : null;
 
+  const explicitEmail = targetEmail || (data as any)?.targetEmail || (data as any)?.email || null;
   const recipients = new Set<string>();
   if (targetUserId) recipients.add(targetUserId);
   (targetUserIds || []).filter(Boolean).forEach((id) => recipients.add(id));
@@ -210,7 +215,7 @@ export async function POST(req: Request) {
     recipients.delete(senderId);
   }
 
-  if (!recipients.size && !targetEmail) {
+  if (!recipients.size && !explicitEmail) {
     return NextResponse.json({ error: 'No recipients resolved' }, { status: 400 });
   }
 
@@ -275,8 +280,8 @@ export async function POST(req: Request) {
       // eslint-disable-next-line no-await-in-loop
       await notifyOne(id);
     }
-  } else if (targetEmail) {
-    await notifyOne(null, targetEmail);
+  } else if (explicitEmail) {
+    await notifyOne(null, explicitEmail);
   }
 
   const emailSent = results.some((r) => r.emailSent);
