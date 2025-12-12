@@ -2517,17 +2517,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <div
                           key={item.id}
                           className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)]"
-                          style={
-                            item.cover_url
+                          style={{
+                            ...(item.cover_url
                               ? {
                                   backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85)), url(${item.cover_url})`,
                                   backgroundSize: 'cover',
                                   backgroundPosition: 'center',
                                   borderRadius: '16px',
-                                  overflow: 'hidden',
                                 }
-                              : undefined
-                          }
+                              : {}),
+                            overflow: 'visible',
+                          }}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>

@@ -16,6 +16,7 @@ type Acapella = {
   audio_url: string | null;
   cover_url?: string | null;
   user_id?: string | null;
+  access_mode?: 'public' | 'request' | 'private' | null;
 };
 
 const dummyAcapellas: Acapella[] = [
@@ -41,7 +42,7 @@ export default function AccapelasPage() {
         setLoading(true);
         const { data, error: err } = await supabase
           .from('acapellas')
-          .select('id, title, bpm, mood, audio_url, cover_url, user_id')
+          .select('id, title, bpm, mood, audio_url, cover_url, user_id, access_mode')
           .order('created_at', { ascending: false })
           .limit(50);
         if (err) throw err;
@@ -71,6 +72,7 @@ export default function AccapelasPage() {
               audio_url: row.audio_url ?? null,
               cover_url: row.cover_url ?? null,
               user_id: row.user_id,
+              access_mode: row.access_mode ?? null,
               artist: (row.user_id && nameMap[row.user_id]) || 'MC',
             }))
           );
@@ -201,7 +203,8 @@ export default function AccapelasPage() {
           {filtered.map((item) => (
             <div
               key={item.id}
-              className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+              className="relative rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+              style={{ overflow: 'visible' }}
             >
               <div className="flex flex-col items-center gap-4">
                 <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
@@ -231,6 +234,31 @@ export default function AccapelasPage() {
                   <p className="text-[11px] text-[var(--mpc-muted)]">
                     {item.bpm ? `${item.bpm} BPM · ` : ''}{item.mood || 'Mood'}
                   </p>
+                  <div className="mt-2 flex items-center justify-center gap-2 text-[11px]">
+                    <span
+                      className={`rounded-full border px-2 py-[2px] uppercase tracking-[0.14em] ${
+                        item.access_mode === 'request'
+                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                          : item.access_mode === 'private'
+                            ? 'border-red-500/40 bg-red-500/10 text-red-100'
+                            : 'border-white/15 bg-white/5 text-[var(--mpc-muted)]'
+                      }`}
+                    >
+                      {item.access_mode === 'request'
+                        ? 'Na žádost'
+                        : item.access_mode === 'private'
+                          ? 'Soukromá'
+                          : 'Veřejná'}
+                    </span>
+                    {item.access_mode === 'request' && (
+                      <button
+                        onClick={() => alert('Žádost o přístup byla odeslána.')}
+                        className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-white hover:bg-[var(--mpc-accent)] hover:text-black"
+                      >
+                        Požádat o přístup
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => playAcapella(item)}
