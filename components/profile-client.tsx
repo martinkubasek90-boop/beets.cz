@@ -31,6 +31,7 @@ type BeatItem = {
   mood: string | null;
   audio_url: string | null;
   cover_url?: string | null;
+  access_mode?: 'public' | 'request' | 'private' | null;
 };
 
 type ProjectItem = {
@@ -310,6 +311,14 @@ export default function ProfileClient() {
   const [editMood, setEditMood] = useState('');
   const [editCoverUrl, setEditCoverUrl] = useState('');
   const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [openAcapellaMenuId, setOpenAcapellaMenuId] = useState<number | null>(null);
+  const [editingAcapellaId, setEditingAcapellaId] = useState<number | null>(null);
+  const [editAcapellaTitle, setEditAcapellaTitle] = useState('');
+  const [editAcapellaBpm, setEditAcapellaBpm] = useState('');
+  const [editAcapellaMood, setEditAcapellaMood] = useState('');
+  const [editAcapellaCoverUrl, setEditAcapellaCoverUrl] = useState('');
+  const [editAcapellaCoverFile, setEditAcapellaCoverFile] = useState<File | null>(null);
+  const [editAcapellaAccess, setEditAcapellaAccess] = useState<'public' | 'request'>('public');
 
   // Načtení přihlášeného uživatele a profilu
   useEffect(() => {
@@ -1100,6 +1109,27 @@ export default function ProfileClient() {
       setNewThreadPartner('');
       setShowNewThreadForm(false);
       setSelectedThreadId(threadId);
+      // Email notifikace pro partnera spolupráce
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'collab_request',
+            targetUserId: partner.id,
+            senderId: userId,
+            threadId,
+            data: {
+              from: ownerName || 'MC',
+              requesterName: ownerName || 'MC',
+              threadTitle: newThreadTitle.trim(),
+              body: `Pozvánka do spolupráce: ${newThreadTitle.trim()}`,
+            },
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn('Email notifikace pro novou spolupráci selhala:', notifyErr);
+      }
     } catch (err) {
       console.error('Chyba při vytvoření spolupráce:', err);
       setCollabThreadsError(err instanceof Error ? err.message : 'Nepodařilo se založit spolupráci.');
@@ -1182,6 +1212,27 @@ export default function ProfileClient() {
       setCollabThreads((prev) =>
         prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
       );
+      // Email notifikace pro ostatní účastníky vlákna
+      try {
+        const threadTitle = collabThreads.find((t) => t.id === selectedThreadId)?.title || 'Spolupráce';
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'collab_message',
+            threadId: selectedThreadId,
+            senderId: userId,
+            fanOutCollab: true,
+            data: {
+              from: profile.display_name || email || 'Uživatel',
+              threadTitle,
+              body: collabMessageBody.trim(),
+            },
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn('Email notifikace pro spolupráci selhala:', notifyErr);
+      }
       setCollabMessageBody('');
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);

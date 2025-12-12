@@ -7,6 +7,12 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
+import { FireButton } from './fire-button';
+import { FireButton } from './fire-button';
+import { FireButton } from './fire-button';
+import { FireButton } from './fire-button';
+import { FireButton } from './fire-button';
+import { FireButton } from './fire-button';
 
 type PublicProfile = {
   display_name: string;
@@ -14,6 +20,11 @@ type PublicProfile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
+  last_seen_at?: string | null;
+  seeking_signals?: string[] | null;
+  offering_signals?: string[] | null;
+  seeking_custom?: string | null;
+  offering_custom?: string | null;
 };
 
 type Beat = {
@@ -127,6 +138,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [sessionUserId, setSessionUserId] = useState<string | null>(null);
+  const [startingCall, setStartingCall] = useState(false);
   const { play, toggle, current: currentTrack, isPlaying, currentTime, duration, seek } =
     useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
@@ -147,7 +159,8 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setProjectsError('Nepodařilo se načíst projekty: ' + message);
       return;
     }
-    setProjects((data as Project[]) ?? []);
+    const visible = (data as Project[])?.filter((p) => p.access_mode !== 'private') ?? [];
+    setProjects(visible);
     setProjectsError(null);
   };
 
@@ -157,7 +170,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       try {
         const { data: profileData, error: profileErr } = await supabase
           .from('profiles')
-          .select('display_name, hardware, bio, avatar_url, banner_url')
+          .select('display_name, hardware, bio, avatar_url, banner_url, last_seen_at')
           .eq('id', profileId)
           .maybeSingle();
 
@@ -169,6 +182,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             bio: profileData.bio ?? '',
             avatar_url: profileData.avatar_url ?? null,
             banner_url: (profileData as any).banner_url ?? null,
+            last_seen_at: (profileData as any).last_seen_at ?? null,
           });
         } else {
           setProfile(null);
@@ -359,6 +373,63 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const currentCover = currentTrack?.cover_url || null;
   const currentSubtitle = currentTrack?.subtitle || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
+  const lastSeenMs = profile?.last_seen_at ? new Date(profile.last_seen_at).getTime() : 0;
+  const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
+  const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
+  const statusLabel = isOnline ? 'Online' : 'Offline';
+
+  const handleStartCall = async () => {
+    if (!isLoggedIn || !sessionUserId) {
+      setMessageError('Musíš být přihlášen pro volání.');
+      return;
+    }
+    if (profileId === sessionUserId) {
+      setMessageError('Nemůžeš volat sám sobě.');
+      return;
+    }
+    setMessageError(null);
+    setStartingCall(true);
+    try {
+      const roomName = `beets-call-${crypto.randomUUID()}`;
+      const { data, error } = await supabase
+        .from('calls')
+        .insert({
+          caller_id: sessionUserId,
+          callee_id: profileId,
+          room_name: roomName,
+          status: 'ringing',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      if (!data?.id) throw new Error('Hovor se nepodařilo založit.');
+      // Email/SMS webhook pro příjemce hovoru (funguje i jako upozornění na zmeškaný hovor, pokud nezareaguje)
+      try {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'missed_call',
+            targetUserId: profileId,
+            senderId: sessionUserId,
+            data: {
+              from: 'Volající',
+              roomName,
+              threadTitle: 'Hovor',
+            },
+          }),
+        });
+      } catch (notifyErr) {
+        console.warn('Email notifikace hovoru selhala:', notifyErr);
+      }
+      router.push(`/call/${data.id}?room=${encodeURIComponent(roomName)}&caller=${sessionUserId}&callee=${profileId}`);
+    } catch (err) {
+      console.error('Chyba při startu hovoru:', err);
+      setMessageError('Nepodařilo se zahájit hovor.');
+    } finally {
+      setStartingCall(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#0c0f16] text-[var(--mpc-light)]">
@@ -401,6 +472,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                     <span className="text-2xl font-black uppercase tracking-[0.12em] md:text-3xl">
                       {heroName}
                     </span>
+                    <div className="flex items-center gap-1 text-[12px] text-white/90">
+                      <span className={`inline-flex h-3 w-3 rounded-full ${statusColor}`} aria-hidden />
+                      <span>{statusLabel}</span>
+                    </div>
                   </div>
                   <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-black/70 bg-black/70 px-4 py-1.5 text-white shadow-[0_6px_14px_rgba(0,0,0,0.35)] backdrop-blur">
                     <span className="text-[13px] font-semibold tracking-[0.08em]">
@@ -454,7 +529,16 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               {t('publicProfile.nav.collabs', 'Spolupráce')}
             </a>
           </div>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
+            {isLoggedIn && sessionUserId !== profileId && (
+              <button
+                onClick={handleStartCall}
+                disabled={startingCall}
+                className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+              >
+                {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+              </button>
+            )}
             <a
               href="#message-form"
               className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
@@ -505,29 +589,35 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                               <span>{beat.title.slice(0, 2)}</span>
                             )}
                           </div>
-                          <div>
-                            <p className="text-base font-semibold text-white">{beat.title}</p>
-                            <p className="text-[12px] text-[var(--mpc-muted)]">
-                              {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
-                            </p>
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <p className="text-base font-semibold text-white">{beat.title}</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">
+                                {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
+                              </p>
+                            </div>
+                            <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
                           </div>
                         </div>
-                        <button
-                          onClick={() =>
-                            handlePlayTrack({
-                              id: `beat-${beat.id}`,
-                              title: beat.title,
-                              url: beat.audio_url || '',
-                              source: 'beat',
-                              cover_url: beat.cover_url,
-                              subtitle: profile?.display_name || null,
-                            })
-                          }
-                          disabled={!beat.audio_url}
-                          className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
-                        >
-                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() =>
+                              handlePlayTrack({
+                                id: `beat-${beat.id}`,
+                                title: beat.title,
+                                url: beat.audio_url || '',
+                                source: 'beat',
+                                cover_url: beat.cover_url,
+                                subtitle: profile?.display_name || null,
+                              })
+                            }
+                            disabled={!beat.audio_url}
+                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                          >
+                            {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                          </button>
+                          <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+                        </div>
                       </div>
                       <div
                         className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
@@ -609,13 +699,16 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                           <span>{project.title.slice(0, 2)}</span>
                         )}
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-lg font-semibold text-white">{project.title}</p>
-                        <p className="text-[12px] text-[var(--mpc-muted)]">
-                          {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="space-y-1">
+                    <p className="text-lg font-semibold text-white">{project.title}</p>
+                    <p className="text-[12px] text-[var(--mpc-muted)]">
+                      {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
+                    </p>
+                  </div>
+                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
+                </div>
+                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
+                </div>
 
                     <div className="mt-4 flex flex-col items-center gap-2">
                       <button
@@ -853,10 +946,15 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           </div>
           <form onSubmit={handleSendMessage} className="space-y-3">
             <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+              <label
+                htmlFor="public-profile-message"
+                className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]"
+              >
                 {t('publicProfile.message.label', 'Zpráva')}
               </label>
               <textarea
+                id="public-profile-message"
+                name="public-profile-message"
                 value={messageBody}
                 onChange={(e) => setMessageBody(e.target.value)}
                 className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"

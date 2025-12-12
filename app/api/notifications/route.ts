@@ -2,15 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { sendEmail } from '@/lib/email';
 
-type EventType =
-  | 'direct_message'
-  | 'project_access_request'
-  | 'project_request_approved'
-  | 'project_request_denied'
-  | 'collab_request'
-  | 'collab_created'
-  | 'collab_message'
-  | 'missed_call';
+type EventType = 'direct_message' | 'project_access_request' | 'collab_request' | 'collab_message' | 'missed_call';
 
 type NotificationPayload = {
   type: EventType;
@@ -101,7 +93,7 @@ function renderTemplate({
 }
 
 function buildEmail(type: EventType, data: Record<string, any> = {}): EmailContent {
-  const from = data.from ?? data.fromName ?? data.from_name ?? data.sender ?? data.senderName ?? 'uživatel';
+  const from = data.from ?? data.fromName ?? 'uživatel';
   const projectTitle = data.projectTitle ?? 'projekt';
   const requester = data.requesterName ?? from;
   const threadTitle = data.threadTitle ?? 'Spolupráce';
@@ -116,7 +108,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `Dostal(a) jsi novou zprávu od ${from}.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová zpráva',
-          intro: `Dostal(a) jsi novou zprávu od ${from}.`,
+          intro: `Dostal(a) jsi novou zprávu od <strong>${from}</strong>.`,
           preview,
           buttonLabel: link ? 'Otevřít zprávy' : undefined,
           buttonUrl: link || undefined,
@@ -128,84 +120,43 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
         text: `${requester} požádal(a) o přístup k projektu "${projectTitle}".${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Žádost o přístup k projektu',
-          intro: `${requester} požádal(a) o přístup k projektu „${projectTitle}“.`,
+          intro: `<strong>${requester}</strong> požádal(a) o přístup k projektu „${projectTitle}“.`,
           preview,
           buttonLabel: link ? 'Otevřít projekt' : undefined,
           buttonUrl: link || undefined,
         }),
       };
-    case 'collab_request': {
-      const partner = (data as any)?.partnerName ?? requester ?? 'spolupracovník';
+    case 'collab_request':
       return {
         subject: `Nová žádost o spolupráci: ${threadTitle}`,
-        text: `${requester} chce zahájit spolupráci „${threadTitle}“ (s: ${partner}).${friendlyPreview}`,
+        text: `${requester} chce zahájit spolupráci „${threadTitle}“.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová spolupráce',
-          intro: `${requester} chce zahájit spolupráci „${threadTitle}“ (s: ${partner}).`,
+          intro: `<strong>${requester}</strong> chce zahájit spolupráci „${threadTitle}“.`,
           preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
         }),
       };
-    }
     case 'collab_message':
       return {
         subject: `Nová zpráva ve spolupráci: ${threadTitle}`,
         text: `Ve vlákně „${threadTitle}“ přistála nová zpráva od ${from}.${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová zpráva ve spolupráci',
-          intro: `Ve vlákně „${threadTitle}“ přistála nová zpráva od ${from}.`,
+          intro: `Ve vlákně „${threadTitle}“ přistála nová zpráva od <strong>${from}</strong>.`,
           preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
         }),
       };
-    case 'collab_created': {
-      const partner = (data as any)?.partnerName ?? 'spolupracovník';
-      return {
-        subject: `Nová spolupráce: ${threadTitle}`,
-        text: `${from} tě zve ke spolupráci „${threadTitle}“ (s: ${partner}).${friendlyPreview}`,
-        html: renderTemplate({
-          heading: 'Nová spolupráce',
-          intro: `${from} tě zve ke spolupráci „${threadTitle}“ (s: ${partner}).`,
-          preview: partner ? `Druhá strana: ${partner}` : preview,
-          buttonLabel: link ? 'Otevřít spolupráci' : undefined,
-          buttonUrl: link || undefined,
-        }),
-      };
-    }
-    case 'project_request_approved': {
-      const owner = (data as any)?.from ?? 'autor';
-      return {
-        subject: `Žádost schválena: ${projectTitle}`,
-        text: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena uživatelem ${owner}.`,
-        html: renderTemplate({
-          heading: 'Žádost schválena',
-          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena uživatelem ${owner}.`,
-          buttonLabel: link ? 'Otevřít projekt' : undefined,
-          buttonUrl: link || undefined,
-        }),
-      };
-    }
-    case 'project_request_denied': {
-      const owner = (data as any)?.from ?? 'autor';
-      return {
-        subject: `Žádost zamítnuta: ${projectTitle}`,
-        text: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta uživatelem ${owner}.`,
-        html: renderTemplate({
-          heading: 'Žádost zamítnuta',
-          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta uživatelem ${owner}.`,
-          preview,
-        }),
-      };
-    }
     case 'missed_call':
       return {
         subject: `Zmeškaný hovor od ${from}`,
         text: `Zmeškal(a) jsi hovor od ${from}. ${data.roomName ? `Místnost: ${data.roomName}.` : ''}`,
         html: renderTemplate({
           heading: 'Zmeškaný hovor',
-          intro: `Zmeškal(a) jsi hovor od ${from}.`,
+          intro: `Zmeškal(a) jsi hovor od <strong>${from}</strong>.`,
           preview: data.roomName ? `Místnost: ${data.roomName}` : undefined,
           buttonLabel: link ? 'Připojit se' : undefined,
           buttonUrl: link || undefined,
@@ -214,14 +165,7 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
     default:
       return {
         subject: 'Nová aktivita',
-        text: data?.message ? String(data.message) : 'Na profilu máš novou aktivitu.',
-        html: renderTemplate({
-          heading: 'Nová aktivita',
-          intro: data?.message ? String(data.message) : 'Na profilu máš novou aktivitu.',
-          preview,
-          buttonLabel: link ? 'Otevřít' : undefined,
-          buttonUrl: link || undefined,
-        }),
+        text: 'Na profilu máš novou aktivitu.',
       };
   }
 }
@@ -234,36 +178,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON payload', detail: err?.message }, { status: 400 });
   }
 
-  const {
-    type,
-    targetUserId,
-    targetUserIds,
-    targetEmail,
-    user_id: legacyUserId,
-    data = {},
-    itemId,
-    itemType,
-    threadId,
-    senderId,
-    fanOutCollab,
-  } = payload || {};
+  const { type, targetUserId, targetUserIds, targetEmail, data = {}, itemId, itemType, threadId, senderId, fanOutCollab } = payload || {};
   if (!type) {
     return NextResponse.json({ error: 'Missing type' }, { status: 400 });
   }
 
-  const serviceKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_SERVICE_ROLE ||
-    process.env.SERVICE_ROLE_KEY;
-  const hasServiceEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && serviceKey);
+  const hasServiceEnv = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
   const service = hasServiceEnv
-    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey!)
+    ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
     : null;
 
-  const explicitEmail = targetEmail || (data as any)?.targetEmail || (data as any)?.email || null;
   const recipients = new Set<string>();
-  const normalizedTargetId = targetUserId || legacyUserId;
-  if (normalizedTargetId) recipients.add(normalizedTargetId);
+  if (targetUserId) recipients.add(targetUserId);
   (targetUserIds || []).filter(Boolean).forEach((id) => recipients.add(id));
 
   if (fanOutCollab && service && threadId) {
@@ -284,61 +210,14 @@ export async function POST(req: Request) {
     recipients.delete(senderId);
   }
 
-  if (!recipients.size && !explicitEmail) {
+  if (!recipients.size && !targetEmail) {
     return NextResponse.json({ error: 'No recipients resolved' }, { status: 400 });
   }
 
-  const enrichedData = { ...data };
-  if (!enrichedData.from && !enrichedData.fromName && !enrichedData.from_name && service && senderId) {
-    try {
-      const { data: senderProfile } = await service.from('profiles').select('display_name').eq('id', senderId).maybeSingle();
-      if (senderProfile?.display_name) {
-        enrichedData.from = senderProfile.display_name;
-      }
-    } catch (err) {
-      console.warn('Nepodařilo se načíst jméno odesílatele:', err);
-    }
-  }
-
-  const contentCache = buildEmail(type, enrichedData);
+  const contentCache = buildEmail(type, { ...data });
   const results: Array<{ userId: string | null; emailSent: boolean; inserted: boolean }> = [];
-  const recipientIds = Array.from(recipients);
-
-  // Prefs a rate limit
-  const prefsMap: Record<string, { email: boolean }> = {};
-  const rateLimited = new Set<string>();
-  if (service && recipientIds.length) {
-    try {
-      const { data: prefs } = await service
-        .from('notification_preferences')
-        .select('user_id,email_notifications')
-        .in('user_id', recipientIds);
-      (prefs as any[] | null | undefined)?.forEach((row) => {
-        prefsMap[row.user_id] = { email: row.email_notifications !== false };
-      });
-    } catch (err) {
-      console.warn('Nepodařilo se načíst notification_preferences:', err);
-    }
-    try {
-      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const { data: counts } = await service
-        .from('notifications')
-        .select('user_id', { count: 'exact', head: false })
-        .in('user_id', recipientIds)
-        .gte('created_at', windowStart);
-      (counts as any[] | null | undefined)?.forEach((row: any) => {
-        if ((row?.count || 0) > 40 && row.user_id) rateLimited.add(row.user_id as string);
-      });
-    } catch (err) {
-      console.warn('Nepodařilo se načíst limity notifikací:', err);
-    }
-  }
 
   async function notifyOne(userId: string | null, fallbackEmail?: string | null) {
-    if (userId && rateLimited.has(userId)) {
-      results.push({ userId, emailSent: false, inserted: false });
-      return;
-    }
     let email = fallbackEmail || null;
     let displayName: string | null = null;
     let insertOk = false;
@@ -377,9 +256,8 @@ export async function POST(req: Request) {
       }
     }
 
-    const content = buildEmail(type, { ...enrichedData, targetName: displayName });
-    const allowEmail = userId ? prefsMap[userId]?.email ?? true : true;
-    if (email && allowEmail) {
+    const content = buildEmail(type, { ...data, targetName: displayName });
+    if (email) {
       const result = await sendEmail({
         to: email,
         subject: content.subject,
@@ -397,8 +275,8 @@ export async function POST(req: Request) {
       // eslint-disable-next-line no-await-in-loop
       await notifyOne(id);
     }
-  } else if (explicitEmail) {
-    await notifyOne(null, explicitEmail);
+  } else if (targetEmail) {
+    await notifyOne(null, targetEmail);
   }
 
   const emailSent = results.some((r) => r.emailSent);
