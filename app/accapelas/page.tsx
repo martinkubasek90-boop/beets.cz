@@ -40,14 +40,31 @@ export default function AccapelasPage() {
     const load = async () => {
       try {
         setLoading(true);
-        const { data, error: err } = await supabase
-          .from('acapellas')
-          .select('id, title, bpm, mood, audio_url, cover_url, user_id, access_mode')
-          .order('created_at', { ascending: false })
-          .limit(50);
-        if (err) throw err;
+        let rows: any[] = [];
+        try {
+          const { data, error: err } = await supabase
+            .from('acapellas')
+            .select('id, title, bpm, mood, audio_url, cover_url, user_id, access_mode')
+            .order('created_at', { ascending: false })
+            .limit(50);
+          if (err) throw err;
+          rows = data ?? [];
+        } catch (err: any) {
+          // fallback pro databázi bez sloupce access_mode
+          const msg = String(err?.message || '').toLowerCase();
+          if (msg.includes('access_mode') || msg.includes('column')) {
+            const { data, error: fallbackErr } = await supabase
+              .from('acapellas')
+              .select('id, title, bpm, mood, audio_url, cover_url, user_id')
+              .order('created_at', { ascending: false })
+              .limit(50);
+            if (fallbackErr) throw fallbackErr;
+            rows = data ?? [];
+          } else {
+            throw err;
+          }
+        }
 
-        const rows = (data as any[]) ?? [];
         const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean) as string[]));
         let nameMap: Record<string, string> = {};
         if (userIds.length) {
