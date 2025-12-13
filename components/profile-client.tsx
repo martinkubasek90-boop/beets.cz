@@ -374,6 +374,18 @@ export default function ProfileClient() {
     return counts;
   }, [collabThreads]);
   const [startingCollabCall, setStartingCollabCall] = useState(false);
+  const profileCompleteness = useMemo(() => {
+    const missing: string[] = [];
+    if (!profile.avatar_url) missing.push('avatar');
+    if (!profile.bio?.trim()) missing.push('bio');
+    if (!profile.region?.trim()) missing.push('město/region');
+    if (!profile.role) missing.push('role');
+    if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
+    const total = 5;
+    const done = total - missing.length;
+    const percent = Math.round((done / total) * 100);
+    return { missing, percent };
+  }, [profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -2706,6 +2718,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
+        {profileCompleteness.missing.length > 0 && (
+          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
+            <p className="text-[12px] text-amber-100/90">
+              Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
+            </p>
+          </div>
+        )}
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
