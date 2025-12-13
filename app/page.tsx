@@ -1033,16 +1033,16 @@ export default function Home() {
               {heroTitle}
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
-              {subtitleCleaned}
+              {cms('home.hero.subtitle', subtitleCleaned)}
               <br />
-              {t('hero.subtitle2', 'Bez reklam a nesmyslů, jen hudba.')}
+              {cms('home.hero.subtitle2', t('hero.subtitle2', 'Bez reklam a nesmyslů, jen hudba.'))}
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link
                 href="/komunita"
                 className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-5 py-2.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:translate-y-[1px]"
               >
-                Více o platformě
+                {cms('home.hero.cta', 'Více o platformě')}
               </Link>
             </div>
           </div>

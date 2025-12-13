@@ -31,6 +31,12 @@ const fields: CmsField[] = [
     category: 'Homepage',
   },
   {
+    key: 'home.hero.subtitle2',
+    label: 'Homepage – druhý řádek podtitulu',
+    defaultValue: 'Bez reklam a nesmyslů, jen hudba.',
+    category: 'Homepage',
+  },
+  {
     key: 'home.projects.title',
     label: 'Homepage – sekce projekty (nadpis)',
     defaultValue: 'Nejnovější projekty',
@@ -100,6 +106,24 @@ const fields: CmsField[] = [
     key: 'faq.intro',
     label: 'FAQ – úvodní text',
     defaultValue: 'Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.',
+    category: 'FAQ',
+  },
+  {
+    key: 'collabs.hero.title',
+    label: 'Spolupráce – hlavní titulek',
+    defaultValue: 'Spolupráce bez chaosu',
+    category: 'Spolupráce',
+  },
+  {
+    key: 'collabs.hero.lead',
+    label: 'Spolupráce – úvodní odstavec',
+    defaultValue: 'Spolupráce na beets.cz znamená, že jeden umělec osloví druhého přímo přes platformu a odešle mu žádost o spolupráci.',
+    category: 'Spolupráce',
+  },
+  {
+    key: 'faq.title',
+    label: 'FAQ – hlavní titulek',
+    defaultValue: 'FAQ',
     category: 'FAQ',
   },
 ];
