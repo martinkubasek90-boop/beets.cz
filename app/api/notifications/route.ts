@@ -134,18 +134,20 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
           buttonUrl: link || undefined,
         }),
       };
-    case 'collab_request':
+    case 'collab_request': {
+      const partner = (data as any)?.partnerName ?? requester ?? 'spolupracovník';
       return {
         subject: `Nová žádost o spolupráci: ${threadTitle}`,
-        text: `${requester} chce zahájit spolupráci „${threadTitle}“.${friendlyPreview}`,
+        text: `${requester} chce zahájit spolupráci „${threadTitle}“ (s: ${partner}).${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová spolupráce',
-          intro: `${requester} chce zahájit spolupráci „${threadTitle}“.`,
+          intro: `${requester} chce zahájit spolupráci „${threadTitle}“ (s: ${partner}).`,
           preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
         }),
       };
+    }
     case 'collab_message':
       return {
         subject: `Nová zpráva ve spolupráci: ${threadTitle}`,
@@ -158,38 +160,45 @@ function buildEmail(type: EventType, data: Record<string, any> = {}): EmailConte
           buttonUrl: link || undefined,
         }),
       };
-    case 'collab_created':
+    case 'collab_created': {
+      const partner = (data as any)?.partnerName ?? 'spolupracovník';
       return {
         subject: `Nová spolupráce: ${threadTitle}`,
-        text: `${from} tě zve ke spolupráci „${threadTitle}“.${friendlyPreview}`,
+        text: `${from} tě zve ke spolupráci „${threadTitle}“ (s: ${partner}).${friendlyPreview}`,
         html: renderTemplate({
           heading: 'Nová spolupráce',
-          intro: `${from} tě zve ke spolupráci „${threadTitle}“.`,
-          preview,
+          intro: `${from} tě zve ke spolupráci „${threadTitle}“ (s: ${partner}).`,
+          preview: partner ? `Druhá strana: ${partner}` : preview,
           buttonLabel: link ? 'Otevřít spolupráci' : undefined,
           buttonUrl: link || undefined,
         }),
       };
-    case 'project_request_approved':
+    }
+    case 'project_request_approved': {
+      const owner = (data as any)?.from ?? 'autor';
       return {
         subject: `Žádost schválena: ${projectTitle}`,
-        text: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena.`,
+        text: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena uživatelem ${owner}.`,
         html: renderTemplate({
           heading: 'Žádost schválena',
-          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena.`,
+          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla schválena uživatelem ${owner}.`,
           buttonLabel: link ? 'Otevřít projekt' : undefined,
           buttonUrl: link || undefined,
         }),
       };
-    case 'project_request_denied':
+    }
+    case 'project_request_denied': {
+      const owner = (data as any)?.from ?? 'autor';
       return {
         subject: `Žádost zamítnuta: ${projectTitle}`,
-        text: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta.`,
+        text: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta uživatelem ${owner}.`,
         html: renderTemplate({
           heading: 'Žádost zamítnuta',
-          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta.`,
+          intro: `Tvoje žádost o přístup k „${projectTitle}“ byla zamítnuta uživatelem ${owner}.`,
+          preview,
         }),
       };
+    }
     case 'missed_call':
       return {
         subject: `Zmeškaný hovor od ${from}`,

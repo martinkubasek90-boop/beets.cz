@@ -1787,7 +1787,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         item_type: 'project',
         item_id: String(req.project_id),
         senderId: userId,
-        data: { from: profile.display_name || email || 'Neznámý' },
+        data: { from: profile.display_name || email || 'Neznámý', projectTitle: req.project_title || 'projekt' },
       });
     } catch (err) {
       console.error('Chyba při schválení/odmítnutí žádosti:', err);
@@ -1900,7 +1900,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         item_type: 'collab_thread',
         item_id: threadId,
         senderId: userId,
-        data: { from: ownerName },
+        data: { from: ownerName, threadTitle: newThreadTitle.trim(), partnerName: partner.display_name || 'Spolupracovník' },
       });
 
       const partnerName = partner.display_name?.trim() || newThreadPartner.trim() || 'Partner';
@@ -2100,6 +2100,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   const updateCollabStatus = async (threadId: string, status: 'active' | 'paused' | 'done' | 'cancelled' | 'rejected') => {
     if (!userId) return;
+    const threadTitle = collabThreads.find((t) => t.id === threadId)?.title?.trim() || 'spolupráce';
     setCollabStatusUpdating(threadId);
     try {
       const { error } = await supabase.from('collab_threads').update({ status, last_activity: new Date().toISOString() }).eq('id', threadId);
@@ -2138,7 +2139,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
               item_type: 'collab_thread',
               item_id: threadId,
               senderId: userId,
-              data: { from: profile.display_name || email || 'Uživatel' },
+              data: { from: profile.display_name || email || 'Uživatel', threadTitle },
             })
           )
         );
