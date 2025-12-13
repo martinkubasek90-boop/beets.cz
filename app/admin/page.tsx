@@ -27,7 +27,7 @@ const fields: CmsField[] = [
   {
     key: 'home.hero.cta',
     label: 'Homepage – CTA tlačítko',
-    defaultValue: 'Spustit přehrávač',
+    defaultValue: 'Více o platformě',
     category: 'Homepage',
   },
   {

@@ -105,6 +105,9 @@ type CollabThread = {
   updated_at: string | null;
   participants: string[];
   creator_id?: string | null;
+  deadline?: string | null;
+  last_activity?: string | null;
+  milestones?: { id: string; title: string; due?: string | null; done?: boolean }[];
 };
 
 type CollabMessage = {
@@ -355,6 +358,9 @@ export default function ProfileClient() {
   const [collabMessagesLoading, setCollabMessagesLoading] = useState<boolean>(false);
   const [collabFilesLoading, setCollabFilesLoading] = useState<boolean>(false);
   const [collabStatusUpdating, setCollabStatusUpdating] = useState<string | null>(null);
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
+  const [newMilestoneDue, setNewMilestoneDue] = useState('');
+  const [savingMilestone, setSavingMilestone] = useState(false);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -1128,12 +1134,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
         const [byCreator, byParticipant] = await Promise.all([
           supabase
             .from('collab_threads')
-            .select('id, title, status, updated_at, created_by')
+            .select('id, title, status, updated_at, created_by, deadline, last_activity, milestones')
             .eq('created_by', userId)
             .order('updated_at', { ascending: false }),
           supabase
             .from('collab_threads')
-            .select('id, title, status, updated_at, created_by, collab_participants!inner(user_id)')
+            .select('id, title, status, updated_at, created_by, deadline, last_activity, milestones, collab_participants!inner(user_id)')
             .eq('collab_participants.user_id', userId)
             .order('updated_at', { ascending: false }),
         ]);
@@ -1147,12 +1153,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
           status: (t.status as string) || 'pending',
           updated_at: t.updated_at as string | null,
           creator_id: t.created_by || null,
+          deadline: t.deadline || null,
+          last_activity: t.last_activity || t.updated_at || null,
+          milestones: Array.isArray(t.milestones) ? t.milestones : [],
           participants: [],
         });
 
         const combinedMap = new Map<
           string,
-          { id: string; title: string; status: string; updated_at: string | null; participants: string[] }
+          {
+            id: string;
+            title: string;
+            status: string;
+            updated_at: string | null;
+            participants: string[];
+            deadline?: string | null;
+            last_activity?: string | null;
+            milestones?: { id: string; title: string; due?: string | null; done?: boolean }[];
+            creator_id?: string | null;
+          }
         >();
         (byCreator.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
         (byParticipant.data ?? []).forEach((t: any) => combinedMap.set(t.id, mapThread(t)));
@@ -1861,6 +1880,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           title: newThreadTitle.trim(),
           status: 'pending',
           updated_at: new Date().toISOString(),
+          last_activity: new Date().toISOString(),
           participants,
           creator_id: userId,
         },
@@ -1967,6 +1987,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         user_id: userId,
       });
       if (error) throw error;
+      await supabase.from('collab_threads').update({ last_activity: new Date().toISOString() }).eq('id', selectedThreadId);
       setCollabMessages((prev) => [
         ...prev,
         {
@@ -1978,7 +1999,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
         },
       ]);
       setCollabThreads((prev) =>
-        prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
+        prev.map((t) =>
+          t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString(), last_activity: new Date().toISOString() } : t
+        )
       );
       // Notifikace pro ostatní účastníky vlákna
       try {
@@ -2032,6 +2055,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         { id: crypto.randomUUID(), file_name: collabFile.name, file_url: pub.publicUrl, user_id: userId, created_at: new Date().toISOString() },
         ...prev,
       ]);
+      await supabase.from('collab_threads').update({ last_activity: new Date().toISOString() }).eq('id', selectedThreadId);
       setCollabThreads((prev) =>
         prev.map((t) => (t.id === selectedThreadId ? { ...t, updated_at: new Date().toISOString() } : t))
       );
@@ -2043,13 +2067,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
-  const updateCollabStatus = async (threadId: string, status: 'active' | 'rejected') => {
+  const updateCollabStatus = async (threadId: string, status: 'active' | 'paused' | 'done' | 'cancelled' | 'rejected') => {
     if (!userId) return;
     setCollabStatusUpdating(threadId);
     try {
-      const { error } = await supabase.from('collab_threads').update({ status }).eq('id', threadId);
+      const { error } = await supabase.from('collab_threads').update({ status, last_activity: new Date().toISOString() }).eq('id', threadId);
       if (error) throw error;
-      setCollabThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, status, updated_at: new Date().toISOString() } : t)));
+      setCollabThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId ? { ...t, status, updated_at: new Date().toISOString(), last_activity: new Date().toISOString() } : t
+        )
+      );
       // Notifikace druhé straně
       try {
         const { data: participants } = await supabase
@@ -2064,9 +2092,18 @@ function handleFieldChange(field: keyof Profile, value: string) {
           targets.map((uid) =>
             sendNotificationSafe(supabase, {
               user_id: uid,
-              type: status === 'active' ? 'collab_created' : 'collab_request_denied',
-              title: status === 'active' ? 'Spolupráce potvrzena' : 'Spolupráce odmítnuta',
-              body: threadId,
+              type: status === 'active' ? 'collab_created' : 'collab_message',
+              title:
+                status === 'active'
+                  ? 'Spolupráce potvrzena'
+                  : status === 'paused'
+                    ? 'Spolupráce pozastavena'
+                    : status === 'done'
+                      ? 'Spolupráce dokončena'
+                      : status === 'cancelled'
+                        ? 'Spolupráce ukončena'
+                        : 'Spolupráce odmítnuta',
+              body: `Status: ${status}`,
               item_type: 'collab_thread',
               item_id: threadId,
               senderId: userId,
@@ -2083,6 +2120,62 @@ function handleFieldChange(field: keyof Profile, value: string) {
     } finally {
       setCollabStatusUpdating(null);
     }
+  };
+
+  const getThreadById = (id: string | null) => collabThreads.find((t) => t.id === id) || null;
+  const getLastActivity = (thread: CollabThread | null) => thread?.last_activity || thread?.updated_at || null;
+  const inactivityDays = (thread: CollabThread | null) => {
+    const ts = getLastActivity(thread);
+    if (!ts) return null;
+    const diff = Date.now() - new Date(ts).getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+  };
+
+  const saveMilestones = async (threadId: string, milestones: { id: string; title: string; due?: string | null; done?: boolean }[], deadline?: string | null) => {
+    setSavingMilestone(true);
+    try {
+      const payload: any = { milestones };
+      if (deadline !== undefined) payload.deadline = deadline || null;
+      payload.last_activity = new Date().toISOString();
+      const { error } = await supabase.from('collab_threads').update(payload).eq('id', threadId);
+      if (error) throw error;
+      setCollabThreads((prev) =>
+        prev.map((t) =>
+          t.id === threadId
+            ? { ...t, milestones, deadline: deadline || null, last_activity: payload.last_activity, updated_at: payload.last_activity }
+            : t
+        )
+      );
+    } catch (err) {
+      console.error('Chyba při ukládání milníků:', err);
+      setPlayerMessage('Nepodařilo se uložit milníky.');
+    } finally {
+      setSavingMilestone(false);
+    }
+  };
+
+  const handleAddMilestone = async () => {
+    if (!selectedThreadId || !newMilestoneTitle.trim()) return;
+    const thread = getThreadById(selectedThreadId);
+    const list = Array.isArray(thread?.milestones) ? thread!.milestones! : [];
+    const newItem = { id: crypto.randomUUID(), title: newMilestoneTitle.trim(), due: newMilestoneDue || null, done: false };
+    await saveMilestones(selectedThreadId, [...list, newItem], thread?.deadline ?? null);
+    setNewMilestoneTitle('');
+    setNewMilestoneDue('');
+  };
+
+  const toggleMilestone = async (threadId: string, milestoneId: string) => {
+    const thread = getThreadById(threadId);
+    if (!thread || !Array.isArray(thread.milestones)) return;
+    const updated = thread.milestones.map((m) => (m.id === milestoneId ? { ...m, done: !m.done } : m));
+    await saveMilestones(threadId, updated, thread.deadline ?? null);
+  };
+
+  const removeMilestone = async (threadId: string, milestoneId: string) => {
+    const thread = getThreadById(threadId);
+    if (!thread || !Array.isArray(thread.milestones)) return;
+    const updated = thread.milestones.filter((m) => m.id !== milestoneId);
+    await saveMilestones(threadId, updated, thread.deadline ?? null);
   };
 
   async function resolveRecipientId(name: string, explicitId?: string) {
@@ -3526,6 +3619,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                     {collabThreads.length} {t('profile.collabs.count', 'spoluprací')}
                   </p>
+                  <p className="text-[11px] text-[var(--mpc-muted)]">
+                    Aktivní: {collabSummary.active} · Čeká: {collabSummary.pending} · Dokončené: {collabSummary.done} · Ukončené: {collabSummary.cancelled}
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowNewThreadForm((prev) => !prev)}
@@ -3615,14 +3711,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                   ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
                                   : thread.status === 'pending'
                                     ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                                    : 'border-red-500/40 bg-red-500/10 text-red-100'
+                                    : thread.status === 'paused'
+                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                      : thread.status === 'done'
+                                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                        : 'border-red-500/40 bg-red-500/10 text-red-100'
                               }`}
                             >
                               {thread.status === 'active'
                                 ? 'Aktivní'
                                 : thread.status === 'pending'
                                   ? 'Čeká na potvrzení'
-                                  : 'Odmítnuto'}
+                                  : thread.status === 'paused'
+                                    ? 'Pozastavená'
+                                    : thread.status === 'done'
+                                      ? 'Dokončená'
+                                      : thread.status === 'cancelled'
+                                        ? 'Ukončená'
+                                        : 'Odmítnuto'}
                             </span>
                           </div>
                         </button>
@@ -3645,12 +3751,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               ? 'Aktivní'
                               : activeThread.status === 'pending'
                                 ? 'Čeká na potvrzení'
-                                : 'Odmítnuto'}
+                                : activeThread.status === 'paused'
+                                  ? 'Pozastavená'
+                                  : activeThread.status === 'done'
+                                    ? 'Dokončená'
+                                    : activeThread.status === 'cancelled'
+                                      ? 'Ukončená'
+                                      : 'Odmítnuto'}
                           </p>
                         </div>
                         <p className="text-[11px] text-[var(--mpc-muted)]">
                           Aktualizováno {formatRelativeTime(activeThread.updated_at)}
                         </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--mpc-muted)]">
+                        <span>Poslední aktivita: {formatRelativeTime(getLastActivity(activeThread))}</span>
+                        {activeThread.deadline && (
+                          <span>Deadline: {new Date(activeThread.deadline).toLocaleDateString('cs-CZ')}</span>
+                        )}
                       </div>
 
                       {activeThread.status === 'pending' && activeThread.creator_id !== userId && (
@@ -3672,6 +3791,115 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           </button>
                         </div>
                       )}
+
+                      {/* Milníky a deadline */}
+                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
+                            Milníky
+                            {Array.isArray(activeThread.milestones) && activeThread.milestones.length > 0 && (
+                              <span className="text-[11px] text-[var(--mpc-muted)]">
+                                {activeThread.milestones.filter((m) => m.done).length}/{activeThread.milestones.length} splněno
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <label className="text-[var(--mpc-muted)]">Deadline:</label>
+                            <input
+                              type="date"
+                              value={activeThread.deadline ? activeThread.deadline.slice(0, 10) : ''}
+                              onChange={(e) => void saveMilestones(activeThread.id, activeThread.milestones || [], e.target.value || null)}
+                              className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-1 text-[11px] text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          {(activeThread.milestones || []).map((m) => (
+                            <div key={m.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={!!m.done}
+                                  onChange={() => void toggleMilestone(activeThread.id, m.id)}
+                                  className="h-4 w-4"
+                                />
+                                <div>
+                                  <p className="text-[var(--mpc-light)]">{m.title}</p>
+                                  {m.due && <p className="text-[11px] text-[var(--mpc-muted)]">Do: {new Date(m.due).toLocaleDateString('cs-CZ')}</p>}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => void removeMilestone(activeThread.id, m.id)}
+                                className="text-[11px] text-red-300 hover:text-white"
+                              >
+                                Odebrat
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Nový milník..."
+                            value={newMilestoneTitle}
+                            onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                            className="flex-1 min-w-[180px] rounded border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                          />
+                          <input
+                            type="date"
+                            value={newMilestoneDue}
+                            onChange={(e) => setNewMilestoneDue(e.target.value)}
+                            className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                          />
+                          <button
+                            onClick={() => void handleAddMilestone()}
+                            disabled={savingMilestone || !newMilestoneTitle.trim()}
+                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                          >
+                            {savingMilestone ? 'Ukládám…' : 'Přidat'}
+                          </button>
+                        </div>
+                        {inactivityDays(activeThread) !== null && inactivityDays(activeThread)! >= 7 && activeThread.status === 'active' && (
+                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
+                            <span>Partner nereagoval {inactivityDays(activeThread)} dní.</span>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const { data: participants } = await supabase
+                                    .from('collab_participants')
+                                    .select('user_id')
+                                    .eq('thread_id', activeThread.id);
+                                  const targets =
+                                    (participants ?? [])
+                                      .map((p: any) => p.user_id as string)
+                                      .filter((uid) => uid && uid !== userId) || [];
+                                  await Promise.all(
+                                    targets.map((uid) =>
+                                      sendNotificationSafe(supabase, {
+                                        user_id: uid,
+                                        type: 'collab_message',
+                                        title: 'Připomenutí spolupráce',
+                                        body: 'Reaguj prosím na spolupráci',
+                                        item_type: 'collab_thread',
+                                        item_id: activeThread.id,
+                                        senderId: userId,
+                                        data: { from: profile.display_name || email || 'Uživatel' },
+                                      })
+                                    )
+                                  );
+                                  setPlayerMessage('Připomenutí odesláno.');
+                                } catch (err) {
+                                  console.error('Ping selhal:', err);
+                                  setPlayerMessage('Nepodařilo se odeslat připomenutí.');
+                                }
+                              }}
+                              className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                            >
+                              Připomenout
+                            </button>
+                          </div>
+                        )}
+                      </div>
 
                       <div className="space-y-3">
                         <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3">
