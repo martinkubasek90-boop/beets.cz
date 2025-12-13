@@ -361,6 +361,30 @@ export default function ProfileClient() {
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
   const [newMilestoneDue, setNewMilestoneDue] = useState('');
   const [savingMilestone, setSavingMilestone] = useState(false);
+  const collabSummary = useMemo(() => {
+    const counts = { active: 0, pending: 0, done: 0, cancelled: 0, paused: 0, rejected: 0 };
+    collabThreads.forEach((t) => {
+      if (t.status === 'active') counts.active += 1;
+      else if (t.status === 'pending') counts.pending += 1;
+      else if (t.status === 'done') counts.done += 1;
+      else if (t.status === 'cancelled') counts.cancelled += 1;
+      else if (t.status === 'paused') counts.paused += 1;
+      else if (t.status === 'rejected') counts.rejected += 1;
+    });
+    return counts;
+  }, [collabThreads]);
+  const collabSummary = useMemo(() => {
+    const counts = { active: 0, pending: 0, done: 0, cancelled: 0, paused: 0, rejected: 0 };
+    collabThreads.forEach((t) => {
+      if (t.status === 'active') counts.active += 1;
+      else if (t.status === 'pending') counts.pending += 1;
+      else if (t.status === 'done') counts.done += 1;
+      else if (t.status === 'cancelled') counts.cancelled += 1;
+      else if (t.status === 'paused') counts.paused += 1;
+      else if (t.status === 'rejected') counts.rejected += 1;
+    });
+    return counts;
+  }, [collabThreads]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
