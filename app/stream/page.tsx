@@ -22,7 +22,7 @@ export default function StreamPage() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <StreamSection embed />
+        <StreamSection embed={false} />
       </div>
     </main>
   );

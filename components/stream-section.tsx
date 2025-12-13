@@ -168,6 +168,8 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const title = nextStreamInfo?.title || defaultStreamInfo.title;
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
 
+  const joinUrl = `https://meet.jit.si/${nextStreamInfo?.roomName || defaultStreamInfo.roomName}`;
+
   return (
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
       <div className="mx-auto max-w-6xl space-y-4">
@@ -215,12 +217,14 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
         ) : (
           <div className="rounded-2xl border border-[var(--mpc-dark)] bg-black/60 p-4 text-sm text-[var(--mpc-light)]">
             <p className="text-[var(--mpc-muted)]">{description}</p>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
-                href="/stream"
+                href={joinUrl}
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center justify-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
               >
-                {t('stream.openPage', 'Otevřít stream')}
+                {t('stream.join', 'Připojit se přes Jitsi')}
               </Link>
               {!isLoggedIn && (
                 <Link
