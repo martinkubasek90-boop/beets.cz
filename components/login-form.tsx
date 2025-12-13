@@ -121,13 +121,13 @@ export function LoginForm({
                 {isLoading ? "Přihlašuji..." : "Přihlásit se"}
               </Button>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Nemáte účet?{" "}
+            <div className="mt-6 rounded-xl border border-[var(--mpc-accent,#f37433)] bg-[var(--mpc-accent,#f37433)]/10 px-4 py-4 text-center shadow-[0_8px_24px_rgba(243,116,51,0.25)]">
+              <p className="text-base font-semibold text-white">Nemáte účet?</p>
               <Link
                 href="/auth/sign-up"
-                className="font-semibold text-[var(--mpc-accent,#f37433)] underline underline-offset-4"
+                className="mt-1 inline-block text-[17px] font-bold text-[var(--mpc-accent,#f37433)] underline underline-offset-4"
               >
-                Registrovat se
+                Registrujte se
               </Link>
             </div>
           </form>
