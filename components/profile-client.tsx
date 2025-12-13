@@ -2485,6 +2485,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                   {t('profile.tab.posts', 'Moje články')}
                 </a>
               )}
+              {isAdmin && (
+                <Link href="/admin" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  Admin
+                </Link>
+              )}
               <NotificationBell />
             </div>
             <button
@@ -2516,6 +2521,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
               {(isAdmin || !isMcOnly) && (
                 <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                   {t('profile.tab.stream', 'Stream')}
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href="/admin" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  Admin
                 </Link>
               )}
               <a href="#messages" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
