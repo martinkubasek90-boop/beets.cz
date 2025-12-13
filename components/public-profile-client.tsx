@@ -186,6 +186,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [collabRequestState, setCollabRequestState] = useState<'idle' | 'sending' | 'success'>('idle');
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
+  const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -1532,12 +1533,48 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
                 {project.access_mode === 'request' && (
                   <div className="mt-4 flex justify-center">
-                    <Link
-                      href={`/projects/${project.id}`}
-                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                    <button
+                      onClick={async () => {
+                        if (!currentUserId) {
+                          alert('Pro odeslání žádosti se přihlas.');
+                          return;
+                        }
+                        setProjectRequesting((prev) => ({ ...prev, [String(project.id)]: true }));
+                        try {
+                          const { error: insertErr } = await supabase.from('project_access_requests').insert({
+                            project_id: project.id,
+                            requester_id: currentUserId,
+                          });
+                          if (insertErr) throw insertErr;
+                          // poslat notifikaci autorovi
+                          if (project.user_id) {
+                            await fetch('/api/notifications', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                user_id: project.user_id,
+                                senderId: currentUserId,
+                                type: 'project_request',
+                                title: 'Žádost o přístup k projektu',
+                                body: `${profile?.display_name || 'Uživatel'} žádá o přístup k projektu ${project.title}`,
+                                item_type: 'project',
+                                item_id: String(project.id),
+                              }),
+                            });
+                          }
+                          alert('Žádost byla odeslána.');
+                        } catch (err) {
+                          console.error('Chyba při žádosti o přístup k projektu:', err);
+                          alert('Nepodařilo se odeslat žádost.');
+                        } finally {
+                          setProjectRequesting((prev) => ({ ...prev, [String(project.id)]: false }));
+                        }
+                      }}
+                      disabled={projectRequesting[String(project.id)]}
+                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
                     >
-                      Požádat o přístup
-                    </Link>
+                      {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
+                    </button>
                   </div>
                 )}
 
