@@ -8,6 +8,21 @@ import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from '@/components/global-player-provider';
 import { MainNav } from '@/components/main-nav';
 
+const CMS_KEYS = [
+  'home.hero.title',
+  'home.hero.subtitle',
+  'home.projects.title',
+  'home.beats.title',
+  'home.artists.title',
+  'home.blog.title',
+  'home.info.producers.title',
+  'home.info.producers.text',
+  'home.info.rappers.title',
+  'home.info.rappers.text',
+  'home.info.community.title',
+  'home.info.community.text',
+];
+
 type Beat = {
   id: number;
   title: string;
@@ -212,6 +227,7 @@ export default function Home() {
   const [isRepeat, setIsRepeat] = useState(false);
   const [videoIndex, setVideoIndex] = useState(0);
   const [forumError, setForumError] = useState<string | null>(null);
+  const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
   const subtitleDefault =
@@ -220,9 +236,31 @@ export default function Home() {
   const subtitleCleaned = (subtitleRaw.includes('CZ/SK') ? subtitleRaw : subtitleDefault)
     .replace(/\s*Bez reklam.*$/i, '')
     .trim();
+  const heroTitle = cms('home.hero.title', heroTitle);
+  const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const beatList = beats.length ? beats : dummyBeats;
   const beatsPerPage = 3;
   const beatTotalPages = Math.max(1, Math.ceil(beatList.length / beatsPerPage));
+
+  // Načti CMS texty (homepage)
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        const { data, error } = await supabase.from('cms_content').select('key,value').in('key', CMS_KEYS);
+        if (error) throw error;
+        const map: Record<string, string> = {};
+        (data as any[] | null | undefined)?.forEach((row) => {
+          if (row.key) map[row.key] = row.value;
+        });
+        setCmsEntries(map);
+      } catch (err) {
+        console.warn('Nepodařilo se načíst CMS texty:', err);
+      }
+    };
+    void loadCms();
+  }, [supabase]);
+
+  const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
   const visibleBeats = beatList.length
     ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
         const start = beatPage * beatsPerPage;
@@ -992,7 +1030,7 @@ export default function Home() {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_85%,rgba(243,116,51,0.28),rgba(243,116,51,0)_40%)]" />
             <div className="relative flex flex-col items-center gap-3 text-center sm:gap-4">
             <h1 className="font-['Space_Grotesk'] text-[2.2rem] sm:text-[clamp(2rem,3vw+1rem,3.4rem)] font-black uppercase leading-tight tracking-[0.08em] text-white">
-              {t('hero.title', 'Beets.cz')}
+              {heroTitle}
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {subtitleCleaned}
@@ -1014,7 +1052,7 @@ export default function Home() {
         <section className="w-full py-8" id="projects">
           <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
             <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">
-              {t('projects.title', 'Nejnovější projekty')}
+              {cms('home.projects.title', t('projects.title', 'Nejnovější projekty'))}
             </h2>
           </div>
           {projectsError && (

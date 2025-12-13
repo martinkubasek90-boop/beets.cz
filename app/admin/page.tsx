@@ -9,31 +9,98 @@ type CmsEntry = {
   value: string;
 };
 
-const fields: { key: string; label: string; description?: string; defaultValue: string }[] = [
+type CmsField = { key: string; label: string; description?: string; defaultValue: string; category: string };
+
+const fields: CmsField[] = [
   {
     key: 'home.hero.title',
     label: 'Homepage – hlavní titulek',
     defaultValue: 'Beat komunita BEETS.CZ',
+    category: 'Homepage',
   },
   {
     key: 'home.hero.subtitle',
     label: 'Homepage – podtitulek',
     defaultValue: 'Nahrávej beaty, sdílej instrumentály, feedback od CZ/SK komunity.',
+    category: 'Homepage',
   },
   {
     key: 'home.hero.cta',
     label: 'Homepage – CTA tlačítko',
     defaultValue: 'Spustit přehrávač',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.projects.title',
+    label: 'Homepage – sekce projekty (nadpis)',
+    defaultValue: 'Nejnovější projekty',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.beats.title',
+    label: 'Homepage – sekce beaty (nadpis)',
+    defaultValue: 'Nejnovější beaty',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.artists.title',
+    label: 'Homepage – sekce umělci (nadpis)',
+    defaultValue: 'Umělci',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.blog.title',
+    label: 'Homepage – sekce blog (nadpis)',
+    defaultValue: 'News from Beats',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.producers.title',
+    label: 'Homepage – box Pro producenty (titulek)',
+    defaultValue: 'Pro producenty',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.producers.text',
+    label: 'Homepage – box Pro producenty (text)',
+    defaultValue: 'Nahrávej beaty, sdílej instrumentály, feedback od CZ/SK komunity.',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.rappers.title',
+    label: 'Homepage – box Pro rapery (titulek)',
+    defaultValue: 'Pro rapery',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.rappers.text',
+    label: 'Homepage – box Pro rapery (text)',
+    defaultValue: 'Hledej beaty, domlouvej spolupráce, přidávej akapely.',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.community.title',
+    label: 'Homepage – box Komunita (titulek)',
+    defaultValue: 'CZ / SK komunita',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.info.community.text',
+    label: 'Homepage – box Komunita (text)',
+    defaultValue: 'Kurátorovaný vstup, žádné reklamy, čistá platforma pro hudbu.',
+    category: 'Homepage',
   },
   {
     key: 'stream.description',
     label: 'Stream – popis pod tlačítkem',
     defaultValue: 'Zapni se a bav se s námi naživo.',
+    category: 'Stream',
   },
   {
     key: 'faq.intro',
     label: 'FAQ – úvodní text',
     defaultValue: 'Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.',
+    category: 'FAQ',
   },
 ];
 
@@ -140,35 +207,45 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {fields.map((field) => {
-            const current = entries[field.key] ?? field.defaultValue;
-            return (
-              <div key={field.key} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white">{field.label}</p>
-                    <p className="text-[11px] text-[var(--mpc-muted)]">{field.key}</p>
-                    {field.description && <p className="text-[11px] text-[var(--mpc-muted)]">{field.description}</p>}
+        {Array.from(
+          fields.reduce((acc, f) => {
+            const arr = acc.get(f.category) || [];
+            arr.push(f);
+            acc.set(f.category, arr);
+            return acc;
+          }, new Map<string, CmsField[]>())
+        ).map(([category, items]) => (
+          <div key={category} className="space-y-3">
+            <h2 className="text-base font-semibold text-white">{category}</h2>
+            {items.map((field) => {
+              const current = entries[field.key] ?? field.defaultValue;
+              return (
+                <div key={field.key} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">{field.label}</p>
+                      <p className="text-[11px] text-[var(--mpc-muted)]">{field.key}</p>
+                      {field.description && <p className="text-[11px] text-[var(--mpc-muted)]">{field.description}</p>}
+                    </div>
+                    <button
+                      onClick={() => void handleSave(field.key, current)}
+                      disabled={saving[field.key]}
+                      className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                    >
+                      {saving[field.key] ? 'Ukládám…' : 'Uložit'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => void handleSave(field.key, current)}
-                    disabled={saving[field.key]}
-                    className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-                  >
-                    {saving[field.key] ? 'Ukládám…' : 'Uložit'}
-                  </button>
+                  <textarea
+                    className="mt-3 w-full rounded-md border border-[var(--mpc-dark)] bg-black/50 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                    rows={3}
+                    value={current}
+                    onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                  />
                 </div>
-                <textarea
-                  className="mt-3 w-full rounded-md border border-[var(--mpc-dark)] bg-black/50 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                  rows={3}
-                  value={current}
-                  onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                />
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </main>
   );
