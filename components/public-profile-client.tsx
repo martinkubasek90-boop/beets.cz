@@ -79,6 +79,7 @@ type Project = {
   title: string;
   description: string | null;
   cover_url: string | null;
+  user_id?: string | null;
   access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
   tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
