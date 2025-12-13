@@ -1630,7 +1630,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       disabled={projectRequesting[String(project.id)]}
                       className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
                     >
-                      {projectRequesting[String(project.id)] ? 'Odesílám…' : '{cms('public.cta.requestProject', 'Požádat o přístup')}'}
+                      {projectRequesting[String(project.id)]
+                        ? 'Odesílám…'
+                        : cms('public.cta.requestProject', 'Požádat o přístup')}
                     </button>
                   </div>
                 )}
