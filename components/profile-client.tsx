@@ -104,6 +104,7 @@ type CollabThread = {
   status: 'pending' | 'active' | 'rejected' | string;
   updated_at: string | null;
   participants: string[];
+  creator_id?: string | null;
 };
 
 type CollabMessage = {
@@ -1127,12 +1128,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
         const [byCreator, byParticipant] = await Promise.all([
           supabase
             .from('collab_threads')
-            .select('id, title, status, updated_at')
+            .select('id, title, status, updated_at, created_by')
             .eq('created_by', userId)
             .order('updated_at', { ascending: false }),
           supabase
             .from('collab_threads')
-            .select('id, title, status, updated_at, collab_participants!inner(user_id)')
+            .select('id, title, status, updated_at, created_by, collab_participants!inner(user_id)')
             .eq('collab_participants.user_id', userId)
             .order('updated_at', { ascending: false }),
         ]);
@@ -1145,6 +1146,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           title: t.title as string,
           status: (t.status as string) || 'pending',
           updated_at: t.updated_at as string | null,
+          creator_id: t.created_by || null,
           participants: [],
         });
 
@@ -1860,6 +1862,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           status: 'pending',
           updated_at: new Date().toISOString(),
           participants,
+          creator_id: userId,
         },
         ...prev,
       ]);
@@ -3640,7 +3643,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         </p>
                       </div>
 
-                      {activeThread.status === 'pending' && (
+                      {activeThread.status === 'pending' && activeThread.creator_id !== userId && (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-[11px] text-[var(--mpc-muted)]">Čeká na potvrzení</span>
                           <button
