@@ -33,6 +33,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [jitsiLoading, setJitsiLoading] = useState(false);
   const [jitsiError, setJitsiError] = useState<string | null>(null);
+  const [communityInvite, setCommunityInvite] = useState<{ room: string; from?: string | null } | null>(null);
   const jitsiApiRef = useRef<any>(null);
   const streamContainerRef = useRef<HTMLDivElement | null>(null);
   const jitsiScriptLoadedRef = useRef(false);
@@ -77,6 +78,21 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
       setNextStreamInfo(defaultStreamInfo);
     };
     void loadStreamInfo();
+  }, [supabase]);
+
+  // Zachytíme komunitní call broadcast a nabídneme link
+  useEffect(() => {
+    const channel = supabase
+      .channel('community-call-global-stream')
+      .on('broadcast', { event: 'community-call' }, (payload) => {
+        const data: any = payload.payload;
+        if (!data?.room) return;
+        setCommunityInvite({ room: String(data.room), from: data.fromName || null });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [supabase]);
 
   const loadJitsiScript = useCallback(() => {
@@ -167,8 +183,8 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const description = nextStreamInfo?.description || defaultStreamInfo.description;
   const title = nextStreamInfo?.title || defaultStreamInfo.title;
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
-
-  const joinUrl = `https://meet.jit.si/${nextStreamInfo?.roomName || defaultStreamInfo.roomName}`;
+  const joinRoom = communityInvite?.room || nextStreamInfo?.roomName || defaultStreamInfo.roomName;
+  const joinUrl = `https://meet.jit.si/${joinRoom}`;
 
   return (
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
@@ -179,6 +195,11 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
           <p className="text-[12px]">
             {t('stream.next', 'Další stream')} {startsAt}
           </p>
+          {communityInvite && (
+            <p className="text-[11px] text-[var(--mpc-accent)]">
+              Live: {communityInvite.from ? `${communityInvite.from} spustil community call` : 'Community call je aktivní'}
+            </p>
+          )}
         </div>
         {embed ? (
           isLoggedIn ? (
