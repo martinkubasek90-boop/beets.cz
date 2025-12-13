@@ -101,7 +101,7 @@ const normalizeProjectTracks = (raw?: ProjectItem['tracks_json']) => {
 type CollabThread = {
   id: string;
   title: string;
-  status: string;
+  status: 'pending' | 'active' | 'rejected' | string;
   updated_at: string | null;
   participants: string[];
 };
@@ -253,7 +253,7 @@ function buildCollabLabel(names?: string[]) {
   return `Spolupráce ${uniqueNames.join(', ')} a ${last}`;
 }
 
-function formatTime(sec?: number) {
+  function formatTime(sec?: number) {
   if (!sec || Number.isNaN(sec)) return '0:00';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60)
@@ -353,6 +353,7 @@ export default function ProfileClient() {
   const [collabFiles, setCollabFiles] = useState<CollabFile[]>([]);
   const [collabMessagesLoading, setCollabMessagesLoading] = useState<boolean>(false);
   const [collabFilesLoading, setCollabFilesLoading] = useState<boolean>(false);
+  const [collabStatusUpdating, setCollabStatusUpdating] = useState<string | null>(null);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -1142,7 +1143,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         const mapThread = (t: any) => ({
           id: t.id as string,
           title: t.title as string,
-          status: t.status as string,
+          status: (t.status as string) || 'pending',
           updated_at: t.updated_at as string | null,
           participants: [],
         });
@@ -2015,7 +2016,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
     if (!selectedThreadId || !collabFile || !userId) return;
     setUploadingCollabFile(true);
     try {
-      const safe = collabFile.name.replace(/[^a-zA-Z0-9.\\-_]/g, '_');
+      const safe = collabFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
       const path = `${userId}/${selectedThreadId}/${Date.now()}-${safe}`;
       const { error: upErr } = await supabase.storage.from('collabs').upload(path, collabFile, { upsert: true });
       if (upErr) throw upErr;
@@ -2036,6 +2037,48 @@ function handleFieldChange(field: keyof Profile, value: string) {
       console.error('Chyba při uploadu souboru:', err);
     } finally {
       setUploadingCollabFile(false);
+    }
+  };
+
+  const updateCollabStatus = async (threadId: string, status: 'active' | 'rejected') => {
+    if (!userId) return;
+    setCollabStatusUpdating(threadId);
+    try {
+      const { error } = await supabase.from('collab_threads').update({ status }).eq('id', threadId);
+      if (error) throw error;
+      setCollabThreads((prev) => prev.map((t) => (t.id === threadId ? { ...t, status, updated_at: new Date().toISOString() } : t)));
+      // Notifikace druhé straně
+      try {
+        const { data: participants } = await supabase
+          .from('collab_participants')
+          .select('user_id')
+          .eq('thread_id', threadId);
+        const targets =
+          (participants ?? [])
+            .map((p: any) => p.user_id as string)
+            .filter((uid) => uid && uid !== userId) || [];
+        await Promise.all(
+          targets.map((uid) =>
+            sendNotificationSafe(supabase, {
+              user_id: uid,
+              type: status === 'active' ? 'collab_created' : 'collab_request_denied',
+              title: status === 'active' ? 'Spolupráce potvrzena' : 'Spolupráce odmítnuta',
+              body: threadId,
+              item_type: 'collab_thread',
+              item_id: threadId,
+              senderId: userId,
+              data: { from: profile.display_name || email || 'Uživatel' },
+            })
+          )
+        );
+      } catch (notifyErr) {
+        console.warn('Notifikace spolupráce se nepodařila:', notifyErr);
+      }
+    } catch (err) {
+      console.error('Chyba při změně stavu spolupráce:', err);
+      setPlayerMessage('Nepodařilo se změnit stav spolupráce.');
+    } finally {
+      setCollabStatusUpdating(null);
     }
   };
 
@@ -3536,8 +3579,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 {formatRelativeTime(thread.updated_at)}
                               </p>
                             </div>
-                            <span className="rounded-full border border-[var(--mpc-dark)] bg-black/40 px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-light)]">
-                              {thread.status}
+                            <span
+                              className={`rounded-full border px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] ${
+                                thread.status === 'active'
+                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                  : thread.status === 'pending'
+                                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                    : 'border-red-500/40 bg-red-500/10 text-red-100'
+                              }`}
+                            >
+                              {thread.status === 'active'
+                                ? 'Aktivní'
+                                : thread.status === 'pending'
+                                  ? 'Čeká na potvrzení'
+                                  : 'Odmítnuto'}
                             </span>
                           </div>
                         </button>
@@ -3555,13 +3610,38 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <div>
                           <p className="text-base font-semibold">{activeThreadLabel}</p>
                           <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                            Status: {activeThread.status}
+                            Status:{' '}
+                            {activeThread.status === 'active'
+                              ? 'Aktivní'
+                              : activeThread.status === 'pending'
+                                ? 'Čeká na potvrzení'
+                                : 'Odmítnuto'}
                           </p>
                         </div>
                         <p className="text-[11px] text-[var(--mpc-muted)]">
                           Aktualizováno {formatRelativeTime(activeThread.updated_at)}
                         </p>
                       </div>
+
+                      {activeThread.status === 'pending' && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] text-[var(--mpc-muted)]">Čeká na potvrzení</span>
+                          <button
+                            onClick={() => void updateCollabStatus(activeThread.id, 'active')}
+                            disabled={collabStatusUpdating === activeThread.id}
+                            className="rounded-full bg-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-60"
+                          >
+                            {collabStatusUpdating === activeThread.id ? 'Ukládám…' : 'Potvrdit'}
+                          </button>
+                          <button
+                            onClick={() => void updateCollabStatus(activeThread.id, 'rejected')}
+                            disabled={collabStatusUpdating === activeThread.id}
+                            className="rounded-full border border-red-400 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-red-200 hover:bg-red-500/10 disabled:opacity-60"
+                          >
+                            Odmítnout
+                          </button>
+                        </div>
+                      )}
 
                       <div className="space-y-3">
                         <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3">
