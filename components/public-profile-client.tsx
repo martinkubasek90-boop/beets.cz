@@ -9,6 +9,22 @@ import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
 import { FireButton } from './fire-button';
 
+const CMS_KEYS_PUBLIC = [
+  'public.tabs.beats',
+  'public.tabs.projects',
+  'public.tabs.collabs',
+  'public.tabs.messages',
+  'public.tabs.acapellas',
+  'public.cta.collabRequest',
+  'public.cta.startCall',
+  'public.cta.sendMessage',
+  'public.cta.requestProject',
+  'public.empty.projects',
+  'public.empty.beats',
+  'public.empty.acapellas',
+  'public.empty.collabs',
+];
+
 async function sendNotificationSafe(
   supabase: ReturnType<typeof createClient>,
   payload: { user_id: string; type: string; title?: string | null; body?: string | null; item_type?: string | null; item_id?: string | null }
@@ -189,6 +205,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
   const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -260,6 +277,26 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     };
     void loadRole();
   }, [currentUserId, supabase]);
+
+  // CMS texty
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        const { data, error } = await supabase.from('cms_content').select('key,value').in('key', CMS_KEYS_PUBLIC);
+        if (error) throw error;
+        const map: Record<string, string> = {};
+        (data as any[] | null | undefined)?.forEach((row) => {
+          if (row.key) map[row.key] = row.value;
+        });
+        setCmsEntries(map);
+      } catch (err) {
+        console.warn('Nepodařilo se načíst CMS texty:', err);
+      }
+    };
+    void loadCms();
+  }, [supabase]);
+
+  const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
 
   const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
@@ -1207,7 +1244,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
               <a href="#acapellas-section" className="hover:text-[var(--mpc-light)]">
-                {t('publicProfile.nav.collabs', 'Akapely')}
+                {cms('public.tabs.acapellas', t('publicProfile.nav.collabs', 'Akapely'))}
               </a>
             </div>
           ) : (
@@ -1217,13 +1254,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
               <a href="#beats-section" className="hover:text-[var(--mpc-light)]">
-                {t('publicProfile.nav.beats', 'Beaty')}
+                {cms('public.tabs.beats', t('publicProfile.nav.beats', 'Beaty'))}
               </a>
               <a href="#projects-section" className="hover:text-[var(--mpc-light)]">
-                {t('publicProfile.nav.projects', 'Projekty')}
+                {cms('public.tabs.projects', t('publicProfile.nav.projects', 'Projekty'))}
               </a>
               <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
-                {t('publicProfile.nav.collabs', 'Spolupráce')}
+                {cms('public.tabs.collabs', t('publicProfile.nav.collabs', 'Spolupráce'))}
               </a>
             </div>
           )}
@@ -1250,7 +1287,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             href="#message-form"
             className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
           >
-            {t('publicProfile.sendMessage', 'Poslat zprávu')}
+            {cms('public.cta.sendMessage', t('publicProfile.sendMessage', 'Poslat zprávu'))}
           </a>
         </div>
       </div>
@@ -1281,18 +1318,18 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           </a>
             {isMcOnly ? (
               <a href="#acapellas-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('publicProfile.nav.collabs', 'Akapely')}
+                {cms('public.tabs.acapellas', t('publicProfile.nav.collabs', 'Akapely'))}
               </a>
             ) : (
               <>
                 <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('publicProfile.nav.beats', 'Beaty')}
+                  {cms('public.tabs.beats', t('publicProfile.nav.beats', 'Beaty'))}
                 </a>
                 <a href="#projects-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('publicProfile.nav.projects', 'Projekty')}
+                  {cms('public.tabs.projects', t('publicProfile.nav.projects', 'Projekty'))}
                 </a>
                 <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('publicProfile.nav.collabs', 'Spolupráce')}
+                  {cms('public.tabs.collabs', t('publicProfile.nav.collabs', 'Spolupráce'))}
                 </a>
               </>
             )}
@@ -1313,7 +1350,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
               </div>
             )}
             {acapellas.length === 0 ? (
-              <p className="text-sm text-[var(--mpc-muted)]">Žádné akapely k zobrazení.</p>
+              <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.acapellas', 'Žádné akapely k zobrazení.')}</p>
             ) : (
               <div className="space-y-3">
                 {acapellas.map((item) => {
@@ -1406,7 +1443,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </div>
           )}
           {beats.length === 0 ? (
-            <p className="text-sm text-[var(--mpc-muted)]">Žádné beaty k zobrazení.</p>
+            <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.beats', 'Žádné beaty k zobrazení.')}</p>
           ) : (
             <div className="space-y-3">
               {beats.map((beat) => {
@@ -1501,7 +1538,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             </div>
           )}
           {projects.filter((p) => p.access_mode !== 'private').length === 0 ? (
-            <p className="text-sm text-[var(--mpc-muted)]">Žádné projekty k zobrazení.</p>
+            <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.projects', 'Žádné projekty k zobrazení.')}</p>
           ) : (
             <div className="space-y-3">
               {projects.filter((p) => p.access_mode !== 'private').map((project) => {
@@ -1593,7 +1630,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                       disabled={projectRequesting[String(project.id)]}
                       className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
                     >
-                      {projectRequesting[String(project.id)] ? 'Odesílám…' : 'Požádat o přístup'}
+                      {projectRequesting[String(project.id)] ? 'Odesílám…' : '{cms('public.cta.requestProject', 'Požádat o přístup')}'}
                     </button>
                   </div>
                 )}
