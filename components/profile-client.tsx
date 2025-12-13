@@ -3894,11 +3894,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         </button>
                       </div>
 
-                      {/* Milníky a deadline */}
+                      {/* Aktivity a deadline */}
                       <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
-                            Milníky
+                            Aktivity
                             {Array.isArray(activeThread.milestones) && activeThread.milestones.length > 0 && (
                               <span className="text-[11px] text-[var(--mpc-muted)]">
                                 {activeThread.milestones.filter((m) => m.done).length}/{activeThread.milestones.length} splněno
@@ -3942,7 +3942,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <div className="flex flex-wrap items-center gap-2">
                           <input
                             type="text"
-                            placeholder="Nový milník..."
+                            placeholder="Nová aktivita..."
                             value={newMilestoneTitle}
                             onChange={(e) => setNewMilestoneTitle(e.target.value)}
                             className="flex-1 min-w-[180px] rounded border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
