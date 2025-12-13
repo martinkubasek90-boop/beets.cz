@@ -187,6 +187,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
   const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -242,6 +243,22 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       setAcapellasError(null);
     }
   }, [profileId, supabase]);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setCurrentUserRole(null);
+      return;
+    }
+    const loadRole = async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', currentUserId)
+        .maybeSingle();
+      setCurrentUserRole(data?.role || null);
+    };
+    void loadRole();
+  }, [currentUserId, supabase]);
 
   const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
@@ -1211,12 +1228,14 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           )}
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={handleCommunityCall}
-            className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
-          >
-            Komunitní call
-          </button>
+          {currentUserRole && (currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
+            <button
+              onClick={handleCommunityCall}
+              className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+            >
+              Komunitní call
+            </button>
+          )}
           {currentUserId && currentUserId !== profileId && (
             <button
               onClick={handleStartCall}

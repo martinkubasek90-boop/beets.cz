@@ -16,6 +16,7 @@ type Beat = {
   audio_url: string | null;
   cover_url?: string | null;
   user_id?: string | null;
+  created_at?: string | null;
 };
 
 const dummyBeats: Beat[] = [
@@ -28,10 +29,12 @@ export default function BeatsPage() {
   const supabase = createClient();
   const { play, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
+  const [fires, setFires] = useState<{ item_id: string; created_at: string }[]>([]);
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
   const [bpmFilter, setBpmFilter] = useState('');
   const [moodFilter, setMoodFilter] = useState('');
+  const [sortMode, setSortMode] = useState<'recent' | 'week' | 'month' | 'year'>('recent');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,8 +66,44 @@ export default function BeatsPage() {
     void load();
   }, [supabase]);
 
+  useEffect(() => {
+    const loadFires = async () => {
+      try {
+        const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
+        const { data, error: err } = await supabase
+          .from('fires')
+          .select('item_id, created_at')
+          .eq('item_type', 'beat')
+          .gte('created_at', startOfYear);
+        if (err) throw err;
+        setFires((data as any[]) ?? []);
+      } catch (err) {
+        console.warn('Nepodařilo se načíst ohně pro řazení:', err);
+      }
+    };
+    void loadFires();
+  }, [supabase]);
+
+  const fireCounts = useMemo(() => {
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    const monthMs = 30 * 24 * 60 * 60 * 1000;
+    const yearStart = new Date(new Date().getFullYear(), 0, 1).getTime();
+    const weekMap: Record<string, number> = {};
+    const monthMap: Record<string, number> = {};
+    const yearMap: Record<string, number> = {};
+    fires.forEach((f) => {
+      const ts = new Date(f.created_at).getTime();
+      if (Number.isNaN(ts)) return;
+      if (ts >= now - weekMs) weekMap[f.item_id] = (weekMap[f.item_id] || 0) + 1;
+      if (ts >= now - monthMs) monthMap[f.item_id] = (monthMap[f.item_id] || 0) + 1;
+      if (ts >= yearStart) yearMap[f.item_id] = (yearMap[f.item_id] || 0) + 1;
+    });
+    return { weekMap, monthMap, yearMap };
+  }, [fires]);
+
   const filtered = useMemo(() => {
-    return beats.filter((b) => {
+    const base = beats.filter((b) => {
       const matchesSearch =
         b.title.toLowerCase().includes(search.toLowerCase()) ||
         (b.artist || '').toLowerCase().includes(search.toLowerCase());
@@ -75,7 +114,17 @@ export default function BeatsPage() {
         : true;
       return matchesSearch && matchesAuthor && matchesBpm && matchesMood;
     });
-  }, [beats, search, authorFilter, bpmFilter, moodFilter]);
+
+    if (sortMode === 'recent') return base;
+    const { weekMap, monthMap, yearMap } = fireCounts;
+    const getScore = (b: Beat) => {
+      const id = String(b.id);
+      if (sortMode === 'week') return weekMap[id] || 0;
+      if (sortMode === 'month') return monthMap[id] || 0;
+      return yearMap[id] || 0;
+    };
+    return [...base].sort((a, b) => getScore(b) - getScore(a));
+  }, [beats, search, authorFilter, bpmFilter, moodFilter, sortMode, fireCounts]);
 
   const authors = useMemo(() => {
     const names = Array.from(new Set(beats.map((b) => b.artist || '').filter(Boolean)));
@@ -160,6 +209,16 @@ export default function BeatsPage() {
             placeholder="Mood / vibe (boom bap, lo-fi…)"
             className="w-full max-w-xs rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
           />
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as typeof sortMode)}
+            className="rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          >
+            <option value="recent">Nejnovější</option>
+            <option value="week">Top beaty (týden)</option>
+            <option value="month">Top beaty (měsíc)</option>
+            <option value="year">Top beaty (rok)</option>
+          </select>
         </div>
 
         {loading && <p className="text-[12px] text-[var(--mpc-muted)]">Načítám beaty…</p>}
