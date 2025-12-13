@@ -373,6 +373,7 @@ export default function ProfileClient() {
     });
     return counts;
   }, [collabThreads]);
+  const [startingCollabCall, setStartingCollabCall] = useState(false);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -2190,6 +2191,59 @@ function handleFieldChange(field: keyof Profile, value: string) {
     await saveMilestones(threadId, updated, thread.deadline ?? null);
   };
 
+  const buildRoomName = (a: string, b: string) => {
+    const sorted = [a, b].sort();
+    return `beets-${sorted[0]}-${sorted[1]}`;
+  };
+
+  const handleStartCollabCall = async () => {
+    if (!selectedThreadId || !userId) {
+      setPlayerMessage('Vyber spolupráci a přihlas se.');
+      return;
+    }
+    setStartingCollabCall(true);
+    try {
+      const { data: participants } = await supabase
+        .from('collab_participants')
+        .select('user_id')
+        .eq('thread_id', selectedThreadId);
+      const target = (participants ?? []).map((p: any) => p.user_id as string).find((uid) => uid && uid !== userId) || null;
+      if (!target) {
+        setPlayerMessage('Nenalezen druhý profil ve spolupráci.');
+        return;
+      }
+      const roomName = buildRoomName(userId, target);
+      const url = `https://meet.jit.si/${roomName}`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      const { error } = await supabase
+        .from('calls')
+        .insert({
+          room_name: roomName,
+          caller_id: userId,
+          callee_id: target,
+          status: 'ringing',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      await sendNotificationSafe(supabase, {
+        user_id: target,
+        type: 'call_incoming',
+        title: 'Příchozí hovor',
+        body: profile.display_name || 'Uživatel',
+        item_type: 'call',
+        item_id: selectedThreadId,
+        senderId: userId,
+        data: { from: profile.display_name || email || 'Uživatel', roomName },
+      });
+    } catch (err) {
+      console.error('Chyba při zahájení hovoru:', err);
+      setPlayerMessage('Nepodařilo se zahájit hovor.');
+    } finally {
+      setStartingCollabCall(false);
+    }
+  };
+
   async function resolveRecipientId(name: string, explicitId?: string) {
     const trimmed = explicitId?.trim();
     if (trimmed) return trimmed;
@@ -3803,6 +3857,16 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           </button>
                         </div>
                       )}
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => void handleStartCollabCall()}
+                          disabled={startingCollabCall}
+                          className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                        >
+                          {startingCollabCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+                        </button>
+                      </div>
 
                       {/* Milníky a deadline */}
                       <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
