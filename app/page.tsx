@@ -236,8 +236,6 @@ export default function Home() {
   const subtitleCleaned = (subtitleRaw.includes('CZ/SK') ? subtitleRaw : subtitleDefault)
     .replace(/\s*Bez reklam.*$/i, '')
     .trim();
-  const heroTitle = cms('home.hero.title', heroTitle);
-  const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const beatList = beats.length ? beats : dummyBeats;
   const beatsPerPage = 3;
   const beatTotalPages = Math.max(1, Math.ceil(beatList.length / beatsPerPage));
@@ -261,6 +259,8 @@ export default function Home() {
   }, [supabase]);
 
   const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
+  const heroTitle = cms('home.hero.title', t('hero.title', 'Beets.cz'));
+  const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const visibleBeats = beatList.length
     ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
         const start = beatPage * beatsPerPage;
