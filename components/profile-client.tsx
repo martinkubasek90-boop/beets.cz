@@ -2718,17 +2718,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
-        {profileCompleteness.missing.length > 0 && (
-          <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
-            <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
-            <p className="text-[12px] text-amber-100/90">
-              Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
-            </p>
-          </div>
-        )}
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
+            {profileCompleteness.missing.length > 0 && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+                <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
+                <p className="text-[12px] text-amber-100/90">
+                  Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
+                </p>
+              </div>
+            )}
             {isMcOnly && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
                 <div className="mb-4 flex items-center justify-between">
