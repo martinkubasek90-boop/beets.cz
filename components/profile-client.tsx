@@ -1857,7 +1857,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         {
           id: threadId,
           title: newThreadTitle.trim(),
-          status: 'active',
+          status: 'pending',
           updated_at: new Date().toISOString(),
           participants,
         },
@@ -3476,7 +3476,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="font-semibold">{req.project_title || req.project_id}</p>
-                            <p className="text-[11px] text-[var(--mpc-muted)]">Status: {req.status}</p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="text-[11px] text-[var(--mpc-muted)]">Status:</span>
+                              <span
+                                className={`rounded-full border px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] ${
+                                  req.status === 'approved'
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                    : req.status === 'pending'
+                                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                      : 'border-red-500/40 bg-red-500/10 text-red-100'
+                                }`}
+                              >
+                                {req.status === 'approved'
+                                  ? 'Aktivní'
+                                  : req.status === 'pending'
+                                    ? 'Čeká na schválení'
+                                    : 'Odmítnuto'}
+                              </span>
+                            </div>
                           </div>
                           <p className="text-[11px] text-[var(--mpc-muted)]">{formatRelativeTime(req.created_at)}</p>
                         </div>
