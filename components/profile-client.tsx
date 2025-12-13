@@ -381,11 +381,12 @@ export default function ProfileClient() {
     if (!profile.region?.trim()) missing.push('město/region');
     if (!profile.role) missing.push('role');
     if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
-    const total = 5;
+    if (!beats.length) missing.push('nahraný beat');
+    const total = 6;
     const done = total - missing.length;
     const percent = Math.round((done / total) * 100);
     return { missing, percent };
-  }, [profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
+  }, [beats.length, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
