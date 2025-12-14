@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import PublicProfileClient from '@/components/public-profile-client';
 
@@ -10,7 +9,7 @@ const selectBase =
 export default async function PublicProfilePage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params?.id ?? '').trim();
   if (!id) {
-    notFound();
+    return <div className="p-8 text-white">Profil nenalezen.</div>;
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
