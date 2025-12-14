@@ -1,7 +1,5 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { formatDistanceToNow } from 'date-fns';
-import { cs } from 'date-fns/locale';
 
 // Prozatím čteme napříč tabulkami; ideálně nahradit tabulkou activity_feed.
 async function loadFeed() {
@@ -119,7 +117,7 @@ export default async function FeedPage() {
             href="/"
             className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[12px] uppercase tracking-[0.14em] text-white hover:border-[var(--mpc-accent)]"
           >
-            Domů
+            Zpět na homepage
           </Link>
         </div>
 
@@ -128,7 +126,7 @@ export default async function FeedPage() {
         ) : (
           <div className="space-y-3">
             {items.map((item, idx) => {
-              const since = item.when ? formatDistanceToNow(new Date(item.when), { addSuffix: true, locale: cs }) : '';
+              const since = item.when ? formatSince(new Date(item.when)) : '';
               const badge =
                 item.type === 'beat'
                   ? 'Beat'
@@ -170,4 +168,16 @@ export default async function FeedPage() {
       </div>
     </main>
   );
+}
+
+function formatSince(date: Date) {
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return 'před chvílí';
+  if (minutes < 60) return `před ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `před ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `před ${days} dny`;
+  return date.toLocaleDateString('cs-CZ');
 }
