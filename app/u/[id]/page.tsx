@@ -1,10 +1,7 @@
-import { redirect, notFound } from 'next/navigation';
+import PublicProfileClient from '@/components/public-profile-client';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import PublicProfileClient from '@/components/public-profile-client';
 
-// Server-renderovaný veřejný profil (primárně pro staré URL /u/<id>)
-// Načítá přes service role, aby obejšel RLS, a předá data klientu.
 export const dynamic = 'force-dynamic';
 
 const selectBase =
@@ -12,9 +9,10 @@ const selectBase =
 
 export default async function PublicProfilePage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params?.id ?? '').trim();
-  if (!id || id === 'undefined') notFound();
+  if (!id || id === 'undefined') {
+    return <div className="p-8 text-white">Profil nenalezen.</div>;
+  }
 
-  // Zkusíme service role (preferované)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -33,7 +31,6 @@ export default async function PublicProfilePage({ params }: { params: { id: stri
     }
   }
 
-  // fallback: anonymní klient (pokud není service key)
   if (!profile) {
     const supabase = await createClient();
     const { data } = await supabase.from('profiles').select(selectBase).eq('id', id).maybeSingle();
@@ -42,11 +39,6 @@ export default async function PublicProfilePage({ params }: { params: { id: stri
 
   if (!profile) {
     return <div className="p-8 text-white">Profil nenalezen.</div>;
-  }
-
-  // pokud má profil slug, použijeme kanonickou URL
-  if (profile.slug && profile.slug !== id) {
-    redirect(`/artist/${profile.slug}`);
   }
 
   return <PublicProfileClient profileId={profile.id} initialProfile={profile} />;
