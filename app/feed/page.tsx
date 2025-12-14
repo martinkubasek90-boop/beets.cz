@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { FeedList } from '@/components/feed-list';
 
 // Prozatím čteme napříč tabulkami; ideálně nahradit tabulkou activity_feed.
 async function loadFeed() {
@@ -8,17 +9,17 @@ async function loadFeed() {
   const [beats, projects, acapellas, collabs] = await Promise.all([
     supabase
       .from('beats')
-      .select('id, title, user_id, created_at, profiles!inner(display_name, slug)')
+      .select('id, title, user_id, created_at, audio_url, cover_url, profiles!inner(display_name, slug)')
       .order('created_at', { ascending: false })
       .limit(10),
     supabase
       .from('projects')
-      .select('id, title, user_id, created_at, profiles!inner(display_name, slug)')
+      .select('id, title, user_id, created_at, cover_url, tracks_json, profiles!inner(display_name, slug)')
       .order('created_at', { ascending: false })
       .limit(10),
     supabase
       .from('acapellas')
-      .select('id, title, user_id, created_at, profiles!inner(display_name, slug)')
+      .select('id, title, user_id, created_at, audio_url, cover_url, profiles!inner(display_name, slug)')
       .order('created_at', { ascending: false })
       .limit(10),
     supabase
@@ -48,6 +49,8 @@ async function loadFeed() {
       author,
       when: b.created_at,
       extra: profileUrl,
+      coverUrl: (b as any).cover_url ?? null,
+      audioUrl: (b as any).audio_url ?? null,
     });
   });
 
@@ -62,6 +65,8 @@ async function loadFeed() {
       author,
       when: p.created_at,
       extra: profileUrl,
+      coverUrl: (p as any).cover_url ?? null,
+      audioUrl: Array.isArray((p as any).tracks_json) ? (p as any).tracks_json[0]?.url ?? null : null,
     });
   });
 
@@ -76,6 +81,8 @@ async function loadFeed() {
       author,
       when: a.created_at,
       extra: profileUrl,
+      coverUrl: (a as any).cover_url ?? null,
+      audioUrl: (a as any).audio_url ?? null,
     });
   });
 
@@ -131,6 +138,7 @@ export default async function FeedPage() {
                 when: new Date().toISOString(),
                 url: '/projects',
                 extra: '/profile/nineteez',
+                coverUrl: '/mpc-hero.jpg',
               },
               {
                 type: 'beat',
@@ -139,6 +147,8 @@ export default async function FeedPage() {
                 when: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
                 url: '/beats',
                 extra: '/profile/blockboy',
+                coverUrl: '/mpc-hero.jpg',
+                audioUrl: '/demo-beat.mp3',
               },
               {
                 type: 'collab',
@@ -155,9 +165,11 @@ export default async function FeedPage() {
                 when: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
                 url: '/accapelas',
                 extra: '/profile/quin',
+                coverUrl: '/mpc-hero.jpg',
+                audioUrl: '/demo-acapella.mp3',
               },
             ]}
-            />
+          />
         ) : (
           <FeedList items={items} />
         )}
