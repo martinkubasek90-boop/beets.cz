@@ -1,18 +1,11 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
-import PublicProfileClient from '@/components/public-profile-client';
+import { redirect } from 'next/navigation';
 
 export default async function PublicProfilePage({
   params,
 }: {
   params: { id: string };
 }) {
-  const supabase = await createClient();
-  const { data } = await supabase.from('profiles').select('slug').eq('id', params.id).maybeSingle();
-
-  if (data?.slug) {
-    redirect(`/artist/${data.slug}`);
-  }
-
-  return <PublicProfileClient profileId={params.id} />;
+  // Jednoduchý redirect: pokud přijde čisté ID, pošleme ho do /artist (slug fallback se řeší tam)
+  redirect(`/artist/${params.id}`);
 }
