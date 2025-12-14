@@ -12,9 +12,10 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
   }
 
   try {
-    const hostHeaders = await import('next/headers');
-    const host = hostHeaders.headers().get('host') || 'beets.cz';
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`;
+    // Zjistíme host z prostředí nebo z hlaviček (bez async)
+    const baseUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof process !== 'undefined' && process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://beets.cz');
     const apiUrl = `${baseUrl}/api/public-profile/${encodeURIComponent(decoded)}`;
     const res = await fetch(apiUrl, { cache: 'no-store' });
     if (!res.ok) {
