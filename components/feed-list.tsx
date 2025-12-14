@@ -30,6 +30,7 @@ export function FeedList({ items }: { items: FeedItem[] }) {
   const [activeSrc, setActiveSrc] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const defaultCover = '/mpc-hero.jpg';
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -84,17 +85,18 @@ export function FeedList({ items }: { items: FeedItem[] }) {
                   : "Spolupráce";
           const canPlay = Boolean(item.audioUrl);
           const playing = canPlay && activeSrc === item.audioUrl && isPlaying;
+          const cover = item.coverUrl || (item.type !== "collab" ? defaultCover : null);
 
           return (
             <div
               key={`${item.type}-${item.url}-${idx}`}
-              className="relative overflow-hidden rounded-xl border border-white/10 bg-black/50 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+              className="relative overflow-hidden rounded-xl border border-white/10 bg-black/60 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.35)] min-h-[120px]"
             >
-              {item.coverUrl && (
+              {cover && (
                 <div
                   className="pointer-events-none absolute inset-0 opacity-20"
                   style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.9)), url(${item.coverUrl})`,
+                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.88)), url(${cover})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
