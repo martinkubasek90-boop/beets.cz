@@ -358,6 +358,8 @@ export default function ProfileClient() {
   const [collabMessagesLoading, setCollabMessagesLoading] = useState<boolean>(false);
   const [collabFilesLoading, setCollabFilesLoading] = useState<boolean>(false);
   const [collabStatusUpdating, setCollabStatusUpdating] = useState<string | null>(null);
+  const [shareLoadingId, setShareLoadingId] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
   const [newMilestoneDue, setNewMilestoneDue] = useState('');
   const [savingMilestone, setSavingMilestone] = useState(false);
@@ -1533,6 +1535,35 @@ function handleFieldChange(field: keyof Profile, value: string) {
   function toggleSection(key: 'profile' | 'beatUpload' | 'projectUpload' | 'acapellaUpload') {
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
   }
+
+  const createShareLink = async (itemType: 'beat' | 'project', itemId: string, allowDownload = false) => {
+    if (!userId) return;
+    setShareLoadingId(`${itemType}-${itemId}`);
+    setShareMessage(null);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_type: itemType, item_id: itemId, allow_download: allowDownload, expires_in_hours: 72 }),
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Failed to create share link');
+      }
+      const json = await res.json();
+      if (json?.url && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(json.url);
+        setShareMessage('Odkaz zkopírován do schránky.');
+      } else if (json?.url) {
+        setShareMessage(json.url);
+      }
+    } catch (err: any) {
+      console.error('Chyba při vytváření sdílecího odkazu:', err);
+      setShareMessage('Nepodařilo se vytvořit odkaz.');
+    } finally {
+      setShareLoadingId(null);
+    }
+  };
 
   function handlePlayBeat(beat: BeatItem) {
     if (!beat.audio_url) {
@@ -3005,6 +3036,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
                   </div>
                 </div>
+                {shareMessage && (
+                  <div className="mb-2 rounded-md border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[12px] text-[var(--mpc-light)]">
+                    {shareMessage}
+                  </div>
+                )}
                 {beatsError && (
                   <div className="mb-2 rounded-md border border-red-700/50 bg-red-900/30 px-3 py-2 text-xs text-red-200">
                     {beatsError}
@@ -3065,6 +3101,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
                               >
                                 Upravit beat
+                              </button>
+                              <button
+                                onClick={() => void createShareLink('beat', String(beat.id))}
+                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
+                              >
+                                Sdílet
                               </button>
                               <button
                                 onClick={() => handleDeleteBeat(beat.id)}
@@ -3557,6 +3599,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
                             className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                           >
                             Upravit
+                          </button>
+                          <button
+                            onClick={() => void createShareLink('project', String(project.id))}
+                            className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                          >
+                            Sdílet
                           </button>
                           <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                             <label className="text-[var(--mpc-muted)]">Přístup</label>
