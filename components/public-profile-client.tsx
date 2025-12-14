@@ -553,7 +553,39 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
     };
 
     loadSession();
-    loadData();
+
+    if (initialProfile) {
+      const normalizedProfile: PublicProfile = {
+        display_name: initialProfile.display_name ?? 'Uživatel',
+        hardware: initialProfile.hardware ?? '',
+        bio: initialProfile.bio ?? '',
+        avatar_url: initialProfile.avatar_url ?? null,
+        banner_url: (initialProfile as any).banner_url ?? null,
+        seeking_signals: (initialProfile as any).seeking_signals ?? [],
+        offering_signals: (initialProfile as any).offering_signals ?? [],
+        seeking_custom: (initialProfile as any).seeking_custom ?? null,
+        offering_custom: (initialProfile as any).offering_custom ?? null,
+        role: (initialProfile as any).role ?? null,
+        slug: (initialProfile as any).slug ?? null,
+      };
+      setProfile(normalizedProfile);
+      setProfileSlug(normalizedProfile.slug ?? null);
+      const mcOnly = normalizedProfile.role === 'mc';
+      if (mcOnly) {
+        void loadAcapellas();
+        setBeats([]);
+        setProjects([]);
+        setBeatsError(null);
+        setProjectsError(null);
+      } else {
+        void loadBeats();
+        void loadProjects();
+        void loadCollabs();
+      }
+      setProfileError(null);
+    } else {
+      loadData();
+    }
     // Realtime příchozí hovory
     const channel = supabase
       .channel('calls-listener')
