@@ -12,7 +12,8 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
   }
 
   // zavoláme interní API, které čte přes service role (a obejde RLS)
-  const apiUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/public-profile/${encodeURIComponent(decoded)}`;
+  const apiBase = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SUPABASE_SITE_URL || '';
+  const apiUrl = `${apiBase}/api/public-profile/${encodeURIComponent(decoded)}`;
   const res = await fetch(apiUrl, { cache: 'no-store' });
   if (!res.ok) {
     notFound();

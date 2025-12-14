@@ -19,14 +19,16 @@ export async function GET(
   const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
   const slugLower = decoded.toLowerCase();
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(decoded);
   const selectBase =
     'id, display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
 
-  const { data, error } = await service
-    .from('profiles')
-    .select(selectBase)
-    .or(`slug.eq.${decoded},slug.eq.${slugLower},slug.ilike.${slugLower},id.eq.${decoded}`)
-    .maybeSingle();
+  const orFilters = [`slug.eq.${decoded}`, `slug.eq.${slugLower}`, `slug.ilike.${slugLower}`];
+  if (isUuid) {
+    orFilters.push(`id.eq.${decoded}`);
+  }
+
+  const { data, error } = await service.from('profiles').select(selectBase).or(orFilters.join(',')).maybeSingle();
 
   if (error) {
     return NextResponse.json({ error: String(error?.message || error) }, { status: 500 });
