@@ -14,66 +14,72 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
 
   const slugLower = decoded.toLowerCase();
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, slug')
-    .or(`slug.eq.${decoded},slug.eq.${slugLower},slug.ilike.${slugLower},id.eq.${decoded}`)
-    .maybeSingle();
 
-  if (error) {
-    console.error('Chyba při načítání profilu podle slugu:', error);
-  }
+  // Nejprve zkusíme service role (pokud je k dispozici), aby RLS neblokovalo načtení profilu ani slugu
+  const canUseService = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY;
+  let slugLookup: { id?: string; slug?: string | null } | null = null;
 
-  let finalId = data?.id ?? (UUID_REGEX.test(decoded) ? decoded : null);
-
-  // Fallback: pokud RLS/slug nedovolí načíst, zkusíme service role (pokud je k dispozici)
-  if (!finalId && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (canUseService) {
     try {
-      const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-      const { data: svcProfile, error: svcErr } = await service
+      const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: svc, error: svcErr } = await service
         .from('profiles')
         .select('id, slug')
         .or(`slug.eq.${decoded},slug.eq.${slugLower},slug.ilike.${slugLower},id.eq.${decoded}`)
         .maybeSingle();
-      if (!svcErr && svcProfile?.id) {
-        finalId = svcProfile.id;
-        if (svcProfile.slug && svcProfile.slug !== decoded) {
-          redirect(`/artist/${svcProfile.slug}`);
-        }
-      }
+      if (!svcErr) slugLookup = svc ?? null;
     } catch (e) {
       console.error('Service slug lookup failed:', e);
     }
   }
 
-  // pokud se slug v URL neshoduje s uloženým slugem, přesměruj na kanonický
-  if (data?.slug && data.slug !== decoded) {
-    redirect(`/artist/${data.slug}`);
+  if (!slugLookup) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, slug')
+      .or(`slug.eq.${decoded},slug.eq.${slugLower},slug.ilike.${slugLower},id.eq.${decoded}`)
+      .maybeSingle();
+    if (error) console.error('Chyba při načítání profilu podle slugu:', error);
+    slugLookup = data ?? null;
+  }
+
+  let finalId = slugLookup?.id ?? (UUID_REGEX.test(decoded) ? decoded : null);
+
+  if (slugLookup?.slug && slugLookup.slug !== decoded) {
+    redirect(`/artist/${slugLookup.slug}`);
   }
 
   if (!finalId) notFound();
 
-  // Načti profil (přes service role pokud je k dispozici), abychom ho nemuseli tahat anonymně na klientu
+  // Načti profil (preferujeme service role, aby RLS neblokovalo)
   let initialProfile: any = null;
   const selectBase =
     'id, display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
-  const { data: profileData, error: profileErr } = await supabase
-    .from('profiles')
-    .select(selectBase)
-    .eq('id', finalId)
-    .maybeSingle();
 
-  if (!profileErr && profileData) {
-    initialProfile = profileData;
-  } else if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (canUseService) {
     try {
-      const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-      const { data: svcProfile } = await service.from('profiles').select(selectBase).eq('id', finalId).maybeSingle();
-      if (svcProfile) {
+      const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: svcProfile, error: svcErr } = await service
+        .from('profiles')
+        .select(selectBase)
+        .eq('id', finalId)
+        .maybeSingle();
+      if (!svcErr && svcProfile) {
         initialProfile = svcProfile;
       }
     } catch (e) {
       console.error('Service profile fetch failed:', e);
+    }
+  }
+
+  if (!initialProfile) {
+    const { data: profileData, error: profileErr } = await supabase
+      .from('profiles')
+      .select(selectBase)
+      .eq('id', finalId)
+      .maybeSingle();
+    if (!profileErr && profileData) {
+      initialProfile = profileData;
     }
   }
 
