@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 // Čistý SSR endpoint: načte profil podle slugu/ID přes service role, vrátí JSON nebo 404.
 export async function GET(
-  _req: Request,
-  { params }: { params: { slug: string } }
+  _req: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const slugParam = params?.slug ?? '';
+  const { slug: slugParam } = await params;
   const decoded = decodeURIComponent(slugParam || '').trim();
   if (!decoded || decoded === 'undefined') {
     return NextResponse.json({ error: 'missing slug' }, { status: 400 });
