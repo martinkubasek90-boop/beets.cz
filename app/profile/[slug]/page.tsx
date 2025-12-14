@@ -9,9 +9,10 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
   if (error) {
     console.error('Chyba při načítání profilu podle slugu:', error);
   }
-  if (!data?.id) {
-    notFound();
-  }
+  // Fallback: pokud slug nenalezen a vypadá jako UUID, zkusme přímo ID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const finalId = data?.id ?? (uuidRegex.test(params.slug) ? params.slug : null);
+  if (!finalId) notFound();
 
-  return <PublicProfileClient profileId={data.id} />;
+  return <PublicProfileClient profileId={finalId} />;
 }
