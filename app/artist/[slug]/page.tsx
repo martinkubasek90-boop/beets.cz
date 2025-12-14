@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation';
-import { headers } from 'next/headers';
 import PublicProfileClient from '@/components/public-profile-client';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +12,8 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
   }
 
   try {
-    const host = headers().get('host') || 'beets.cz';
+    const hostHeaders = await import('next/headers');
+    const host = hostHeaders.headers().get('host') || 'beets.cz';
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${host}`;
     const apiUrl = `${baseUrl}/api/public-profile/${encodeURIComponent(decoded)}`;
     const res = await fetch(apiUrl, { cache: 'no-store' });
