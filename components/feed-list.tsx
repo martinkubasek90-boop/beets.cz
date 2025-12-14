@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-type FeedItem = {
+export type FeedItem = {
   type: "beat" | "project" | "acapella" | "collab";
   title: string;
   url: string;

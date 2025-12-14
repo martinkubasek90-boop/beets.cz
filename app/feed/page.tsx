@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { FeedList } from '@/components/feed-list';
+import { FeedList, type FeedItem } from '@/components/feed-list';
 
 // Prozatím čteme napříč tabulkami; ideálně nahradit tabulkou activity_feed.
 async function loadFeed() {
@@ -29,14 +29,7 @@ async function loadFeed() {
       .limit(10),
   ]);
 
-  const items: Array<{
-    type: 'beat' | 'project' | 'acapella' | 'collab';
-    title: string;
-    url: string;
-    author: string;
-    when: string | null;
-    extra?: string;
-  }> = [];
+  const items: FeedItem[] = [];
 
   beats.data?.forEach((b) => {
     const author = (b as any).profiles?.display_name || 'Autor';
