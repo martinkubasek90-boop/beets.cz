@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function PublicProfileBySlugPage({ params }: { params: { slug: string } }) {
+  if (!params?.slug || params.slug === 'undefined') {
+    notFound();
+  }
   const supabase = await createClient();
   const { data, error } = await supabase.from('profiles').select('id, slug').eq('slug', params.slug).maybeSingle();
 
