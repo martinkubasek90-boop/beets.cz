@@ -53,5 +53,29 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
 
   if (!finalId) notFound();
 
-  return <PublicProfileClient profileId={finalId} />;
+  // Načti profil (přes service role pokud je k dispozici), abychom ho nemuseli tahat anonymně na klientu
+  let initialProfile: any = null;
+  const selectBase =
+    'id, display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
+  const { data: profileData, error: profileErr } = await supabase
+    .from('profiles')
+    .select(selectBase)
+    .eq('id', finalId)
+    .maybeSingle();
+
+  if (!profileErr && profileData) {
+    initialProfile = profileData;
+  } else if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { data: svcProfile } = await service.from('profiles').select(selectBase).eq('id', finalId).maybeSingle();
+      if (svcProfile) {
+        initialProfile = svcProfile;
+      }
+    } catch (e) {
+      console.error('Service profile fetch failed:', e);
+    }
+  }
+
+  return <PublicProfileClient profileId={finalId} initialProfile={initialProfile ?? undefined} />;
 }

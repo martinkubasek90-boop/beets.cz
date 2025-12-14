@@ -174,14 +174,16 @@ function buildRoomName(a: string, b: string) {
 const COMMUNITY_ROOM = 'beets-community-main';
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export default function PublicProfileClient({ profileId }: { profileId: string }) {
+type PublicProfileInitial = PublicProfile & { id?: string | null };
+
+export default function PublicProfileClient({ profileId, initialProfile }: { profileId: string; initialProfile?: PublicProfileInitial }) {
   const supabase = createClient();
   const router = useRouter();
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const [profileSlug, setProfileSlug] = useState<string | null>(null);
+  const [profile, setProfile] = useState<PublicProfile | null>(initialProfile ?? null);
+  const [profileSlug, setProfileSlug] = useState<string | null>(initialProfile?.slug ?? null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -462,37 +464,43 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         return;
       }
       try {
-        const selectBase =
-          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
-        const { data: profileDataFull, error: profileErr } = await supabase
-          .from('profiles')
-          .select(selectBase)
-          .eq('id', profileId)
-          .maybeSingle();
+        // Preferujeme profil z SSR (initialProfile), abychom nemuseli číst tabulku anonymně (RLS)
+        let profileData: any = initialProfile ?? profile;
 
-        let profileData = profileDataFull as any;
-        if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
-          const { data: fallback, error: fbError } = await supabase
+        if (!profileData) {
+          const selectBase =
+            'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
+          const { data: profileDataFull, error: profileErr } = await supabase
             .from('profiles')
-            .select('display_name, hardware, bio, avatar_url, banner_url')
+            .select(selectBase)
             .eq('id', profileId)
             .maybeSingle();
-          if (fbError) throw fbError;
-          profileData = fallback
-            ? {
-                ...fallback,
-                seeking_signals: [],
-                offering_signals: [],
-                seeking_custom: null,
-                offering_custom: null,
-              }
-            : null;
-        } else if (profileErr) {
-          throw profileErr;
+
+          if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
+            const { data: fallback, error: fbError } = await supabase
+              .from('profiles')
+              .select('display_name, hardware, bio, avatar_url, banner_url')
+              .eq('id', profileId)
+              .maybeSingle();
+            if (fbError) throw fbError;
+            profileData = fallback
+              ? {
+                  ...fallback,
+                  seeking_signals: [],
+                  offering_signals: [],
+                  seeking_custom: null,
+                  offering_custom: null,
+                }
+              : null;
+          } else if (profileErr) {
+            throw profileErr;
+          } else {
+            profileData = profileDataFull;
+          }
         }
 
         if (profileData) {
-          setProfile({
+          const normalizedProfile: PublicProfile = {
             display_name: profileData.display_name ?? 'Uživatel',
             hardware: profileData.hardware ?? '',
             bio: profileData.bio ?? '',
@@ -504,9 +512,10 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             offering_custom: (profileData as any).offering_custom ?? null,
             role: (profileData as any).role ?? null,
             slug: (profileData as any).slug ?? null,
-          });
-          setProfileSlug(profileData.slug ?? null);
-          const mcOnly = (profileData as any)?.role === 'mc';
+          };
+          setProfile(normalizedProfile);
+          setProfileSlug(normalizedProfile.slug ?? null);
+          const mcOnly = normalizedProfile.role === 'mc';
           if (mcOnly) {
             await loadAcapellas();
             setBeats([]);
@@ -518,6 +527,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             await loadProjects();
             await loadCollabs();
           }
+          setProfileError(null);
         } else {
           setProfile(null);
           setProfileError('Profil nenalezen.');
@@ -529,22 +539,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             : 'Neznámá chyba';
         console.error('Chyba při načítání profilu:', err);
         setProfileError('Nepodařilo se načíst profil. ' + message);
-      }
-    };
-
-    const loadBeats = async () => {
-        const { data, error } = await supabase
-          .from('beats')
-          .select('id, title, bpm, mood, audio_url, cover_url')
-          .eq('user_id', profileId)
-          .order('id', { ascending: false })
-          .limit(10);
-      if (error) {
-        console.error('Chyba načítání beatů:', error);
-        setBeatsError('Nepodařilo se načíst beaty.');
-      } else {
-        setBeats((data as Beat[]) ?? []);
-        setBeatsError(null);
       }
     };
 
@@ -593,7 +587,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, incomingCall, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
+  }, [currentUserId, incomingCall, initialProfile, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
