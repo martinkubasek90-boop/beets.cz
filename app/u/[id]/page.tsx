@@ -1,11 +1,18 @@
-import { use } from 'react';
-import PublicProfileClient from '../../../components/public-profile-client';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import PublicProfileClient from '@/components/public-profile-client';
 
-export default function PublicProfilePage({
+export default async function PublicProfilePage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const { id } = use(params);
-  return <PublicProfileClient profileId={id} />;
+  const supabase = await createClient();
+  const { data } = await supabase.from('profiles').select('slug').eq('id', params.id).maybeSingle();
+
+  if (data?.slug) {
+    redirect(`/profile/${data.slug}`);
+  }
+
+  return <PublicProfileClient profileId={params.id} />;
 }

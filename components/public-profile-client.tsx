@@ -179,6 +179,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [profileSlug, setProfileSlug] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -206,6 +207,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
+  const profileLink = useMemo(() => (profileSlug ? `/profile/${profileSlug}` : `/u/${profileId}`), [profileId, profileSlug]);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -454,7 +456,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
     const loadData = async () => {
       try {
         const selectBase =
-          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role';
+          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
         const { data: profileDataFull, error: profileErr } = await supabase
           .from('profiles')
           .select(selectBase)
@@ -494,7 +496,9 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
             seeking_custom: (profileData as any).seeking_custom ?? null,
             offering_custom: (profileData as any).offering_custom ?? null,
             role: (profileData as any).role ?? null,
+            slug: (profileData as any).slug ?? null,
           });
+          setProfileSlug(profileData.slug ?? null);
           const mcOnly = (profileData as any)?.role === 'mc';
           if (mcOnly) {
             await loadAcapellas();
@@ -2048,7 +2052,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                 {currentSubtitle ? (
                   <p className="text-[11px] text-[var(--mpc-muted)]">
                     {profileId ? (
-                      <Link href={`/u/${profileId}`} className="hover:text-[var(--mpc-accent)]">
+                      <Link href={profileLink} className="hover:text-[var(--mpc-accent)]">
                         {currentSubtitle}
                       </Link>
                     ) : (
