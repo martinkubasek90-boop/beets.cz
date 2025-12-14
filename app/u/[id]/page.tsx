@@ -3,11 +3,11 @@ import { redirect, notFound } from 'next/navigation';
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  // Jednoduchý redirect: pokud přijde čisté ID, pošleme ho do /artist (slug fallback se řeší tam)
-  if (!params?.id || params.id === 'undefined') {
+  const { id } = await params;
+  if (!id || id === 'undefined') {
     notFound();
   }
-  redirect(`/artist/${params.id}`);
+  redirect(`/artist/${id}`);
 }
