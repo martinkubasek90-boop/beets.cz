@@ -172,6 +172,7 @@ function buildRoomName(a: string, b: string) {
 }
 
 const COMMUNITY_ROOM = 'beets-community-main';
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function PublicProfileClient({ profileId }: { profileId: string }) {
   const supabase = createClient();
@@ -455,6 +456,11 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
 
   useEffect(() => {
     const loadData = async () => {
+      if (!profileId || !UUID_REGEX.test(profileId)) {
+        setProfileError('Profil nenalezen.');
+        setProfile(null);
+        return;
+      }
       try {
         const selectBase =
           'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
