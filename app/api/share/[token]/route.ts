@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-export async function GET(_req: Request, { params }: { params: { token: string } }) {
-  const token = params.token;
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
 
   const supabase = await createClient();
