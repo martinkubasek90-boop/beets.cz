@@ -9,24 +9,42 @@ const selectBase =
 
 export default async function PublicProfilePage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params?.id ?? '').trim();
-  if (!id) notFound();
+  if (!id) {
+    notFound();
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
-    return <div className="p-8 text-white">Chybí konfigurace databáze.</div>;
+
+  // 1) Zkus přímo DB přes service role
+  if (supabaseUrl && serviceKey) {
+    try {
+      const service = createSupabaseClient(supabaseUrl, serviceKey);
+      const { data, error } = await service.from('profiles').select(selectBase).eq('id', id).maybeSingle();
+      if (!error && data) {
+        return <PublicProfileClient profileId={data.id} initialProfile={data} />;
+      }
+      if (error) {
+        console.error('Service profile fetch error:', error);
+      }
+    } catch (err) {
+      console.error('Service client failed:', err);
+    }
   }
 
-  const service = createSupabaseClient(supabaseUrl, serviceKey);
-  const { data, error } = await service.from('profiles').select(selectBase).eq('id', id).maybeSingle();
-
-  if (error) {
-    console.error('Service profile fetch error:', error);
-    return <div className="p-8 text-white">Profil nelze načíst.</div>;
+  // 2) Fallback: veřejné API, pokud by DB neprošla
+  try {
+    const res = await fetch(`https://beets.cz/api/public-profile/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    if (res.ok) {
+      const json = await res.json();
+      const profile = json?.profile;
+      if (profile?.id) {
+        return <PublicProfileClient profileId={profile.id} initialProfile={profile} />;
+      }
+    }
+  } catch (err) {
+    console.error('Public API profile fetch failed:', err);
   }
-  if (!data) {
-    return <div className="p-8 text-white">Profil nenalezen.</div>;
-  }
 
-  return <PublicProfileClient profileId={data.id} initialProfile={data} />;
+  return <div className="p-8 text-white">Profil nenalezen.</div>;
 }
