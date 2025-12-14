@@ -3,6 +3,9 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import PublicProfileClient from '@/components/public-profile-client';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function PublicProfileBySlugPage({ params }: { params: { slug: string } }) {
@@ -81,6 +84,10 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
     if (!profileErr && profileData) {
       initialProfile = profileData;
     }
+  }
+
+  if (!initialProfile) {
+    notFound();
   }
 
   return <PublicProfileClient profileId={finalId} initialProfile={initialProfile ?? undefined} />;
