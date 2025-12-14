@@ -33,13 +33,17 @@ export default async function PublicProfilePage({ params }: { params: { id: stri
 
   // 2) Fallback: veřejné API, pokud by DB neprošla
   try {
-    const res = await fetch(`https://beets.cz/api/public-profile/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    const apiBase = process.env.NEXT_PUBLIC_SITE_URL || 'https://beets.cz';
+    const apiUrl = `${apiBase}/api/public-profile/${encodeURIComponent(id)}`;
+    const res = await fetch(apiUrl, { cache: 'no-store' });
     if (res.ok) {
       const json = await res.json();
       const profile = json?.profile;
       if (profile?.id) {
         return <PublicProfileClient profileId={profile.id} initialProfile={profile} />;
       }
+    } else {
+      console.error('Public API status', res.status, res.statusText);
     }
   } catch (err) {
     console.error('Public API profile fetch failed:', err);
