@@ -122,51 +122,92 @@ export default async function FeedPage() {
         </div>
 
         {items.length === 0 ? (
-          <p className="text-sm text-[var(--mpc-muted)]">Zatím žádné novinky.</p>
+          <FeedList
+            items={[
+              {
+                type: 'project',
+                title: 'Nový projekt: Raindrops',
+                author: 'Nineteez',
+                when: new Date().toISOString(),
+                url: '/projects',
+                extra: '/profile/nineteez',
+              },
+              {
+                type: 'beat',
+                title: 'Beat: Night Tram 93',
+                author: 'Blockboy',
+                when: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+                url: '/beats',
+                extra: '/profile/blockboy',
+              },
+              {
+                type: 'collab',
+                title: 'Spolupráce „Cypher Praha“ dokončena',
+                author: 'LoFi Karel • Northside',
+                when: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
+                url: '/collabs',
+                extra: 'done',
+              },
+              {
+                type: 'acapella',
+                title: 'Akapela: Hook idea',
+                author: 'Quin',
+                when: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
+                url: '/accapelas',
+                extra: '/profile/quin',
+              },
+            ]}
+            />
         ) : (
-          <div className="space-y-3">
-            {items.map((item, idx) => {
-              const since = item.when ? formatSince(new Date(item.when)) : '';
-              const badge =
-                item.type === 'beat'
-                  ? 'Beat'
-                  : item.type === 'project'
-                    ? 'Projekt'
-                    : item.type === 'acapella'
-                      ? 'Akapela'
-                      : 'Spolupráce';
-
-              return (
-                <div
-                  key={`${item.type}-${item.url}-${idx}`}
-                  className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
-                >
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                    <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold text-white">{badge}</span>
-                    {since && <span>{since}</span>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-white">
-                    <span className="font-semibold">{item.title}</span>
-                    <span className="text-[var(--mpc-muted)]">· {item.author}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
-                    <Link href={item.url} className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black">
-                      Otevřít
-                    </Link>
-                    {item.extra && item.extra.startsWith('/profile') ? (
-                      <Link href={item.extra} className="text-[var(--mpc-accent)] underline underline-offset-4">
-                        Profil autora
-                      </Link>
-                    ) : null}
-                    {item.type === 'collab' && item.extra ? <span>Status: {item.extra}</span> : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <FeedList items={items} />
         )}
       </div>
     </main>
+  );
+}
+
+function FeedList({ items }: { items: Array<{ type: 'beat' | 'project' | 'acapella' | 'collab'; title: string; url: string; author: string; when: string | null; extra?: string }> }) {
+  return (
+    <div className="space-y-3">
+      {items.map((item, idx) => {
+        const since = item.when ? formatSince(new Date(item.when)) : '';
+        const badge =
+          item.type === 'beat'
+            ? 'Beat'
+            : item.type === 'project'
+              ? 'Projekt'
+              : item.type === 'acapella'
+                ? 'Akapela'
+                : 'Spolupráce';
+
+        return (
+          <div
+            key={`${item.type}-${item.url}-${idx}`}
+            className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+          >
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+              <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-[10px] font-semibold text-white">{badge}</span>
+              {since && <span>{since}</span>}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-white">
+              <span className="font-semibold">{item.title}</span>
+              <span className="text-[var(--mpc-muted)]">· {item.author}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
+              <Link href={item.url} className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black">
+                Otevřít
+              </Link>
+              {item.extra && item.extra.startsWith('/profile') ? (
+                <Link href={item.extra} className="text-[var(--mpc-accent)] underline underline-offset-4">
+                  Profil autora
+                </Link>
+              ) : null}
+              {item.type === 'collab' && item.extra ? <span>Status: {item.extra}</span> : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
