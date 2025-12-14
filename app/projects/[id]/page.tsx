@@ -17,7 +17,7 @@ export default async function ProjectDetail({ params }: { params: { id: string }
 
   const authorSlug = (project as any)?.profiles?.slug ?? null;
   const authorName = (project as any)?.profiles?.display_name ?? 'Autor';
-  const authorUrl = authorSlug ? `/profile/${authorSlug}` : project.user_id ? `/u/${project.user_id}` : '/';
+  const authorUrl = authorSlug ? `/artist/${authorSlug}` : project.user_id ? `/u/${project.user_id}` : '/';
   const firstTrack = Array.isArray((project as any).tracks_json) ? (project as any).tracks_json[0] : null;
 
   return (

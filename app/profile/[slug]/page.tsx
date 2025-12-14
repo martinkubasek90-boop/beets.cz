@@ -1,8 +1,8 @@
-import { notFound } from 'next/navigation';
-import PublicProfileClient from '@/components/public-profile-client';
-import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
 export default async function PublicProfileBySlugPage({ params }: { params: { slug: string } }) {
+  redirect(`/artist/${params.slug}`);
+}
   const supabase = await createClient();
   const { data, error } = await supabase.from('profiles').select('id').eq('slug', params.slug).maybeSingle();
 

@@ -209,7 +209,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
   const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
-  const profileLink = useMemo(() => (profileSlug ? `/profile/${profileSlug}` : `/u/${profileId}`), [profileId, profileSlug]);
+  const profileLink = useMemo(() => (profileSlug ? `/artist/${profileSlug}` : `/u/${profileId}`), [profileId, profileSlug]);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);

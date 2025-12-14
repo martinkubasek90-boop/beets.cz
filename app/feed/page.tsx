@@ -34,7 +34,7 @@ async function loadFeed() {
   beats.data?.forEach((b) => {
     const author = (b as any).profiles?.display_name || 'Autor';
     const slug = (b as any).profiles?.slug;
-    const profileUrl = slug ? `/profile/${slug}` : b.user_id ? `/u/${b.user_id}` : '#';
+    const profileUrl = slug ? `/artist/${slug}` : b.user_id ? `/u/${b.user_id}` : '#';
     items.push({
       type: 'beat',
       title: b.title || 'Nový beat',
@@ -50,7 +50,7 @@ async function loadFeed() {
   projects.data?.forEach((p) => {
     const author = (p as any).profiles?.display_name || 'Autor';
     const slug = (p as any).profiles?.slug;
-    const profileUrl = slug ? `/profile/${slug}` : p.user_id ? `/u/${p.user_id}` : '#';
+    const profileUrl = slug ? `/artist/${slug}` : p.user_id ? `/u/${p.user_id}` : '#';
     items.push({
       type: 'project',
       title: p.title || 'Nový projekt',
@@ -66,7 +66,7 @@ async function loadFeed() {
   acapellas.data?.forEach((a) => {
     const author = (a as any).profiles?.display_name || 'Autor';
     const slug = (a as any).profiles?.slug;
-    const profileUrl = slug ? `/profile/${slug}` : a.user_id ? `/u/${a.user_id}` : '#';
+    const profileUrl = slug ? `/artist/${slug}` : a.user_id ? `/u/${a.user_id}` : '#';
     items.push({
       type: 'acapella',
       title: a.title || 'Nová akapela',
@@ -131,7 +131,7 @@ export default async function FeedPage() {
                     author: 'Nineteez',
                     when: new Date().toISOString(),
                     url: '/projects',
-                    extra: '/profile/nineteez',
+                    extra: '/artist/nineteez',
                     coverUrl: '/mpc-hero.jpg',
                   },
                   {
@@ -140,7 +140,7 @@ export default async function FeedPage() {
                     author: 'Blockboy',
                     when: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
                     url: '/beats',
-                    extra: '/profile/blockboy',
+                    extra: '/artist/blockboy',
                     coverUrl: '/mpc-hero.jpg',
                     audioUrl: '/demo-beat.mp3',
                   },
@@ -158,7 +158,7 @@ export default async function FeedPage() {
                     author: 'Quin',
                     when: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6).toISOString(),
                     url: '/accapelas',
-                    extra: '/profile/quin',
+                    extra: '/artist/quin',
                     coverUrl: '/mpc-hero.jpg',
                     audioUrl: '/demo-acapella.mp3',
                   },

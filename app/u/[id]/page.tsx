@@ -11,7 +11,7 @@ export default async function PublicProfilePage({
   const { data } = await supabase.from('profiles').select('slug').eq('id', params.id).maybeSingle();
 
   if (data?.slug) {
-    redirect(`/profile/${data.slug}`);
+    redirect(`/artist/${data.slug}`);
   }
 
   return <PublicProfileClient profileId={params.id} />;

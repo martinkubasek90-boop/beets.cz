@@ -17,7 +17,7 @@ export default async function BeatDetail({ params }: { params: { id: string } })
 
   const authorSlug = (beat as any)?.profiles?.slug ?? null;
   const authorName = (beat as any)?.profiles?.display_name ?? 'Autor';
-  const authorUrl = authorSlug ? `/profile/${authorSlug}` : beat.user_id ? `/u/${beat.user_id}` : '/';
+  const authorUrl = authorSlug ? `/artist/${authorSlug}` : beat.user_id ? `/u/${beat.user_id}` : '/';
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
