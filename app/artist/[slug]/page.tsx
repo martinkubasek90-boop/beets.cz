@@ -1,11 +1,8 @@
 import { redirect, notFound } from 'next/navigation';
-import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import PublicProfileClient from '@/components/public-profile-client';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function PublicProfileBySlugPage({ params }: { params: { slug: string } }) {
   const raw = params?.slug ?? '';
@@ -14,42 +11,21 @@ export default async function PublicProfileBySlugPage({ params }: { params: { sl
     notFound();
   }
 
-  // Service client (obejde RLS)
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // zavoláme interní API, které čte přes service role (a obejde RLS)
+  const apiUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ''}/api/public-profile/${encodeURIComponent(decoded)}`;
+  const res = await fetch(apiUrl, { cache: 'no-store' });
+  if (!res.ok) {
     notFound();
   }
-  const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-
-  const slugLower = decoded.toLowerCase();
-  const selectBase =
-    'id, display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
-
-  // Najdi profil podle slugu (nebo UUID v URL)
-  const { data: profile, error } = await service
-    .from('profiles')
-    .select(selectBase)
-    .or(`slug.eq.${decoded},slug.eq.${slugLower},slug.ilike.${slugLower},id.eq.${decoded}`)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Service profile fetch failed:', error);
-  }
-
-  // Pokud nenalezeno a URL vypadá jako UUID, zkus id.eq ještě jednou
-  let finalProfile = profile;
-  if (!finalProfile && UUID_REGEX.test(decoded)) {
-    const { data: byId } = await service.from('profiles').select(selectBase).eq('id', decoded).maybeSingle();
-    finalProfile = byId ?? null;
-  }
-
-  if (!finalProfile) {
+  const json = await res.json();
+  const profile = json?.profile;
+  if (!profile?.id) {
     notFound();
   }
 
-  // kanonický slug redirect
-  if (finalProfile.slug && finalProfile.slug !== decoded) {
-    redirect(`/artist/${finalProfile.slug}`);
+  if (profile.slug && profile.slug !== decoded) {
+    redirect(`/artist/${profile.slug}`);
   }
 
-  return <PublicProfileClient profileId={finalProfile.id} initialProfile={finalProfile} />;
+  return <PublicProfileClient profileId={profile.id} initialProfile={profile} />;
 }
