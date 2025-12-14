@@ -458,6 +458,9 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
 
   useEffect(() => {
     const loadData = async () => {
+      // Pokud už máme SSR profil, nerefreshujeme anonymně (RLS by mohlo blokovat)
+      if (initialProfile) return;
+
       if (!profileId || !UUID_REGEX.test(profileId)) {
         setProfileError('Profil nenalezen.');
         setProfile(null);
