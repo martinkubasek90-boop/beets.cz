@@ -824,21 +824,32 @@ export default function PublicProfileClient({
 
       playFromQueue(initialIdx);
 
-      setOnNext(() => {
-        if (!queue.length) return;
-        const next = (currentQueueIdxRef.current + 1) % queue.length;
-        playFromQueue(next);
-      });
-      setOnPrev(() => {
-        if (!queue.length) return;
-        const prev = (currentQueueIdxRef.current - 1 + queue.length) % queue.length;
-        playFromQueue(prev);
-      });
-      setOnEnded(() => {
-        if (!queue.length) return;
-        const next = (currentQueueIdxRef.current + 1) % queue.length;
-        playFromQueue(next);
-      });
+      // Reset globální callbacky a znovu je nastav na aktuální frontu
+      setOnNext && setOnNext(null);
+      setOnPrev && setOnPrev(null);
+      setOnEnded && setOnEnded(null);
+
+      if (setOnNext) {
+        setOnNext(() => {
+          if (!queue.length) return;
+          const next = (currentQueueIdxRef.current + 1) % queue.length;
+          playFromQueue(next);
+        });
+      }
+      if (setOnPrev) {
+        setOnPrev(() => {
+          if (!queue.length) return;
+          const prev = (currentQueueIdxRef.current - 1 + queue.length) % queue.length;
+          playFromQueue(prev);
+        });
+      }
+      if (setOnEnded) {
+        setOnEnded(() => {
+          if (!queue.length) return;
+          const next = (currentQueueIdxRef.current + 1) % queue.length;
+          playFromQueue(next);
+        });
+      }
     },
     [buildPlayerTrack, play, setOnEnded, setOnNext, setOnPrev, unifiedTracks]
   );
@@ -876,6 +887,8 @@ export default function PublicProfileClient({
 
   useEffect(() => {
     if (!setOnNext || !setOnPrev || !setOnEnded) return;
+    // Pokud běží sjednocená fronta, necháme callbacky nastavené startTrackem
+    if (unifiedTracks.length) return;
     if (currentTrack?.item_type === 'project' && projectQueueRef.current?.projectId === currentTrack?.meta?.projectId) {
       return;
     }
@@ -978,6 +991,7 @@ export default function PublicProfileClient({
     setOnNext,
     setOnPrev,
     startTrack,
+    unifiedTracks,
   ]);
 
   function formatTime(sec: number) {
