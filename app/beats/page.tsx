@@ -157,7 +157,7 @@ export default function BeatsPage() {
       });
     };
 
-    const idx = queue.findIndex((b) => b.id === beat.id);
+    const idx = queue.findIndex((b) => String(b.id) === String(beat.id));
     const startIdx = idx === -1 ? 0 : idx;
     playAt(startIdx);
 
