@@ -320,11 +320,11 @@ export default function Home() {
 
   const loadArtists = async () => {
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, avatar_url, role')
-        .neq('role', 'mc')
-        .limit(20);
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('id, display_name, avatar_url, role, slug')
+          .neq('role', 'mc')
+          .limit(20);
 
       if (error || !profiles || profiles.length === 0) {
         setArtists(dummyArtists);
@@ -353,6 +353,7 @@ export default function Home() {
         projectsCount: projMap[p.id] || 0,
         city: '',
         avatar_url: p.avatar_url || null,
+        user_id: (p as any)?.slug || p.id,
       }));
       setArtists(mapped);
     } catch (err) {
@@ -395,12 +396,20 @@ export default function Home() {
           const beatIds = Array.from(new Set((data as any[]).map((b) => b.id).filter(Boolean)));
 
           // Jména autorů
-          let profileNames: Record<string, string> = {};
+          let profileProfiles: Record<string, { name: string; avatar_url: string | null; slug: string | null }> = {};
           if (ids.length) {
-            const { data: profiles } = await supabase.from('profiles').select('id, display_name').in('id', ids);
+            const { data: profiles } = await supabase
+              .from('profiles')
+              .select('id, display_name, avatar_url, slug')
+              .in('id', ids);
             if (profiles) {
-              profileNames = Object.fromEntries((profiles as any[]).map((p) => [p.id, p.display_name || '']));
-              setBeatAuthorNames(profileNames);
+              profileProfiles = Object.fromEntries(
+                (profiles as any[]).map((p) => [
+                  p.id,
+                  { name: p.display_name || '', avatar_url: p.avatar_url || null, slug: (p as any)?.slug ?? null },
+                ])
+              );
+              setBeatAuthorNames(Object.fromEntries(Object.entries(profileProfiles).map(([id, v]) => [id, v.name])));
             }
           }
 
@@ -422,7 +431,9 @@ export default function Home() {
 
           const mappedBeats = (data as any[]).map((b) => ({
             ...b,
-            artist: b.user_id ? profileNames[b.user_id] || b.artist || '' : b.artist || '',
+            artist: b.user_id ? profileProfiles[b.user_id]?.name || b.artist || '' : b.artist || '',
+            author_avatar: b.user_id ? profileProfiles[b.user_id]?.avatar_url ?? null : null,
+            author_slug: b.user_id ? profileProfiles[b.user_id]?.slug ?? null : null,
             monthlyFires: firesMap[String(b.id)] || 0,
           })) as Beat[];
 

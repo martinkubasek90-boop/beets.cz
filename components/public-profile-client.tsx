@@ -793,75 +793,54 @@ export default function PublicProfileClient({
     [profile?.display_name]
   );
 
-  // Sledování posledního projektového tracku pro správné next/prev
-  const lastProjectTrackIdRef = useRef<string | null>(null);
+  // Jednotná fronta pro všechny typy (beat, projekt, acapella, collab)
+  const unifiedTracks = useMemo<CurrentTrack[]>(() => {
+    const projectFlat = Object.values(projectTracksMap).flat();
+    return [...beatTracks, ...acapellaTracks, ...collabTracks, ...projectFlat].filter((t) => Boolean(t.url));
+  }, [beatTracks, acapellaTracks, collabTracks, projectTracksMap]);
+  const currentQueueIdxRef = useRef<number>(0);
 
   const startTrack = useCallback(
     (track: CurrentTrack) => {
       if (!track.url) return;
       setPlayerError(null);
 
-      // Pokud jde o projektový track a máme dostupné next/prev/ended, nastavíme frontu
-      if (track.source === 'project' && track.meta?.projectId && setOnNext && setOnPrev && setOnEnded) {
-        const queue = projectTracksMap[track.meta.projectId]?.filter((t) => t.url) || [];
-        if (!queue.length) {
-          play(buildPlayerTrack(track));
-          setOnNext && setOnNext(null);
-          setOnPrev && setOnPrev(null);
-          setOnEnded && setOnEnded(null);
-          return;
-        }
-        const initialIdx = Math.max(queue.findIndex((t) => t.id === track.id), 0);
-        const playFromQueue = (idx: number) => {
-          const nextTrack = queue[idx];
-          if (!nextTrack?.url) return;
-          projectQueueRef.current = { projectId: track.meta!.projectId as string, queue, idx };
-          lastProjectTrackIdRef.current = nextTrack.id;
-          play(buildPlayerTrack(nextTrack));
-        };
-
-        playFromQueue(initialIdx);
-
-        setOnNext(() => {
-          const q = projectQueueRef.current;
-          const qQueue = q?.queue ?? queue;
-          if (!qQueue.length) return;
-          const currentId = lastProjectTrackIdRef.current;
-          const currentIdx =
-            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
-          const next = ((currentIdx >= 0 ? currentIdx : 0) + 1) % qQueue.length;
-          playFromQueue(next);
-        });
-        setOnPrev(() => {
-          const q = projectQueueRef.current;
-          const qQueue = q?.queue ?? queue;
-          if (!qQueue.length) return;
-          const currentId = lastProjectTrackIdRef.current;
-          const currentIdx =
-            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
-          const prev = ((currentIdx >= 0 ? currentIdx : 0) - 1 + qQueue.length) % qQueue.length;
-          playFromQueue(prev);
-        });
-        setOnEnded(() => {
-          const q = projectQueueRef.current;
-          const qQueue = q?.queue ?? queue;
-          if (!qQueue.length) return;
-          const currentId = lastProjectTrackIdRef.current;
-          const currentIdx =
-            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
-          const next = ((currentIdx >= 0 ? currentIdx : 0) + 1) % qQueue.length;
-          playFromQueue(next);
-        });
+      const queue = unifiedTracks;
+      if (!queue.length) {
+        play(buildPlayerTrack(track));
+        setOnNext && setOnNext(null);
+        setOnPrev && setOnPrev(null);
+        setOnEnded && setOnEnded(null);
         return;
       }
 
-      // Fallback: standard přehrání
-      play(buildPlayerTrack(track));
-      setOnNext && setOnNext(null);
-      setOnPrev && setOnPrev(null);
-      setOnEnded && setOnEnded(null);
+      const initialIdx = Math.max(queue.findIndex((t) => t.id === track.id), 0);
+      const playFromQueue = (idx: number) => {
+        const nextTrack = queue[idx];
+        if (!nextTrack?.url) return;
+        currentQueueIdxRef.current = idx;
+        play(buildPlayerTrack(nextTrack));
+      };
+
+      playFromQueue(initialIdx);
+
+      setOnNext(() => {
+        if (!queue.length) return;
+        const next = (currentQueueIdxRef.current + 1) % queue.length;
+        playFromQueue(next);
+      });
+      setOnPrev(() => {
+        if (!queue.length) return;
+        const prev = (currentQueueIdxRef.current - 1 + queue.length) % queue.length;
+        playFromQueue(prev);
+      });
+      setOnEnded(() => {
+        if (!queue.length) return;
+        const next = (currentQueueIdxRef.current + 1) % queue.length;
+        playFromQueue(next);
+      });
     },
-    [buildPlayerTrack, play, projectTracksMap, setOnEnded, setOnNext, setOnPrev]
+    [buildPlayerTrack, play, setOnEnded, setOnNext, setOnPrev, unifiedTracks]
   );
 
   function handlePlayTrack(track: CurrentTrack) {
