@@ -39,6 +39,7 @@ type PublicProfile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
+  slug?: string | null;
   last_seen_at?: string | null;
   seeking_signals?: string[] | null;
   offering_signals?: string[] | null;
