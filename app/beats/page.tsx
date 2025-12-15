@@ -131,6 +131,9 @@ export default function BeatsPage() {
     return names;
   }, [beats]);
 
+  const queueRef = useRef<Beat[]>([]);
+  const queueIdxRef = useRef<number>(0);
+
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url) return;
     const playable = filtered.filter((b) => b.audio_url);
