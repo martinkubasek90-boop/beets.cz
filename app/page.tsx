@@ -1641,85 +1641,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* VIDEO */}
-        <section className="w-full py-8" id="video">
-          <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
-            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Video</h2>
-          </div>
-          <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] sm:w-[90%] md:w-[80%]">
-            <div className="relative w-full aspect-square md:aspect-video">
-              <iframe
-                key={videoItems[videoIndex].id}
-                className="absolute inset-0 h-full w-full rounded-xl"
-                src={videoItems[videoIndex].url}
-                title={videoItems[videoIndex].title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-            <div className="flex items-center justify-center gap-3 w-full text-sm text-[var(--mpc-muted)]">
-              <button
-                onClick={prevVideo}
-                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-              >
-                ←
-              </button>
-              <button
-                onClick={nextVideo}
-                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-              >
-                →
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* COMMUNITY */}
-        <section className="w-full py-8" id="community">
-          <div className="max-w-4xl mx-auto flex flex-col items-center gap-2 text-center">
-            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Komunita · Fórum</h2>
-            <p className="text-[12px] text-[var(--mpc-muted)]">Diskuze, feedback, rychlé domluvy</p>
-          </div>
-
-          <div className="mt-4 space-y-3 max-w-4xl mx-auto">
-            {forumError && (
-              <div className="rounded-md border border-yellow-700/40 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                {forumError}
-              </div>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {forumCategories.map((cat) => (
-                <Link
-                  href="/forum"
-                  key={cat.id}
-                  className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-center shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] transition"
-                >
-                  <span className="rounded-full bg-[var(--mpc-accent)]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)]">
-                    {cat.name}
-                  </span>
-                  <p className="text-sm text-[var(--mpc-muted)]">Klikni pro nejnovější vlákna.</p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            <Link
-              href="/forum"
-              className="flex w-full max-w-4xl flex-col items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-r from-[#0f1f1a] to-[#0a130f] p-5 text-sm text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
-            >
-              <div className="text-center space-y-1">
-                <p className="text-base font-semibold text-white">{t('forum.cta.title', 'Přejít do fóra')}</p>
-                <p>{t('forum.cta.subtitle', 'Hledej spolupráce, feedback na mix, nebo domluv vydání.')}</p>
-              </div>
-              <span className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-6 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)]">
-                {t('forum.cta.button', 'Otevřít fórum')}
-              </span>
-            </Link>
-          </div>
-        </section>
-
         {/* ARTISTS (carousel) */}
         <section className="w-full py-8" id="artists">
           <div className="relative mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
@@ -1923,6 +1844,85 @@ export default function Home() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* COMMUNITY */}
+        <section className="w-full py-8" id="community">
+          <div className="max-w-4xl mx-auto flex flex-col items-center gap-2 text-center">
+            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Komunita · Fórum</h2>
+            <p className="text-[12px] text-[var(--mpc-muted)]">Diskuze, feedback, rychlé domluvy</p>
+          </div>
+
+          <div className="mt-4 space-y-3 max-w-4xl mx-auto">
+            {forumError && (
+              <div className="rounded-md border border-yellow-700/40 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+                {forumError}
+              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {forumCategories.map((cat) => (
+                <Link
+                  href="/forum"
+                  key={cat.id}
+                  className="flex flex-col items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-4 text-center shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] transition"
+                >
+                  <span className="rounded-full bg-[var(--mpc-accent)]/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-accent)]">
+                    {cat.name}
+                  </span>
+                  <p className="text-sm text-[var(--mpc-muted)]">Klikni pro nejnovější vlákna.</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-center">
+            <Link
+              href="/forum"
+              className="flex w-full max-w-4xl flex-col items-center gap-3 rounded-xl border border-white/10 bg-gradient-to-r from-[#0f1f1a] to-[#0a130f] p-5 text-sm text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
+            >
+              <div className="text-center space-y-1">
+                <p className="text-base font-semibold text-white">{t('forum.cta.title', 'Přejít do fóra')}</p>
+                <p>{t('forum.cta.subtitle', 'Hledej spolupráce, feedback na mix, nebo domluv vydání.')}</p>
+              </div>
+              <span className="rounded-full border border-white/20 bg-[var(--mpc-accent)] px-6 py-3 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)]">
+                {t('forum.cta.button', 'Otevřít fórum')}
+              </span>
+            </Link>
+          </div>
+        </section>
+
+        {/* VIDEO */}
+        <section className="w-full py-8" id="video">
+          <div className="mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
+            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Video</h2>
+          </div>
+          <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] sm:w-[90%] md:w-[80%]">
+            <div className="relative w-full aspect-square md:aspect-video">
+              <iframe
+                key={videoItems[videoIndex].id}
+                className="absolute inset-0 h-full w-full rounded-xl"
+                src={videoItems[videoIndex].url}
+                title={videoItems[videoIndex].title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+            <div className="flex items-center justify-center gap-3 w-full text-sm text-[var(--mpc-muted)]">
+              <button
+                onClick={prevVideo}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+              >
+                ←
+              </button>
+              <button
+                onClick={nextVideo}
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+              >
+                →
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* INFO */}
