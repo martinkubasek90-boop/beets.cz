@@ -472,34 +472,25 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
 
         if (!profileData) {
           const selectBase =
-            'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug';
-          const { data: profileDataFull, error: profileErr } = await supabase
-            .from('profiles')
-            .select(selectBase)
-            .eq('id', profileId)
-            .maybeSingle();
+            'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug, last_seen_at';
 
-          if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
-            const { data: fallback, error: fbError } = await supabase
-              .from('profiles')
-              .select('display_name, hardware, bio, avatar_url, banner_url')
-              .eq('id', profileId)
-              .maybeSingle();
-            if (fbError) throw fbError;
-            profileData = fallback
-              ? {
-                  ...fallback,
-                  seeking_signals: [],
-                  offering_signals: [],
-                  seeking_custom: null,
-                  offering_custom: null,
-                }
-              : null;
-          } else if (profileErr) {
-            throw profileErr;
-          } else {
-            profileData = profileDataFull;
+          // Načteme profil přes serverový endpoint (service role) → vyhneme se anonymním RLS limitům
+          const res = await fetch(`/api/public-profile/${encodeURIComponent(profileId)}`);
+          if (res.status === 404) {
+            setProfileError('Profil nenalezen.');
+            setProfile(null);
+            return;
           }
+          if (!res.ok) {
+            const detail = await res.json().catch(() => ({} as { error?: string }));
+            const errMsg =
+              detail?.error && typeof detail.error === 'string'
+                ? detail.error
+                : `HTTP ${res.status}`;
+            throw new Error(errMsg);
+          }
+          const body = (await res.json()) as { profile?: any };
+          profileData = body?.profile ?? null;
         }
 
         if (profileData) {
