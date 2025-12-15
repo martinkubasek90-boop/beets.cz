@@ -179,7 +179,7 @@ export default function PublicProfileClient({
           seeking_custom: initialProfile.seeking_custom ?? null,
           offering_custom: initialProfile.offering_custom ?? null,
           last_seen_at: initialProfile.last_seen_at ?? null,
-          slug: initialProfile.slug ?? null,
+          slug: (initialProfile as any)?.slug ?? null,
           role: (initialProfile as any)?.role ?? null,
         }
       : null
