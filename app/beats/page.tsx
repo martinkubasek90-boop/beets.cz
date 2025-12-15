@@ -135,6 +135,7 @@ export default function BeatsPage() {
     if (!beat.audio_url) return;
     const playable = filtered.filter((b) => b.audio_url);
     if (!playable.length) return;
+    queueRef.current = playable;
 
     const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
     const startIdx = idx === -1 ? 0 : idx;
@@ -149,26 +150,41 @@ export default function BeatsPage() {
       user_id: start.user_id,
     });
 
+    queueIdxRef.current = startIdx;
+
+    const playAtIndex = (nextIdx: number) => {
+      const q = queueRef.current;
+      if (!q.length) return;
+      const target = q[nextIdx];
+      if (!target?.audio_url) return;
+      queueIdxRef.current = nextIdx;
+      play({
+        id: target.id,
+        title: target.title,
+        artist: target.artist,
+        url: target.audio_url,
+        cover_url: target.cover_url,
+        user_id: target.user_id,
+      });
+    };
+
     setOnNext?.(() => {
-      const nextIdx = (startIdx + 1) % playable.length;
-      const next = playable[nextIdx];
-      if (next?.audio_url) playBeat(next);
+      const q = queueRef.current;
+      if (!q.length) return;
+      const nextIdx = (queueIdxRef.current + 1) % q.length;
+      playAtIndex(nextIdx);
     });
     setOnPrev?.(() => {
-      const prevIdx = (startIdx - 1 + playable.length) % playable.length;
-      const prev = playable[prevIdx];
-      if (prev?.audio_url) playBeat(prev);
+      const q = queueRef.current;
+      if (!q.length) return;
+      const prevIdx = (queueIdxRef.current - 1 + q.length) % q.length;
+      playAtIndex(prevIdx);
     });
     setOnEnded?.(() => {
-      for (let i = startIdx + 1; i < playable.length; i++) {
-        const next = playable[i];
-        if (next.audio_url) {
-          playBeat(next);
-          return;
-        }
-      }
-      // Pokud nenajdeme další, nerestartujeme
-      setOnEnded?.(null);
+      const q = queueRef.current;
+      if (!q.length) return;
+      const nextIdx = (queueIdxRef.current + 1) % q.length;
+      playAtIndex(nextIdx);
     });
   };
 
