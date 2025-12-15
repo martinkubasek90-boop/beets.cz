@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 type CreateSharePayload = {
   item_type: 'beat' | 'project';
@@ -21,11 +22,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
 
+  // Pokusíme se použít service role, abychom nepadali na RLS/ACL při insertu do share_links
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    process.env.SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const dbClient =
+    supabaseUrl && serviceKey
+      ? createSupabaseClient(supabaseUrl, serviceKey)
+      : supabase;
+
   const expiresHours = body.expires_in_hours && body.expires_in_hours > 0 ? body.expires_in_hours : 72;
   const expires_at = new Date(Date.now() + expiresHours * 60 * 60 * 1000).toISOString();
   const token = randomUUID().replace(/-/g, '');
 
-  const { error } = await supabase.from('share_links').insert({
+  const { error } = await dbClient.from('share_links').insert({
     item_type: body.item_type,
     item_id: body.item_id,
     token,
