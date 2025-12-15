@@ -7,23 +7,6 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
-import { FireButton } from './fire-button';
-
-const CMS_KEYS_PUBLIC = [
-  'public.tabs.beats',
-  'public.tabs.projects',
-  'public.tabs.collabs',
-  'public.tabs.messages',
-  'public.tabs.acapellas',
-  'public.cta.collabRequest',
-  'public.cta.startCall',
-  'public.cta.sendMessage',
-  'public.cta.requestProject',
-  'public.empty.projects',
-  'public.empty.beats',
-  'public.empty.acapellas',
-  'public.empty.collabs',
-];
 
 async function sendNotificationSafe(
   supabase: ReturnType<typeof createClient>,
@@ -56,7 +39,6 @@ type PublicProfile = {
   bio: string;
   avatar_url: string | null;
   banner_url: string | null;
-  slug?: string | null;
   last_seen_at?: string | null;
   seeking_signals?: string[] | null;
   offering_signals?: string[] | null;
@@ -96,7 +78,6 @@ type Project = {
   title: string;
   description: string | null;
   cover_url: string | null;
-  user_id?: string | null;
   access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
   tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
@@ -172,18 +153,14 @@ function buildRoomName(a: string, b: string) {
 }
 
 const COMMUNITY_ROOM = 'beets-community-main';
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type PublicProfileInitial = PublicProfile & { id?: string | null };
-
-export default function PublicProfileClient({ profileId, initialProfile }: { profileId: string; initialProfile?: PublicProfileInitial }) {
+export default function PublicProfileClient({ profileId }: { profileId: string }) {
   const supabase = createClient();
   const router = useRouter();
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
-  const [profile, setProfile] = useState<PublicProfile | null>(initialProfile ?? null);
-  const [profileSlug, setProfileSlug] = useState<string | null>(initialProfile?.slug ?? null);
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [beats, setBeats] = useState<Beat[]>([]);
@@ -208,10 +185,6 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
   const [collabRequestState, setCollabRequestState] = useState<'idle' | 'sending' | 'success'>('idle');
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
-  const [projectRequesting, setProjectRequesting] = useState<Record<string, boolean>>({});
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
-  const profileLink = useMemo(() => (profileSlug ? `/artist/${profileSlug}` : `/u/${profileId}`), [profileId, profileSlug]);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -267,42 +240,6 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
       setAcapellasError(null);
     }
   }, [profileId, supabase]);
-
-  useEffect(() => {
-    if (!currentUserId) {
-      setCurrentUserRole(null);
-      return;
-    }
-    const loadRole = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', currentUserId)
-        .maybeSingle();
-      setCurrentUserRole(data?.role || null);
-    };
-    void loadRole();
-  }, [currentUserId, supabase]);
-
-  // CMS texty
-  useEffect(() => {
-    const loadCms = async () => {
-      try {
-        const { data, error } = await supabase.from('cms_content').select('key,value').in('key', CMS_KEYS_PUBLIC);
-        if (error) throw error;
-        const map: Record<string, string> = {};
-        (data as any[] | null | undefined)?.forEach((row) => {
-          if (row.key) map[row.key] = row.value;
-        });
-        setCmsEntries(map);
-      } catch (err) {
-        console.warn('Nepodařilo se načíst CMS texty:', err);
-      }
-    };
-    void loadCms();
-  }, [supabase]);
-
-  const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
 
   const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
@@ -458,43 +395,38 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
 
   useEffect(() => {
     const loadData = async () => {
-      // Pokud už máme SSR profil, nerefreshujeme anonymně (RLS by mohlo blokovat)
-      if (initialProfile) return;
-
-      if (!profileId || !UUID_REGEX.test(profileId)) {
-        setProfileError('Profil nenalezen.');
-        setProfile(null);
-        return;
-      }
       try {
-        // Preferujeme profil z SSR (initialProfile), abychom nemuseli číst tabulku anonymně (RLS)
-        let profileData: any = initialProfile ?? profile;
+        const selectBase =
+          'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role';
+        const { data: profileDataFull, error: profileErr } = await supabase
+          .from('profiles')
+          .select(selectBase)
+          .eq('id', profileId)
+          .maybeSingle();
 
-        if (!profileData) {
-          const selectBase =
-            'display_name, hardware, bio, avatar_url, banner_url, seeking_signals, offering_signals, seeking_custom, offering_custom, role, slug, last_seen_at';
-
-          // Načteme profil přes serverový endpoint (service role) → vyhneme se anonymním RLS limitům
-          const res = await fetch(`/api/public-profile/${encodeURIComponent(profileId)}`);
-          if (res.status === 404) {
-            setProfileError('Profil nenalezen.');
-            setProfile(null);
-            return;
-          }
-          if (!res.ok) {
-            const detail = await res.json().catch(() => ({} as { error?: string }));
-            const errMsg =
-              detail?.error && typeof detail.error === 'string'
-                ? detail.error
-                : `HTTP ${res.status}`;
-            throw new Error(errMsg);
-          }
-          const body = (await res.json()) as { profile?: any };
-          profileData = body?.profile ?? null;
+        let profileData = profileDataFull as any;
+        if (profileErr && typeof profileErr.message === 'string' && profileErr.message.includes('column')) {
+          const { data: fallback, error: fbError } = await supabase
+            .from('profiles')
+            .select('display_name, hardware, bio, avatar_url, banner_url')
+            .eq('id', profileId)
+            .maybeSingle();
+          if (fbError) throw fbError;
+          profileData = fallback
+            ? {
+                ...fallback,
+                seeking_signals: [],
+                offering_signals: [],
+                seeking_custom: null,
+                offering_custom: null,
+              }
+            : null;
+        } else if (profileErr) {
+          throw profileErr;
         }
 
         if (profileData) {
-          const normalizedProfile: PublicProfile = {
+          setProfile({
             display_name: profileData.display_name ?? 'Uživatel',
             hardware: profileData.hardware ?? '',
             bio: profileData.bio ?? '',
@@ -505,11 +437,8 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
             seeking_custom: (profileData as any).seeking_custom ?? null,
             offering_custom: (profileData as any).offering_custom ?? null,
             role: (profileData as any).role ?? null,
-            slug: (profileData as any).slug ?? null,
-          };
-          setProfile(normalizedProfile);
-          setProfileSlug(normalizedProfile.slug ?? null);
-          const mcOnly = normalizedProfile.role === 'mc';
+          });
+          const mcOnly = (profileData as any)?.role === 'mc';
           if (mcOnly) {
             await loadAcapellas();
             setBeats([]);
@@ -521,7 +450,6 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
             await loadProjects();
             await loadCollabs();
           }
-          setProfileError(null);
         } else {
           setProfile(null);
           setProfileError('Profil nenalezen.');
@@ -536,6 +464,22 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
       }
     };
 
+    const loadBeats = async () => {
+        const { data, error } = await supabase
+          .from('beats')
+          .select('id, title, bpm, mood, audio_url, cover_url')
+          .eq('user_id', profileId)
+          .order('id', { ascending: false })
+          .limit(10);
+      if (error) {
+        console.error('Chyba načítání beatů:', error);
+        setBeatsError('Nepodařilo se načíst beaty.');
+      } else {
+        setBeats((data as Beat[]) ?? []);
+        setBeatsError(null);
+      }
+    };
+
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession();
       const uid = data.session?.user?.id;
@@ -547,39 +491,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
     };
 
     loadSession();
-
-    if (initialProfile) {
-      const normalizedProfile: PublicProfile = {
-        display_name: initialProfile.display_name ?? 'Uživatel',
-        hardware: initialProfile.hardware ?? '',
-        bio: initialProfile.bio ?? '',
-        avatar_url: initialProfile.avatar_url ?? null,
-        banner_url: (initialProfile as any).banner_url ?? null,
-        seeking_signals: (initialProfile as any).seeking_signals ?? [],
-        offering_signals: (initialProfile as any).offering_signals ?? [],
-        seeking_custom: (initialProfile as any).seeking_custom ?? null,
-        offering_custom: (initialProfile as any).offering_custom ?? null,
-        role: (initialProfile as any).role ?? null,
-        slug: (initialProfile as any).slug ?? null,
-      };
-      setProfile(normalizedProfile);
-      setProfileSlug(normalizedProfile.slug ?? null);
-      const mcOnly = normalizedProfile.role === 'mc';
-      if (mcOnly) {
-        void loadAcapellas();
-        setBeats([]);
-        setProjects([]);
-        setBeatsError(null);
-        setProjectsError(null);
-      } else {
-        void loadBeats();
-        void loadProjects();
-        void loadCollabs();
-      }
-      setProfileError(null);
-    } else {
-      loadData();
-    }
+    loadData();
     // Realtime příchozí hovory
     const channel = supabase
       .channel('calls-listener')
@@ -613,7 +525,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId, incomingCall, initialProfile, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
+  }, [currentUserId, incomingCall, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
@@ -1275,7 +1187,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
                 <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
               <a href="#acapellas-section" className="hover:text-[var(--mpc-light)]">
-                {cms('public.tabs.acapellas', t('publicProfile.nav.collabs', 'Akapely'))}
+                {t('publicProfile.nav.collabs', 'Akapely')}
               </a>
             </div>
           ) : (
@@ -1285,26 +1197,24 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
                 <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
               <a href="#beats-section" className="hover:text-[var(--mpc-light)]">
-                {cms('public.tabs.beats', t('publicProfile.nav.beats', 'Beaty'))}
+                {t('publicProfile.nav.beats', 'Beaty')}
               </a>
               <a href="#projects-section" className="hover:text-[var(--mpc-light)]">
-                {cms('public.tabs.projects', t('publicProfile.nav.projects', 'Projekty'))}
+                {t('publicProfile.nav.projects', 'Projekty')}
               </a>
               <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
-                {cms('public.tabs.collabs', t('publicProfile.nav.collabs', 'Spolupráce'))}
+                {t('publicProfile.nav.collabs', 'Spolupráce')}
               </a>
             </div>
           )}
         </div>
         <div className="ml-auto flex items-center gap-3">
-          {currentUserRole && (currentUserRole === 'admin' || currentUserRole === 'superadmin') && (
-            <button
-              onClick={handleCommunityCall}
-              className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
-            >
-              Komunitní call
-            </button>
-          )}
+          <button
+            onClick={handleCommunityCall}
+            className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+          >
+            Komunitní call
+          </button>
           {currentUserId && currentUserId !== profileId && (
             <button
               onClick={handleStartCall}
@@ -1318,7 +1228,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
             href="#message-form"
             className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
           >
-            {cms('public.cta.sendMessage', t('publicProfile.sendMessage', 'Poslat zprávu'))}
+            {t('publicProfile.sendMessage', 'Poslat zprávu')}
           </a>
         </div>
       </div>
@@ -1349,18 +1259,18 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
           </a>
             {isMcOnly ? (
               <a href="#acapellas-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {cms('public.tabs.acapellas', t('publicProfile.nav.collabs', 'Akapely'))}
+                {t('publicProfile.nav.collabs', 'Akapely')}
               </a>
             ) : (
               <>
                 <a href="#beats-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {cms('public.tabs.beats', t('publicProfile.nav.beats', 'Beaty'))}
+                  {t('publicProfile.nav.beats', 'Beaty')}
                 </a>
                 <a href="#projects-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {cms('public.tabs.projects', t('publicProfile.nav.projects', 'Projekty'))}
+                  {t('publicProfile.nav.projects', 'Projekty')}
                 </a>
                 <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {cms('public.tabs.collabs', t('publicProfile.nav.collabs', 'Spolupráce'))}
+                  {t('publicProfile.nav.collabs', 'Spolupráce')}
                 </a>
               </>
             )}
@@ -1381,7 +1291,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
               </div>
             )}
             {acapellas.length === 0 ? (
-              <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.acapellas', 'Žádné akapely k zobrazení.')}</p>
+              <p className="text-sm text-[var(--mpc-muted)]">Žádné akapely k zobrazení.</p>
             ) : (
               <div className="space-y-3">
                 {acapellas.map((item) => {
@@ -1474,7 +1384,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
             </div>
           )}
           {beats.length === 0 ? (
-            <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.beats', 'Žádné beaty k zobrazení.')}</p>
+            <p className="text-sm text-[var(--mpc-muted)]">Žádné beaty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
               {beats.map((beat) => {
@@ -1509,25 +1419,22 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() =>
-                              handlePlayTrack({
-                                id: `beat-${beat.id}`,
-                                title: beat.title,
-                                url: beat.audio_url || '',
-                                source: 'beat',
-                                cover_url: beat.cover_url,
-                                subtitle: profile?.display_name || null,
-                              })
-                            }
-                            disabled={!beat.audio_url}
-                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
-                          >
-                            {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                          </button>
-                          <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
-                        </div>
+                        <button
+                          onClick={() =>
+                            handlePlayTrack({
+                              id: `beat-${beat.id}`,
+                              title: beat.title,
+                              url: beat.audio_url || '',
+                              source: 'beat',
+                              cover_url: beat.cover_url,
+                              subtitle: profile?.display_name || null,
+                            })
+                          }
+                          disabled={!beat.audio_url}
+                          className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                        >
+                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                        </button>
                       </div>
                       <div
                         className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
@@ -1569,7 +1476,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
             </div>
           )}
           {projects.filter((p) => p.access_mode !== 'private').length === 0 ? (
-            <p className="text-sm text-[var(--mpc-muted)]">{cms('public.empty.projects', 'Žádné projekty k zobrazení.')}</p>
+            <p className="text-sm text-[var(--mpc-muted)]">Žádné projekty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
               {projects.filter((p) => p.access_mode !== 'private').map((project) => {
@@ -1613,58 +1520,17 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
                     </p>
-                    <div className="flex justify-center pt-2">
-                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
-                    </div>
                   </div>
                 </div>
 
                 {project.access_mode === 'request' && (
                   <div className="mt-4 flex justify-center">
-                    <button
-                      onClick={async () => {
-                        if (!currentUserId) {
-                          alert('Pro odeslání žádosti se přihlas.');
-                          return;
-                        }
-                        setProjectRequesting((prev) => ({ ...prev, [String(project.id)]: true }));
-                        try {
-                          const { error: insertErr } = await supabase.from('project_access_requests').insert({
-                            project_id: project.id,
-                            requester_id: currentUserId,
-                          });
-                          if (insertErr) throw insertErr;
-                          // poslat notifikaci autorovi
-                          if (project.user_id) {
-                            await fetch('/api/notifications', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                user_id: project.user_id,
-                                senderId: currentUserId,
-                                type: 'project_request',
-                                title: 'Žádost o přístup k projektu',
-                                body: `${profile?.display_name || 'Uživatel'} žádá o přístup k projektu ${project.title}`,
-                                item_type: 'project',
-                                item_id: String(project.id),
-                              }),
-                            });
-                          }
-                          alert('Žádost byla odeslána.');
-                        } catch (err) {
-                          console.error('Chyba při žádosti o přístup k projektu:', err);
-                          alert('Nepodařilo se odeslat žádost.');
-                        } finally {
-                          setProjectRequesting((prev) => ({ ...prev, [String(project.id)]: false }));
-                        }
-                      }}
-                      disabled={projectRequesting[String(project.id)]}
-                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                    <Link
+                      href={`/projects/${project.id}`}
+                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
                     >
-                      {projectRequesting[String(project.id)]
-                        ? 'Odesílám…'
-                        : cms('public.cta.requestProject', 'Požádat o přístup')}
-                    </button>
+                      Požádat o přístup
+                    </Link>
                   </div>
                 )}
 
@@ -2079,7 +1945,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
                 {currentSubtitle ? (
                   <p className="text-[11px] text-[var(--mpc-muted)]">
                     {profileId ? (
-                      <Link href={profileLink} className="hover:text-[var(--mpc-accent)]">
+                      <Link href={`/u/${profileId}`} className="hover:text-[var(--mpc-accent)]">
                         {currentSubtitle}
                       </Link>
                     ) : (
