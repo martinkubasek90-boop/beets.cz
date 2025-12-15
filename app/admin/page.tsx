@@ -9,6 +9,12 @@ type CmsEntry = {
   value: string;
 };
 
+type VideoItem = {
+  id: string;
+  title: string;
+  url: string;
+};
+
 type CmsField = { key: string; label: string; description?: string; defaultValue: string; category: string };
 
 const fields: CmsField[] = [
@@ -133,6 +139,7 @@ export default function AdminPage() {
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState<Record<string, string>>({});
+  const [videos, setVideos] = useState<VideoItem[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
@@ -163,6 +170,23 @@ export default function AdminPage() {
           map[row.key] = row.value;
         });
         setEntries(map);
+
+        if (map['home.video.items']) {
+          try {
+            const parsed = JSON.parse(map['home.video.items']);
+            if (Array.isArray(parsed)) {
+              setVideos(
+                parsed.map((v: any, idx: number) => ({
+                  id: String(v.id ?? idx + 1),
+                  title: v.title ?? `Video ${idx + 1}`,
+                  url: v.url ?? '',
+                }))
+              );
+            }
+          } catch (err) {
+            console.warn('Nepodařilo se načíst seznam videí:', err);
+          }
+        }
       } catch (err: any) {
         console.error('Chyba načítání CMS:', err);
         setError('Nepodařilo se načíst data.');
@@ -182,6 +206,22 @@ export default function AdminPage() {
       const { error } = await supabase.from('cms_content').upsert({ key, value });
       if (error) throw error;
       setEntries((prev) => ({ ...prev, [key]: value }));
+      if (key === 'home.video.items') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) {
+            setVideos(
+              parsed.map((v: any, idx: number) => ({
+                id: String(v.id ?? idx + 1),
+                title: v.title ?? `Video ${idx + 1}`,
+                url: v.url ?? '',
+              }))
+            );
+          }
+        } catch (err) {
+          console.warn('Parsování uložených videí selhalo:', err);
+        }
+      }
     } catch (err: any) {
       console.error('Chyba ukládání CMS:', err);
       setError('Uložení se nepodařilo.');
@@ -270,6 +310,80 @@ export default function AdminPage() {
             })}
           </div>
         ))}
+
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold text-white">Homepage – Video sekce</h2>
+          <p className="text-[12px] text-[var(--mpc-muted)]">
+            Seznam videí (YouTube/iframe embed URL). Uloženo jako JSON v klíči <code>home.video.items</code>.
+          </p>
+          <div className="space-y-2">
+            {videos.map((v, idx) => (
+              <div
+                key={v.id}
+                className="flex flex-col gap-2 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-3 sm:flex-row sm:items-center"
+              >
+                <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--mpc-muted)]">#{idx + 1}</span>
+                <input
+                  className="w-full rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                  placeholder="Název videa"
+                  value={v.title}
+                  onChange={(e) =>
+                    setVideos((prev) =>
+                      prev.map((item, i) => (i === idx ? { ...item, title: e.target.value } : item))
+                    )
+                  }
+                />
+                <input
+                  className="w-full rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                  placeholder="https://www.youtube.com/embed/..."
+                  value={v.url}
+                  onChange={(e) =>
+                    setVideos((prev) =>
+                      prev.map((item, i) => (i === idx ? { ...item, url: e.target.value } : item))
+                    )
+                  }
+                />
+                <button
+                  onClick={() => setVideos((prev) => prev.filter((_, i) => i !== idx))}
+                  className="self-start rounded-full border border-red-500/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-red-300 hover:bg-red-500/10"
+                >
+                  Smazat
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() =>
+                setVideos((prev) => [
+                  ...prev,
+                  { id: `${Date.now()}`, title: `Video ${prev.length + 1}`, url: '' },
+                ])
+              }
+              className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+            >
+              Přidat video
+            </button>
+            <button
+              onClick={() =>
+                void handleSave(
+                  'home.video.items',
+                  JSON.stringify(
+                    videos.map((v, idx) => ({
+                      id: v.id || idx + 1,
+                      title: v.title || `Video ${idx + 1}`,
+                      url: v.url || '',
+                    }))
+                  )
+                )
+              }
+              disabled={saving['home.video.items']}
+              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-white hover:border-[var(--mpc-accent)] disabled:opacity-60"
+            >
+              {saving['home.video.items'] ? 'Ukládám…' : 'Uložit videa'}
+            </button>
+          </div>
+        </div>
       </div>
     </main>
   );

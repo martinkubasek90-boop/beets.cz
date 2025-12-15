@@ -21,6 +21,7 @@ const CMS_KEYS = [
   'home.info.rappers.text',
   'home.info.community.title',
   'home.info.community.text',
+  'home.video.items',
 ];
 
 type Beat = {
@@ -226,6 +227,7 @@ export default function Home() {
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
   const [videoIndex, setVideoIndex] = useState(0);
+  const [videoList, setVideoList] = useState(videoItems);
   const [forumError, setForumError] = useState<string | null>(null);
   const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
   const cmsWarnedLoadRef = useRef(false);
@@ -253,6 +255,26 @@ export default function Home() {
         if (row.key) map[row.key] = row.value;
       });
       setCmsEntries(map);
+
+      if (map['home.video.items']) {
+        try {
+          const parsed = JSON.parse(map['home.video.items']);
+          if (Array.isArray(parsed) && parsed.length) {
+            setVideoList(
+              parsed.map((v: any, idx: number) => ({
+                id: v.id ?? idx + 1,
+                title: v.title ?? `Video ${idx + 1}`,
+                url: v.url ?? '',
+              }))
+            );
+          }
+        } catch (e) {
+          if (!cmsWarnedLoadRef.current) {
+            console.warn('Nepodařilo se parsovat home.video.items', e);
+            cmsWarnedLoadRef.current = true;
+          }
+        }
+      }
     } catch (err) {
       if (!cmsWarnedLoadRef.current) {
         console.warn('Nepodařilo se načíst CMS texty:', err);
@@ -1016,11 +1038,15 @@ export default function Home() {
   }
 
   function nextVideo() {
-    setVideoIndex((prev) => (prev + 1) % videoItems.length);
+    const len = videoList.length || videoItems.length;
+    if (!len) return;
+    setVideoIndex((prev) => (prev + 1) % len);
   }
 
   function prevVideo() {
-    setVideoIndex((prev) => (prev - 1 + videoItems.length) % videoItems.length);
+    const len = videoList.length || videoItems.length;
+    if (!len) return;
+    setVideoIndex((prev) => (prev - 1 + len) % len);
   }
 
   function nextBlog() {
@@ -1898,15 +1924,21 @@ export default function Home() {
           </div>
           <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-black/50 p-3 shadow-[0_16px_40px_rgba(0,0,0,0.35)] sm:w-[90%] md:w-[80%]">
             <div className="relative w-full aspect-square md:aspect-video">
-              <iframe
-                key={videoItems[videoIndex].id}
-                className="absolute inset-0 h-full w-full rounded-xl"
-                src={videoItems[videoIndex].url}
-                title={videoItems[videoIndex].title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
+              {videoList.length === 0 ? (
+                <div className="grid h-full w-full place-items-center rounded-xl border border-white/10 bg-black/40 text-[var(--mpc-muted)]">
+                  Žádná videa nejsou k dispozici.
+                </div>
+              ) : (
+                <iframe
+                  key={videoList[videoIndex % videoList.length].id}
+                  className="absolute inset-0 h-full w-full rounded-xl"
+                  src={videoList[videoIndex % videoList.length].url}
+                  title={videoList[videoIndex % videoList.length].title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              )}
             </div>
             <div className="flex items-center justify-center gap-3 w-full text-sm text-[var(--mpc-muted)]">
               <button
