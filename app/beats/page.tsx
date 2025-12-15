@@ -144,7 +144,7 @@ export default function BeatsPage() {
     if (!queue.length) return;
 
     const playAt = (idx: number) => {
-      const target = queue[idx];
+      const target = queueRef.current[idx];
       if (!target?.audio_url) return;
       queueIdxRef.current = idx;
       play({
@@ -164,7 +164,12 @@ export default function BeatsPage() {
     const go = (direction: 1 | -1) => {
       const q = queueRef.current;
       if (!q.length) return;
-      const next = (queueIdxRef.current + direction + q.length) % q.length;
+      // Najdi aktuální index dle current.id nebo dle uloženého ref
+      const currentId = current?.id;
+      const currentIdx =
+        currentId != null ? q.findIndex((b) => String(b.id) === String(currentId)) : queueIdxRef.current;
+      const baseIdx = currentIdx === -1 ? queueIdxRef.current : currentIdx;
+      const next = (baseIdx + direction + q.length) % q.length;
       playAt(next);
     };
 
