@@ -192,6 +192,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const [sendingMessage, setSendingMessage] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<PublicProfile['role'] | null>(null);
   const [startingCall, setStartingCall] = useState(false);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [incomingCallerName, setIncomingCallerName] = useState<string | null>(null);
@@ -485,6 +486,18 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
       const uid = data.session?.user?.id;
       setIsLoggedIn(!!uid);
       setCurrentUserId(uid ?? null);
+      if (uid) {
+        try {
+          const { data: me, error: meErr } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+          if (!meErr) {
+            setCurrentUserRole((me as any)?.role ?? null);
+          }
+        } catch (err) {
+          console.warn('Nepodařilo se načíst roli uživatele:', err);
+        }
+      } else {
+        setCurrentUserRole(null);
+      }
       if (uid && uid === profileId) {
         router.push('/profile');
       }
@@ -969,6 +982,7 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
   const statusColor = isOnline ? 'bg-emerald-500' : 'bg-red-500';
   const statusLabel = isOnline ? 'Online' : 'Offline';
   const isMcOnly = profile?.role === 'mc';
+  const isCommunityCallAllowed = currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
   const handleCommunityCall = () => {
     void supabase
@@ -1209,12 +1223,14 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
           )}
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={handleCommunityCall}
-            className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
-          >
-            Komunitní call
-          </button>
+          {isCommunityCallAllowed && (
+            <button
+              onClick={handleCommunityCall}
+              className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+            >
+              Komunitní call
+            </button>
+          )}
           {currentUserId && currentUserId !== profileId && (
             <button
               onClick={handleStartCall}
