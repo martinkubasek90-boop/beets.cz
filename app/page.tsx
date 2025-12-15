@@ -255,7 +255,12 @@ export default function Home() {
         console.warn('Nepodařilo se načíst CMS texty:', err);
       }
     };
-    void loadCms();
+
+    const loadPageData = async () => {
+      await Promise.allSettled([loadCms(), loadArtists(), loadBeats(), loadProjects(), loadForum(), loadBlog()]);
+    };
+
+    loadPageData();
   }, [supabase]);
 
   const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
@@ -313,51 +318,49 @@ export default function Home() {
     setCurrentYear(new Date().getFullYear());
   }, []);
 
-  useEffect(() => {
-    const loadArtists = async () => {
-      try {
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('id, display_name, avatar_url, role')
-          .neq('role', 'mc')
-          .limit(20);
+  const loadArtists = async () => {
+    try {
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url, role')
+        .neq('role', 'mc')
+        .limit(20);
 
-        if (error || !profiles || profiles.length === 0) {
-          setArtists(dummyArtists);
-          return;
-        }
-
-        const [beatsResp, projectsResp] = await Promise.all([
-          supabase.from('beats').select('user_id'),
-          supabase.from('projects').select('user_id'),
-        ]);
-
-        const beatMap: Record<string, number> = {};
-        const projMap: Record<string, number> = {};
-        (beatsResp.data as any[] | null)?.forEach((row) => {
-          if (row.user_id) beatMap[row.user_id] = (beatMap[row.user_id] || 0) + 1;
-        });
-        (projectsResp.data as any[] | null)?.forEach((row) => {
-          if (row.user_id) projMap[row.user_id] = (projMap[row.user_id] || 0) + 1;
-        });
-
-        const mapped: Artist[] = (profiles as any[]).map((p: any) => ({
-          id: p.id,
-          name: p.display_name || 'Bez jména',
-          initials: getInitials(p.display_name || '??'),
-          beatsCount: beatMap[p.id] || 0,
-          projectsCount: projMap[p.id] || 0,
-          city: '',
-          avatar_url: p.avatar_url || null,
-        }));
-        setArtists(mapped);
-      } catch (err) {
-        console.error('Chyba při načítání umělců:', err);
+      if (error || !profiles || profiles.length === 0) {
         setArtists(dummyArtists);
+        return;
       }
-    };
-    void loadArtists();
-  }, [supabase]);
+
+      const [beatsResp, projectsResp] = await Promise.all([
+        supabase.from('beats').select('user_id'),
+        supabase.from('projects').select('user_id'),
+      ]);
+
+      const beatMap: Record<string, number> = {};
+      const projMap: Record<string, number> = {};
+      (beatsResp.data as any[] | null)?.forEach((row) => {
+        if (row.user_id) beatMap[row.user_id] = (beatMap[row.user_id] || 0) + 1;
+      });
+      (projectsResp.data as any[] | null)?.forEach((row) => {
+        if (row.user_id) projMap[row.user_id] = (projMap[row.user_id] || 0) + 1;
+      });
+
+      const mapped: Artist[] = (profiles as any[]).map((p: any) => ({
+        id: p.id,
+        name: p.display_name || 'Bez jména',
+        initials: getInitials(p.display_name || '??'),
+        beatsCount: beatMap[p.id] || 0,
+        projectsCount: projMap[p.id] || 0,
+        city: '',
+        avatar_url: p.avatar_url || null,
+      }));
+      setArtists(mapped);
+    } catch (err) {
+      console.error('Chyba při načítání umělců:', err);
+      setArtists(dummyArtists);
+    }
+  };
+
 
   useEffect(() => {
     const checkSession = async () => {
