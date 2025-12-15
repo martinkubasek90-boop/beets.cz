@@ -73,6 +73,7 @@ type PlayerTrack = {
 const SEEKING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'GRAFIKA', 'VIDEO', 'STUDIO'];
 const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', 'GRAFIKA', 'VIDEO'];
 const SIGNAL_CACHE_KEY = 'beets-signals-cache';
+const SHOW_SHARE_FEATURE = false;
 
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
@@ -3036,7 +3037,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
                   </div>
                 </div>
-                {shareMessage && (
+                {SHOW_SHARE_FEATURE && shareMessage && (
                   <div className="mb-2 rounded-md border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[12px] text-[var(--mpc-light)]">
                     {shareMessage}
                   </div>
@@ -3102,12 +3103,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               >
                                 Upravit beat
                               </button>
-                              <button
-                                onClick={() => void createShareLink('beat', String(beat.id))}
-                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                              >
-                                Sdílet
-                              </button>
+                              {SHOW_SHARE_FEATURE && (
+                                <button
+                                  onClick={() => void createShareLink('beat', String(beat.id))}
+                                  className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
+                                >
+                                  Sdílet
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleDeleteBeat(beat.id)}
                                 className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] text-red-400"
