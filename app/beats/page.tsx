@@ -131,46 +131,45 @@ export default function BeatsPage() {
     return names;
   }, [beats]);
 
-  const queueRef = useRef<Beat[]>([]);
-  const queueIdxRef = useRef<number>(0);
-
-  useEffect(() => {
-    queueRef.current = filtered.filter((b) => b.audio_url);
-  }, [filtered]);
-
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url) return;
-    const queue = queueRef.current;
-    if (!queue.length) return;
+    const playable = filtered.filter((b) => b.audio_url);
+    if (!playable.length) return;
 
-    const playAt = (idx: number) => {
-      const target = queueRef.current[idx];
-      if (!target?.audio_url) return;
-      queueIdxRef.current = idx;
-      play({
-        id: target.id,
-        title: target.title,
-        artist: target.artist,
-        url: target.audio_url,
-        cover_url: target.cover_url,
-        user_id: target.user_id,
-      });
-    };
-
-    const idx = queue.findIndex((b) => String(b.id) === String(beat.id));
+    const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
     const startIdx = idx === -1 ? 0 : idx;
-    playAt(startIdx);
+    const start = playable[startIdx];
 
-    const go = (direction: 1 | -1) => {
-      const q = queueRef.current;
-      if (!q.length) return;
-      const next = (queueIdxRef.current + direction + q.length) % q.length;
-      playAt(next);
-    };
+    play({
+      id: start.id,
+      title: start.title,
+      artist: start.artist,
+      url: start.audio_url || '',
+      cover_url: start.cover_url,
+      user_id: start.user_id,
+    });
 
-    setOnNext?.(() => go(1));
-    setOnPrev?.(() => go(-1));
-    setOnEnded?.(() => go(1));
+    setOnNext?.(() => {
+      const nextIdx = (startIdx + 1) % playable.length;
+      const next = playable[nextIdx];
+      if (next?.audio_url) playBeat(next);
+    });
+    setOnPrev?.(() => {
+      const prevIdx = (startIdx - 1 + playable.length) % playable.length;
+      const prev = playable[prevIdx];
+      if (prev?.audio_url) playBeat(prev);
+    });
+    setOnEnded?.(() => {
+      for (let i = startIdx + 1; i < playable.length; i++) {
+        const next = playable[i];
+        if (next.audio_url) {
+          playBeat(next);
+          return;
+        }
+      }
+      // Pokud nenajdeme další, nerestartujeme
+      setOnEnded?.(null);
+    });
   };
 
   useEffect(() => {
