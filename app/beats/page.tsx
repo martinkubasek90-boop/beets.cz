@@ -164,12 +164,7 @@ export default function BeatsPage() {
     const go = (direction: 1 | -1) => {
       const q = queueRef.current;
       if (!q.length) return;
-      // Najdi aktuální index dle current.id nebo dle uloženého ref
-      const currentId = current?.id;
-      const currentIdx =
-        currentId != null ? q.findIndex((b) => String(b.id) === String(currentId)) : queueIdxRef.current;
-      const baseIdx = currentIdx === -1 ? queueIdxRef.current : currentIdx;
-      const next = (baseIdx + direction + q.length) % q.length;
+      const next = (queueIdxRef.current + direction + q.length) % q.length;
       playAt(next);
     };
 
