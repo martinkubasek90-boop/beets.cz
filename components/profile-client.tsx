@@ -3603,12 +3603,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           >
                             Upravit
                           </button>
-                          <button
-                            onClick={() => void createShareLink('project', String(project.id))}
-                            className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                          >
-                            Sdílet
-                          </button>
+                          {SHOW_SHARE_FEATURE && (
+                            <button
+                              onClick={() => void createShareLink('project', String(project.id))}
+                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            >
+                              Sdílet
+                            </button>
+                          )}
                           <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                             <label className="text-[var(--mpc-muted)]">Přístup</label>
                             <select
