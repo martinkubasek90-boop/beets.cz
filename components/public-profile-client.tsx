@@ -154,13 +154,36 @@ function buildRoomName(a: string, b: string) {
 
 const COMMUNITY_ROOM = 'beets-community-main';
 
-export default function PublicProfileClient({ profileId }: { profileId: string }) {
+export default function PublicProfileClient({
+  profileId,
+  initialProfile,
+}: {
+  profileId: string;
+  initialProfile?: Partial<PublicProfile> & { slug?: string | null; last_seen_at?: string | null } | null;
+}) {
   const supabase = createClient();
   const router = useRouter();
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [profile, setProfile] = useState<PublicProfile | null>(
+    initialProfile
+      ? {
+          display_name: initialProfile.display_name ?? 'Uživatel',
+          hardware: initialProfile.hardware ?? '',
+          bio: initialProfile.bio ?? '',
+          avatar_url: initialProfile.avatar_url ?? null,
+          banner_url: initialProfile.banner_url ?? null,
+          seeking_signals: initialProfile.seeking_signals ?? [],
+          offering_signals: initialProfile.offering_signals ?? [],
+          seeking_custom: initialProfile.seeking_custom ?? null,
+          offering_custom: initialProfile.offering_custom ?? null,
+          last_seen_at: initialProfile.last_seen_at ?? null,
+          slug: initialProfile.slug ?? null,
+          role: (initialProfile as any)?.role ?? null,
+        }
+      : null
+  );
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [beats, setBeats] = useState<Beat[]>([]);
