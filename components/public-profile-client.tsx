@@ -805,7 +805,19 @@ export default function PublicProfileClient({
       if (!track.url) return;
       setPlayerError(null);
 
-      const queue = unifiedTracks;
+      // Vyber frontu podle typu tracku, ať next/prev běží jen v relevantní sekci
+      let queue: CurrentTrack[] = [];
+      if (track.source === 'project' && track.meta?.projectId && projectTracksMap[track.meta.projectId]) {
+        queue = projectTracksMap[track.meta.projectId] || [];
+      } else if (track.source === 'beat') {
+        queue = beatTracks;
+      } else if (track.source === 'acapella') {
+        queue = acapellaTracks;
+      } else if (track.source === 'collab') {
+        queue = collabTracks;
+      } else {
+        queue = unifiedTracks;
+      }
       if (!queue.length) {
         play(buildPlayerTrack(track));
         setOnNext && setOnNext(null);
