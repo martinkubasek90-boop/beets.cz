@@ -793,6 +793,9 @@ export default function PublicProfileClient({
     [profile?.display_name]
   );
 
+  // Sledování posledního projektového tracku pro správné next/prev
+  const lastProjectTrackIdRef = useRef<string | null>(null);
+
   const startTrack = useCallback(
     (track: CurrentTrack) => {
       if (!track.url) return;
@@ -813,6 +816,7 @@ export default function PublicProfileClient({
           const nextTrack = queue[idx];
           if (!nextTrack?.url) return;
           projectQueueRef.current = { projectId: track.meta!.projectId as string, queue, idx };
+          lastProjectTrackIdRef.current = nextTrack.id;
           play(buildPlayerTrack(nextTrack));
         };
 
@@ -822,21 +826,30 @@ export default function PublicProfileClient({
           const q = projectQueueRef.current;
           const qQueue = q?.queue ?? queue;
           if (!qQueue.length) return;
-          const next = ((q?.idx ?? initialIdx) + 1) % qQueue.length;
+          const currentId = lastProjectTrackIdRef.current;
+          const currentIdx =
+            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
+          const next = ((currentIdx >= 0 ? currentIdx : 0) + 1) % qQueue.length;
           playFromQueue(next);
         });
         setOnPrev(() => {
           const q = projectQueueRef.current;
           const qQueue = q?.queue ?? queue;
           if (!qQueue.length) return;
-          const prev = ((q?.idx ?? initialIdx) - 1 + qQueue.length) % qQueue.length;
+          const currentId = lastProjectTrackIdRef.current;
+          const currentIdx =
+            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
+          const prev = ((currentIdx >= 0 ? currentIdx : 0) - 1 + qQueue.length) % qQueue.length;
           playFromQueue(prev);
         });
         setOnEnded(() => {
           const q = projectQueueRef.current;
           const qQueue = q?.queue ?? queue;
           if (!qQueue.length) return;
-          const next = ((q?.idx ?? initialIdx) + 1) % qQueue.length;
+          const currentId = lastProjectTrackIdRef.current;
+          const currentIdx =
+            currentId ? qQueue.findIndex((t) => t.id === currentId) : q?.idx ?? initialIdx;
+          const next = ((currentIdx >= 0 ? currentIdx : 0) + 1) % qQueue.length;
           playFromQueue(next);
         });
         return;
