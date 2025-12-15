@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import PublicProfileClient from '../../../components/public-profile-client';
 import { createClient } from '@/lib/supabase/server';
 
@@ -33,6 +33,10 @@ export default async function PublicProfilePage({
   }
 
   const profileId = data?.id || (isUuid ? slugOrId : null);
+  if (isUuid && data?.slug && data.slug !== slugOrId) {
+    // Máme slug, přesměrujeme na slugovou URL
+    return redirect(`/u/${data.slug}`);
+  }
   if (!profileId) {
     notFound();
   }
