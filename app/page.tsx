@@ -228,6 +228,8 @@ export default function Home() {
   const [videoIndex, setVideoIndex] = useState(0);
   const [forumError, setForumError] = useState<string | null>(null);
   const [cmsEntries, setCmsEntries] = useState<Record<string, string>>({});
+  const cmsWarnedLoadRef = useRef(false);
+  const cmsMissingLoggedRef = useRef<Set<string>>(new Set());
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang, key, fallback);
   const subtitleDefault =
@@ -252,7 +254,10 @@ export default function Home() {
       });
       setCmsEntries(map);
     } catch (err) {
-      console.warn('Nepodařilo se načíst CMS texty:', err);
+      if (!cmsWarnedLoadRef.current) {
+        console.warn('Nepodařilo se načíst CMS texty:', err);
+        cmsWarnedLoadRef.current = true;
+      }
     }
   };
 
@@ -497,7 +502,14 @@ export default function Home() {
     loadPageData();
   }, [supabase]);
 
-  const cms = (key: string, fallback: string) => cmsEntries[key] ?? fallback;
+  const cms = (key: string, fallback: string) => {
+    const val = cmsEntries[key];
+    if (val === undefined && !cmsMissingLoggedRef.current.has(key)) {
+      console.warn(`CMS klíč chybí: ${key}`);
+      cmsMissingLoggedRef.current.add(key);
+    }
+    return val ?? fallback;
+  };
   const heroTitle = cms('home.hero.title', t('hero.title', 'Beets.cz'));
   const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const visibleBeats = beatList.length
