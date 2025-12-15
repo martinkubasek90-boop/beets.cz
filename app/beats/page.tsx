@@ -137,27 +137,12 @@ export default function BeatsPage() {
     if (!playable.length) return;
     queueRef.current = playable;
 
-    const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
-    const startIdx = idx === -1 ? 0 : idx;
-    const start = playable[startIdx];
-
-    play({
-      id: start.id,
-      title: start.title,
-      artist: start.artist,
-      url: start.audio_url || '',
-      cover_url: start.cover_url,
-      user_id: start.user_id,
-    });
-
-    queueIdxRef.current = startIdx;
-
-    const playAtIndex = (nextIdx: number) => {
+    const playDirect = (idx: number) => {
       const q = queueRef.current;
       if (!q.length) return;
-      const target = q[nextIdx];
+      const target = q[idx];
       if (!target?.audio_url) return;
-      queueIdxRef.current = nextIdx;
+      queueIdxRef.current = idx;
       play({
         id: target.id,
         title: target.title,
@@ -168,24 +153,20 @@ export default function BeatsPage() {
       });
     };
 
-    setOnNext?.(() => {
+    const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
+    const startIdx = idx === -1 ? 0 : idx;
+    playDirect(startIdx);
+
+    const advance = (direction: 1 | -1) => {
       const q = queueRef.current;
       if (!q.length) return;
-      const nextIdx = (queueIdxRef.current + 1) % q.length;
-      playAtIndex(nextIdx);
-    });
-    setOnPrev?.(() => {
-      const q = queueRef.current;
-      if (!q.length) return;
-      const prevIdx = (queueIdxRef.current - 1 + q.length) % q.length;
-      playAtIndex(prevIdx);
-    });
-    setOnEnded?.(() => {
-      const q = queueRef.current;
-      if (!q.length) return;
-      const nextIdx = (queueIdxRef.current + 1) % q.length;
-      playAtIndex(nextIdx);
-    });
+      const nextIdx = (queueIdxRef.current + direction + q.length) % q.length;
+      playDirect(nextIdx);
+    };
+
+    setOnNext?.(() => advance(1));
+    setOnPrev?.(() => advance(-1));
+    setOnEnded?.(() => advance(1));
   };
 
   useEffect(() => {
