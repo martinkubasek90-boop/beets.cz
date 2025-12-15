@@ -379,6 +379,8 @@ export default function Home() {
         const { data, error } = await supabase
           .from('beats')
           .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at')
+          .not('audio_url', 'is', null)
+          .order('created_at', { ascending: false })
           .limit(12);
 
         if (error) {
@@ -428,6 +430,13 @@ export default function Home() {
             const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
             return bDate - aDate;
           });
+
+          if (!mappedBeats.length) {
+            setBeats(dummyBeats);
+            setBeatsError(null);
+            setBeatAuthorNames({});
+            return;
+          }
 
           setBeats(mappedBeats);
           setBeatsError(null);
@@ -1579,6 +1588,13 @@ export default function Home() {
           {beatsError && (
             <div className="mb-3 inline-flex items-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200">
               <span>⚠</span> {beatsError}
+            </div>
+          )}
+          {isLoadingBeats && !beatsError && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
+              {Array.from({ length: 3 }).map((_, idx) => (
+                <div key={idx} className="h-80 w-full animate-pulse rounded-2xl bg-white/5 border border-white/10" />
+              ))}
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
