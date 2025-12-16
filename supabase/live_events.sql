@@ -9,6 +9,7 @@ create table if not exists public.live_events (
   description text,
   room_name text,
   cover_url text,
+  stream_embed_url text,
   starts_at timestamptz not null,
   ends_at timestamptz,
   status text not null default 'scheduled' check (status in ('scheduled','live','done','cancelled')),

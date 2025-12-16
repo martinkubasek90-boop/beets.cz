@@ -11,6 +11,7 @@ type StreamInfo = {
   title: string;
   startsAt: string;
   description?: string | null;
+  embedUrl?: string | null;
 };
 
 const defaultStreamInfo: StreamInfo = {
@@ -18,6 +19,7 @@ const defaultStreamInfo: StreamInfo = {
   title: 'Platformní live stream',
   startsAt: 'Dnes v 20:00',
   description: 'Zapni se a bav se s námi naživo.',
+  embedUrl: process.env.NEXT_PUBLIC_STREAM_EMBED_URL || null,
 };
 
 type StreamSectionProps = {
@@ -51,7 +53,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
       try {
         const { data, error } = await supabase
           .from('live_streams')
-          .select('room_name,title,starts_at,description')
+          .select('room_name,title,starts_at,description,stream_embed_url')
           .eq('active', true)
           .order('starts_at', { ascending: true })
           .limit(1)
@@ -69,6 +71,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
                 })
               : defaultStreamInfo.startsAt,
             description: data.description ?? defaultStreamInfo.description,
+            embedUrl: (data as any).stream_embed_url || defaultStreamInfo.embedUrl || null,
           });
           return;
         }
@@ -131,6 +134,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
 
   useEffect(() => {
     if (!embed) return;
+    if (nextStreamInfo?.embedUrl) return; // YouTube / externí embed, Jitsi netřeba
     if (streamAccessKey !== 'logged-in' || !nextStreamInfo?.roomName || !streamContainerRef.current) return;
     let cancelled = false;
     setJitsiError(null);
@@ -185,6 +189,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
   const joinRoom = communityInvite?.room || nextStreamInfo?.roomName || defaultStreamInfo.roomName;
   const joinUrl = `https://meet.jit.si/${joinRoom}`;
+  const embedUrl = nextStreamInfo?.embedUrl || defaultStreamInfo.embedUrl || null;
 
   return (
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
@@ -201,7 +206,20 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
             </p>
           )}
         </div>
-        {embed ? (
+        {embedUrl ? (
+          <div className="overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-black/70">
+            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+              <iframe
+                src={embedUrl}
+                title="Live stream"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full"
+              />
+            </div>
+            <p className="p-3 text-[11px] text-[var(--mpc-muted)]">{description}</p>
+          </div>
+        ) : embed ? (
           isLoggedIn ? (
             <div className="rounded-2xl border border-[var(--mpc-dark)] bg-black/60 p-3">
               <div
