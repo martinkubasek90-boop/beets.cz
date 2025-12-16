@@ -11,6 +11,7 @@ const links = [
   { href: '/projects', label: 'Projekty' },
   { href: '/artists', label: 'Umělci' },
   { href: '/collabs', label: 'Spolupráce' },
+  { href: '/live', label: 'Live' },
   { href: '/faq', label: 'FAQ' },
 ];
 
