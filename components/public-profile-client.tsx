@@ -7,12 +7,6 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
-import { FireButton } from './fire-button';
-import { FireButton } from './fire-button';
-import { FireButton } from './fire-button';
-import { FireButton } from './fire-button';
-import { FireButton } from './fire-button';
-import { FireButton } from './fire-button';
 
 type PublicProfile = {
   display_name: string;
@@ -403,25 +397,6 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
         .single();
       if (error) throw error;
       if (!data?.id) throw new Error('Hovor se nepodařilo založit.');
-      // Email/SMS webhook pro příjemce hovoru (funguje i jako upozornění na zmeškaný hovor, pokud nezareaguje)
-      try {
-        await fetch('/api/notifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'missed_call',
-            targetUserId: profileId,
-            senderId: sessionUserId,
-            data: {
-              from: 'Volající',
-              roomName,
-              threadTitle: 'Hovor',
-            },
-          }),
-        });
-      } catch (notifyErr) {
-        console.warn('Email notifikace hovoru selhala:', notifyErr);
-      }
       router.push(`/call/${data.id}?room=${encodeURIComponent(roomName)}&caller=${sessionUserId}&callee=${profileId}`);
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
@@ -589,35 +564,29 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                               <span>{beat.title.slice(0, 2)}</span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
-                            <div>
-                              <p className="text-base font-semibold text-white">{beat.title}</p>
-                              <p className="text-[12px] text-[var(--mpc-muted)]">
-                                {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
-                              </p>
-                            </div>
-                            <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+                          <div>
+                            <p className="text-base font-semibold text-white">{beat.title}</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">
+                              {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() =>
-                              handlePlayTrack({
-                                id: `beat-${beat.id}`,
-                                title: beat.title,
-                                url: beat.audio_url || '',
-                                source: 'beat',
-                                cover_url: beat.cover_url,
-                                subtitle: profile?.display_name || null,
-                              })
-                            }
-                            disabled={!beat.audio_url}
-                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
-                          >
-                            {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                          </button>
-                          <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
-                        </div>
+                        <button
+                          onClick={() =>
+                            handlePlayTrack({
+                              id: `beat-${beat.id}`,
+                              title: beat.title,
+                              url: beat.audio_url || '',
+                              source: 'beat',
+                              cover_url: beat.cover_url,
+                              subtitle: profile?.display_name || null,
+                            })
+                          }
+                          disabled={!beat.audio_url}
+                          className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                        >
+                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+                        </button>
                       </div>
                       <div
                         className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
@@ -699,16 +668,13 @@ export default function PublicProfileClient({ profileId }: { profileId: string }
                           <span>{project.title.slice(0, 2)}</span>
                         )}
                       </div>
-                  <div className="space-y-1">
-                    <p className="text-lg font-semibold text-white">{project.title}</p>
-                    <p className="text-[12px] text-[var(--mpc-muted)]">
-                      {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
-                    </p>
-                  </div>
-                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
-                </div>
-                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
-                </div>
+                      <div className="space-y-1">
+                        <p className="text-lg font-semibold text-white">{project.title}</p>
+                        <p className="text-[12px] text-[var(--mpc-muted)]">
+                          {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
+                        </p>
+                      </div>
+                    </div>
 
                     <div className="mt-4 flex flex-col items-center gap-2">
                       <button
