@@ -553,6 +553,7 @@ export default function Home() {
     currentTime: gpTime,
     duration: gpDuration,
     seek: gpSeek,
+    setQueue,
     setOnEnded,
     setOnNext,
     setOnPrev,

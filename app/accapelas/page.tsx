@@ -27,7 +27,7 @@ const dummyAcapellas: Acapella[] = [
 
 export default function AccapelasPage() {
   const supabase = createClient();
-  const { play, current, isPlaying, currentTime, duration, setOnEnded } = useGlobalPlayer();
+  const { current, isPlaying, currentTime, duration, setQueue } = useGlobalPlayer();
   const [acapellas, setAcapellas] = useState<Acapella[]>(dummyAcapellas);
   const [userId, setUserId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -138,33 +138,21 @@ export default function AccapelasPage() {
 
   const playAcapella = (item: Acapella) => {
     if (!item.audio_url) return;
-    play({
-      id: item.id,
-      title: item.title,
-      artist: item.artist,
-      url: item.audio_url,
-      cover_url: item.cover_url,
-      user_id: item.user_id,
-      item_type: 'acapella',
-    });
     const playable = filtered.filter((a) => a.audio_url);
-    if (playable.length <= 1) {
-      setOnEnded(null);
-      return;
-    }
-    setOnEnded(() => {
-      const idx = playable.findIndex((a) => a.id === item.id);
-      if (idx === -1) {
-        setOnEnded(null);
-        return;
-      }
-      const next = playable.slice(idx + 1).find((a) => a.audio_url);
-      if (next) {
-        playAcapella(next);
-      } else {
-        setOnEnded(null);
-      }
-    });
+    if (!playable.length) return;
+    setQueue(
+      playable.map((a) => ({
+        id: a.id,
+        title: a.title,
+        artist: a.artist,
+        url: a.audio_url as string,
+        cover_url: a.cover_url,
+        user_id: a.user_id,
+        item_type: 'acapella',
+      })),
+      item.id,
+      true
+    );
   };
 
   const requestAccess = async (item: Acapella) => {
