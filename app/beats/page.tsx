@@ -173,32 +173,23 @@ export default function BeatsPage() {
 
   const queueRef = useRef<Beat[]>([]);
   const queueIdxRef = useRef<number>(0);
+  const lastPlayedIdRef = useRef<string | number | null>(null);
 
-  const ensureQueue = () => {
-    if (queueRef.current.length) return queueRef.current;
-    const playable = filtered.filter((b) => b.audio_url);
-    queueRef.current = playable;
-    if (playable.length && current?.id) {
-      const idx = playable.findIndex((b) => String(b.id) === String(current.id));
-      if (idx >= 0) {
-        queueIdxRef.current = idx;
-      }
-    }
-    return playable;
-  };
+  const getPlayable = () => filtered.filter((b) => b.audio_url);
 
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url) return;
-    const playable = filtered.filter((b) => b.audio_url);
+    const playable = getPlayable();
     if (!playable.length) return;
     queueRef.current = playable;
 
-    const playDirect = (idx: number) => {
-      const q = queueRef.current;
+    const playDirect = (idx: number, queue: Beat[] = queueRef.current) => {
+      const q = queue;
       if (!q.length) return;
       const target = q[idx];
       if (!target?.audio_url) return;
       queueIdxRef.current = idx;
+      lastPlayedIdRef.current = target.id;
       play({
         id: target.id,
         title: target.title,
@@ -211,13 +202,17 @@ export default function BeatsPage() {
 
     const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
     const startIdx = idx === -1 ? 0 : idx;
-    playDirect(startIdx);
+    playDirect(startIdx, playable);
 
     const advance = (direction: 1 | -1) => {
-      const q = ensureQueue();
+      const q = getPlayable();
       if (!q.length) return;
-      const nextIdx = (queueIdxRef.current + direction + q.length) % q.length;
-      playDirect(nextIdx);
+      queueRef.current = q;
+      const currentId = lastPlayedIdRef.current ?? current?.id ?? beat.id;
+      const currentIdx = q.findIndex((b) => String(b.id) === String(currentId));
+      const safeIdx = currentIdx === -1 ? 0 : currentIdx;
+      const nextIdx = (safeIdx + direction + q.length) % q.length;
+      playDirect(nextIdx, q);
     };
 
     setOnNext?.(() => advance(1));
