@@ -4,7 +4,7 @@
 create table if not exists public.project_access_audit (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.project_access_requests (id) on delete cascade,
-  project_id public.projects.id%TYPE not null references public.projects (id) on delete cascade,
+  project_id bigint not null references public.projects (id) on delete cascade,
   requester_id uuid not null references auth.users (id) on delete cascade,
   decided_by uuid not null references auth.users (id) on delete cascade,
   action text not null check (action in ('approved','denied')),
@@ -15,7 +15,7 @@ create table if not exists public.project_access_audit (
 alter table public.project_access_audit enable row level security;
 
 -- helper: is project owner
-create or replace function public.is_project_owner(pid public.projects.id%TYPE)
+create or replace function public.is_project_owner(pid bigint)
 returns boolean language sql stable as $$
   select exists (select 1 from public.projects p where p.id = pid and p.user_id = auth.uid());
 $$;
