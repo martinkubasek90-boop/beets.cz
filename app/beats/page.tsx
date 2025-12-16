@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { FireButton } from '@/components/fire-button';
@@ -27,7 +27,7 @@ const dummyBeats: Beat[] = [
 
 export default function BeatsPage() {
   const supabase = createClient();
-  const { play, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const { current, isPlaying, currentTime, duration, setQueue } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
   const [fires, setFires] = useState<{ item_id: string; created_at: string; user_id: string | null }[]>([]);
   const [curatorEndorsements, setCuratorEndorsements] = useState<Record<string, string[]>>({});
@@ -171,62 +171,24 @@ export default function BeatsPage() {
     return Object.entries(curatorProfiles).map(([id, name]) => ({ id, name }));
   }, [curatorProfiles]);
 
-  const queueRef = useRef<Beat[]>([]);
-  const queueIdxRef = useRef<number>(0);
-  const lastPlayedIdRef = useRef<string | number | null>(null);
-
-  const getPlayable = () => filtered.filter((b) => b.audio_url);
-
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url) return;
-    const playable = getPlayable();
+    const playable = filtered.filter((b) => b.audio_url);
     if (!playable.length) return;
-    queueRef.current = playable;
-
-    const playDirect = (idx: number, queue: Beat[] = queueRef.current) => {
-      const q = queue;
-      if (!q.length) return;
-      const target = q[idx];
-      if (!target?.audio_url) return;
-      queueIdxRef.current = idx;
-      lastPlayedIdRef.current = target.id;
-      play({
-        id: target.id,
-        title: target.title,
-        artist: target.artist,
-        url: target.audio_url,
-        cover_url: target.cover_url,
-        user_id: target.user_id,
-      });
-    };
-
-    const idx = playable.findIndex((b) => String(b.id) === String(beat.id));
-    const startIdx = idx === -1 ? 0 : idx;
-    playDirect(startIdx, playable);
-
-    const advance = (direction: 1 | -1) => {
-      const q = getPlayable();
-      if (!q.length) return;
-      queueRef.current = q;
-      const currentId = lastPlayedIdRef.current ?? current?.id ?? beat.id;
-      const currentIdx = q.findIndex((b) => String(b.id) === String(currentId));
-      const safeIdx = currentIdx === -1 ? 0 : currentIdx;
-      const nextIdx = (safeIdx + direction + q.length) % q.length;
-      playDirect(nextIdx, q);
-    };
-
-    setOnNext?.(() => advance(1));
-    setOnPrev?.(() => advance(-1));
-    setOnEnded?.(() => advance(1));
+    setQueue(
+      playable.map((b) => ({
+        id: b.id,
+        title: b.title,
+        artist: b.artist,
+        url: b.audio_url as string,
+        cover_url: b.cover_url,
+        user_id: b.user_id,
+        item_type: "beat",
+      })),
+      beat.id,
+      true
+    );
   };
-
-  useEffect(() => {
-    return () => {
-      setOnEnded(null);
-      setOnNext?.(null);
-      setOnPrev?.(null);
-    };
-  }, [setOnEnded, setOnNext, setOnPrev]);
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
