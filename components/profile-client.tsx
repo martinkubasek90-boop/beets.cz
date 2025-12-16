@@ -2761,11 +2761,28 @@ function handleFieldChange(field: keyof Profile, value: string) {
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
             {profileCompleteness.missing.length > 0 && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
-                <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
-                <p className="text-[12px] text-amber-100/90">
-                  Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
-                </p>
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
+                    <p className="text-[12px] text-amber-100/90">
+                      Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
+                    </p>
+                  </div>
+                  <a
+                    href="#profile"
+                    className="inline-flex items-center rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-amber-50 hover:bg-amber-400/30"
+                  >
+                    Opravit profil
+                  </a>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[12px] text-amber-50/90">
+                  {profileCompleteness.missing.map((item) => (
+                    <span key={item} className="rounded-full border border-amber-400/50 bg-amber-400/10 px-3 py-1">
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
             {isMcOnly && (

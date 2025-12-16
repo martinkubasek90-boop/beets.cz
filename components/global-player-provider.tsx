@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FireButton } from "./fire-button";
+import { createClient } from "@/lib/supabase/client";
 
 type TrackMeta = {
   projectId?: string;
@@ -42,14 +43,25 @@ export function useGlobalPlayer() {
 }
 
 export function GlobalPlayerProvider({ children }: { children: React.ReactNode }) {
+  const supabase = createClient();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [current, setCurrent] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
   const onEndedRef = useRef<(() => void) | null>(null);
   const onNextRef = useRef<(() => void) | null>(null);
   const onPrevRef = useRef<(() => void) | null>(null);
+  const resumeAtRef = useRef<number | null>(null);
+  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null)).catch(() => {});
+  }, [supabase]);
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -58,7 +70,15 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     const el = audioRef.current;
     if (!el) return;
     const onTime = () => setCurrentTime(el.currentTime || 0);
-    const onMeta = () => setDuration(el.duration || 0);
+    const onMeta = () => {
+      setDuration(el.duration || 0);
+      // případné obnovení pozice
+      if (resumeAtRef.current && el.duration && resumeAtRef.current < el.duration) {
+        el.currentTime = resumeAtRef.current;
+        setCurrentTime(resumeAtRef.current);
+        resumeAtRef.current = null;
+      }
+    };
     const onEnd = () => {
       setIsPlaying(false);
       if (onEndedRef.current) {
@@ -82,13 +102,18 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
 
   const play = useCallback((track: Track) => {
     if (!audioRef.current || !track.url) return;
+    setPlayError(null);
     setCurrent(track);
     audioRef.current.src = track.url;
     audioRef.current.currentTime = 0;
     audioRef.current
       .play()
       .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
+      .catch((err) => {
+        console.error("playback error", err);
+        setPlayError("Nepodařilo se spustit přehrávání (možná expirovaný odkaz nebo problém s povolením zvuku).");
+        setIsPlaying(false);
+      });
   }, []);
 
   const toggle = useCallback(() => {
@@ -160,13 +185,92 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     }
   }, [handleNextDefault, handlePrevDefault]);
 
+  const derivedItemType =
+    current?.item_type ||
+    (typeof current?.id === "string" && String(current.id).startsWith("project-") ? "project" : "beat");
+  const fireItemId = current ? String(current.id) : null;
+
+  // načtení oblíbených + progress při změně tracku
+  useEffect(() => {
+    if (!current || !userId) {
+      setIsFavorite(false);
+      resumeAtRef.current = null;
+      return;
+    }
+    const itemType = derivedItemType;
+    const itemId = String(current.id);
+    const load = async () => {
+      try {
+        const { data: fav } = await supabase
+          .from("favorites")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("item_type", itemType)
+          .eq("item_id", itemId)
+          .maybeSingle();
+        setIsFavorite(!!fav);
+
+        const { data: prog } = await supabase
+          .from("playback_progress")
+          .select("position_sec,duration_sec")
+          .eq("user_id", userId)
+          .eq("item_type", itemType)
+          .eq("item_id", itemId)
+          .maybeSingle();
+        if (prog && typeof prog.position_sec === "number" && prog.position_sec > 5) {
+          resumeAtRef.current = Math.min(prog.position_sec, prog.duration_sec || prog.position_sec);
+        } else {
+          resumeAtRef.current = null;
+        }
+        // záznam do historie
+        void supabase.from("play_history").insert({
+          user_id: userId,
+          item_type: itemType,
+          item_id: itemId,
+        });
+      } catch (err) {
+        console.warn("Nepodařilo se načíst oblíbené/progress:", err);
+      }
+    };
+    void load();
+  }, [current, derivedItemType, supabase, userId]);
+
+  // průběžný sync progress
+  useEffect(() => {
+    if (!current || !userId) return;
+    if (!isPlaying) return;
+    const itemType = derivedItemType;
+    const itemId = String(current.id);
+    const saveProgress = async () => {
+      try {
+        await supabase.from("playback_progress").upsert({
+          user_id: userId,
+          item_type: itemType,
+          item_id: itemId,
+          position_sec: Math.round(currentTime),
+          duration_sec: duration || null,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn("Save progress failed", err);
+      }
+    };
+    // uložíme hned a pak v intervalu
+    void saveProgress();
+    progressTimerRef.current && clearInterval(progressTimerRef.current);
+    progressTimerRef.current = setInterval(() => {
+      void saveProgress();
+    }, 10000);
+    return () => {
+      progressTimerRef.current && clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+    };
+  }, [current, currentTime, duration, derivedItemType, isPlaying, supabase, userId]);
+
   const value = useMemo(
     () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
     [current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
   );
-
-  const derivedItemType =
-    typeof current?.id === "string" && String(current.id).startsWith("project-") ? "project" : "beat";
   const fireItemId = current ? String(current.id) : null;
   const formatTime = (sec: number) => {
     if (!sec || Number.isNaN(sec)) return "0:00";
@@ -202,6 +306,45 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                   {fireItemId && (
                     <FireButton itemType={derivedItemType} itemId={fireItemId} className="scale-90" />
                   )}
+                  <button
+                    onClick={async () => {
+                      if (!userId || !current) {
+                        setPlayError("Pro uložení do oblíbených se přihlas.");
+                        return;
+                      }
+                      setFavLoading(true);
+                      try {
+                        if (isFavorite) {
+                          const { error } = await supabase
+                            .from("favorites")
+                            .delete()
+                            .eq("user_id", userId)
+                            .eq("item_type", derivedItemType)
+                            .eq("item_id", String(current.id));
+                          if (error) throw error;
+                          setIsFavorite(false);
+                        } else {
+                          const { error } = await supabase.from("favorites").upsert({
+                            user_id: userId,
+                            item_type: derivedItemType,
+                            item_id: String(current.id),
+                          });
+                          if (error) throw error;
+                          setIsFavorite(true);
+                        }
+                      } catch (err) {
+                        console.error("favorite toggle failed", err);
+                        setPlayError("Nepodařilo se uložit do oblíbených.");
+                      } finally {
+                        setFavLoading(false);
+                      }
+                    }}
+                    disabled={favLoading}
+                    className="text-lg leading-none"
+                    title={isFavorite ? "Odebrat z oblíbených" : "Přidat do oblíbených"}
+                  >
+                    {isFavorite ? "★" : "☆"}
+                  </button>
                 </div>
                 <p className="text-[11px] text-[var(--mpc-muted)]">{current.artist}</p>
               </div>
@@ -252,6 +395,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 <span>{duration ? formatTime(duration) : "--"}</span>
               </div>
             </div>
+            {playError && <p className="text-[11px] text-red-400">{playError}</p>}
           </div>
         </div>
       )}
