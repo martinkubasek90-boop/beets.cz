@@ -174,6 +174,19 @@ export default function BeatsPage() {
   const queueRef = useRef<Beat[]>([]);
   const queueIdxRef = useRef<number>(0);
 
+  const ensureQueue = () => {
+    if (queueRef.current.length) return queueRef.current;
+    const playable = filtered.filter((b) => b.audio_url);
+    queueRef.current = playable;
+    if (playable.length && current?.id) {
+      const idx = playable.findIndex((b) => String(b.id) === String(current.id));
+      if (idx >= 0) {
+        queueIdxRef.current = idx;
+      }
+    }
+    return playable;
+  };
+
   const playBeat = (beat: Beat) => {
     if (!beat.audio_url) return;
     const playable = filtered.filter((b) => b.audio_url);
@@ -201,7 +214,7 @@ export default function BeatsPage() {
     playDirect(startIdx);
 
     const advance = (direction: 1 | -1) => {
-      const q = queueRef.current;
+      const q = ensureQueue();
       if (!q.length) return;
       const nextIdx = (queueIdxRef.current + direction + q.length) % q.length;
       playDirect(nextIdx);
