@@ -271,7 +271,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
     [current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
   );
-  const fireItemId = current ? String(current.id) : null;
   const formatTime = (sec: number) => {
     if (!sec || Number.isNaN(sec)) return "0:00";
     const m = Math.floor(sec / 60);
