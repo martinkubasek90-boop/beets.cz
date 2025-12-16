@@ -30,6 +30,28 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
 
   const [nextStreamInfo, setNextStreamInfo] = useState<StreamInfo | null>(null);
   const [communityInvite, setCommunityInvite] = useState<{ room: string; from?: string | null } | null>(null);
+  const [cmsStream, setCmsStream] = useState<{ embedUrl?: string | null; description?: string | null }>({});
+
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cms_content')
+          .select('key,value')
+          .in('key', ['stream.embed.url', 'stream.description']);
+        if (!error && data) {
+          const map = Object.fromEntries((data as any[]).map((row) => [row.key, row.value]));
+          setCmsStream({
+            embedUrl: map['stream.embed.url'] || null,
+            description: map['stream.description'] || null,
+          });
+        }
+      } catch (err) {
+        console.warn('Nepodařilo se načíst CMS stream obsah:', err);
+      }
+    };
+    void loadCms();
+  }, [supabase]);
 
   useEffect(() => {
     const loadStreamInfo = async () => {
@@ -83,7 +105,8 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const description = nextStreamInfo?.description || defaultStreamInfo.description;
   const title = nextStreamInfo?.title || defaultStreamInfo.title;
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
-  const embedUrl = nextStreamInfo?.embedUrl || defaultStreamInfo.embedUrl || null;
+  const descriptionWithCms = description || cmsStream.description || defaultStreamInfo.description;
+  const embedUrl = nextStreamInfo?.embedUrl || cmsStream.embedUrl || defaultStreamInfo.embedUrl || null;
 
   return (
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
@@ -111,7 +134,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
                 className="absolute inset-0 h-full w-full"
               />
             </div>
-            <p className="p-3 text-[11px] text-[var(--mpc-muted)]">{description}</p>
+            <p className="p-3 text-[11px] text-[var(--mpc-muted)]">{descriptionWithCms}</p>
           </div>
         ) : (
           <div className="rounded-2xl border border-[var(--mpc-dark)] bg-black/60 p-4 text-sm text-[var(--mpc-light)]">

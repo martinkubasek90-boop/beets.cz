@@ -109,6 +109,13 @@ const fields: CmsField[] = [
     category: 'Stream',
   },
   {
+    key: 'stream.embed.url',
+    label: 'Stream – YouTube/iframe embed URL',
+    description: 'Například https://www.youtube.com/embed/VIDEO_ID nebo jiný iframe embed link.',
+    defaultValue: 'https://www.youtube.com/embed/BdzEQd1L0zk',
+    category: 'Stream',
+  },
+  {
     key: 'faq.intro',
     label: 'FAQ – úvodní text',
     defaultValue: 'Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.',
