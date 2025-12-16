@@ -34,8 +34,6 @@ type PlayerCtx = {
   toggleShuffle: () => void;
   repeatMode: "off" | "all" | "one";
   cycleRepeatMode: () => void;
-  isMini: boolean;
-  toggleMini: () => void;
   toggle: () => void;
   pause: () => void;
   seek: (pct: number) => void;
@@ -68,14 +66,11 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const queueIdxRef = useRef<number>(0);
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
-  const [queueOpen, setQueueOpen] = useState(false);
-  const [isMini, setIsMini] = useState(false);
   const onEndedRef = useRef<(() => void) | null>(null);
   const onNextRef = useRef<(() => void) | null>(null);
   const onPrevRef = useRef<(() => void) | null>(null);
   const resumeAtRef = useRef<number | null>(null);
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const draggingIdRef = useRef<string | number | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null)).catch(() => {});
@@ -240,7 +235,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     () => setRepeatMode((mode) => (mode === "off" ? "all" : mode === "all" ? "one" : "off")),
     []
   );
-  const toggleMini = useCallback(() => setIsMini((v) => !v), []);
 
   const toggle = useCallback(() => {
     if (!audioRef.current) return;
@@ -334,23 +328,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   }, [next, prev, toggle]);
 
   const queueList = useMemo(() => queue, [queue]);
-
-  const moveInQueue = useCallback(
-    (fromIdx: number, toIdx: number) => {
-      const q = queueRef.current.slice();
-      if (fromIdx < 0 || toIdx < 0 || fromIdx >= q.length || toIdx >= q.length) return;
-      const [item] = q.splice(fromIdx, 1);
-      q.splice(toIdx, 0, item);
-      queueRef.current = q;
-      setQueueState(q);
-      if (current && String(item.id) === String(current.id)) {
-        queueIdxRef.current = toIdx;
-      } else if (queueIdxRef.current >= 0) {
-        queueIdxRef.current = q.findIndex((t) => String(t.id) === String(current?.id));
-      }
-    },
-    [current]
-  );
 
   const derivedItemType =
     current?.item_type ||
@@ -447,8 +424,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       toggleShuffle,
       repeatMode,
       cycleRepeatMode,
-      isMini,
-      toggleMini,
       toggle,
       pause,
       seek,
@@ -470,8 +445,6 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       toggleShuffle,
       repeatMode,
       cycleRepeatMode,
-      isMini,
-      toggleMini,
       toggle,
       pause,
       seek,
@@ -495,15 +468,9 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       {children}
       {current && (
         <div
-          className={`fixed z-40 border border-white/10 bg-black/90 backdrop-blur transition-all ${
-            isMini ? "bottom-4 right-4 left-auto w-[90%] max-w-sm rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.5)]" : "bottom-0 left-0 right-0 border-t"
-          }`}
+          className="fixed bottom-0 left-0 right-0 z-40 border border-white/10 border-t bg-black/90 backdrop-blur"
         >
-          <div
-            className={`mx-auto flex max-w-6xl flex-col items-start gap-3 px-3 py-3 text-sm sm:flex-row sm:items-center sm:gap-4 sm:px-4 ${
-              isMini ? "w-full" : ""
-            }`}
-          >
+          <div className="mx-auto flex max-w-6xl flex-col items-start gap-3 px-3 py-3 text-sm sm:flex-row sm:items-center sm:gap-4 sm:px-4">
             <div className="flex items-center gap-3 w-full sm:w-auto">
               {current.cover_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -605,91 +572,12 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                   style={{ width: duration ? `${(currentTime / duration) * 100}%` : "0%" }}
                 />
               </div>
-              <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
-                <span>{formatTime(currentTime)}</span>
-                <span>{duration ? formatTime(duration) : "--"}</span>
-              </div>
+            <div className="mt-1 flex justify-between text-[11px] text-[var(--mpc-muted)]">
+              <span>{formatTime(currentTime)}</span>
+              <span>{duration ? formatTime(duration) : "--"}</span>
             </div>
-            {playError && <p className="text-[11px] text-red-400">{playError}</p>}
-            <div className="flex flex-wrap items-center gap-3 w-full">
-              <button
-                onClick={toggleShuffle}
-                className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.14em] ${
-                  shuffle
-                    ? "border-[var(--mpc-accent)] text-[var(--mpc-accent)]"
-                    : "border-white/20 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
-                }`}
-              >
-                Shuffle {shuffle ? "On" : "Off"}
-              </button>
-              <button
-                onClick={cycleRepeatMode}
-                className={`rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.14em] ${
-                  repeatMode !== "off"
-                    ? "border-[var(--mpc-accent)] text-[var(--mpc-accent)]"
-                    : "border-white/20 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
-                }`}
-              >
-                Repeat {repeatMode === "one" ? "One" : repeatMode === "all" ? "All" : "Off"}
-              </button>
-              <button
-                onClick={() => setQueueOpen((v) => !v)}
-                className="rounded-full border border-white/20 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
-              >
-                Fronta ({queueList.length})
-              </button>
-              <button
-                onClick={toggleMini}
-                className="ml-auto rounded-full border border-white/20 px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]"
-              >
-                {isMini ? "Velký přehrávač" : "Mini přehrávač"}
-              </button>
-            </div>
-            {queueOpen && queueList.length > 0 && (
-              <div className="w-full space-y-2 rounded-lg border border-white/10 bg-black/60 p-3">
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Fronta</p>
-                <div className="max-h-48 overflow-y-auto space-y-2">
-                  {queueList.map((item, idx) => (
-                    <div
-                      key={item.id}
-                      draggable
-                      onDragStart={() => (draggingIdRef.current = item.id)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (draggingIdRef.current === null) return;
-                        const fromIdx = queueList.findIndex((t) => String(t.id) === String(draggingIdRef.current));
-                        const toIdx = idx;
-                        draggingIdRef.current = null;
-                        moveInQueue(fromIdx, toIdx);
-                      }}
-                      onClick={() => playFromQueue(idx)}
-                      className={`flex items-center gap-3 rounded-md border px-3 py-2 text-sm transition ${
-                        current?.id === item.id
-                          ? "border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/10"
-                          : "border-white/10 bg-white/5 hover:border-[var(--mpc-accent)]"
-                      }`}
-                    >
-                      <div className="h-10 w-10 overflow-hidden rounded border border-white/10 bg-black/40">
-                        {item.cover_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.cover_url} alt={item.title} className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center text-[10px] text-[var(--mpc-muted)]">
-                            {String(item.title || "?").slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[13px] font-semibold text-white line-clamp-1">{item.title}</p>
-                        <p className="text-[11px] text-[var(--mpc-muted)] line-clamp-1">{item.artist}</p>
-                      </div>
-                      <span className="text-[10px] text-[var(--mpc-muted)]">↕</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          </div>
+          {playError && <p className="text-[11px] text-red-400">{playError}</p>}
           </div>
         </div>
       )}
