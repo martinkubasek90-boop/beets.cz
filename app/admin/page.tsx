@@ -116,6 +116,19 @@ const fields: CmsField[] = [
     category: 'Stream',
   },
   {
+    key: 'live.embed.url',
+    label: 'Live – YouTube/iframe embed URL',
+    description: 'Embed pro live session / listening party (YouTube nebo jiný iframe).',
+    defaultValue: 'https://www.youtube.com/embed/BdzEQd1L0zk',
+    category: 'Live',
+  },
+  {
+    key: 'live.embed.description',
+    label: 'Live – popis u embedu',
+    defaultValue: 'Plánované premiéry, live poslechy, chat a Q&A.',
+    category: 'Live',
+  },
+  {
     key: 'faq.intro',
     label: 'FAQ – úvodní text',
     defaultValue: 'Nejčastější dotazy k účtu, nahrávání beatů/projektů, spolupráci a zprávám.',

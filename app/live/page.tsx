@@ -30,6 +30,7 @@ export default function LivePage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [cmsLive, setCmsLive] = useState<{ embedUrl?: string | null; description?: string | null }>({});
 
   const [messages, setMessages] = useState<LiveMessage[]>([]);
   const [messagesError, setMessagesError] = useState<string | null>(null);
@@ -42,6 +43,28 @@ export default function LivePage() {
   // session
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null));
+  }, [supabase]);
+
+  // CMS obsah pro embed
+  useEffect(() => {
+    const loadCms = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cms_content')
+          .select('key,value')
+          .in('key', ['live.embed.url', 'live.embed.description']);
+        if (!error && data) {
+          const map = Object.fromEntries((data as any[]).map((row) => [row.key, row.value]));
+          setCmsLive({
+            embedUrl: map['live.embed.url'] || null,
+            description: map['live.embed.description'] || null,
+          });
+        }
+      } catch (err) {
+        console.warn('Nepodařilo se načíst live embed z CMS:', err);
+      }
+    };
+    void loadCms();
   }, [supabase]);
 
   // load events
@@ -199,6 +222,23 @@ export default function LivePage() {
             ← Zpět
           </Link>
         </div>
+
+        {cmsLive.embedUrl && (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+            <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black/60" style={{ paddingTop: '56.25%' }}>
+              <iframe
+                src={cmsLive.embedUrl}
+                title="Live embed"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="absolute inset-0 h-full w-full"
+              />
+            </div>
+            <p className="mt-2 text-[12px] text-[var(--mpc-muted)]">
+              {cmsLive.description || 'Embed pro živý přenos / premiéru.'}
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-5 md:grid-cols-3">
           <div className="space-y-3 md:col-span-2">
