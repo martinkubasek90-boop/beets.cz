@@ -189,6 +189,8 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     current?.item_type ||
     (typeof current?.id === "string" && String(current.id).startsWith("project-") ? "project" : "beat");
   const fireItemId = current ? String(current.id) : null;
+  const fireButtonType: "beat" | "project" | "acapella" =
+    derivedItemType === "project" ? "project" : derivedItemType === "acapella" ? "acapella" : "beat";
 
   // načtení oblíbených + progress při změně tracku
   useEffect(() => {
@@ -303,7 +305,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-white leading-tight">{current.title}</p>
                   {fireItemId && (
-                    <FireButton itemType={derivedItemType} itemId={fireItemId} className="scale-90" />
+                    <FireButton itemType={fireButtonType} itemId={fireItemId} className="scale-90" />
                   )}
                   <button
                     onClick={async () => {
