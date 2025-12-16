@@ -29,7 +29,10 @@ export default function BeatsPage() {
   const supabase = createClient();
   const { play, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
   const [beats, setBeats] = useState<Beat[]>(dummyBeats);
-  const [fires, setFires] = useState<{ item_id: string; created_at: string }[]>([]);
+  const [fires, setFires] = useState<{ item_id: string; created_at: string; user_id: string | null }[]>([]);
+  const [curatorEndorsements, setCuratorEndorsements] = useState<Record<string, string[]>>({});
+  const [curatorProfiles, setCuratorProfiles] = useState<Record<string, string>>({});
+  const [curatorFilter, setCuratorFilter] = useState<'all' | 'curated' | string>('all');
   const [search, setSearch] = useState('');
   const [authorFilter, setAuthorFilter] = useState('all');
   const [bpmFilter, setBpmFilter] = useState('');
@@ -67,16 +70,42 @@ export default function BeatsPage() {
   }, [supabase]);
 
   useEffect(() => {
+    const CURATOR_ROLES = ['curator'];
     const loadFires = async () => {
       try {
         const startOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
         const { data, error: err } = await supabase
           .from('fires')
-          .select('item_id, created_at')
+          .select('item_id, created_at, user_id')
           .eq('item_type', 'beat')
           .gte('created_at', startOfYear);
         if (err) throw err;
-        setFires((data as any[]) ?? []);
+        const rows = (data as any[]) ?? [];
+        setFires(rows);
+
+        const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean) as string[]));
+        let curatorMap: Record<string, string> = {};
+        if (userIds.length) {
+          const { data: profs } = await supabase.from('profiles').select('id, display_name, role').in('id', userIds);
+          if (profs) {
+            curatorMap = Object.fromEntries(
+              (profs as any[])
+                .filter((p) => CURATOR_ROLES.includes((p as any).role))
+                .map((p) => [p.id as string, (p.display_name as string) || 'Kurátor'])
+            );
+          }
+        }
+
+        const curated: Record<string, string[]> = {};
+        rows.forEach((row) => {
+          if (!row?.item_id || !row?.user_id) return;
+          if (!curatorMap[row.user_id]) return;
+          const key = String(row.item_id);
+          curated[key] = curated[key] || [];
+          if (!curated[key].includes(row.user_id)) curated[key].push(row.user_id);
+        });
+        setCuratorProfiles(curatorMap);
+        setCuratorEndorsements(curated);
       } catch (err) {
         console.warn('Nepodařilo se načíst ohně pro řazení:', err);
       }
@@ -112,7 +141,14 @@ export default function BeatsPage() {
       const matchesMood = moodFilter
         ? (b.mood || '').toLowerCase().includes(moodFilter.toLowerCase())
         : true;
-      return matchesSearch && matchesAuthor && matchesBpm && matchesMood;
+      const endorsers = curatorEndorsements[String(b.id)] || [];
+      const matchesCurator =
+        curatorFilter === 'all'
+          ? true
+          : curatorFilter === 'curated'
+            ? endorsers.length > 0
+            : endorsers.includes(curatorFilter);
+      return matchesSearch && matchesAuthor && matchesBpm && matchesMood && matchesCurator;
     });
 
     if (sortMode === 'recent') return base;
@@ -124,12 +160,16 @@ export default function BeatsPage() {
       return yearMap[id] || 0;
     };
     return [...base].sort((a, b) => getScore(b) - getScore(a));
-  }, [beats, search, authorFilter, bpmFilter, moodFilter, sortMode, fireCounts]);
+  }, [beats, search, authorFilter, bpmFilter, moodFilter, sortMode, fireCounts, curatorFilter, curatorEndorsements]);
 
   const authors = useMemo(() => {
     const names = Array.from(new Set(beats.map((b) => b.artist || '').filter(Boolean)));
     return names;
   }, [beats]);
+
+  const curatorOptions = useMemo(() => {
+    return Object.entries(curatorProfiles).map(([id, name]) => ({ id, name }));
+  }, [curatorProfiles]);
 
   const queueRef = useRef<Beat[]>([]);
   const queueIdxRef = useRef<number>(0);
@@ -228,6 +268,19 @@ export default function BeatsPage() {
             placeholder="Mood / vibe (boom bap, lo-fi…)"
             className="w-full max-w-xs rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
           />
+          <select
+            value={curatorFilter}
+            onChange={(e) => setCuratorFilter(e.target.value as typeof curatorFilter)}
+            className="rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          >
+            <option value="all">Všechny beaty</option>
+            <option value="curated">Kurátorský výběr</option>
+            {curatorOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                🔥 {c.name}
+              </option>
+            ))}
+          </select>
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as typeof sortMode)}

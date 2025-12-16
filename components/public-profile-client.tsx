@@ -45,7 +45,7 @@ type PublicProfile = {
   offering_signals?: string[] | null;
   seeking_custom?: string | null;
   offering_custom?: string | null;
-  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
+  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null;
 };
 
 type Beat = {

@@ -19,7 +19,7 @@ type Profile = {
   avatar_url: string | null;
   banner_url: string | null;
   region?: string | null;
-  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
+  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null;
   seeking_signals?: string[] | null;
   offering_signals?: string[] | null;
   seeking_custom?: string | null;
@@ -296,7 +296,7 @@ export default function ProfileClient() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | null>('creator');
+  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null>('creator');
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
   const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
@@ -385,7 +385,7 @@ export default function ProfileClient() {
     if (!profile.role) missing.push('role');
     if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
 
-    const requireBeat = profile.role !== 'mc';
+    const requireBeat = profile.role !== 'mc' && profile.role !== 'curator';
     const requireAcapella = profile.role === 'mc';
     if (requireBeat && !beats.length) missing.push('nahraný beat');
     if (requireAcapella && !acapellas.length) missing.push('nahraná akapela');

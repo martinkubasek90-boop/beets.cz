@@ -39,6 +39,9 @@ export default function ProjectsPage() {
   const [myRequests, setMyRequests] = useState<Record<number, "pending" | "approved" | "denied">>({});
   const [search, setSearch] = useState("");
   const [authorFilter, setAuthorFilter] = useState<string>("all");
+  const [curatorEndorsements, setCuratorEndorsements] = useState<Record<string, string[]>>({});
+  const [curatorProfiles, setCuratorProfiles] = useState<Record<string, string>>({});
+  const [curatorFilter, setCuratorFilter] = useState<"all" | "curated" | string>("all");
 
   const { play, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
   const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
@@ -49,6 +52,8 @@ export default function ProjectsPage() {
 
   const publicUrlFromPath = (path?: string | null) =>
     path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}` : "";
+  const projectFireKey = (id: number | string) =>
+    String(id).startsWith("project-") ? String(id) : `project-${id}`;
 
   useEffect(() => {
     const resolveSignedUrl = async (path?: string | null) => {
@@ -61,6 +66,7 @@ export default function ProjectsPage() {
     const load = async () => {
       setLoading(true);
       try {
+        const CURATOR_ROLES = ["curator"];
         let rows: any[] = [];
         // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks" a bez autor_name/year)
         const { data, error: err } = await supabase
@@ -69,6 +75,13 @@ export default function ProjectsPage() {
           .order("id", { ascending: false });
         if (err) throw err;
         rows = data ?? [];
+
+        const { data: fireRows, error: fireErr } = await supabase
+          .from("fires")
+          .select("item_id,user_id")
+          .eq("item_type", "project");
+        if (fireErr) throw fireErr;
+        const fires = (fireRows as any[]) ?? [];
 
         // grants a requesty
         let grants = new Set<number>();
@@ -89,12 +102,35 @@ export default function ProjectsPage() {
         }
         setMyRequests(requests);
 
-        const userIds = Array.from(new Set(rows.map((p) => p.user_id).filter(Boolean) as string[]));
+        const userIds = Array.from(
+          new Set([
+            ...rows.map((p) => p.user_id).filter(Boolean),
+            ...fires.map((f) => f.user_id).filter(Boolean),
+          ] as string[])
+        );
         let profilesMap: Record<string, string> = {};
+        let curatorMap: Record<string, string> = {};
         if (userIds.length) {
-          const { data: profs } = await supabase.from("profiles").select("id,display_name").in("id", userIds);
-          if (profs) profilesMap = Object.fromEntries(profs.map((p: any) => [p.id, p.display_name || ""]));
+          const { data: profs } = await supabase.from("profiles").select("id,display_name,role").in("id", userIds);
+          if (profs) {
+            profilesMap = Object.fromEntries(profs.map((p: any) => [p.id, p.display_name || ""]));
+            curatorMap = Object.fromEntries(
+              (profs as any[])
+                .filter((p) => CURATOR_ROLES.includes((p as any).role))
+                .map((p) => [p.id as string, (p.display_name as string) || "Kurátor"])
+            );
+          }
         }
+        const curated: Record<string, string[]> = {};
+        fires.forEach((row) => {
+          if (!row?.item_id || !row?.user_id) return;
+          if (!curatorMap[row.user_id]) return;
+          const key = String(row.item_id);
+          curated[key] = curated[key] || [];
+          if (!curated[key].includes(row.user_id)) curated[key].push(row.user_id);
+        });
+        setCuratorProfiles(curatorMap);
+        setCuratorEndorsements(curated);
 
         const normalized = await Promise.all(
           rows.map(async (p) => {
@@ -163,15 +199,27 @@ export default function ProjectsPage() {
     return Array.from(new Set(projectsVisible.map((p) => (p.author_name || "").trim()).filter(Boolean)));
   }, [projectsVisible]);
 
+  const curatorOptions = useMemo(() => {
+    return Object.entries(curatorProfiles).map(([id, name]) => ({ id, name }));
+  }, [curatorProfiles]);
+
   const filteredProjects = useMemo(() => {
     return projectsVisible.filter((p) => {
       const haystack = `${p.title} ${p.description || ""}`.toLowerCase();
       const matchesSearch = haystack.includes(search.toLowerCase().trim());
       const matchesAuthor =
         authorFilter === "all" || (p.author_name || "").toLowerCase() === authorFilter.toLowerCase();
-      return matchesSearch && matchesAuthor;
+      const fireKey = projectFireKey(p.id);
+      const endorsers = curatorEndorsements[fireKey] || curatorEndorsements[String(p.id)] || [];
+      const matchesCurator =
+        curatorFilter === "all"
+          ? true
+          : curatorFilter === "curated"
+            ? endorsers.length > 0
+            : endorsers.includes(curatorFilter);
+      return matchesSearch && matchesAuthor && matchesCurator;
     });
-  }, [projectsVisible, search, authorFilter]);
+  }, [projectsVisible, search, authorFilter, curatorFilter, curatorEndorsements]);
 
   const handlePlay = (project: Project, track: ProjectTrack, idx: number) => {
     if (!track.url || !setOnNext || !setOnPrev || !setOnEnded) return;
@@ -302,6 +350,19 @@ export default function ProjectsPage() {
               </option>
             ))}
           </select>
+          <select
+            value={curatorFilter}
+            onChange={(e) => setCuratorFilter(e.target.value as typeof curatorFilter)}
+            className="rounded border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
+          >
+            <option value="all">Všechny projekty</option>
+            <option value="curated">Kurátorský výběr</option>
+            {curatorOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                🔥 {c.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -312,6 +373,9 @@ export default function ProjectsPage() {
             const isCurrentPrimary = current?.id === `project-${project.id}-0`;
             const progressPct =
               isCurrentPrimary && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : "0%";
+            const fireKey = projectFireKey(project.id);
+            const endorsers = curatorEndorsements[fireKey] || curatorEndorsements[String(project.id)] || [];
+            const curatorNames = endorsers.map((id) => curatorProfiles[id]).filter(Boolean);
 
             return (
               <div
@@ -366,6 +430,12 @@ export default function ProjectsPage() {
                       <p className="text-lg font-semibold text-white">{project.title}</p>
                       {userId && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
                     </div>
+                    {curatorNames.length > 0 && (
+                      <p className="flex items-center justify-center gap-1 text-[11px] uppercase tracking-[0.12em] text-orange-200">
+                        <span>🔥 Kurátor:</span>
+                        <span className="text-white">{curatorNames.join(", ")}</span>
+                      </p>
+                    )}
                     {project.year && (
                       <p className="text-[12px] text-[var(--mpc-muted)]">{project.year}</p>
                     )}
