@@ -302,8 +302,43 @@ export async function POST(req: Request) {
 
   const contentCache = buildEmail(type, enrichedData);
   const results: Array<{ userId: string | null; emailSent: boolean; inserted: boolean }> = [];
+  const recipientIds = Array.from(recipients);
+
+  // Prefs a rate limit
+  const prefsMap: Record<string, { email: boolean }> = {};
+  const rateLimited = new Set<string>();
+  if (service && recipientIds.length) {
+    try {
+      const { data: prefs } = await service
+        .from('notification_preferences')
+        .select('user_id,email_notifications')
+        .in('user_id', recipientIds);
+      (prefs as any[] | null | undefined)?.forEach((row) => {
+        prefsMap[row.user_id] = { email: row.email_notifications !== false };
+      });
+    } catch (err) {
+      console.warn('Nepodařilo se načíst notification_preferences:', err);
+    }
+    try {
+      const windowStart = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { data: counts } = await service
+        .from('notifications')
+        .select('user_id', { count: 'exact', head: false })
+        .in('user_id', recipientIds)
+        .gte('created_at', windowStart);
+      (counts as any[] | null | undefined)?.forEach((row: any) => {
+        if ((row?.count || 0) > 40 && row.user_id) rateLimited.add(row.user_id as string);
+      });
+    } catch (err) {
+      console.warn('Nepodařilo se načíst limity notifikací:', err);
+    }
+  }
 
   async function notifyOne(userId: string | null, fallbackEmail?: string | null) {
+    if (userId && rateLimited.has(userId)) {
+      results.push({ userId, emailSent: false, inserted: false });
+      return;
+    }
     let email = fallbackEmail || null;
     let displayName: string | null = null;
     let insertOk = false;
@@ -343,7 +378,8 @@ export async function POST(req: Request) {
     }
 
     const content = buildEmail(type, { ...enrichedData, targetName: displayName });
-    if (email) {
+    const allowEmail = userId ? prefsMap[userId]?.email ?? true : true;
+    if (email && allowEmail) {
       const result = await sendEmail({
         to: email,
         subject: content.subject,
