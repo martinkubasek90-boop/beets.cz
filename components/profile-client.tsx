@@ -3002,7 +3002,7 @@ export default function ProfileClient() {
                 })}
               </div>
 
-              <form onSubmit={handleSendCollabMessage} id="collab-new-message" className="mt-4 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
+              <form onSubmit={(e) => { e.preventDefault(); void handleSendCollabMsg(); }} id="collab-new-message" className="mt-4 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
                 <div className="space-y-3">
                   <div>
                     <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
