@@ -34,6 +34,8 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
     return "h-7 w-7";
   }, [count]);
 
+  const weeklyLimit = role === "curator" ? 30 : 10;
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -89,7 +91,6 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
       }
 
       // Limity: běžně 10/týden, kurátor 30/týden
-      const weeklyLimit = role === "curator" ? 30 : 10;
       const week = weekStartIso();
       const { data: weekly, error: weeklyErr } = await supabase
         .from("fires")
@@ -129,7 +130,7 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
     <div className={cn("flex flex-col items-center gap-1 text-center", className)}>
       <button
         onClick={handleClick}
-        disabled={loading || usedThisWeek >= 10}
+        disabled={loading || usedThisWeek >= weeklyLimit}
         className={cn(
           "flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-orange-400 transition hover:bg-orange-500/20 disabled:opacity-50",
           flameSize

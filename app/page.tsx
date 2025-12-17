@@ -1351,6 +1351,18 @@ export default function Home() {
                 key={project.id}
                 className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
               >
+                <div className="absolute right-4 top-4 flex items-center gap-2">
+                  {userRole === 'curator' && (
+                    <button
+                      onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+                      className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                      title="Kurátorská hvězda"
+                    >
+                      ★
+                    </button>
+                  )}
+                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-100" />
+                </div>
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
                     {project.user_id ? (
@@ -1387,16 +1399,6 @@ export default function Home() {
                       </p>
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
-                      {userRole === 'curator' && (
-                        <button
-                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
-                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                          title="Kurátorská hvězda"
-                        >
-                          ★
-                        </button>
-                      )}
-                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                   <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                     Beat tape / EP
