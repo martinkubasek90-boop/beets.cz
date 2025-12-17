@@ -265,6 +265,7 @@ export default function ProfileClient() {
   const [sendingCollabMessage, setSendingCollabMessage] = useState(false);
   const [profilesById, setProfilesById] = useState<Record<string, string>>({});
   const [uploadingCollabFile, setUploadingCollabFile] = useState(false);
+  const [threadReplies, setThreadReplies] = useState<Record<string, string>>({});
   const [collabFile, setCollabFile] = useState<File | null>(null);
   const [showNewThreadForm, setShowNewThreadForm] = useState(false);
   const [blogForm, setBlogForm] = useState({
