@@ -121,14 +121,6 @@ type ForumThreadSummary = {
   updated_at?: string | null;
 };
 
-type InboxMessage = {
-  id: number | string;
-  from: string;
-  preview: string;
-  time: string;
-  unread?: boolean;
-};
-
 type DirectMessage = {
   id: number | string;
   user_id: string;
@@ -140,37 +132,52 @@ type DirectMessage = {
   unread?: boolean;
 };
 
-const demoCollabMessages: InboxMessage[] = [
+const demoCollabMessages: DirectMessage[] = [
   {
     id: 1,
-    from: 'MC Panel',
-    preview: 'Hej, posílám ti vokály k „Betonovej sen“, můžeš mrknout?',
-    time: '10:32',
+    user_id: 'demo-1',
+    to_user_id: 'demo-me',
+    from_name: 'MC Panel',
+    to_name: 'Ty',
+    body: 'Hej, posílám ti vokály k „Betonovej sen“, můžeš mrknout?',
+    created_at: '2024-12-16T10:32:00Z',
     unread: true,
   },
   {
     id: 2,
-    from: 'Třetí Vchod',
-    preview: 'Díky za beat, máš i verzi bez basy na živák?',
-    time: '09:15',
+    user_id: 'demo-2',
+    to_user_id: 'demo-me',
+    from_name: 'Třetí Vchod',
+    to_name: 'Ty',
+    body: 'Díky za beat, máš i verzi bez basy na živák?',
+    created_at: '2024-12-16T09:15:00Z',
   },
   {
     id: 3,
-    from: 'GreyTone',
-    preview: 'Můžem hodit rychlej call ohledně mixu akapely?',
-    time: 'včera',
+    user_id: 'demo-3',
+    to_user_id: 'demo-me',
+    from_name: 'GreyTone',
+    to_name: 'Ty',
+    body: 'Můžem hodit rychlej call ohledně mixu akapely?',
+    created_at: '2024-12-15T12:00:00Z',
   },
   {
     id: 4,
-    from: 'Northside',
-    preview: 'Máme připravený hook na tvůj beat, chceš poslat raw?',
-    time: 'před 2 dny',
+    user_id: 'demo-4',
+    to_user_id: 'demo-me',
+    from_name: 'Northside',
+    to_name: 'Ty',
+    body: 'Máme připravený hook na tvůj beat, chceš poslat raw?',
+    created_at: '2024-12-14T12:00:00Z',
   },
   {
     id: 5,
-    from: 'DJ Lávka',
-    preview: 'Hledám scratch části na live set, pošleš stems?',
-    time: 'před 3 dny',
+    user_id: 'demo-5',
+    to_user_id: 'demo-me',
+    from_name: 'DJ Lávka',
+    to_name: 'Ty',
+    body: 'Hledám scratch části na live set, pošleš stems?',
+    created_at: '2024-12-13T12:00:00Z',
   },
 ];
 
@@ -236,7 +243,7 @@ export default function ProfileClient() {
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [projectGrants, setProjectGrants] = useState<Record<string, ProjectAccessGrant[]>>({});
   const [projectGrantsError, setProjectGrantsError] = useState<string | null>(null);
-  const [messages, setMessages] = useState<InboxMessage[]>(demoCollabMessages);
+  const [messages, setMessages] = useState<DirectMessage[]>(demoCollabMessages);
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
@@ -1272,12 +1279,13 @@ export default function ProfileClient() {
     }
   };
 
-  function handleReplyToCollab(msg: InboxMessage) {
+  function handleReplyToCollab(msg: DirectMessage) {
     setOpenSections((prev) => ({ ...prev, messages: true }));
+    const senderName = msg.user_id === userId ? msg.to_name || 'uživatel' : msg.from_name || 'uživatel';
     setNewMessage({
-      to: msg.from,
+      to: senderName,
       toUserId: '',
-      body: `@${msg.from} `,
+      body: `@${senderName} `,
     });
     const el = document.getElementById('messages');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
