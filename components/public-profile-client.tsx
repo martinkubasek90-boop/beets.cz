@@ -235,6 +235,28 @@ export default function PublicProfileClient({
   } = useGlobalPlayer();
   const [playerError, setPlayerError] = useState<string | null>(null);
 
+  const handleCuratorStar = async (itemType: 'beat' | 'project', itemId: string) => {
+    if (!currentUserId || currentUserRole !== 'curator') {
+      alert('Kurátorská hvězda je dostupná jen pro přihlášeného kurátora.');
+      return;
+    }
+    try {
+      const { data: existing } = await supabase
+        .from('fires')
+        .select('id')
+        .eq('item_type', itemType)
+        .eq('item_id', itemId)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from('fires').insert({ item_type: itemType, item_id: itemId, user_id: currentUserId });
+      }
+    } catch (err) {
+      console.error('Chyba při přidání kurátorské hvězdy:', err);
+      alert('Nepodařilo se přidat hvězdu. Zkus to znovu.');
+    }
+  };
+
   const loadBeats = useCallback(async () => {
     const { data, error } = await supabase
       .from('beats')
@@ -1478,6 +1500,15 @@ export default function PublicProfileClient({
                             </p>
                           </div>
                         </div>
+                        {currentUserRole === 'curator' && (
+                          <button
+                            onClick={() => handleCuratorStar('beat', String(beat.id))}
+                            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                            title="Kurátorská hvězda"
+                          >
+                            ★
+                          </button>
+                        )}
                         <FireButton itemType="beat" itemId={String(beat.id)} className="self-start md:self-center" />
                         <button
                           onClick={() =>
@@ -1575,9 +1606,18 @@ export default function PublicProfileClient({
                           <span>{project.title.slice(0, 2)}</span>
                         )}
                       </div>
-                  <div className="space-y-1">
+                    <div className="space-y-1">
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
+                      {currentUserRole === 'curator' && (
+                        <button
+                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                          title="Kurátorská hvězda"
+                        >
+                          ★
+                        </button>
+                      )}
                       <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                     <p className="text-[12px] text-[var(--mpc-muted)]">

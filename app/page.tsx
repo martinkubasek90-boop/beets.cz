@@ -219,6 +219,8 @@ export default function Home() {
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [currentYear, setCurrentYear] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [currentTrack, setCurrentTrack] = useState<{ id: number | string; title: string; artist: string; user_id?: string | null; url: string; cover_url?: string | null } | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
@@ -588,11 +590,41 @@ export default function Home() {
     setCurrentYear(new Date().getFullYear());
   }, []);
 
+  const handleCuratorStar = async (itemType: "beat" | "project", itemId: string) => {
+    if (!userId || userRole !== "curator") {
+      alert("Kurátorská hvězda je dostupná jen pro přihlášeného kurátora.");
+      return;
+    }
+    try {
+      const { data: existing } = await supabase
+        .from("fires")
+        .select("id")
+        .eq("item_type", itemType)
+        .eq("item_id", itemId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (!existing) {
+        await supabase.from("fires").insert({ item_type: itemType, item_id: itemId, user_id: userId });
+      }
+    } catch (err) {
+      console.error("Chyba při přidání kurátorské hvězdy:", err);
+      alert("Nepodařilo se přidat hvězdu. Zkus to znovu.");
+    }
+  };
+
 
   useEffect(() => {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       setIsLoggedIn(!!data.session);
+      const uid = data.session?.user?.id ?? null;
+      setUserId(uid);
+      if (uid) {
+        const { data: prof } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+        setUserRole((prof as any)?.role ?? null);
+      } else {
+        setUserRole(null);
+      }
     };
     checkSession();
   }, [supabase]);
@@ -1342,10 +1374,10 @@ export default function Home() {
                     )}
                   </div>
                     <div className="text-center space-y-1">
-                      <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                        {project.user_id && project.author_name ? (
-                          <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
-                            Autor: {project.author_name}
+                    <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                      {project.user_id && project.author_name ? (
+                        <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
+                          Autor: {project.author_name}
                         </Link>
                       ) : project.author_name ? (
                         <>Autor: {project.author_name}</>
@@ -1355,6 +1387,15 @@ export default function Home() {
                       </p>
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
+                      {userRole === 'curator' && (
+                        <button
+                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                          title="Kurátorská hvězda"
+                        >
+                          ★
+                        </button>
+                      )}
                       <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                   <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -1805,31 +1846,40 @@ export default function Home() {
                       )}
                     </p>
                     <div className="text-lg font-semibold text-white">{beat.title}</div>
-                    <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                      {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
-                    </div>
+                  <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                    {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
                   </div>
+                </div>
 
-                    <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                    <div className="mx-auto flex max-w-3xl items-center gap-3">
+                <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+                  <div className="mx-auto flex max-w-3xl items-center gap-3">
+                    <button
+                      className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
+                      onClick={() => {
+                        if (gpCurrent?.id === beat.id) {
+                          gpToggle();
+                        } else {
+                          handlePlay(beat.audio_url, beat);
+                        }
+                      }}
+                      disabled={!beat.audio_url}
+                    >
+                      {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
+                    </button>
+                    {userRole === 'curator' && (
                       <button
-                        className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
-                        onClick={() => {
-                          if (gpCurrent?.id === beat.id) {
-                            gpToggle();
-                          } else {
-                            handlePlay(beat.audio_url, beat);
-                          }
-                        }}
-                        disabled={!beat.audio_url}
+                        onClick={() => handleCuratorStar('beat', String(beat.id))}
+                        className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                        title="Kurátorská hvězda"
                       >
-                        {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
+                        ★
                       </button>
-                      <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
-                      <div className="flex-1">
-                        <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
-                        <div className="mt-2 space-y-1">
-                          <div
+                    )}
+                    <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+                    <div className="flex-1">
+                      <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
+                      <div className="mt-2 space-y-1">
+                        <div
                             className="overflow-hidden rounded-full border border-white/10 bg-white/10 cursor-pointer h-3"
                             onClick={(e) => {
                               const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
