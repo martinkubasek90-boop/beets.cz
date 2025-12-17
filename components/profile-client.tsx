@@ -5024,13 +5024,18 @@ function handleFieldChange(field: keyof Profile, value: string) {
     </main>
 );
 }
-  async function handleDeleteProject(id: number) {
+  async function handleDeleteProject(id: string | number) {
     if (!confirm('Opravdu smazat tento projekt?')) return;
+    const targetId = typeof id === 'string' ? Number(id) : id;
+    if (!Number.isFinite(targetId)) {
+      setPlayerMessage('Neplatné ID projektu.');
+      return;
+    }
     try {
-      const { error } = await supabase.from('projects').delete().eq('id', id).eq('user_id', userId);
+      const { error } = await supabase.from('projects').delete().eq('id', targetId).eq('user_id', userId);
       if (error) throw error;
-      setProjects((prev) => prev.filter((p) => p.id !== id));
-      if (editingProject?.id === id) {
+      setProjects((prev) => prev.filter((p) => String(p.id) !== String(id)));
+      if (editingProject?.id && String(editingProject.id) === String(id)) {
         setEditingProject(null);
       }
     } catch (err) {
