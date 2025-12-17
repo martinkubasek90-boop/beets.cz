@@ -1368,7 +1368,7 @@ export default function ProfileClient() {
     try {
       await sendDirectMessage(otherId, otherName, body);
       setThreadReplies((prev) => ({ ...prev, [otherId]: '' }));
-      setExpandedThread(otherId);
+      setSelectedThreadId(otherId);
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
@@ -1392,6 +1392,7 @@ export default function ProfileClient() {
     try {
       const targetUserId = await resolveRecipientId(newMessage.to, newMessage.toUserId);
       await sendDirectMessage(targetUserId, newMessage.to.trim(), newMessage.body.trim());
+      setSelectedThreadId(targetUserId);
       setNewMessage({ to: '', toUserId: '', body: '' });
       setExpandedThread(targetUserId);
     } catch (err) {
