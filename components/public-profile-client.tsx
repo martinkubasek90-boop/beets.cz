@@ -1483,11 +1483,11 @@ export default function PublicProfileClient({
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
-                      <div className="absolute right-4 top-4 flex items-center gap-2">
+                      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
                         {currentUserRole === 'curator' && (
                           <button
                             onClick={() => handleCuratorStar('beat', String(beat.id))}
-                            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                            className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
                             title="Kurátorská hvězda"
                           >
                             ★
@@ -1599,11 +1599,11 @@ export default function PublicProfileClient({
                           }
                     }
                   >
-                    <div className="absolute right-4 top-4 flex items-center gap-2">
+                    <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
                       {currentUserRole === 'curator' && (
                         <button
                           onClick={() => handleCuratorStar('project', `project-${project.id}`)}
-                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                          className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
                           title="Kurátorská hvězda"
                         >
                           ★
