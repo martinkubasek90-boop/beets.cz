@@ -1008,7 +1008,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
               </div>
             </div>
             <button
-              onClick={() => setIsPlaying((prev) => !prev)}
+              onClick={toggle}
               className="grid h-12 w-12 place-items-center rounded-full bg-[var(--mpc-accent)] text-lg text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)]"
             >
               {isPlaying ? '▮▮' : '►'}
