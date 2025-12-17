@@ -21,6 +21,8 @@ type PublicProfile = {
   offering_custom?: string | null;
 };
 
+type InitialProfile = Partial<PublicProfile>;
+
 type Beat = {
   id: number;
   title: string;
@@ -108,13 +110,28 @@ type CurrentTrack = {
   subtitle?: string | null;
 };
 
-export default function PublicProfileClient({ profileId }: { profileId: string }) {
+export default function PublicProfileClient({ profileId, initialProfile }: { profileId: string; initialProfile?: InitialProfile | null }) {
   const supabase = createClient();
   const router = useRouter();
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [profile, setProfile] = useState<PublicProfile | null>(
+    initialProfile
+      ? {
+          display_name: initialProfile.display_name ?? 'Uživatel',
+          hardware: initialProfile.hardware ?? '',
+          bio: initialProfile.bio ?? '',
+          avatar_url: initialProfile.avatar_url ?? null,
+          banner_url: initialProfile.banner_url ?? null,
+          last_seen_at: initialProfile.last_seen_at ?? null,
+          seeking_signals: initialProfile.seeking_signals ?? null,
+          offering_signals: initialProfile.offering_signals ?? null,
+          seeking_custom: initialProfile.seeking_custom ?? null,
+          offering_custom: initialProfile.offering_custom ?? null,
+        }
+      : null
+  );
   const [profileError, setProfileError] = useState<string | null>(null);
 
   const [beats, setBeats] = useState<Beat[]>([]);
