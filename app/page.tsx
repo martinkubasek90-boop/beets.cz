@@ -1508,6 +1508,81 @@ export default function Home() {
         </section>
 
 
+        {/* ARTISTS (carousel) */}
+        <section className="w-full py-12" id="artists">
+          <div className="relative mb-6 flex w-full flex-wrap items-center justify-center gap-3 text-center">
+            <h2 className="text-xl font-semibold tracking-[0.2em] uppercase">Umělci</h2>
+            <Link
+              href="/artists"
+              className="absolute right-0 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
+            >
+              Zobrazit vše
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, idx) => {
+              const list = artists.length ? artists : dummyArtists;
+              const artist = list[(artistIndex + idx) % list.length];
+              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
+              const colors = [
+                'from-emerald-600 to-emerald-900',
+                'from-amber-400 to-orange-600',
+                'from-indigo-500 to-indigo-900',
+                'from-purple-500 to-purple-800',
+                'from-rose-500 to-rose-800',
+                'from-sky-500 to-sky-900',
+              ];
+              const gradient = colors[idx % colors.length];
+              return (
+                <Link
+                  href={`/u/${artist.id}`}
+                  key={artist.id}
+                  className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
+                >
+                  <div
+                  className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
+                >
+                  {artist.avatar_url ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                    </>
+                  ) : (
+                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
+                        {artist.initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-center w-full">
+                    <p className="text-base font-semibold text-white">{artist.name}</p>
+                    <p className="text-[12px] text-[var(--mpc-muted)]">{stats}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <button
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev - 1 + list.length) % list.length);
+              }}
+              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+            >
+              ←
+            </button>
+            <button
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev + 1) % list.length);
+              }}
+              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+            >
+              →
+            </button>
+          </div>
+        </section>
+
         {/* BLOG */}
         <section className="w-full py-8" id="blog">
           <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3 text-center">
@@ -1580,214 +1655,6 @@ export default function Home() {
               </button>
             </div>
           )}
-
-          {/* Blog přidání skryto */}
-          {false && isLoggedIn && (
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_12px_28px_rgba(0,0,0,0.35)] backdrop-blur space-y-4">
-              <div className="flex items-center justify-center">
-                <button
-                  onClick={() => setShowBlogForm((p) => !p)}
-                  className="rounded-full border border-[var(--mpc-accent)] px-5 py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                >
-                  {showBlogForm ? 'Schovat' : 'Přidat článek'}
-                </button>
-              </div>
-              {showBlogForm && (
-                <form className="grid gap-3 md:grid-cols-2" onSubmit={handleCreatePost}>
-                <div className="space-y-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Název</label>
-                  <input
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    value={newPost.title}
-                    onChange={(e) => setNewPost((p) => ({ ...p, title: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Název (English)</label>
-                  <input
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    value={newPost.titleEn}
-                    onChange={(e) => setNewPost((p) => ({ ...p, titleEn: e.target.value }))}
-                  />
-                </div>
-                  <div className="space-y-2">
-                    <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Autor</label>
-                    <input
-                      className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                      value={newPost.author}
-                      onChange={(e) => setNewPost((p) => ({ ...p, author: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Datum</label>
-                    <input
-                      className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                      value={newPost.date}
-                      onChange={(e) => setNewPost((p) => ({ ...p, date: e.target.value }))}
-                      placeholder="12. 2. 2025"
-                      required
-                    />
-                  </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Perex</label>
-                  <textarea
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    rows={3}
-                    value={newPost.excerpt}
-                    onChange={(e) => setNewPost((p) => ({ ...p, excerpt: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Perex (English)</label>
-                  <textarea
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    rows={3}
-                    value={newPost.excerptEn}
-                    onChange={(e) => setNewPost((p) => ({ ...p, excerptEn: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Celý text</label>
-                  <textarea
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    rows={6}
-                    value={newPost.body}
-                    onChange={(e) => setNewPost((p) => ({ ...p, body: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Celý text (English)</label>
-                  <textarea
-                    className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                    rows={6}
-                    value={newPost.bodyEn}
-                    onChange={(e) => setNewPost((p) => ({ ...p, bodyEn: e.target.value }))}
-                  />
-                </div>
-                  <div className="space-y-2">
-                    <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Cover URL (volitelně)</label>
-                    <input
-                      className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                      value={newPost.coverUrl}
-                      onChange={(e) => setNewPost((p) => ({ ...p, coverUrl: e.target.value }))}
-                      placeholder="https://..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Embed (YouTube / Bandcamp / SoundCloud)</label>
-                    <input
-                      className="w-full rounded border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
-                      value={newPost.embedUrl}
-                      onChange={(e) => setNewPost((p) => ({ ...p, embedUrl: e.target.value }))}
-                      placeholder="https://youtu.be/..., https://bandcamp.com/..., https://soundcloud.com/..."
-                    />
-                    <p className="text-[11px] text-[var(--mpc-muted)]">
-                      Vkládej přímo embed/track URL. U YouTube stačí běžný link, převedeme ho na embed.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="block text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Nahrát cover (Storage)</label>
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
-                      className="w-full text-[12px] text-white"
-                    />
-                    {uploadingCover && <p className="text-[11px] text-[var(--mpc-muted)]">Nahrávám cover…</p>}
-                  </div>
-                  <div className="md:col-span-2 flex items-center justify-between">
-                    <p className="text-[11px] text-[var(--mpc-muted)]">Obrázky se ukládají do bucketu blog_covers. Vyplň buď URL, nebo nahraj soubor.</p>
-                    <button
-                      type="submit"
-                      disabled={isSavingPost}
-                      className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] text-white disabled:opacity-60"
-                    >
-                      {isSavingPost ? 'Ukládám…' : 'Přidat článek'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-        </section>
-
-        {/* ARTISTS (carousel) */}
-        <section className="w-full py-8" id="artists">
-          <div className="relative mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
-            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Umělci</h2>
-            <Link
-              href="/artists"
-              className="absolute right-0 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
-            >
-              Zobrazit vše
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, idx) => {
-              const list = artists.length ? artists : dummyArtists;
-              const artist = list[(artistIndex + idx) % list.length];
-              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
-              const colors = [
-                'from-emerald-600 to-emerald-900',
-                'from-amber-400 to-orange-600',
-                'from-indigo-500 to-indigo-900',
-                'from-purple-500 to-purple-800',
-                'from-rose-500 to-rose-800',
-                'from-sky-500 to-sky-900',
-              ];
-              const gradient = colors[idx % colors.length];
-              return (
-                <Link
-                  href={`/u/${artist.id}`}
-                  key={artist.id}
-                  className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
-                >
-                  <div
-                  className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
-                >
-                  {artist.avatar_url ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                    </>
-                  ) : (
-                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
-                        {artist.initials}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 text-center w-full">
-                    <p className="text-sm font-semibold text-white">{artist.name}</p>
-                    <p className="text-[11px] text-[var(--mpc-muted)]">{stats}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <button
-              onClick={() => {
-                const list = artists.length ? artists : dummyArtists;
-                setArtistIndex((prev) => (prev - 1 + list.length) % list.length);
-              }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => {
-                const list = artists.length ? artists : dummyArtists;
-                setArtistIndex((prev) => (prev + 1) % list.length);
-              }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-            >
-              →
-            </button>
-          </div>
         </section>
 
         {/* BEATS */}
