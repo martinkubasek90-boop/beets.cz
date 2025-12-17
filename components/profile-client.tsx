@@ -19,7 +19,7 @@ type Profile = {
   avatar_url: string | null;
   banner_url: string | null;
   region?: string | null;
-  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | null;
+  role?: 'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null;
   seeking_signals?: string[] | null;
   offering_signals?: string[] | null;
   seeking_custom?: string | null;
@@ -296,7 +296,7 @@ export default function ProfileClient() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | null>('creator');
+const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null>('creator');
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
   const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
@@ -339,13 +339,14 @@ export default function ProfileClient() {
     }
   };
 
-  const currentRole = profile.role ?? 'creator';
-  const isSuperAdmin = currentRole === 'superadmin';
-  const isAdmin = currentRole === 'admin' || isSuperAdmin;
-  const isMcOnly = currentRole === 'mc';
-  const canUpload = !isMcOnly;
-  const canUploadAcapellas = currentRole === 'mc';
-  const canWriteArticles = isAdmin;
+const currentRole = profile.role ?? 'creator';
+const isSuperAdmin = currentRole === 'superadmin';
+const isCurator = currentRole === 'curator';
+const isAdmin = currentRole === 'admin' || isSuperAdmin || isCurator;
+const isMcOnly = currentRole === 'mc';
+const canUpload = !isMcOnly;
+const canUploadAcapellas = currentRole === 'mc';
+const canWriteArticles = isAdmin;
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
