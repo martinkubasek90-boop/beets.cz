@@ -7,6 +7,7 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from './global-player-provider';
+import { FireButton } from './fire-button';
 
 async function sendNotificationSafe(
   supabase: ReturnType<typeof createClient>,
@@ -1477,6 +1478,9 @@ export default function PublicProfileClient({
                             </p>
                           </div>
                         </div>
+                        {currentUserId && (
+                          <FireButton itemType="beat" itemId={String(beat.id)} className="self-start md:self-center" />
+                        )}
                         <button
                           onClick={() =>
                             handlePlayTrack({
@@ -1574,7 +1578,10 @@ export default function PublicProfileClient({
                         )}
                       </div>
                   <div className="space-y-1">
-                    <p className="text-lg font-semibold text-white">{project.title}</p>
+                    <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
+                      <span>{project.title}</span>
+                      {currentUserId && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
+                    </div>
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
                     </p>

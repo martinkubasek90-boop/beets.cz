@@ -6,6 +6,7 @@ import { createClient } from '../lib/supabase/client';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import { useGlobalPlayer } from '@/components/global-player-provider';
+import { FireButton } from '@/components/fire-button';
 import { MainNav } from '@/components/main-nav';
 
 const CMS_KEYS = [
@@ -1340,19 +1341,22 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <div className="text-center space-y-1">
-                    <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                      {project.user_id && project.author_name ? (
-                        <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
-                          Autor: {project.author_name}
+                    <div className="text-center space-y-1">
+                      <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                        {project.user_id && project.author_name ? (
+                          <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
+                            Autor: {project.author_name}
                         </Link>
                       ) : project.author_name ? (
                         <>Autor: {project.author_name}</>
                       ) : (
                         'Autor projektu'
-                      )}
-                    </p>
-                    <div className="text-lg font-semibold text-white">{project.title}</div>
+                        )}
+                      </p>
+                    <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
+                      <span>{project.title}</span>
+                      {isLoggedIn && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
+                    </div>
                   <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                     Beat tape / EP
                   </div>
@@ -1806,7 +1810,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+                    <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
                       <button
                         className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
@@ -1821,6 +1825,7 @@ export default function Home() {
                       >
                         {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
                       </button>
+                      {isLoggedIn && <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />}
                       <div className="flex-1">
                         <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
                         <div className="mt-2 space-y-1">
