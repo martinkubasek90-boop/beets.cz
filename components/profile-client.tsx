@@ -102,14 +102,6 @@ type BlogPost = {
   published?: boolean | null;
 };
 
-type InboxMessage = {
-  id: number;
-  from: string;
-  preview: string;
-  time: string;
-  unread?: boolean;
-};
-
 type UserSuggestion = {
   id: string;
   display_name: string | null;
