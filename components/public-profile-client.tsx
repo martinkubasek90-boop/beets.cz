@@ -1483,7 +1483,7 @@ export default function PublicProfileClient({
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
-                      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
+                      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
                         {currentUserRole === 'curator' && (
                           <button
                             onClick={() => handleCuratorStar('beat', String(beat.id))}
@@ -1493,7 +1493,7 @@ export default function PublicProfileClient({
                             ★
                           </button>
                         )}
-                        <FireButton itemType="beat" itemId={String(beat.id)} className="scale-100" />
+                        <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
                       </div>
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
@@ -1599,7 +1599,7 @@ export default function PublicProfileClient({
                           }
                     }
                   >
-                    <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
+                    <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
                       {currentUserRole === 'curator' && (
                         <button
                           onClick={() => handleCuratorStar('project', `project-${project.id}`)}
