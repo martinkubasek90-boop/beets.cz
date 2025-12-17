@@ -15,7 +15,7 @@ type Track = {
   url: string;
   cover_url?: string | null;
   user_id?: string | null;
-  item_type?: 'beat' | 'project' | 'collab';
+  item_type?: 'beat' | 'project' | 'collab' | 'acapella';
   meta?: TrackMeta;
 };
 
@@ -25,6 +25,7 @@ type PlayerCtx = {
   currentTime: number;
   duration: number;
   play: (track: Track) => void;
+  setQueue: (tracks: Track[], startId?: Track["id"], autoplay?: boolean) => void;
   toggle: () => void;
   pause: () => void;
   seek: (pct: number) => void;
@@ -50,6 +51,8 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   const onEndedRef = useRef<(() => void) | null>(null);
   const onNextRef = useRef<(() => void) | null>(null);
   const onPrevRef = useRef<(() => void) | null>(null);
+  const queueRef = useRef<Track[]>([]);
+  const queueIdxRef = useRef<number>(-1);
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -146,6 +149,71 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     [handlePrevDefault]
   );
 
+  const setQueue = useCallback(
+    (tracks: Track[], startId?: Track["id"], autoplay = true) => {
+      queueRef.current = tracks ?? [];
+      let startIdx = 0;
+      if (startId !== undefined) {
+        const byId = queueRef.current.findIndex((t) => String(t.id) === String(startId));
+        if (byId >= 0) startIdx = byId;
+      }
+      queueIdxRef.current = startIdx;
+
+      const playAt = (idx: number) => {
+        const next = queueRef.current[idx];
+        if (!next) return;
+        queueIdxRef.current = idx;
+        play(next);
+      };
+
+      if (!queueRef.current.length) {
+        pause();
+        setCurrent(null);
+        setDuration(0);
+        setCurrentTime(0);
+        setOnNext(null);
+        setOnPrev(null);
+        setOnEnded(null);
+        return;
+      }
+
+      const onNext = () => {
+        const nextIdx = queueIdxRef.current + 1;
+        if (nextIdx < queueRef.current.length) {
+          playAt(nextIdx);
+        } else {
+          pause();
+        }
+      };
+      const onPrev = () => {
+        const prevIdx = queueIdxRef.current - 1;
+        if (prevIdx >= 0) {
+          playAt(prevIdx);
+        }
+      };
+      const onEnded = () => {
+        const nextIdx = queueIdxRef.current + 1;
+        if (nextIdx < queueRef.current.length) {
+          playAt(nextIdx);
+        } else {
+          setIsPlaying(false);
+        }
+      };
+
+      setOnNext(onNext);
+      setOnPrev(onPrev);
+      setOnEnded(onEnded);
+
+      if (autoplay) {
+        playAt(startIdx);
+      } else {
+        const target = queueRef.current[startIdx];
+        if (target) setCurrent(target);
+      }
+    },
+    [pause, play, setOnEnded, setOnNext, setOnPrev]
+  );
+
   useEffect(() => {
     if (!onNextRef.current) {
       onNextRef.current = handleNextDefault;
@@ -156,8 +224,21 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   }, [handleNextDefault, handlePrevDefault]);
 
   const value = useMemo(
-    () => ({ current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev }),
-    [current, isPlaying, currentTime, duration, play, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
+    () => ({
+      current,
+      isPlaying,
+      currentTime,
+      duration,
+      play,
+      setQueue,
+      toggle,
+      pause,
+      seek,
+      setOnEnded,
+      setOnNext,
+      setOnPrev,
+    }),
+    [current, isPlaying, currentTime, duration, play, setQueue, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
   );
 
   const derivedItemType =
