@@ -381,7 +381,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
 
   const heroName = profile?.display_name || 'Profil';
   const currentCover = currentTrack?.cover_url || null;
-  const currentSubtitle = currentTrack?.subtitle || profile?.display_name || null;
+  const currentSubtitle = (currentTrack as any)?.subtitle || profile?.display_name || null;
   const progressRatio = duration ? Math.min(currentTime / duration, 1) : 0;
   const lastSeenMs = profile?.last_seen_at ? new Date(profile.last_seen_at).getTime() : 0;
   const isOnline = lastSeenMs && Date.now() - lastSeenMs < 5 * 60 * 1000;
