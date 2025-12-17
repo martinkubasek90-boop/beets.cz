@@ -450,7 +450,6 @@ const canWriteArticles = isAdmin;
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
   const [currentAcapella, setCurrentAcapella] = useState<AcapellaItem | null>(null);
   const [playerMessage, setPlayerMessage] = useState<string | null>(null);
-  const [openBeatMenuId, setOpenBeatMenuId] = useState<number | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBpm, setEditBpm] = useState('');
@@ -3087,40 +3086,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         >
                           {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? '▮▮' : '▶'}
                         </button>
-                        <div className="relative">
+                        <button
+                          onClick={() => startEditBeat(beat)}
+                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                        >
+                          Upravit
+                        </button>
+                        {SHOW_SHARE_FEATURE && (
                           <button
-                            onClick={() =>
-                              setOpenBeatMenuId((prev) => (prev === beat.id ? null : beat.id))
-                            }
-                            className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            onClick={() => void createShareLink('beat', String(beat.id))}
+                            className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
                           >
-                            •••
+                            Sdílet
                           </button>
-                          {openBeatMenuId === beat.id && (
-                            <div className="absolute right-0 top-10 z-20 min-w-[140px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-                              <button
-                                onClick={() => startEditBeat(beat)}
-                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                              >
-                                Upravit beat
-                              </button>
-                              {SHOW_SHARE_FEATURE && (
-                                <button
-                                  onClick={() => void createShareLink('beat', String(beat.id))}
-                                  className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                                >
-                                  Sdílet
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteBeat(beat.id)}
-                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] text-red-400"
-                              >
-                                Smazat beat
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        )}
+                        <button
+                          onClick={() => handleDeleteBeat(beat.id)}
+                          className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                        >
+                          Smazat
+                        </button>
                       </div>
                       {editingBeatId === beat.id && (
                         <div className="mt-3 space-y-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-3">
