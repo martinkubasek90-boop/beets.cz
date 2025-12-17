@@ -3558,43 +3558,51 @@ function handleFieldChange(field: keyof Profile, value: string) {
                             {project.description || 'Bez popisu'}
                           </p>
                         </div>
-                        <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
-                          <span>Projekt</span>
-                          <button
-                            onClick={() => {
-                              setEditingProject(project);
-                              setProjectEditTitle(project.title || '');
-                              setProjectEditDescription(project.description || '');
-                              const tracks = Array.isArray(project.tracks_json)
-                                ? project.tracks_json.map((t: any) => {
-                                    const path = t.path || null;
-                                    const urlFallback =
-                                      path && (!t.url || t.url.startsWith('http') === false)
-                                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                        : '';
-                                    return {
-                                      name: t.name || '',
-                                      url: t.url || urlFallback,
-                                      path,
-                                    };
-                                  })
-                                : [];
-                              setProjectEditTracks(
-                                tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                              );
-                            }}
-                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                          >
-                            Upravit
-                          </button>
-                          {SHOW_SHARE_FEATURE && (
+                        <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
-                              onClick={() => void createShareLink('project', String(project.id))}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              onClick={() => {
+                                setEditingProject(project);
+                                setProjectEditTitle(project.title || '');
+                                setProjectEditDescription(project.description || '');
+                                const tracks = Array.isArray(project.tracks_json)
+                                  ? project.tracks_json.map((t: any) => {
+                                      const path = t.path || null;
+                                      const urlFallback =
+                                        path && (!t.url || t.url.startsWith('http') === false)
+                                          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                          : '';
+                                      return {
+                                        name: t.name || '',
+                                        url: t.url || urlFallback,
+                                        path,
+                                      };
+                                    })
+                                  : [];
+                                setProjectEditTracks(
+                                  tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                                );
+                              }}
+                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
                             >
-                              Sdílet
+                              Upravit
                             </button>
-                          )}
+                            {SHOW_SHARE_FEATURE && (
+                              <button
+                                onClick={() => void createShareLink('project', String(project.id))}
+                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Sdílet
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                            >
+                              Smazat
+                            </button>
+                          </div>
                           <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                             <label className="text-[var(--mpc-muted)]">Přístup</label>
                             <select
