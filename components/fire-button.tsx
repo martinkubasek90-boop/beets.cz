@@ -25,7 +25,6 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [usedThisWeek, setUsedThisWeek] = useState<number>(0);
-  const [role, setRole] = useState<string | null>(null);
 
   const flameSize = useMemo(() => {
     if (count >= 10) return "h-12 w-12";
@@ -39,13 +38,6 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
       try {
         const { data: userData } = await supabase.auth.getUser();
         const userId = userData.user?.id || null;
-
-        if (userId) {
-          const { data: prof } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-          setRole((prof as any)?.role ?? null);
-        } else {
-          setRole(null);
-        }
 
         const { data: total, error: totalErr } = await supabase
           .from("fires")
@@ -88,8 +80,7 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
         return;
       }
 
-      // Limity: běžně 10/týden, kurátor 30/týden
-      const weeklyLimit = role === "curator" ? 30 : 10;
+      // Limit 10 ohňů týdně
       const week = weekStartIso();
       const { data: weekly, error: weeklyErr } = await supabase
         .from("fires")
@@ -98,8 +89,8 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
         .eq("week_start", week);
       if (weeklyErr) throw weeklyErr;
       const already = weekly?.length ?? 0;
-      if (already >= weeklyLimit) {
-        setError(`Vyčerpal(a) jsi limit ${weeklyLimit} ohňů pro tento týden.`);
+      if (already >= 10) {
+        setError("Vyčerpal(a) jsi limit 10 ohňů pro tento týden.");
         return;
       }
 
