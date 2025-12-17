@@ -1394,7 +1394,6 @@ export default function ProfileClient() {
       await sendDirectMessage(targetUserId, newMessage.to.trim(), newMessage.body.trim());
       setSelectedThreadId(targetUserId);
       setNewMessage({ to: '', toUserId: '', body: '' });
-      setExpandedThread(targetUserId);
     } catch (err) {
       console.error('Chyba při odeslání zprávy:', err);
       setMessagesError(err instanceof Error ? err.message : 'Nepodařilo se odeslat zprávu.');
