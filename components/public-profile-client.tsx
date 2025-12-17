@@ -1478,9 +1478,7 @@ export default function PublicProfileClient({
                             </p>
                           </div>
                         </div>
-                        {currentUserId && (
-                          <FireButton itemType="beat" itemId={String(beat.id)} className="self-start md:self-center" />
-                        )}
+                        <FireButton itemType="beat" itemId={String(beat.id)} className="self-start md:self-center" />
                         <button
                           onClick={() =>
                             handlePlayTrack({
@@ -1580,7 +1578,7 @@ export default function PublicProfileClient({
                   <div className="space-y-1">
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
-                      {currentUserId && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
+                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}

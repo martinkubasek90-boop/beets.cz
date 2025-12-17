@@ -1355,7 +1355,7 @@ export default function Home() {
                       </p>
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
-                      {isLoggedIn && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
+                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                   <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                     Beat tape / EP
@@ -1825,7 +1825,7 @@ export default function Home() {
                       >
                         {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
                       </button>
-                      {isLoggedIn && <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />}
+                      <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
                       <div className="flex-1">
                         <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
                         <div className="mt-2 space-y-1">
