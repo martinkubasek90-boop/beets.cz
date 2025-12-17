@@ -633,7 +633,7 @@ export default function ProfileClient() {
           .eq('collab_participants.user_id', userId)
           .order('updated_at', { ascending: false });
         if (error) throw error;
-        const mapped =
+        const mapped: CollabThread[] =
           data?.map((t: any) => ({
             id: t.id as string,
             title: t.title as string,
