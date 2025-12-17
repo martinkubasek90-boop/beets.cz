@@ -129,6 +129,17 @@ type InboxMessage = {
   unread?: boolean;
 };
 
+type DirectMessage = {
+  id: number | string;
+  user_id: string;
+  to_user_id: string;
+  from_name?: string | null;
+  to_name?: string | null;
+  body: string;
+  created_at?: string | null;
+  unread?: boolean;
+};
+
 const demoCollabMessages: InboxMessage[] = [
   {
     id: 1,
