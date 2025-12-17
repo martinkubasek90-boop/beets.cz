@@ -270,15 +270,14 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
       if (byParticipant.error) throw byParticipant.error;
 
       const mapThread = (thread: any): Collaboration => {
-        const participants = Array.isArray(thread.collab_participants)
-          ? Array.from(
-              new Set(
-                thread.collab_participants
-                  .map((p: any) => p.profiles?.display_name || p.user_id)
-                  .filter(Boolean)
-              )
-            )
+        const participantsRaw = Array.isArray(thread.collab_participants)
+          ? thread.collab_participants.map((p: any) => p.profiles?.display_name || p.user_id)
           : [];
+        const participants = Array.from(
+          new Set(
+            participantsRaw.filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
+          )
+        );
         return {
           id: thread.id,
           title: buildCollabLabel(participants),
