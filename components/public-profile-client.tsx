@@ -1524,7 +1524,7 @@ export default function PublicProfileClient({
                             })
                           }
                           disabled={!beat.audio_url}
-                          className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
+                          className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0 md:mr-6"
                         >
                           {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
                         </button>
@@ -1599,7 +1599,7 @@ export default function PublicProfileClient({
                           }
                     }
                   >
-                    <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
+                    <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
                       {currentUserRole === 'curator' && (
                         <button
                           onClick={() => handleCuratorStar('project', `project-${project.id}`)}
