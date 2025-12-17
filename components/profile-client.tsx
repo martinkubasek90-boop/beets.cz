@@ -2966,36 +2966,40 @@ export default function ProfileClient() {
               )}
 
               <div className="space-y-3">
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`rounded-lg border px-4 py-3 text-sm transition ${msg.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
-                  >
-                    <div className="flex items-center justify-between text-[12px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-[var(--mpc-light)]">{msg.from}</span>
-                        {msg.unread && (
-                          <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                            Nové
-                          </span>
-                        )}
+                {messages.map((msg) => {
+                  const isFromMe = msg.user_id === userId;
+                  const senderName = isFromMe ? msg.to_name || 'Neznámý' : msg.from_name || 'Neznámý';
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`rounded-lg border px-4 py-3 text-sm transition ${msg.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
+                    >
+                      <div className="flex items-center justify-between text-[12px]">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[var(--mpc-light)]">{senderName}</span>
+                          {msg.unread && (
+                            <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                              Nové
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[var(--mpc-muted)]">{formatRelativeTime(msg.created_at)}</span>
                       </div>
-                      <span className="text-[var(--mpc-muted)]">{msg.time}</span>
+                      <p className="mt-1 text-[var(--mpc-muted)]">{msg.body}</p>
+                      <div className="mt-2 flex items-center gap-2 text-[11px]">
+                        <button
+                          onClick={() => handleReplyToCollab(msg)}
+                          className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                        >
+                          Odpovědět
+                        </button>
+                        <button className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]">
+                          Otevřít vlákno
+                        </button>
+                      </div>
                     </div>
-                    <p className="mt-1 text-[var(--mpc-muted)]">{msg.preview}</p>
-                    <div className="mt-2 flex items-center gap-2 text-[11px]">
-                      <button
-                        onClick={() => handleReplyToCollab(msg)}
-                        className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                      >
-                        Odpovědět
-                      </button>
-                      <button className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]">
-                        Otevřít vlákno
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <form onSubmit={handleSendCollabMessage} id="collab-new-message" className="mt-4 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4">
