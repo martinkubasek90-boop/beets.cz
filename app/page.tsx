@@ -1681,6 +1681,18 @@ export default function Home() {
                 key={beat.id}
                 className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto"
               >
+                <div className="absolute right-4 top-4 flex items-center gap-2">
+                  {userRole === 'curator' && (
+                    <button
+                      onClick={() => handleCuratorStar('beat', String(beat.id))}
+                      className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                      title="Kurátorská hvězda"
+                    >
+                      ★
+                    </button>
+                  )}
+                  <FireButton itemType="beat" itemId={String(beat.id)} className="scale-100" />
+                </div>
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
                     {beat.user_id ? (
@@ -1735,16 +1747,6 @@ export default function Home() {
                     >
                       {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
                     </button>
-                    {userRole === 'curator' && (
-                      <button
-                        onClick={() => handleCuratorStar('beat', String(beat.id))}
-                        className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                        title="Kurátorská hvězda"
-                      >
-                        ★
-                      </button>
-                    )}
-                    <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
                     <div className="flex-1">
                       <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
                       <div className="mt-2 space-y-1">

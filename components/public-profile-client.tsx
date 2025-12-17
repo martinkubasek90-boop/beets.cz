@@ -1483,6 +1483,18 @@ export default function PublicProfileClient({
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
+                      <div className="absolute right-4 top-4 flex items-center gap-2">
+                        {currentUserRole === 'curator' && (
+                          <button
+                            onClick={() => handleCuratorStar('beat', String(beat.id))}
+                            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                            title="Kurátorská hvězda"
+                          >
+                            ★
+                          </button>
+                        )}
+                        <FireButton itemType="beat" itemId={String(beat.id)} className="scale-100" />
+                      </div>
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
                           <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
@@ -1500,16 +1512,6 @@ export default function PublicProfileClient({
                             </p>
                           </div>
                         </div>
-                        {currentUserRole === 'curator' && (
-                          <button
-                            onClick={() => handleCuratorStar('beat', String(beat.id))}
-                            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                            title="Kurátorská hvězda"
-                          >
-                            ★
-                          </button>
-                        )}
-                        <FireButton itemType="beat" itemId={String(beat.id)} className="self-start md:self-center" />
                         <button
                           onClick={() =>
                             handlePlayTrack({
@@ -1597,6 +1599,18 @@ export default function PublicProfileClient({
                           }
                     }
                   >
+                    <div className="absolute right-4 top-4 flex items-center gap-2">
+                      {currentUserRole === 'curator' && (
+                        <button
+                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                          title="Kurátorská hvězda"
+                        >
+                          ★
+                        </button>
+                      )}
+                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-100" />
+                    </div>
                     <div className="flex flex-col items-center gap-3 text-center">
                       <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
                         {project.cover_url ? (
@@ -1609,16 +1623,6 @@ export default function PublicProfileClient({
                     <div className="space-y-1">
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
-                      {currentUserRole === 'curator' && (
-                        <button
-                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
-                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                          title="Kurátorská hvězda"
-                        >
-                          ★
-                        </button>
-                      )}
-                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
