@@ -1478,12 +1478,12 @@ export default function PublicProfileClient({
                     className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
                   >
                     <div
-                      className="relative overflow-hidden rounded-xl border border-white/5 p-4"
+                      className="relative overflow-hidden rounded-xl border border-white/5 p-4 pr-16"
                       style={{
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
-                      <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
+                      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-3 py-2 backdrop-blur">
                         {currentUserRole === 'curator' && (
                           <button
                             onClick={() => handleCuratorStar('beat', String(beat.id))}
