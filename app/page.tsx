@@ -599,12 +599,12 @@ export default function Home() {
       const { data: existing } = await supabase
         .from("fires")
         .select("id")
-        .eq("item_type", itemType)
+        .eq("item_type", "curator_star")
         .eq("item_id", itemId)
         .eq("user_id", userId)
         .maybeSingle();
       if (!existing) {
-        await supabase.from("fires").insert({ item_type: itemType, item_id: itemId, user_id: userId });
+        await supabase.from("fires").insert({ item_type: "curator_star", item_id: itemId, user_id: userId });
       }
     } catch (err) {
       console.error("Chyba při přidání kurátorské hvězdy:", err);

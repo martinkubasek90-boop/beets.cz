@@ -79,7 +79,7 @@ export default function ProjectsPage() {
         const { data: fireRows, error: fireErr } = await supabase
           .from("fires")
           .select("item_id,user_id")
-          .eq("item_type", "project");
+          .eq("item_type", "curator_star");
         if (fireErr) throw fireErr;
         const fires = (fireRows as any[]) ?? [];
 

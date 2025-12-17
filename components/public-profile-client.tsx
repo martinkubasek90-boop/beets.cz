@@ -244,12 +244,12 @@ export default function PublicProfileClient({
       const { data: existing } = await supabase
         .from('fires')
         .select('id')
-        .eq('item_type', itemType)
+        .eq('item_type', 'curator_star')
         .eq('item_id', itemId)
         .eq('user_id', currentUserId)
         .maybeSingle();
       if (!existing) {
-        await supabase.from('fires').insert({ item_type: itemType, item_id: itemId, user_id: currentUserId });
+        await supabase.from('fires').insert({ item_type: 'curator_star', item_id: itemId, user_id: currentUserId });
       }
     } catch (err) {
       console.error('Chyba při přidání kurátorské hvězdy:', err);

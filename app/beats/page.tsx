@@ -77,7 +77,7 @@ export default function BeatsPage() {
         const { data, error: err } = await supabase
           .from('fires')
           .select('item_id, created_at, user_id')
-          .eq('item_type', 'beat')
+          .eq('item_type', 'curator_star')
           .gte('created_at', startOfYear);
         if (err) throw err;
         const rows = (data as any[]) ?? [];
