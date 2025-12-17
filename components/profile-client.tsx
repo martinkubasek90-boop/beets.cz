@@ -5024,3 +5024,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
     </main>
 );
 }
+  async function handleDeleteProject(id: number) {
+    if (!confirm('Opravdu smazat tento projekt?')) return;
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', id).eq('user_id', userId);
+      if (error) throw error;
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      if (editingProject?.id === id) {
+        setEditingProject(null);
+      }
+    } catch (err) {
+      console.error('Chyba při mazání projektu:', err);
+      setPlayerMessage('Nepodařilo se smazat projekt.');
+    }
+  }
