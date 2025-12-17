@@ -1719,7 +1719,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
       const { error } = await supabase.from('beats').delete().eq('id', id);
       if (error) throw error;
       setBeats((prev) => prev.filter((b) => b.id !== id));
-      setOpenBeatMenuId(null);
       if (editingBeatId === id) {
         setEditingBeatId(null);
       }
