@@ -2770,8 +2770,11 @@ export default function ProfileClient() {
                     setEditingPostId(null);
                     setBlogForm({
                       title: '',
+                      titleEn: '',
                       excerpt: '',
+                      excerptEn: '',
                       body: '',
+                      bodyEn: '',
                       author: profile.display_name || '',
                       date: '',
                       coverUrl: '',
