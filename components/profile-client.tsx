@@ -1844,6 +1844,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
+  async function handleDeleteProject(id: string | number) {
+    if (!confirm('Opravdu smazat tento projekt?')) return;
+    const targetId = typeof id === 'string' ? Number(id) : id;
+    if (!Number.isFinite(targetId)) {
+      setPlayerMessage('Neplatné ID projektu.');
+      return;
+    }
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', targetId).eq('user_id', userId);
+      if (error) throw error;
+      setProjects((prev) => prev.filter((p) => String(p.id) !== String(id)));
+      if (editingProject?.id && String(editingProject.id) === String(id)) {
+        setEditingProject(null);
+      }
+    } catch (err) {
+      console.error('Chyba při mazání projektu:', err);
+      setPlayerMessage('Nepodařilo se smazat projekt.');
+    }
+  }
+
   const handleRevokeGrant = async (projectId: string, grantId: string) => {
     try {
       const { error } = await supabase.from('project_access_grants').delete().eq('id', grantId);
@@ -5022,24 +5042,5 @@ function handleFieldChange(field: keyof Profile, value: string) {
         </div>
       </section>
     </main>
-);
+  );
 }
-  async function handleDeleteProject(id: string | number) {
-    if (!confirm('Opravdu smazat tento projekt?')) return;
-    const targetId = typeof id === 'string' ? Number(id) : id;
-    if (!Number.isFinite(targetId)) {
-      setPlayerMessage('Neplatné ID projektu.');
-      return;
-    }
-    try {
-      const { error } = await supabase.from('projects').delete().eq('id', targetId).eq('user_id', userId);
-      if (error) throw error;
-      setProjects((prev) => prev.filter((p) => String(p.id) !== String(id)));
-      if (editingProject?.id && String(editingProject.id) === String(id)) {
-        setEditingProject(null);
-      }
-    } catch (err) {
-      console.error('Chyba při mazání projektu:', err);
-      setPlayerMessage('Nepodařilo se smazat projekt.');
-    }
-  }
