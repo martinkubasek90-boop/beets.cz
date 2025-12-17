@@ -1740,7 +1740,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setEditBpm(beat.bpm ? String(beat.bpm) : '');
     setEditMood(beat.mood || '');
     setEditCoverUrl(beat.cover_url || '');
-    setOpenBeatMenuId(null);
   }
 
   async function handleSaveBeat() {
