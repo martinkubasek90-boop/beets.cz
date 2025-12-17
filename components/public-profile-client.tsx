@@ -270,7 +270,7 @@ export default function PublicProfileClient({ profileId, initialProfile }: { pro
       if (byParticipant.error) throw byParticipant.error;
 
       const mapThread = (thread: any): Collaboration => {
-        const participantsRaw = Array.isArray(thread.collab_participants)
+        const participantsRaw: unknown[] = Array.isArray(thread.collab_participants)
           ? thread.collab_participants.map((p: any) => p.profiles?.display_name || p.user_id)
           : [];
         const participants = Array.from(
