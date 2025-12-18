@@ -132,7 +132,7 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
         onClick={handleClick}
         disabled={loading || usedThisWeek >= weeklyLimit}
         className={cn(
-          "flex items-center justify-center rounded-full border border-white/10 bg-white/5 text-orange-400 transition hover:bg-orange-500/20 disabled:opacity-50",
+          "flex items-center justify-center rounded-full border border-[var(--mpc-accent-2)] bg-[var(--mpc-accent-2)] text-orange-200 shadow-[0_6px_16px_rgba(0,86,63,0.35)] transition hover:brightness-110 disabled:opacity-50",
           flameSize
         )}
         title="Přidat oheň"
