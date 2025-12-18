@@ -8,6 +8,7 @@ type FireButtonProps = {
   itemType: "beat" | "project" | "acapella";
   itemId: string;
   className?: string;
+  variant?: "default" | "accent";
 };
 
 const weekStartIso = () => {
@@ -18,7 +19,7 @@ const weekStartIso = () => {
   return monday.toISOString().slice(0, 10);
 };
 
-export function FireButton({ itemType, itemId, className }: FireButtonProps) {
+export function FireButton({ itemType, itemId, className, variant = "default" }: FireButtonProps) {
   const supabase = createClient();
   const [count, setCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
@@ -132,7 +133,10 @@ export function FireButton({ itemType, itemId, className }: FireButtonProps) {
         onClick={handleClick}
         disabled={loading || usedThisWeek >= weeklyLimit}
         className={cn(
-          "flex items-center justify-center rounded-full border border-[var(--mpc-accent-2)] bg-[var(--mpc-accent-2)] text-orange-200 shadow-[0_6px_16px_rgba(0,86,63,0.35)] transition hover:brightness-110 disabled:opacity-50",
+          "flex items-center justify-center rounded-full transition disabled:opacity-50",
+          variant === "accent"
+            ? "border-none bg-[var(--mpc-accent-2)] text-white shadow-[0_6px_16px_rgba(0,86,63,0.35)] hover:brightness-110"
+            : "border border-white/10 bg-white/5 text-orange-400 hover:bg-orange-500/20",
           flameSize
         )}
         title="Přidat oheň"

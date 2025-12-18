@@ -1493,7 +1493,7 @@ export default function PublicProfileClient({
                             ★
                           </button>
                         )}
-                        <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+                        <FireButton itemType="beat" itemId={String(beat.id)} variant="accent" className="scale-90" />
                       </div>
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
