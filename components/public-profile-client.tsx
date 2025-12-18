@@ -1483,7 +1483,7 @@ export default function PublicProfileClient({
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
-                      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-3 py-2 backdrop-blur">
+                      <div className="absolute right-3 top-3 flex items-center gap-2">
                         {currentUserRole === 'curator' && (
                           <button
                             onClick={() => handleCuratorStar('beat', String(beat.id))}
