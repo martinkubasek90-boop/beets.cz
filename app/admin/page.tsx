@@ -17,6 +17,28 @@ type VideoItem = {
 
 type CmsField = { key: string; label: string; description?: string; defaultValue: string; category: string };
 
+const extractEmbedSrc = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes('<iframe')) {
+    const match = trimmed.match(/src=["']([^"']+)["']/i);
+    return match?.[1] ?? null;
+  }
+  return trimmed;
+};
+
+const isInvalidEmbed = (value: string) => {
+  const src = extractEmbedSrc(value);
+  if (!src) return true;
+  if (src.includes('undefined')) return true;
+  try {
+    const url = new URL(src);
+    return url.protocol !== 'http:' && url.protocol !== 'https:';
+  } catch {
+    return true;
+  }
+};
+
 const fields: CmsField[] = [
   {
     key: 'home.hero.title',
@@ -303,6 +325,8 @@ export default function AdminPage() {
             <h2 className="text-base font-semibold text-white">{category}</h2>
             {items.map((field) => {
               const current = entries[field.key] ?? field.defaultValue;
+              const isEmbedField = field.key === 'stream.embed.url' || field.key === 'live.embed.url';
+              const showEmbedWarning = isEmbedField && current.trim() !== '' && isInvalidEmbed(current);
               return (
                 <div key={field.key} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
@@ -325,6 +349,11 @@ export default function AdminPage() {
                     value={current}
                     onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
                   />
+                  {showEmbedWarning && (
+                    <p className="mt-2 text-[12px] text-red-300">
+                      Neplatný embed. Vlož přímý URL (např. https://www.youtube.com/embed/VIDEO_ID) nebo celé &lt;iframe&gt; s platným src.
+                    </p>
+                  )}
                 </div>
               );
             })}

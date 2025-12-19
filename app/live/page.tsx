@@ -24,6 +24,17 @@ type LiveMessage = {
   created_at: string;
 };
 
+const normalizeEmbedUrl = (value?: string | null) => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes('<iframe')) {
+    const match = trimmed.match(/src=["']([^"']+)["']/i);
+    return match?.[1] || null;
+  }
+  return trimmed;
+};
+
 export default function LivePage() {
   const supabase = createClient();
   const [events, setEvents] = useState<LiveEvent[]>([]);
@@ -39,6 +50,7 @@ export default function LivePage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const liveEmbedUrl = normalizeEmbedUrl(cmsLive.embedUrl);
 
   // session
   useEffect(() => {
@@ -223,11 +235,11 @@ export default function LivePage() {
           </Link>
         </div>
 
-        {cmsLive.embedUrl && (
+        {liveEmbedUrl && (
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
             <div className="relative w-full overflow-hidden rounded-xl border border-white/10 bg-black/60" style={{ paddingTop: '56.25%' }}>
               <iframe
-                src={cmsLive.embedUrl}
+                src={liveEmbedUrl}
                 title="Live embed"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen

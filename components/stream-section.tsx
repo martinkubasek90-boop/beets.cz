@@ -23,6 +23,17 @@ type StreamSectionProps = {
   embed?: boolean;
 };
 
+const normalizeEmbedUrl = (value?: string | null) => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes('<iframe')) {
+    const match = trimmed.match(/src=["']([^"']+)["']/i);
+    return match?.[1] || null;
+  }
+  return trimmed;
+};
+
 export default function StreamSection({ embed = true }: StreamSectionProps) {
   const supabase = createClient();
   const { lang } = useLanguage('cs');
@@ -106,7 +117,9 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const title = nextStreamInfo?.title || defaultStreamInfo.title;
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
   const descriptionWithCms = description || cmsStream.description || defaultStreamInfo.description;
-  const embedUrl = nextStreamInfo?.embedUrl || cmsStream.embedUrl || defaultStreamInfo.embedUrl || null;
+  const embedUrl = normalizeEmbedUrl(
+    nextStreamInfo?.embedUrl || cmsStream.embedUrl || defaultStreamInfo.embedUrl || null
+  );
 
   return (
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
