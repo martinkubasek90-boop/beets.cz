@@ -27,8 +27,41 @@ const extractEmbedSrc = (value: string) => {
   return trimmed;
 };
 
-const isInvalidEmbed = (value: string) => {
+const normalizeEmbedInput = (value: string) => {
   const src = extractEmbedSrc(value);
+  if (!src) return '';
+  try {
+    const url = new URL(src);
+    const hostname = url.hostname.replace(/^www\./, '');
+    if (hostname === 'youtu.be') {
+      const id = url.pathname.split('/').filter(Boolean)[0];
+      return id ? `https://www.youtube.com/embed/${id}` : src;
+    }
+    if (hostname.endsWith('youtube.com')) {
+      if (url.pathname.startsWith('/watch')) {
+        const id = url.searchParams.get('v');
+        return id ? `https://www.youtube.com/embed/${id}` : src;
+      }
+      if (url.pathname.startsWith('/live/')) {
+        const id = url.pathname.split('/').filter(Boolean)[1];
+        return id ? `https://www.youtube.com/embed/${id}` : src;
+      }
+      if (url.pathname.startsWith('/shorts/')) {
+        const id = url.pathname.split('/').filter(Boolean)[1];
+        return id ? `https://www.youtube.com/embed/${id}` : src;
+      }
+      if (url.pathname.startsWith('/embed/')) {
+        return src;
+      }
+    }
+    return src;
+  } catch {
+    return src;
+  }
+};
+
+const isInvalidEmbed = (value: string) => {
+  const src = normalizeEmbedInput(value);
   if (!src) return true;
   if (src.includes('undefined')) return true;
   try {
@@ -242,15 +275,17 @@ export default function AdminPage() {
   const isAdmin = useMemo(() => role === 'admin' || role === 'superadmin', [role]);
 
   const handleSave = async (key: string, value: string) => {
+    const isEmbedField = key === 'stream.embed.url' || key === 'live.embed.url';
+    const normalizedValue = isEmbedField ? normalizeEmbedInput(value) : value;
     setSaving((prev) => ({ ...prev, [key]: true }));
     setError(null);
     try {
-      const { error } = await supabase.from('cms_content').upsert({ key, value });
+      const { error } = await supabase.from('cms_content').upsert({ key, value: normalizedValue });
       if (error) throw error;
-      setEntries((prev) => ({ ...prev, [key]: value }));
+      setEntries((prev) => ({ ...prev, [key]: normalizedValue }));
       if (key === 'home.video.items') {
         try {
-          const parsed = JSON.parse(value);
+          const parsed = JSON.parse(normalizedValue);
           if (Array.isArray(parsed)) {
             setVideos(
               parsed.map((v: any, idx: number) => ({
