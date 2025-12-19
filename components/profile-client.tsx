@@ -380,9 +380,10 @@ const canWriteArticles = isAdmin;
   const [startingCollabCall, setStartingCollabCall] = useState(false);
   const profileCompleteness = useMemo(() => {
     const missing: string[] = [];
+    const regionValue = editRegion.trim() || profile.region?.trim() || '';
     if (!profile.avatar_url) missing.push('avatar');
     if (!profile.bio?.trim()) missing.push('bio');
-    if (!profile.region?.trim()) missing.push('město/region');
+    if (!regionValue) missing.push('kraj');
     if (!profile.role) missing.push('role');
     if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
 
@@ -395,7 +396,7 @@ const canWriteArticles = isAdmin;
     const done = total - missing.length;
     const percent = Math.round((done / total) * 100);
     return { missing, percent };
-  }, [acapellas.length, beats.length, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
+  }, [acapellas.length, beats.length, editRegion, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -4549,7 +4550,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                        Kraj (povinné)
+                        Kraj
                       </label>
                       <select
                         value={editRegion}
