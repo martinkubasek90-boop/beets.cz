@@ -1511,7 +1511,7 @@ export default function PublicProfileClient({
                                 itemType="beat"
                                 itemId={String(beat.id)}
                                 variant="accent"
-                                className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                                className="ml-8 scale-110 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
                               />
                             </div>
                             <p className="text-[12px] text-[var(--mpc-muted)]">
