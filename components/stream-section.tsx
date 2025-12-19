@@ -13,9 +13,9 @@ type StreamInfo = {
 };
 
 const defaultStreamInfo: StreamInfo = {
-  title: 'Platformní live stream',
+  title: 'Meet',
   startsAt: 'Dnes v 20:00',
-  description: 'Zapni se a bav se s námi naživo.',
+  description: 'Pojďme se potkat naživo přes Google Meet.',
   embedUrl: process.env.NEXT_PUBLIC_STREAM_EMBED_URL || null,
 };
 
@@ -117,7 +117,7 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
   const title = nextStreamInfo?.title || defaultStreamInfo.title;
   const startsAt = nextStreamInfo?.startsAt || defaultStreamInfo.startsAt;
   const descriptionWithCms = description || cmsStream.description || defaultStreamInfo.description;
-  const embedUrl = normalizeEmbedUrl(
+  const meetUrl = normalizeEmbedUrl(
     nextStreamInfo?.embedUrl || cmsStream.embedUrl || defaultStreamInfo.embedUrl || null
   );
 
@@ -125,10 +125,10 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
     <section className="rounded-b-xl border border-t-0 border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
       <div className="mx-auto max-w-6xl space-y-4">
         <div className="flex flex-col gap-1 text-sm uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-          <span>{t('stream.heading', 'Stream')}</span>
+          <span>{t('stream.heading', 'Meet')}</span>
           <p className="text-[var(--mpc-light)] text-base font-semibold">{title}</p>
           <p className="text-[12px]">
-            {t('stream.next', 'Další stream')} {startsAt}
+            {t('stream.next', 'Další meet')} {startsAt}
           </p>
           {communityInvite && (
             <p className="text-[11px] text-[var(--mpc-accent)]">
@@ -136,24 +136,21 @@ export default function StreamSection({ embed = true }: StreamSectionProps) {
             </p>
           )}
         </div>
-        {embedUrl ? (
-          <div className="overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-black/70">
-            <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
-              <iframe
-                src={embedUrl}
-                title="Live stream"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                className="absolute inset-0 h-full w-full"
-              />
-            </div>
-            <p className="p-3 text-[11px] text-[var(--mpc-muted)]">{descriptionWithCms}</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-[var(--mpc-dark)] bg-black/60 p-4 text-sm text-[var(--mpc-light)]">
-            <p className="text-[var(--mpc-muted)]">Stream připravujeme.</p>
-          </div>
-        )}
+        <div className="rounded-2xl border border-[var(--mpc-dark)] bg-black/70 p-5">
+          <p className="text-sm text-[var(--mpc-light)]">{descriptionWithCms}</p>
+          {meetUrl ? (
+            <a
+              href={meetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)] hover:translate-y-[1px]"
+            >
+              Připojit se na Google Meet
+            </a>
+          ) : (
+            <p className="mt-3 text-[12px] text-[var(--mpc-muted)]">Meet link brzy doplníme.</p>
+          )}
+        </div>
       </div>
     </section>
   );

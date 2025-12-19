@@ -9,8 +9,8 @@ export default function StreamPage() {
       <header className="border-b border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/70 px-4 py-4 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Stream</p>
-            <h1 className="text-2xl font-bold text-white">Platformní live stream</h1>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Meet</p>
+            <h1 className="text-2xl font-bold text-white">Potkáme se na Google Meet</h1>
           </div>
           <Link
             href="/"

@@ -159,16 +159,16 @@ const fields: CmsField[] = [
   },
   {
     key: 'stream.description',
-    label: 'Stream – popis pod tlačítkem',
-    defaultValue: 'Zapni se a bav se s námi naživo.',
-    category: 'Stream',
+    label: 'Meet – popis pod tlačítkem',
+    defaultValue: 'Pojďme se potkat naživo přes Google Meet.',
+    category: 'Meet',
   },
   {
     key: 'stream.embed.url',
-    label: 'Stream – YouTube/iframe embed URL',
-    description: 'Například https://www.youtube.com/embed/VIDEO_ID nebo jiný iframe embed link.',
-    defaultValue: 'https://www.youtube.com/embed/BdzEQd1L0zk',
-    category: 'Stream',
+    label: 'Meet – Google Meet URL',
+    description: 'Vlož přímo odkaz na Google Meet (např. https://meet.google.com/xxx-xxxx-xxx).',
+    defaultValue: 'https://meet.google.com/',
+    category: 'Meet',
   },
   {
     key: 'live.embed.url',
