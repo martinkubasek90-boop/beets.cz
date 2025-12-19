@@ -1511,7 +1511,7 @@ export default function PublicProfileClient({
                                 itemType="beat"
                                 itemId={String(beat.id)}
                                 variant="accent"
-                                className="scale-90 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100 [&>div]:hidden [&>p]:hidden"
+                                className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
                               />
                             </div>
                             <p className="text-[12px] text-[var(--mpc-muted)]">
@@ -1606,7 +1606,7 @@ export default function PublicProfileClient({
                           }
                     }
                   >
-                    <div className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-black/60 px-3 py-2 backdrop-blur">
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
                       {currentUserRole === 'curator' && (
                         <button
                           onClick={() => handleCuratorStar('project', `project-${project.id}`)}
@@ -1616,7 +1616,11 @@ export default function PublicProfileClient({
                           ★
                         </button>
                       )}
-                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-100" />
+                      <FireButton
+                        itemType="project"
+                        itemId={`project-${project.id}`}
+                        className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                      />
                     </div>
                     <div className="flex flex-col items-center gap-3 text-center">
                       <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
