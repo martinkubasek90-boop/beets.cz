@@ -225,6 +225,12 @@ type ForumThreadSummary = {
   updated_at?: string | null;
 };
 
+type IncomingCall = {
+  id: string;
+  room_name: string;
+  caller_id: string;
+};
+
 type NewMessageForm = {
   to: string;
   toUserId: string;
@@ -275,6 +281,8 @@ export default function ProfileClient() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [incomingCallerName, setIncomingCallerName] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     hardware: '',
@@ -775,6 +783,42 @@ const canWriteArticles = isAdmin;
 
     loadProfile();
   }, [supabase, router]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel('calls-listener-profile')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        async (payload) => {
+          const row: any = payload.new;
+          if (!row || row.status !== 'ringing') return;
+          setIncomingCall({ id: row.id, room_name: row.room_name, caller_id: row.caller_id });
+          if (row.caller_id) {
+            const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', row.caller_id).maybeSingle();
+            setIncomingCallerName(prof?.display_name || null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        (payload) => {
+          const row: any = payload.new;
+          if (!row || !incomingCall || row.id !== incomingCall.id) return;
+          if (row.status && row.status !== 'ringing') {
+            setIncomingCall(null);
+            setIncomingCallerName(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [incomingCall, supabase, userId]);
 
   
   // Vlákna přímých zpráv seskupená podle protistrany
@@ -2261,6 +2305,34 @@ function handleFieldChange(field: keyof Profile, value: string) {
     await saveMilestones(threadId, updated, thread.deadline ?? null);
   };
 
+  const acceptIncomingCall = async () => {
+    if (!incomingCall) return;
+    window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
+    try {
+      await supabase
+        .from('calls')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při označení hovoru jako přijatého:', err);
+    } finally {
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
+
+  const declineIncomingCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase.from('calls').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při odmítnutí hovoru:', err);
+    } finally {
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
+
   const buildRoomName = (a: string, b: string) => {
     const sorted = [a, b].sort();
     return `beets-${sorted[0]}-${sorted[1]}`;
@@ -2577,6 +2649,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+      {incomingCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--mpc-accent)]/60 bg-[var(--mpc-panel)] p-5 text-sm text-white shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Příchozí hovor</p>
+            <p className="mt-1 text-base font-semibold">{incomingCallerName || 'Uživatel'} volá…</p>
+            <p className="mt-1 text-[12px] text-[var(--mpc-muted)]">Chceš hovor přijmout?</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={acceptIncomingCall}
+                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+              >
+                Přijmout
+              </button>
+              <button
+                onClick={declineIncomingCall}
+                className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white hover:border-red-400 hover:text-red-200"
+              >
+                Položit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero / cover */}
       <section
         className="relative overflow-hidden border-b border-[var(--mpc-dark)]"

@@ -1108,6 +1108,7 @@ export default function PublicProfileClient({
   const acceptIncomingCall = async () => {
     if (!incomingCall) return;
     try {
+      window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
       await supabase
         .from('calls')
         .update({ status: 'accepted', accepted_at: new Date().toISOString() })
@@ -1115,7 +1116,6 @@ export default function PublicProfileClient({
     } catch (err) {
       console.error('Chyba při označení hovoru jako přijatého:', err);
     } finally {
-      window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
       setIncomingCall(null);
       setIncomingCallerName(null);
     }
@@ -1314,22 +1314,25 @@ export default function PublicProfileClient({
         </div>
       </div>
       {incomingCall && (
-        <div className="mt-4 rounded-xl border border-[var(--mpc-accent)]/40 bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.45)]">
-          <p className="text-sm font-semibold text-white">Volá ti {incomingCallerName || 'uživatel'}.</p>
-          <p className="text-xs text-[var(--mpc-muted)]">Chceš hovor přijmout?</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              onClick={acceptIncomingCall}
-              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(255,75,129,0.35)]"
-            >
-              Přijmout
-            </button>
-            <button
-              onClick={declineIncomingCall}
-              className="rounded-full border border-white/20 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white hover:border-red-400 hover:text-red-200"
-            >
-              Položit
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--mpc-accent)]/60 bg-[var(--mpc-panel)] p-5 text-sm text-white shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Příchozí hovor</p>
+            <p className="mt-1 text-base font-semibold">{incomingCallerName || 'Uživatel'} volá…</p>
+            <p className="mt-1 text-[12px] text-[var(--mpc-muted)]">Chceš hovor přijmout?</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={acceptIncomingCall}
+                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+              >
+                Přijmout
+              </button>
+              <button
+                onClick={declineIncomingCall}
+                className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white hover:border-red-400 hover:text-red-200"
+              >
+                Položit
+              </button>
+            </div>
           </div>
         </div>
       )}
