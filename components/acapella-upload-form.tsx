@@ -56,8 +56,8 @@ export default function AcapellaUploadForm({ onCreated }: { onCreated?: () => vo
 
       // upload audio
       const audioExt = audioFile.name.split('.').pop()?.toLowerCase();
-      if (audioExt && !['wav', 'mp3'].includes(audioExt)) {
-        throw new Error('Podporujeme jen WAV nebo MP3.');
+      if (audioExt && audioExt !== 'mp3') {
+        throw new Error('Podporujeme jen MP3.');
       }
       const audioPath = `${user.id}/${Date.now()}-${audioFile.name}`;
       const { error: uploadErr } = await supabase.storage.from('acapellas').upload(audioPath, audioFile);
@@ -139,8 +139,8 @@ export default function AcapellaUploadForm({ onCreated }: { onCreated?: () => vo
         </div>
       </div>
       <div>
-        <label className={labelClass}>Audio (WAV/MP3)</label>
-        <input type="file" accept="audio/wav,audio/mp3,audio/mpeg" onChange={handleAudioChange} className={helperClass} />
+        <label className={labelClass}>Audio (MP3)</label>
+        <input type="file" accept=".mp3,audio/mpeg" onChange={handleAudioChange} className={helperClass} />
       </div>
       <div>
         <label className={labelClass}>Cover (volitelné, JPG/PNG/WEBP)</label>

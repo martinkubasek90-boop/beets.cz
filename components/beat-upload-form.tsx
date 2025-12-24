@@ -77,11 +77,11 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
       let finalAudioUrl: string | null = externalUrl.trim() || null;
       let finalCoverUrl: string | null = null;
 
-      // 2) upload WAV / MP3 do bucketu "beats"
+      // 2) upload MP3 do bucketu "beats"
       if (audioFile) {
         const ext = audioFile.name.split('.').pop()?.toLowerCase();
-        if (ext && !['wav', 'mp3'].includes(ext)) {
-          throw new Error('Podporujeme jen soubory WAV nebo MP3.');
+        if (ext && ext !== 'mp3') {
+          throw new Error('Podporujeme jen soubory MP3.');
         }
 
         const filePath = `${user.id}/${Date.now()}-${audioFile.name}`;
@@ -206,14 +206,14 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
       </div>
 
       <div>
-        <label className={labelClass}>Audio soubor (WAV / MP3)</label>
+        <label className={labelClass}>Audio soubor (MP3)</label>
         <input
           type="file"
-          accept=".wav,audio/wav,.mp3,audio/mpeg"
+          accept=".mp3,audio/mpeg"
           onChange={handleFileChange}
           className="mt-1 block w-full text-sm text-neutral-800"
         />
-        <p className={helperClass}>Stačí jeden formát – WAV nebo MP3. Velikost drž raději při zemi kvůli limitům.</p>
+        <p className={helperClass}>Stačí MP3. Velikost drž raději při zemi kvůli limitům.</p>
       </div>
 
       <div>

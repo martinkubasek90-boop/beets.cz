@@ -27,7 +27,7 @@ export default function UploadForm() {
       <h2 className="text-4xl font-black mb-8">NAHRAJ SVŮJ BEAT</h2>
       <input
         type="file"
-        accept="audio/wav,audio/mp3"
+        accept=".mp3,audio/mpeg"
         onChange={(e) => setFile(e.target.files?.[0] || null)}
         className="block w-full text-lg mb-6 file:btn-mpc file:border-0"
       />

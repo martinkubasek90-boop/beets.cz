@@ -27,11 +27,11 @@ const faqs = [
     items: [
       {
         q: "Jak nahrát beat?",
-        a: "V profilu klikni na „Nahrát beat“. Vyplň název, BPM, mood/vibe a nahraj audio (WAV/MP3). Nepovinně můžeš přidat cover nebo externí URL (SoundCloud/YouTube).",
+        a: "V profilu klikni na „Nahrát beat“. Vyplň název, BPM, mood/vibe a nahraj audio (MP3). Nepovinně můžeš přidat cover nebo externí URL (SoundCloud/YouTube).",
       },
       {
         q: "Jaké formáty a limity podporujete?",
-        a: "Podporujeme WAV a MP3. Pro rychlejší upload drž velikost při zemi; extrémně velké soubory mohou být zamítnuty poskytovatelem úložiště.",
+        a: "Podporujeme MP3. Pro rychlejší upload drž velikost při zemi; extrémně velké soubory mohou být zamítnuty poskytovatelem úložiště.",
       },
       {
         q: "Kde se beat zobrazí?",

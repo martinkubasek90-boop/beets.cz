@@ -68,7 +68,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
 
     const validTracks = tracks.filter((t) => t.file);
     if (validTracks.length === 0) {
-      setError('Přidej alespoň jeden audio soubor (WAV/MP3).');
+      setError('Přidej alespoň jeden audio soubor (MP3).');
       return;
     }
 
@@ -88,8 +88,8 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
 
       for (const t of validTracks) {
         const ext = t.file!.name.split('.').pop()?.toLowerCase();
-        if (ext && !['wav', 'mp3'].includes(ext)) {
-          throw new Error('Audio musí být WAV nebo MP3.');
+        if (ext && ext !== 'mp3') {
+          throw new Error('Audio musí být MP3.');
         }
         const safeName = t.file!.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const trackPath = `${user.id}/projects/audio/${Date.now()}-${safeName}`;
@@ -211,7 +211,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className={labelClass}>Audio soubory (WAV / MP3)</label>
+          <label className={labelClass}>Audio soubory (MP3)</label>
         </div>
         <p className={helperClass}>Můžeš nahrát více souborů a každému dát název. {tracks.length}/{MAX_TRACKS}</p>
         <div className="space-y-3">
@@ -231,7 +231,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
               </div>
               <input
                 type="file"
-                accept=".wav,.mp3,audio/wav,audio/mpeg"
+                accept=".mp3,audio/mpeg"
                 onChange={(e) => handleTrackFileChange(idx, e)}
                 className="block w-full text-sm text-neutral-200"
               />
