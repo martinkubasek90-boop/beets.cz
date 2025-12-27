@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { GlobalPlayerProvider } from "@/components/global-player-provider";
+import { PasswordGate } from "@/components/password-gate";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -64,7 +65,7 @@ export default function RootLayout({
         >
           <GlobalPlayerProvider>
             <div className="relative min-h-screen pb-24">
-              {children}
+              <PasswordGate>{children}</PasswordGate>
             </div>
           </GlobalPlayerProvider>
         </ThemeProvider>
