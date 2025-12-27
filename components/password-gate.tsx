@@ -48,11 +48,22 @@ export function PasswordGate({ children }: PasswordGateProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 shadow-xl backdrop-blur">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(0,86,63,0.35),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(243,116,51,0.35),transparent_40%),linear-gradient(145deg,#0a0f17_0%,#0c1c23_55%,#0b221d_100%)] text-white">
+      <div className="pointer-events-none absolute inset-0 opacity-50 mix-blend-screen [background:radial-gradient(circle_at_50%_50%,rgba(250,197,90,0.2),transparent_55%)]" />
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6">
+        <div className="absolute left-6 top-6 flex items-center gap-3 text-white">
+          <img
+            src="/favicon.svg"
+            alt="Beets.cz"
+            className="h-10 w-10 rounded-full border border-white/15 bg-black/40 p-1"
+          />
+          <span className="text-xs font-semibold uppercase tracking-[0.35em] text-white/70">
+            Beets.cz
+          </span>
+        </div>
+        <div className="rounded-2xl border border-[var(--mpc-accent)]/30 bg-[var(--mpc-panel)] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
           <div className="mb-6">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/50">
+            <p className="text-xs uppercase tracking-[0.35em] text-[var(--mpc-accent)]">
               Beets.cz
             </p>
             <h1 className="mt-2 text-2xl font-semibold">
@@ -74,7 +85,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
               autoComplete="current-password"
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-white/40 focus:ring-2 focus:ring-white/10"
+              className="w-full rounded-lg border border-white/15 bg-black/60 px-4 py-3 text-white outline-none transition focus:border-[var(--mpc-accent)] focus:ring-2 focus:ring-[var(--mpc-accent)]/20"
               placeholder="••••••••"
             />
             {error ? (
@@ -82,7 +93,7 @@ export function PasswordGate({ children }: PasswordGateProps) {
             ) : null}
             <button
               type="submit"
-              className="w-full rounded-lg bg-white px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-white/90"
+              className="w-full rounded-lg bg-[linear-gradient(120deg,var(--mpc-accent),var(--mpc-accent-2))] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(243,116,51,0.35)] transition hover:opacity-90"
             >
               Odemknout
             </button>
