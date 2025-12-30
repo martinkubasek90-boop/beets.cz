@@ -13,6 +13,7 @@ type AnalysisResult = {
   widthRatio: number | null;
   lowRatio: number;
   highRatio: number;
+  bands: Array<{ label: string; ratio: number }>;
 };
 
 type CompareRow = {
@@ -68,6 +69,18 @@ const referenceGroups = [
   },
 ];
 
+const bandDefs = [
+  { label: '30–60 Hz', low: 30, high: 60 },
+  { label: '60–120 Hz', low: 60, high: 120 },
+  { label: '120–250 Hz', low: 120, high: 250 },
+  { label: '250–500 Hz', low: 250, high: 500 },
+  { label: '500–1k Hz', low: 500, high: 1000 },
+  { label: '1–2k Hz', low: 1000, high: 2000 },
+  { label: '2–4k Hz', low: 2000, high: 4000 },
+  { label: '4–8k Hz', low: 4000, high: 8000 },
+  { label: '8–12k Hz', low: 8000, high: 12000 },
+];
+
 const metricThresholds = {
   peakDb: 1.5,
   rmsDb: 2.5,
@@ -91,6 +104,33 @@ async function renderFilteredRms(buffer: AudioBuffer, type: BiquadFilterType, fr
   const filter = offline.createBiquadFilter();
   filter.type = type;
   filter.frequency.value = frequency;
+  source.connect(filter);
+  filter.connect(offline.destination);
+  source.start(0);
+  const rendered = await offline.startRendering();
+
+  const channel = rendered.getChannelData(0);
+  const stride = Math.max(1, Math.floor(channel.length / MAX_SAMPLE_POINTS));
+  let sumSquares = 0;
+  let count = 0;
+  for (let i = 0; i < channel.length; i += stride) {
+    const sample = channel[i];
+    sumSquares += sample * sample;
+    count += 1;
+  }
+  return Math.sqrt(sumSquares / Math.max(1, count));
+}
+
+async function renderBandRms(buffer: AudioBuffer, low: number, high: number) {
+  const offline = new OfflineAudioContext(buffer.numberOfChannels, buffer.length, buffer.sampleRate);
+  const source = offline.createBufferSource();
+  source.buffer = buffer;
+  const filter = offline.createBiquadFilter();
+  const center = Math.sqrt(low * high);
+  const bandwidth = Math.max(1, high - low);
+  filter.type = 'bandpass';
+  filter.frequency.value = center;
+  filter.Q.value = Math.max(0.1, center / bandwidth);
   source.connect(filter);
   filter.connect(offline.destination);
   source.start(0);
@@ -172,9 +212,10 @@ async function analyzeFile(file: File): Promise<AnalysisResult> {
     widthRatio = Math.sqrt(sideSquares / Math.max(1, count)) / Math.max(1e-6, Math.sqrt(midSquares / Math.max(1, count)));
   }
 
-  const [lowRms, highRms] = await Promise.all([
+  const [lowRms, highRms, ...bandRms] = await Promise.all([
     renderFilteredRms(buffer, 'lowpass', 150),
     renderFilteredRms(buffer, 'highpass', 3000),
+    ...bandDefs.map((band) => renderBandRms(buffer, band.low, band.high)),
   ]);
 
   await ctx.close();
@@ -188,6 +229,10 @@ async function analyzeFile(file: File): Promise<AnalysisResult> {
     widthRatio,
     lowRatio: lowRms / Math.max(1e-6, rms),
     highRatio: highRms / Math.max(1e-6, rms),
+    bands: bandDefs.map((band, index) => ({
+      label: band.label,
+      ratio: bandRms[index] / Math.max(1e-6, rms),
+    })),
   };
 }
 
@@ -251,6 +296,10 @@ function hintFromMetric(label: string, delta: number) {
     default:
       return `Mix je ${direction}.`;
   }
+}
+
+function bandWidth(ratio: number) {
+  return Math.min(100, Math.max(6, ratio * 200));
 }
 
 export default function ReferenceMatchPage() {
@@ -392,6 +441,25 @@ export default function ReferenceMatchPage() {
     ];
   }, [mixResult, refResult]);
 
+  const bandRows = useMemo(() => {
+    if (!mixResult || !refResult) return [];
+    return mixResult.bands.map((band, index) => {
+      const refBand = refResult.bands[index];
+      const mixRatio = band?.ratio ?? 0;
+      const refRatio = refBand?.ratio ?? 0;
+      const delta = mixRatio - refRatio;
+      const score = scoreDelta(delta, 0.06);
+      return {
+        label: band.label,
+        mixRatio,
+        refRatio,
+        delta,
+        score,
+        hint: hintFromMetric('Low ratio', delta),
+      };
+    });
+  }, [mixResult, refResult]);
+
   return (
     <main className="min-h-screen bg-[var(--mpc-deck,#050505)] text-white">
       <MainNav />
@@ -520,6 +588,56 @@ export default function ReferenceMatchPage() {
                   </div>
                 ) : (
                   <p className="text-sm text-[var(--mpc-muted)]">Nahraj mix + referenci a spusť porovnání.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/35 p-6">
+              <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent-2)]">Frekvenční pásma</p>
+              <div className="mt-4 space-y-3 text-sm text-[var(--mpc-muted)]">
+                {bandRows.length ? (
+                  <div className="space-y-3">
+                    {bandRows.map((band) => (
+                      <div key={band.label} className="rounded-xl border border-white/10 bg-black/40 px-4 py-4">
+                        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                          <span>{band.label}</span>
+                          <span>{Math.round(band.score)}%</span>
+                        </div>
+                        <div className="mt-3 space-y-2 text-xs">
+                          <div>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">Mix</p>
+                            <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                              <div
+                                className="h-2 rounded-full bg-[var(--mpc-accent)]"
+                                style={{ width: `${bandWidth(band.mixRatio)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">Reference</p>
+                            <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                              <div
+                                className="h-2 rounded-full bg-[var(--mpc-accent-2)]"
+                                style={{ width: `${bandWidth(band.refRatio)}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                          <span>{scoreText(band.score)}</span>
+                          <span>{band.delta.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                          <div
+                            className={`h-2 rounded-full ${scoreColor(band.score)}`}
+                            style={{ width: `${Math.max(6, band.score)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-[var(--mpc-muted)]">Po analýze se zobrazí heatmapa pásem.</p>
                 )}
               </div>
             </div>
