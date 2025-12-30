@@ -25,6 +25,7 @@ export function MainNav() {
   const supabase = createClient();
   const pathname = usePathname();
   const [navOpen, setNavOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<{ id: string; room_name: string; caller_id: string } | null>(null);
@@ -42,6 +43,7 @@ export function MainNav() {
 
   useEffect(() => {
     setNavOpen(false);
+    setToolsOpen(false);
   }, [pathname]);
 
   // Realtime příchozí hovory (globální popup)
@@ -132,7 +134,7 @@ export function MainNav() {
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-black/70 backdrop-blur">
+    <header className="sticky top-0 z-50 bg-black/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 relative">
         <Link href="/" className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-lg bg-[conic-gradient(from_90deg,var(--mpc-accent),var(--mpc-accent-2),var(--mpc-accent))] text-xs font-black text-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
@@ -160,23 +162,34 @@ export function MainNav() {
               />
             </Link>
           ))}
-          <div className="relative group">
-            <Link href="/konvertor" className="relative py-1 hover:text-white">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setToolsOpen((prev) => !prev)}
+              className="relative py-1 hover:text-white"
+            >
               Nástroje
-              <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 group-hover:scale-x-100" />
-            </Link>
-            <div className="absolute left-1/2 mt-3 hidden -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur group-hover:block group-focus-within:block z-30">
+              <span
+                className={`absolute inset-x-0 -bottom-1 h-[2px] origin-center bg-[var(--mpc-accent)] transition-transform duration-200 ${
+                  toolsOpen ? 'scale-x-100' : 'scale-x-0'
+                }`}
+              />
+            </button>
+            {toolsOpen && (
+              <div className="absolute left-1/2 mt-3 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur z-50 pointer-events-auto">
               {toolLinks.map((tool) => (
                 <Link
                   key={tool.href}
                   className="relative block py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
                   href={tool.href}
+                  onClick={() => setToolsOpen(false)}
                 >
                   {tool.label}
                   <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
                 </Link>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         </nav>
         <div className="flex items-center gap-2 text-right flex-wrap justify-end">
