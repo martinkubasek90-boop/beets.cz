@@ -70,6 +70,7 @@ const referenceGroups = [
 ];
 
 const bandDefs = [
+  { label: '20–30 Hz', low: 20, high: 30 },
   { label: '30–60 Hz', low: 30, high: 60 },
   { label: '60–120 Hz', low: 60, high: 120 },
   { label: '120–250 Hz', low: 120, high: 250 },
@@ -79,6 +80,7 @@ const bandDefs = [
   { label: '2–4k Hz', low: 2000, high: 4000 },
   { label: '4–8k Hz', low: 4000, high: 8000 },
   { label: '8–12k Hz', low: 8000, high: 12000 },
+  { label: '12–16k Hz', low: 12000, high: 16000 },
 ];
 
 const metricThresholds = {
