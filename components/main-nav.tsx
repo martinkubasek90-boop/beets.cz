@@ -14,7 +14,10 @@ const links = [
   { href: '/live', label: 'Live' },
   { href: '/faq', label: 'FAQ' },
 ];
-const toolLinks = [{ href: '/konvertor', label: 'Konvertor MP3' }];
+const toolLinks = [
+  { href: '/konvertor', label: 'Konvertor MP3' },
+  { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
+];
 
 export function MainNav() {
   const supabase = createClient();
