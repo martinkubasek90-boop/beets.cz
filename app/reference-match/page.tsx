@@ -330,6 +330,7 @@ export default function ReferenceMatchPage() {
   const [refResult, setRefResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingRef, setLoadingRef] = useState<string | null>(null);
+  const [mode, setMode] = useState<'match' | 'diagnose'>('match');
 
   const handleDrop = (event: DragEvent<HTMLDivElement>, target: 'mix' | 'ref') => {
     event.preventDefault();
@@ -522,6 +523,36 @@ export default function ReferenceMatchPage() {
 
           <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-6">
+              <div className="rounded-2xl border border-white/10 bg-black/35 p-4">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--mpc-muted)]">Režim porovnání</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs uppercase tracking-[0.2em]">
+                  <button
+                    type="button"
+                    onClick={() => setMode('match')}
+                    className={`rounded-full border px-4 py-2 transition ${
+                      mode === 'match'
+                        ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                        : 'border-white/10 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]'
+                    }`}
+                  >
+                    Match
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('diagnose')}
+                    className={`rounded-full border px-4 py-2 transition ${
+                      mode === 'diagnose'
+                        ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                        : 'border-white/10 text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)]'
+                    }`}
+                  >
+                    Diagnose
+                  </button>
+                </div>
+                <p className="mt-3 text-xs text-[var(--mpc-muted)]">
+                  Match = čisté A/B delta, Diagnose = varování + doporučení.
+                </p>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 {(['mix', 'ref'] as const).map((target) => (
                   <div key={target} className="space-y-3">
@@ -614,19 +645,21 @@ export default function ReferenceMatchPage() {
                             <p className="text-white">{row.delta}</p>
                           </div>
                         </div>
-                        <div className="mt-3">
-                          <div className="flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                            <span>{scoreText(row.score)}</span>
-                            <span>{Math.round(row.score)}%</span>
+                        {mode === 'diagnose' && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                              <span>{scoreText(row.score)}</span>
+                              <span>{Math.round(row.score)}%</span>
+                            </div>
+                            <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                              <div
+                                className={`h-2 rounded-full ${scoreColor(row.score)}`}
+                                style={{ width: `${Math.max(6, row.score)}%` }}
+                              />
+                            </div>
+                            <p className="mt-2 text-xs text-white/80">{row.hint}</p>
                           </div>
-                          <div className="mt-1 h-2 w-full rounded-full bg-white/10">
-                            <div
-                              className={`h-2 rounded-full ${scoreColor(row.score)}`}
-                              style={{ width: `${Math.max(6, row.score)}%` }}
-                            />
-                          </div>
-                          <p className="mt-2 text-xs text-white/80">{row.hint}</p>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -667,16 +700,20 @@ export default function ReferenceMatchPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                          <span>{scoreText(band.score)}</span>
-                          <span>{band.delta.toFixed(2)}</span>
-                        </div>
-                        <div className="mt-1 h-2 w-full rounded-full bg-white/10">
-                          <div
-                            className={`h-2 rounded-full ${scoreColor(band.score)}`}
-                            style={{ width: `${Math.max(6, band.score)}%` }}
-                          />
-                        </div>
+                        {mode === 'diagnose' && (
+                          <>
+                            <div className="mt-3 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                              <span>{scoreText(band.score)}</span>
+                              <span>{band.delta.toFixed(2)}</span>
+                            </div>
+                            <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                              <div
+                                className={`h-2 rounded-full ${scoreColor(band.score)}`}
+                                style={{ width: `${Math.max(6, band.score)}%` }}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
