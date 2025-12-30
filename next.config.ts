@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
   outputFileTracingIncludes: {
-    '/api/konvertor': ['node_modules/ffmpeg-static/ffmpeg'],
+    '/api/konvertor': ['node_modules/ffmpeg-static/**'],
+    '/api/konvertor/route': ['node_modules/ffmpeg-static/**'],
   },
 };
 
