@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     await rm(workingDir, { recursive: true, force: true });
     workingDir = null;
 
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
