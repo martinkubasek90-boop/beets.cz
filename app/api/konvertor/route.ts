@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { PassThrough } from 'node:stream';
+import archiver from 'archiver';
+import ffmpegPath from 'ffmpeg-static';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,11 +19,27 @@ function sanitizeName(value: string) {
 }
 
 async function convertToMp3(inputPath: string, outputPath: string) {
-  await execFileAsync('ffmpeg', ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k', outputPath]);
+  if (!ffmpegPath) {
+    throw new Error('Chybí ffmpeg-static.');
+  }
+  await execFileAsync(ffmpegPath, ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k', outputPath]);
 }
 
-async function zipFolder(sourceDir: string, zipPath: string) {
-  await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: sourceDir });
+async function zipFolderToBuffer(sourceDir: string) {
+  return new Promise<Buffer>((resolve, reject) => {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const stream = new PassThrough();
+    const chunks: Buffer[] = [];
+
+    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+    archive.on('error', reject);
+
+    archive.directory(sourceDir, false);
+    archive.pipe(stream);
+    void archive.finalize();
+  });
 }
 
 export async function POST(request: Request) {
@@ -62,10 +81,7 @@ export async function POST(request: Request) {
     }
 
     const zipName = `beets-konvertor-${Date.now()}.zip`;
-    const zipPath = path.join(workingDir, zipName);
-    await zipFolder(outputDir, zipPath);
-
-    const zipBuffer = await readFile(zipPath);
+    const zipBuffer = await zipFolderToBuffer(outputDir);
     await rm(workingDir, { recursive: true, force: true });
     workingDir = null;
 
@@ -83,7 +99,7 @@ export async function POST(request: Request) {
     }
     const message =
       error?.code === 'ENOENT'
-        ? 'Chybí ffmpeg nebo zip. Nainstaluj je na server nebo uprav runtime.'
+        ? 'Chybí ffmpeg. Zkontroluj nasazení konvertoru.'
         : error?.message || 'Konverze selhala.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
