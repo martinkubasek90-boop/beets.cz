@@ -20,6 +20,9 @@ type CompareRow = {
   mixValue: string;
   refValue: string;
   delta: string;
+  score: number;
+  hint: string;
+  deltaRaw: number;
 };
 
 const MAX_SAMPLE_POINTS = 1_000_000;
@@ -64,6 +67,17 @@ const referenceGroups = [
     ],
   },
 ];
+
+const metricThresholds = {
+  peakDb: 1.5,
+  rmsDb: 2.5,
+  crestDb: 2.5,
+  lowRatio: 0.08,
+  highRatio: 0.08,
+  stereoCorrelation: 0.15,
+  widthRatio: 0.2,
+  dcOffset: 0.01,
+};
 
 function dbfs(value: number) {
   if (value <= 0) return -Infinity;
@@ -182,6 +196,63 @@ function formatValue(value: number | null, unit = '') {
   return `${value.toFixed(2)}${unit}`;
 }
 
+function scoreDelta(delta: number, threshold: number) {
+  const normalized = Math.min(1, Math.abs(delta) / threshold);
+  return Math.max(0, 100 - normalized * 100);
+}
+
+function scoreColor(score: number) {
+  if (score >= 75) return 'bg-emerald-400';
+  if (score >= 45) return 'bg-amber-400';
+  return 'bg-red-500';
+}
+
+function scoreText(score: number) {
+  if (score >= 75) return 'OK';
+  if (score >= 45) return 'Pozor';
+  return 'Problém';
+}
+
+function hintFromMetric(label: string, delta: number) {
+  const direction = delta > 0 ? 'víc než reference' : 'míň než reference';
+  switch (label) {
+    case 'Low ratio':
+      return delta > 0
+        ? 'Low end je těžké. Zkontroluj sub/808 a HPF na nepodstatných stopách.'
+        : 'Low end je slabé. Zkus posílit 40–90 Hz nebo doplnit harmoniky.';
+    case 'High ratio':
+      return delta > 0
+        ? 'Výšky jsou agresivní. Zkus jemný shelf -2 až -4 dB kolem 10 kHz.'
+        : 'Výšky chybí. Přidej air/shine kolem 8–12 kHz.';
+    case 'Crest factor':
+      return delta > 0
+        ? 'Dynamika je větší. Možná stačí jemná bus komprese.'
+        : 'Dynamika je malá. Zvaž uvolnit kompresi nebo transient shaper.';
+    case 'RMS (dBFS)':
+      return delta > 0
+        ? 'Mix je hlasitější. Zkontroluj limiter a headroom.'
+        : 'Mix je tišší. Zvaž gain staging nebo saturaci.';
+    case 'Stereo correlation':
+      return delta > 0
+        ? 'Stereo je stabilnější než reference.'
+        : 'Stereo je rizikové. Zkontroluj mono kompatibilitu.';
+    case 'Width (Side/Mid)':
+      return delta > 0
+        ? 'Šířka je větší. Udrž kontrolu ve středu (kick, bass, vocal).'
+        : 'Šířka je menší. Můžeš přidat stereo FX na perkusích.';
+    case 'Peak (dBFS)':
+      return delta > 0
+        ? 'Peak je vyšší než reference. Zkontroluj clipping.'
+        : 'Peaky jsou níž. Máš prostor pro loudness.';
+    case 'DC offset':
+      return Math.abs(delta) > metricThresholds.dcOffset
+        ? 'DC offset je mimo. Zkus DC filter.'
+        : 'DC offset je OK.';
+    default:
+      return `Mix je ${direction}.`;
+  }
+}
+
 export default function ReferenceMatchPage() {
   const [mixFile, setMixFile] = useState<File | null>(null);
   const [refFile, setRefFile] = useState<File | null>(null);
@@ -236,56 +307,87 @@ export default function ReferenceMatchPage() {
 
   const rows = useMemo<CompareRow[]>(() => {
     if (!mixResult || !refResult) return [];
+    const peakDelta = mixResult.peakDb - refResult.peakDb;
+    const rmsDelta = mixResult.rmsDb - refResult.rmsDb;
+    const crestDelta = mixResult.crestDb - refResult.crestDb;
+    const lowDelta = mixResult.lowRatio - refResult.lowRatio;
+    const highDelta = mixResult.highRatio - refResult.highRatio;
+    const corrDelta = (mixResult.stereoCorrelation ?? 0) - (refResult.stereoCorrelation ?? 0);
+    const widthDelta = (mixResult.widthRatio ?? 0) - (refResult.widthRatio ?? 0);
+    const dcDelta = mixResult.dcOffset - refResult.dcOffset;
+
     return [
       {
         label: 'Peak (dBFS)',
         mixValue: formatValue(mixResult.peakDb),
         refValue: formatValue(refResult.peakDb),
-        delta: formatValue(mixResult.peakDb - refResult.peakDb),
+        delta: formatValue(peakDelta),
+        deltaRaw: peakDelta,
+        score: scoreDelta(peakDelta, metricThresholds.peakDb),
+        hint: hintFromMetric('Peak (dBFS)', peakDelta),
       },
       {
         label: 'RMS (dBFS)',
         mixValue: formatValue(mixResult.rmsDb),
         refValue: formatValue(refResult.rmsDb),
-        delta: formatValue(mixResult.rmsDb - refResult.rmsDb),
+        delta: formatValue(rmsDelta),
+        deltaRaw: rmsDelta,
+        score: scoreDelta(rmsDelta, metricThresholds.rmsDb),
+        hint: hintFromMetric('RMS (dBFS)', rmsDelta),
       },
       {
         label: 'Crest factor',
         mixValue: formatValue(mixResult.crestDb),
         refValue: formatValue(refResult.crestDb),
-        delta: formatValue(mixResult.crestDb - refResult.crestDb),
+        delta: formatValue(crestDelta),
+        deltaRaw: crestDelta,
+        score: scoreDelta(crestDelta, metricThresholds.crestDb),
+        hint: hintFromMetric('Crest factor', crestDelta),
       },
       {
         label: 'Low ratio',
         mixValue: formatValue(mixResult.lowRatio),
         refValue: formatValue(refResult.lowRatio),
-        delta: formatValue(mixResult.lowRatio - refResult.lowRatio),
+        delta: formatValue(lowDelta),
+        deltaRaw: lowDelta,
+        score: scoreDelta(lowDelta, metricThresholds.lowRatio),
+        hint: hintFromMetric('Low ratio', lowDelta),
       },
       {
         label: 'High ratio',
         mixValue: formatValue(mixResult.highRatio),
         refValue: formatValue(refResult.highRatio),
-        delta: formatValue(mixResult.highRatio - refResult.highRatio),
+        delta: formatValue(highDelta),
+        deltaRaw: highDelta,
+        score: scoreDelta(highDelta, metricThresholds.highRatio),
+        hint: hintFromMetric('High ratio', highDelta),
       },
       {
         label: 'Stereo correlation',
         mixValue: formatValue(mixResult.stereoCorrelation),
         refValue: formatValue(refResult.stereoCorrelation),
-        delta: formatValue(
-          (mixResult.stereoCorrelation ?? 0) - (refResult.stereoCorrelation ?? 0)
-        ),
+        delta: formatValue(corrDelta),
+        deltaRaw: corrDelta,
+        score: scoreDelta(corrDelta, metricThresholds.stereoCorrelation),
+        hint: hintFromMetric('Stereo correlation', corrDelta),
       },
       {
         label: 'Width (Side/Mid)',
         mixValue: formatValue(mixResult.widthRatio),
         refValue: formatValue(refResult.widthRatio),
-        delta: formatValue((mixResult.widthRatio ?? 0) - (refResult.widthRatio ?? 0)),
+        delta: formatValue(widthDelta),
+        deltaRaw: widthDelta,
+        score: scoreDelta(widthDelta, metricThresholds.widthRatio),
+        hint: hintFromMetric('Width (Side/Mid)', widthDelta),
       },
       {
         label: 'DC offset',
         mixValue: formatValue(mixResult.dcOffset, ''),
         refValue: formatValue(refResult.dcOffset, ''),
-        delta: formatValue(mixResult.dcOffset - refResult.dcOffset, ''),
+        delta: formatValue(dcDelta, ''),
+        deltaRaw: dcDelta,
+        score: scoreDelta(dcDelta, metricThresholds.dcOffset),
+        hint: hintFromMetric('DC offset', dcDelta),
       },
     ];
   }, [mixResult, refResult]);
@@ -384,9 +486,9 @@ export default function ReferenceMatchPage() {
                 {rows.length ? (
                   <div className="space-y-3">
                     {rows.map((row) => (
-                      <div key={row.label} className="rounded-xl border border-white/10 bg-black/40 px-4 py-3">
+                      <div key={row.label} className="rounded-xl border border-white/10 bg-black/40 px-4 py-4">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{row.label}</p>
-                        <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                           <div>
                             <p className="text-[10px] text-[var(--mpc-muted)]">Mix</p>
                             <p className="text-white">{row.mixValue}</p>
@@ -399,6 +501,19 @@ export default function ReferenceMatchPage() {
                             <p className="text-[10px] text-[var(--mpc-muted)]">Delta</p>
                             <p className="text-white">{row.delta}</p>
                           </div>
+                        </div>
+                        <div className="mt-3">
+                          <div className="flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+                            <span>{scoreText(row.score)}</span>
+                            <span>{Math.round(row.score)}%</span>
+                          </div>
+                          <div className="mt-1 h-2 w-full rounded-full bg-white/10">
+                            <div
+                              className={`h-2 rounded-full ${scoreColor(row.score)}`}
+                              style={{ width: `${Math.max(6, row.score)}%` }}
+                            />
+                          </div>
+                          <p className="mt-2 text-xs text-white/80">{row.hint}</p>
                         </div>
                       </div>
                     ))}
