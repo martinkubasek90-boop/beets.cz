@@ -14,6 +14,7 @@ const links = [
   { href: '/live', label: 'Live' },
   { href: '/faq', label: 'FAQ' },
 ];
+const toolLinks = [{ href: '/konvertor', label: 'Konvertor MP3' }];
 
 export function MainNav() {
   const supabase = createClient();
@@ -154,6 +155,23 @@ export function MainNav() {
               />
             </Link>
           ))}
+          <div className="relative group">
+            <button className="relative py-1 hover:text-white">
+              Nástroje
+              <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 group-hover:scale-x-100" />
+            </button>
+            <div className="absolute left-1/2 mt-3 hidden -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur group-hover:block">
+              {toolLinks.map((tool) => (
+                <Link
+                  key={tool.href}
+                  href={tool.href}
+                  className="block whitespace-nowrap rounded-lg px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)] hover:text-white"
+                >
+                  {tool.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         </nav>
         <div className="flex items-center gap-2 text-right flex-wrap justify-end">
           {isLoggedIn && <NotificationBell className="hidden md:inline-flex" />}
@@ -183,6 +201,16 @@ export function MainNav() {
                   {link.label}
                 </Link>
               ))}
+              <div className="pt-2">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Nástroje</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  {toolLinks.map((tool) => (
+                    <Link key={tool.href} className="py-1 hover:text-white" href={tool.href}>
+                      {tool.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
               {isLoggedIn && (
                 <div className="flex items-center justify-between">
                   <span className="text-[11px]">Notifikace</span>
