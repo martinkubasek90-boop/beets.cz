@@ -156,18 +156,19 @@ export function MainNav() {
             </Link>
           ))}
           <div className="relative group">
-            <button className="relative py-1 hover:text-white">
+            <Link href="/konvertor" className="relative py-1 hover:text-white">
               Nástroje
               <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 group-hover:scale-x-100" />
-            </button>
-            <div className="absolute left-1/2 mt-3 hidden -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur group-hover:block">
+            </Link>
+            <div className="absolute left-1/2 mt-3 hidden -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur group-hover:block group-focus-within:block z-30">
               {toolLinks.map((tool) => (
                 <Link
                   key={tool.href}
+                  className="relative block py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
                   href={tool.href}
-                  className="block whitespace-nowrap rounded-lg px-4 py-2 text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)] hover:text-white"
                 >
                   {tool.label}
+                  <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
                 </Link>
               ))}
             </div>
