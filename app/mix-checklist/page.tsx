@@ -150,25 +150,28 @@ async function analyzeFile(file: File): Promise<AnalysisResult> {
 function buildChecklist(result: AnalysisResult): ChecklistItem[] {
   const items: ChecklistItem[] = [];
 
-  const peakOk = result.peakDb < -1;
+  // Calibrated for modern hip-hop/trap/lo-fi/boombap masters
+  const peakOk = result.peakDb <= -0.2 && result.peakDb >= -1.5;
   items.push({
     label: 'Headroom / clipping',
     status: peakOk ? 'ok' : 'warn',
-    detail: peakOk ? 'Peaky pod -1 dBFS.' : `Peak ${result.peakDb.toFixed(1)} dBFS (příliš hlasité).`,
+    detail: peakOk
+      ? 'True peak v bezpečné zóně moderního masteru.'
+      : `Peak ${result.peakDb.toFixed(1)} dBFS (mimo rozsah -1.5 až -0.2).`,
   });
 
-  const loudnessOk = result.rmsDb <= -10 && result.rmsDb >= -20;
+  const loudnessOk = result.rmsDb <= -6 && result.rmsDb >= -12;
   items.push({
     label: 'Průměrná hlasitost (RMS)',
     status: loudnessOk ? 'ok' : 'warn',
-    detail: `RMS ${result.rmsDb.toFixed(1)} dBFS (mix typicky -20 až -10).`,
+    detail: `RMS ${result.rmsDb.toFixed(1)} dBFS (hip-hop master typicky -12 až -6).`,
   });
 
-  const crestOk = result.crestDb >= 8 && result.crestDb <= 16;
+  const crestOk = result.crestDb >= 6 && result.crestDb <= 12;
   items.push({
     label: 'Dynamika / crest factor',
     status: crestOk ? 'ok' : 'warn',
-    detail: `Crest ${result.crestDb.toFixed(1)} dB (ideál 8–16).`,
+    detail: `Crest ${result.crestDb.toFixed(1)} dB (rap/trap typicky 6–12).`,
   });
 
   const dcOk = Math.abs(result.dcOffset) < 0.01;
@@ -179,7 +182,7 @@ function buildChecklist(result: AnalysisResult): ChecklistItem[] {
   });
 
   if (result.stereoCorrelation !== null) {
-    const corrOk = result.stereoCorrelation > -0.1;
+    const corrOk = result.stereoCorrelation > -0.2;
     items.push({
       label: 'Mono kompatibilita',
       status: corrOk ? 'ok' : 'warn',
@@ -188,26 +191,26 @@ function buildChecklist(result: AnalysisResult): ChecklistItem[] {
   }
 
   if (result.widthRatio !== null) {
-    const widthOk = result.widthRatio >= 0.2 && result.widthRatio <= 1.1;
+    const widthOk = result.widthRatio >= 0.1 && result.widthRatio <= 0.9;
     items.push({
       label: 'Stereo šířka',
       status: widthOk ? 'ok' : 'warn',
-      detail: `Side/Mid ${result.widthRatio.toFixed(2)} (typicky 0.2–1.1).`,
+      detail: `Side/Mid ${result.widthRatio.toFixed(2)} (rap/boombap typicky 0.1–0.9).`,
     });
   }
 
-  const lowOk = result.lowRatio >= 0.2 && result.lowRatio <= 0.5;
+  const lowOk = result.lowRatio >= 0.35 && result.lowRatio <= 0.9;
   items.push({
     label: 'Low end balance',
     status: lowOk ? 'ok' : 'warn',
-    detail: `Low ratio ${result.lowRatio.toFixed(2)} (ideál 0.2–0.5).`,
+    detail: `Low ratio ${result.lowRatio.toFixed(2)} (trap/808 typicky 0.35–0.9).`,
   });
 
-  const highOk = result.highRatio >= 0.15 && result.highRatio <= 0.45;
+  const highOk = result.highRatio >= 0.12 && result.highRatio <= 0.4;
   items.push({
     label: 'High end balance',
     status: highOk ? 'ok' : 'warn',
-    detail: `High ratio ${result.highRatio.toFixed(2)} (ideál 0.15–0.45).`,
+    detail: `High ratio ${result.highRatio.toFixed(2)} (rap/lo-fi typicky 0.12–0.4).`,
   });
 
   return items;
