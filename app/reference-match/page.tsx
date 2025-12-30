@@ -28,43 +28,60 @@ type CompareRow = {
 
 const MAX_SAMPLE_POINTS = 1_000_000;
 
-const referenceGroups = [
+type ReferenceTrack = {
+  label: string;
+  url?: string;
+};
+
+const referenceGroups: Array<{ title: string; items: ReferenceTrack[] }> = [
   {
     title: 'LOW-END / SUB / 808',
     items: [
-      'Kendrick Lamar – HUMBLE.',
-      'Dr. Dre – Still D.R.E.',
+      {
+        label: 'Kendrick Lamar – HUMBLE.',
+        url: 'https://xbezrcyjfsumhohckwsd.supabase.co/storage/v1/object/public/beats/39b6ec86-7841-4ae1-a31c-721f7dd46108/1767133117728-HUMBLE..wav',
+      },
+      {
+        label: 'Dr. Dre – Still D.R.E.',
+        url: 'https://xbezrcyjfsumhohckwsd.supabase.co/storage/v1/object/public/beats/39b6ec86-7841-4ae1-a31c-721f7dd46108/1767133171654-Still%20D.R.E..mp3',
+      },
     ],
   },
   {
     title: 'VOCAL / MID RANGE',
     items: [
-      'J. Cole – Middle Child',
-      'Kendrick Lamar – DNA.',
+      {
+        label: 'J. Cole – Middle Child',
+        url: 'https://xbezrcyjfsumhohckwsd.supabase.co/storage/v1/object/public/beats/39b6ec86-7841-4ae1-a31c-721f7dd46108/1767133209867-J.%20Cole%20-%20MIDDLE%20CHILD%20(Official%20Audio).mp3',
+      },
+      {
+        label: 'Kendrick Lamar – DNA.',
+        url: 'https://xbezrcyjfsumhohckwsd.supabase.co/storage/v1/object/public/beats/39b6ec86-7841-4ae1-a31c-721f7dd46108/1767133229614-DNA..wav',
+      },
     ],
   },
   {
     title: 'STEREO IMAGE / SPACE',
     items: [
-      'Travis Scott – SICKO MODE',
-      'Kanye West – Black Skinhead',
+      { label: 'Travis Scott – SICKO MODE' },
+      { label: 'Kanye West – Black Skinhead' },
     ],
   },
   {
     title: 'LOUDNESS / TRANSIENTY',
     items: [
-      'Drake – God’s Plan',
-      'Post Malone – Rockstar',
+      { label: 'Drake – God’s Plan' },
+      { label: 'Post Malone – Rockstar' },
     ],
   },
   {
     title: 'GOLD STANDARD',
     items: [
-      'Kendrick Lamar – HUMBLE.',
-      'Dr. Dre – Still D.R.E.',
-      'J. Cole – Middle Child',
-      'Travis Scott – SICKO MODE',
-      'Drake – God’s Plan',
+      { label: 'Kendrick Lamar – HUMBLE.' },
+      { label: 'Dr. Dre – Still D.R.E.' },
+      { label: 'J. Cole – Middle Child' },
+      { label: 'Travis Scott – SICKO MODE' },
+      { label: 'Drake – God’s Plan' },
     ],
   },
 ];
@@ -312,6 +329,7 @@ export default function ReferenceMatchPage() {
   const [mixResult, setMixResult] = useState<AnalysisResult | null>(null);
   const [refResult, setRefResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingRef, setLoadingRef] = useState<string | null>(null);
 
   const handleDrop = (event: DragEvent<HTMLDivElement>, target: 'mix' | 'ref') => {
     event.preventDefault();
@@ -353,6 +371,27 @@ export default function ReferenceMatchPage() {
       setError(err?.message || 'Analýza selhala.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadReference = async (track: ReferenceTrack) => {
+    if (!track.url) return;
+    setLoadingRef(track.label);
+    setError(null);
+    try {
+      const response = await fetch(track.url);
+      if (!response.ok) {
+        throw new Error('Nepodařilo se stáhnout referenci.');
+      }
+      const blob = await response.blob();
+      const extension = track.url.split('.').pop() || 'mp3';
+      const file = new File([blob], `${track.label}.${extension}`.replace(/[^\w.\s-]/g, ''), { type: blob.type });
+      setRefFile(file);
+      setRefResult(null);
+    } catch (err: any) {
+      setError(err?.message || 'Nepodařilo se načíst referenci.');
+    } finally {
+      setLoadingRef(null);
     }
   };
 
@@ -529,19 +568,22 @@ export default function ReferenceMatchPage() {
 
               <div className="rounded-2xl border border-white/10 bg-black/35 p-6">
                 <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent)]">Reference library</p>
-                <p className="mt-2 text-xs text-[var(--mpc-muted)]">Tracky doplníme po dodání souborů.</p>
+                <p className="mt-2 text-xs text-[var(--mpc-muted)]">Klikni na referenci pro načtení do analyzátoru.</p>
                 <div className="mt-4 space-y-4 text-xs text-[var(--mpc-muted)]">
                   {referenceGroups.map((group) => (
                     <div key={group.title}>
                       <p className="text-[11px] uppercase tracking-[0.2em] text-white">{group.title}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {group.items.map((item) => (
-                          <span
-                            key={item}
-                            className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]"
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => loadReference(item)}
+                            disabled={!item.url || loadingRef === item.label}
+                            className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {item}
-                          </span>
+                            {loadingRef === item.label ? 'Načítám…' : item.label}
+                          </button>
                         ))}
                       </div>
                     </div>
