@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { access, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
@@ -18,11 +18,29 @@ function sanitizeName(value: string) {
   return base.replace(/[^\w.-]+/g, '_');
 }
 
-async function convertToMp3(inputPath: string, outputPath: string) {
-  if (!ffmpegPath) {
-    throw new Error('Chybí ffmpeg-static.');
+async function resolveFfmpegPath() {
+  const candidates = [
+    ffmpegPath,
+    path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+    path.join(process.cwd(), '.next', 'standalone', 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+    path.join(process.cwd(), '.next', 'server', 'node_modules', 'ffmpeg-static', 'ffmpeg'),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // Zkus další kandidát
+    }
   }
-  await execFileAsync(ffmpegPath, ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k', outputPath]);
+
+  throw new Error('Chybí ffmpeg binárka.');
+}
+
+async function convertToMp3(inputPath: string, outputPath: string) {
+  const resolved = await resolveFfmpegPath();
+  await execFileAsync(resolved, ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k', outputPath]);
 }
 
 async function zipFolderToBuffer(sourceDir: string) {
