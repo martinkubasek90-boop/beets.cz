@@ -18,6 +18,7 @@ const toolLinks = [
   { href: '/konvertor', label: 'Konvertor MP3' },
   { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
   { href: '/mix-checklist', label: 'AI Mix Checklist' },
+  { href: '/reference-match', label: 'Reference Match' },
 ];
 
 export function MainNav() {
