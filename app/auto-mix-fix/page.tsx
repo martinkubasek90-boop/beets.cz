@@ -242,7 +242,6 @@ export default function AutoMixFixPage() {
   const [mp3Url, setMp3Url] = useState<string | null>(null);
   const [wavBlob, setWavBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showWav, setShowWav] = useState(false);
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -264,7 +263,7 @@ export default function AutoMixFixPage() {
     setAnalysis(null);
     setPlan(null);
     setMp3Url(null);
-    setWavBlob(null);
+      setWavBlob(null);
     event.target.value = '';
   };
 
@@ -400,22 +399,9 @@ export default function AutoMixFixPage() {
                         Stáhnout MP3
                       </a>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setShowWav((prev) => !prev)}
-                      className="inline-flex w-full items-center justify-center rounded-full border border-white/10 px-6 py-3 text-[10px] uppercase tracking-[0.3em] text-white hover:border-[var(--mpc-accent)]"
-                    >
-                      {showWav ? 'Skrýt WAV' : 'Zobrazit WAV'}
-                    </button>
-                    {showWav && wavBlob && (
-                      <a
-                        href={URL.createObjectURL(wavBlob)}
-                        download="mix-fix.wav"
-                        className="inline-flex w-full items-center justify-center rounded-full border border-white/10 px-6 py-3 text-[10px] uppercase tracking-[0.3em] text-white hover:border-[var(--mpc-accent)]"
-                      >
-                        Stáhnout WAV
-                      </a>
-                    )}
+                    <p className="text-xs text-[var(--mpc-muted)]">
+                      WAV export je zatím interní a není dostupný ke stažení.
+                    </p>
                   </>
                 ) : (
                   <p className="text-sm text-[var(--mpc-muted)]">Nahraj audio a spusť Auto Mix Fix.</p>
