@@ -2,6 +2,7 @@
 
 import type { ChangeEvent, DragEvent } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Upload, Play, GripVertical, CheckCircle, Loader2 } from 'lucide-react';
 import PadGrid from '@/components/converter/PadGrid';
 import { convertWavToSnd, createZipDownload, buildMPC3000Program } from '@/components/converter/wavToSnd';
@@ -301,7 +302,15 @@ export default function MPC3000ConverterPage() {
   }, [showThankYou]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200 flex flex-col items-center justify-center gap-4 p-4">
+      <div className="w-full max-w-4xl flex justify-start">
+        <Link
+          href="/"
+          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+        >
+          Zpět
+        </Link>
+      </div>
       <div
         className="w-full max-w-4xl"
         style={{
