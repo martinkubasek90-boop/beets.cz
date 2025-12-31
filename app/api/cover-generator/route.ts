@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const height = Math.min(1024, Math.max(512, payload.height ?? 1024));
 
   const response = await fetch(
-    'https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0',
+    'https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0',
     {
       method: 'POST',
       headers: {
