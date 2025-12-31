@@ -24,6 +24,7 @@ const toolGroups = [
       { href: '/reference-match', label: 'Reference Match' },
       { href: '/drum-analyzer', label: 'Drum Analyzer' },
       { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
+      { href: '/stem-splitter', label: 'Stem Splitter' },
       { href: '/mix-targets', label: 'Mix Target Finder' },
     ],
   },
