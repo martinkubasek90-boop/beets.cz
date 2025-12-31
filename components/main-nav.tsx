@@ -20,6 +20,7 @@ const toolLinks = [
   { href: '/mix-checklist', label: 'AI Mix Checklist' },
   { href: '/reference-match', label: 'Reference Match' },
   { href: '/drum-analyzer', label: 'Drum Analyzer' },
+  { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
 ];
 
 export function MainNav() {
