@@ -10,6 +10,11 @@ const RELEASE_FORMAT_LABELS: Record<string, string> = {
   digital: 'Digital',
 };
 
+const normalizePurchaseUrl = (value?: string | null) => {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+};
+
 export default async function ProjectDetail({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { data: project, error } = await supabase
@@ -64,7 +69,7 @@ export default async function ProjectDetail({ params }: { params: { id: string }
             )}
             {(project as any).purchase_url && (
               <a
-                href={(project as any).purchase_url}
+                href={normalizePurchaseUrl((project as any).purchase_url) || undefined}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
