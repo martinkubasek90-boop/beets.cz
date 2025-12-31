@@ -172,7 +172,7 @@ export function MainNav() {
               onClick={() => setToolsOpen((prev) => !prev)}
               className="relative py-1 hover:text-white"
             >
-              Nástroje
+              NÁSTROJE
               <span
                 className={`absolute inset-x-0 -bottom-1 h-[2px] origin-center bg-[var(--mpc-accent)] transition-transform duration-200 ${
                   toolsOpen ? 'scale-x-100' : 'scale-x-0'
