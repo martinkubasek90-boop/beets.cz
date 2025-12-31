@@ -17,6 +17,8 @@ type FixPlan = {
   highGain: number;
   width: number;
   targetPeak: number;
+  mode: 'safe' | 'full';
+  reason?: string;
 };
 
 const MAX_SAMPLE_POINTS = 1_000_000;
@@ -115,18 +117,23 @@ async function analyzeBuffer(buffer: AudioBuffer): Promise<Analysis> {
   };
 }
 
-function buildPlan(analysis: Analysis): FixPlan {
+function buildPlan(analysis: Analysis, options: { mode: 'safe' | 'full'; reason?: string }): FixPlan {
+  const maxGain = options.mode === 'safe' ? 2 : 4;
+  const minWidth = options.mode === 'safe' ? 0.95 : 0.9;
+  const maxWidth = options.mode === 'safe' ? 1.15 : 1.4;
   const targetLow = 0.55;
   const targetHigh = 0.22;
-  const lowGain = clamp((targetLow - analysis.lowRatio) * 10, -4, 4);
-  const highGain = clamp((targetHigh - analysis.highRatio) * 10, -4, 4);
+  const lowGain = clamp((targetLow - analysis.lowRatio) * 10, -maxGain, maxGain);
+  const highGain = clamp((targetHigh - analysis.highRatio) * 10, -maxGain, maxGain);
   const widthTarget = 0.35;
-  const width = clamp(widthTarget / Math.max(0.1, analysis.widthRatio ?? widthTarget), 0.9, 1.4);
+  const width = clamp(widthTarget / Math.max(0.1, analysis.widthRatio ?? widthTarget), minWidth, maxWidth);
   return {
     lowGain,
     highGain,
     width,
     targetPeak: -0.5,
+    mode: options.mode,
+    reason: options.reason,
   };
 }
 
@@ -242,6 +249,7 @@ export default function AutoMixFixPage() {
   const [mp3Url, setMp3Url] = useState<string | null>(null);
   const [wavBlob, setWavBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [safeMode, setSafeMode] = useState(true);
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -263,7 +271,7 @@ export default function AutoMixFixPage() {
     setAnalysis(null);
     setPlan(null);
     setMp3Url(null);
-      setWavBlob(null);
+    setWavBlob(null);
     event.target.value = '';
   };
 
@@ -277,7 +285,12 @@ export default function AutoMixFixPage() {
       const ctx = new AudioContext();
       const buffer = await ctx.decodeAudioData(arrayBuffer);
       const stats = await analyzeBuffer(buffer);
-      const plan = buildPlan(stats);
+      const masteredDetected = stats.rmsDb >= -10 && stats.peakDb >= -1.2;
+      const effectiveMode = masteredDetected || safeMode ? 'safe' : 'full';
+      const reason = masteredDetected
+        ? 'Detekovaný master – Safe mód zamezí přehnaným zásahům.'
+        : undefined;
+      const plan = buildPlan(stats, { mode: effectiveMode, reason });
       const processed = await processBuffer(buffer, plan);
       const wav = encodeWav16(processed);
       setAnalysis(stats);
@@ -305,6 +318,7 @@ export default function AutoMixFixPage() {
   const planSummary = useMemo(() => {
     if (!analysis || !plan) return null;
     return [
+      `Mode ${plan.mode.toUpperCase()}${plan.reason ? ' (auto)' : ''}`,
       `Low shelf ${plan.lowGain > 0 ? '+' : ''}${plan.lowGain.toFixed(1)} dB`,
       `High shelf ${plan.highGain > 0 ? '+' : ''}${plan.highGain.toFixed(1)} dB`,
       `Stereo width ${plan.width.toFixed(2)}x`,
@@ -374,6 +388,37 @@ export default function AutoMixFixPage() {
                 <p className="mt-2">{file?.name || 'Zatím žádný soubor'}</p>
               </div>
 
+              <div className="rounded-2xl border border-white/10 bg-black/40 px-6 py-4 text-sm text-[var(--mpc-muted)]">
+                <p className="uppercase tracking-[0.2em] text-[var(--mpc-accent)]">Režim zpracování</p>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs uppercase tracking-[0.25em]">
+                  <button
+                    type="button"
+                    onClick={() => setSafeMode(true)}
+                    className={`rounded-full px-4 py-2 transition ${
+                      safeMode
+                        ? 'bg-[var(--mpc-accent)] text-black'
+                        : 'border border-white/10 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                    }`}
+                  >
+                    Safe
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSafeMode(false)}
+                    className={`rounded-full px-4 py-2 transition ${
+                      !safeMode
+                        ? 'bg-[var(--mpc-accent)] text-black'
+                        : 'border border-white/10 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                    }`}
+                  >
+                    Full
+                  </button>
+                </div>
+                <p className="mt-2 text-xs text-[var(--mpc-muted)]">
+                  Safe = jemnější zásahy, Full = výraznější úpravy. Mastery se přepnou do Safe automaticky.
+                </p>
+              </div>
+
               {error && <p className="text-sm text-red-400">{error}</p>}
             </div>
 
@@ -389,6 +434,7 @@ export default function AutoMixFixPage() {
                           <p key={item}>{item}</p>
                         ))}
                       </div>
+                      {plan.reason && <p className="mt-2 text-[11px] text-[var(--mpc-muted)]">{plan.reason}</p>}
                     </div>
                     {mp3Url && (
                       <a
