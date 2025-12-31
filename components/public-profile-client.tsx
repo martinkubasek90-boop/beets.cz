@@ -82,7 +82,16 @@ type Project = {
   cover_url: string | null;
   access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
+  release_formats?: string[] | null;
+  purchase_url?: string | null;
   tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
+};
+
+const RELEASE_FORMAT_LABELS: Record<string, string> = {
+  vinyl: 'Vinyl',
+  cassette: 'Kazeta',
+  cd: 'CD',
+  digital: 'Digital',
 };
 
 const isProjectTrack = (value: unknown): value is ProjectTrack =>
@@ -292,7 +301,7 @@ export default function PublicProfileClient({
   const loadProjects = useCallback(async () => {
     const { data, error } = await supabase
       .from('projects')
-      .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
+      .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
       .eq('user_id', profileId)
       .order('id', { ascending: false })
       .limit(6);
@@ -1643,6 +1652,32 @@ export default function PublicProfileClient({
                     </p>
                   </div>
                 </div>
+
+                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      <span>Vydáno na</span>
+                      {(project.release_formats || []).map((format) => (
+                        <span
+                          key={format}
+                          className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                        >
+                          {RELEASE_FORMAT_LABELS[format] || format}
+                        </span>
+                      ))}
+                    </div>
+                    {project.purchase_url && (
+                      <a
+                        href={project.purchase_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                      >
+                        Koupit
+                      </a>
+                    )}
+                  </div>
+                ) : null}
 
                 {project.access_mode === 'request' && (
                   <div className="mt-4 flex justify-center">

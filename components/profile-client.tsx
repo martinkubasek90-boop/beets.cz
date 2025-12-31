@@ -51,6 +51,8 @@ type ProjectItem = {
   description: string | null;
   cover_url: string | null;
   project_url: string | null;
+  release_formats?: string[] | null;
+  purchase_url?: string | null;
   access_mode?: 'public' | 'request' | 'private';
   tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
 };
@@ -451,6 +453,8 @@ const canWriteArticles = isAdmin;
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
   const [projectEditTitle, setProjectEditTitle] = useState('');
   const [projectEditDescription, setProjectEditDescription] = useState('');
+  const [projectEditReleaseFormats, setProjectEditReleaseFormats] = useState<string[]>([]);
+  const [projectEditPurchaseUrl, setProjectEditPurchaseUrl] = useState('');
   const [projectEditTracks, setProjectEditTracks] = useState<
     Array<{ name: string; url?: string; path?: string | null; file?: File | null }>
   >([]);
@@ -952,7 +956,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         try {
           const { data, error } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, project_url, tracks_json, access_mode')
+            .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(5);
@@ -962,7 +966,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           console.warn('Fallback select projects bez project_url/tracks_json:', innerErr);
           const { data, error } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, access_mode')
+            .select('id, title, description, cover_url, access_mode, release_formats, purchase_url')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(5);
@@ -3372,6 +3376,50 @@ function handleFieldChange(field: keyof Profile, value: string) {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Vydáno na</label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[
+                        { id: 'vinyl', label: 'Vinyl' },
+                        { id: 'cassette', label: 'Kazeta' },
+                        { id: 'cd', label: 'CD' },
+                        { id: 'digital', label: 'Digital' },
+                      ].map((format) => {
+                        const active = projectEditReleaseFormats.includes(format.id);
+                        return (
+                          <button
+                            key={format.id}
+                            type="button"
+                            onClick={() =>
+                              setProjectEditReleaseFormats((prev) =>
+                                prev.includes(format.id)
+                                  ? prev.filter((item) => item !== format.id)
+                                  : [...prev, format.id]
+                              )
+                            }
+                            className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
+                              active
+                                ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                                : 'border-white/15 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                            }`}
+                          >
+                            {format.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">URL pro nákup</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                      placeholder="https://..."
+                      value={projectEditPurchaseUrl}
+                      onChange={(e) => setProjectEditPurchaseUrl(e.target.value)}
+                    />
+                  </div>
+
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
                       <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
@@ -3556,6 +3604,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                             project_url: firstUrl,
                             tracks_json: finalTracks,
                             cover_url: coverUrl,
+                            release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
+                            purchase_url: projectEditPurchaseUrl.trim() || null,
                           })
                           .eq('id', editingProject.id);
                         if (updateErr) throw updateErr;
@@ -3570,6 +3620,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                   project_url: firstUrl,
                                   tracks_json: finalTracks,
                                   cover_url: coverUrl,
+                                  release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
+                                  purchase_url: projectEditPurchaseUrl.trim() || null,
                                 }
                               : p
                           )
@@ -3682,6 +3734,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 setEditingProject(project);
                                 setProjectEditTitle(project.title || '');
                                 setProjectEditDescription(project.description || '');
+                                setProjectEditReleaseFormats(project.release_formats || []);
+                                setProjectEditPurchaseUrl(project.purchase_url || '');
                                 const tracks = Array.isArray(project.tracks_json)
                                   ? project.tracks_json.map((t: any) => {
                                       const path = t.path || null;

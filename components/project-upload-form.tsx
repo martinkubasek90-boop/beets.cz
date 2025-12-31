@@ -22,6 +22,8 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
     { file: null, name: '' },
   ]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [releaseFormats, setReleaseFormats] = useState<string[]>([]);
+  const [purchaseUrl, setPurchaseUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -142,6 +144,8 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
         tracks_json: uploadedTracks,
         user_id: user.id,
         access_mode: accessMode,
+        release_formats: releaseFormats.length ? releaseFormats : null,
+        purchase_url: purchaseUrl.trim() || null,
       };
 
       if (coverUrl) {
@@ -159,6 +163,8 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
       setTracks([{ file: null, name: '' }]);
       setCoverFile(null);
       setAccessMode('request');
+      setReleaseFormats([]);
+      setPurchaseUrl('');
 
       if (onCreated) {
         onCreated();
@@ -207,6 +213,51 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
           <option value="private">Soukromý (jen udělené přístupy)</option>
         </select>
         <p className={helperClass}>U „na žádost“ mohou uživatelé poslat žádost o náhled; přehrání bude možné až po schválení.</p>
+      </div>
+
+      <div className="space-y-2">
+        <label className={labelClass}>Vydáno na</label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: 'vinyl', label: 'Vinyl' },
+            { id: 'cassette', label: 'Kazeta' },
+            { id: 'cd', label: 'CD' },
+            { id: 'digital', label: 'Digital' },
+          ].map((format) => {
+            const active = releaseFormats.includes(format.id);
+            return (
+              <button
+                key={format.id}
+                type="button"
+                onClick={() =>
+                  setReleaseFormats((prev) =>
+                    prev.includes(format.id) ? prev.filter((item) => item !== format.id) : [...prev, format.id]
+                  )
+                }
+                className={`rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition ${
+                  active
+                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                    : 'border-white/15 bg-white/90 text-black hover:border-[var(--mpc-accent)]'
+                }`}
+              >
+                {format.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className={helperClass}>Vyber formáty vydání projektu.</p>
+      </div>
+
+      <div>
+        <label className={labelClass}>URL pro nákup</label>
+        <input
+          type="url"
+          value={purchaseUrl}
+          onChange={(e) => setPurchaseUrl(e.target.value)}
+          className={inputClass}
+          placeholder="https://..."
+        />
+        <p className={helperClass}>CTA tlačítko „Koupit“ přesměruje na tuto URL.</p>
       </div>
 
       <div className="space-y-3">

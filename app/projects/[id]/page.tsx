@@ -3,11 +3,18 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { ShareButton } from '@/components/share-button';
 
+const RELEASE_FORMAT_LABELS: Record<string, string> = {
+  vinyl: 'Vinyl',
+  cassette: 'Kazeta',
+  cd: 'CD',
+  digital: 'Digital',
+};
+
 export default async function ProjectDetail({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { data: project, error } = await supabase
     .from('projects')
-    .select('id,title,description,cover_url,user_id,tracks_json,profiles!inner(display_name,slug)')
+    .select('id,title,description,cover_url,user_id,tracks_json,release_formats,purchase_url,profiles!inner(display_name,slug)')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -42,6 +49,29 @@ export default async function ProjectDetail({ params }: { params: { id: string }
               {authorName}
             </Link>
             {project.description && <p className="text-sm text-[var(--mpc-muted)]">{project.description}</p>}
+            {(project as any).release_formats?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                <span>Vydáno na</span>
+                {(project as any).release_formats.map((format: string) => (
+                  <span
+                    key={format}
+                    className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                  >
+                    {RELEASE_FORMAT_LABELS[format] || format}
+                  </span>
+                ))}
+              </div>
+            )}
+            {(project as any).purchase_url && (
+              <a
+                href={(project as any).purchase_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+              >
+                Koupit
+              </a>
+            )}
             {firstTrack?.url ? (
               <audio controls className="mt-2 w-full">
                 <source src={firstTrack.url} />
