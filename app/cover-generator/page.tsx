@@ -101,6 +101,7 @@ export default function CoverGeneratorPage() {
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [addText, setAddText] = useState(true);
+  const [strictPrompt, setStrictPrompt] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [baseUrl, setBaseUrl] = useState<string | null>(null);
@@ -118,14 +119,25 @@ export default function CoverGeneratorPage() {
   const composedPrompt = useMemo(() => {
     if (!prompt.trim()) return '';
     const subject = prompt.trim();
+    const subjectLower = subject.toLowerCase();
+    const wantsPeople = /person|people|man|woman|portrait|face|girl|boy|human|figura|postava|portr[eé]t|člověk|lidé/.test(
+      subjectLower
+    );
+    const subjectLine = wantsPeople
+      ? `Primary subject: ${subject}.`
+      : `Primary subject: ${subject}. Still life composition, object-focused, no people.`;
+    const strictLine = strictPrompt
+      ? 'Strict prompt focus: only the described subject, no extra objects, no unrelated elements.'
+      : 'Creative freedom allowed with the described subject as the main focus.';
     return [
-      `Primary subject: ${subject}.`,
+      subjectLine,
+      strictLine,
       'Keep the main subject centered and dominant.',
       stylePrompt,
       `Color palette: ${palettePrompt}.`,
       'Square album cover, graphic design, high detail, cinematic lighting, no text.',
     ].join(' ');
-  }, [prompt, stylePrompt, palettePrompt]);
+  }, [prompt, stylePrompt, palettePrompt, strictPrompt]);
 
   const negativePrompt = useMemo(() => {
     const subject = prompt.toLowerCase();
@@ -134,10 +146,16 @@ export default function CoverGeneratorPage() {
     );
     const wantsLandscape = /landscape|forest|mountain|field|nature|countryside|les|hory|pole|příroda/.test(subject);
     const extra: string[] = [];
-    if (!wantsPeople) extra.push('person, people, human');
+    if (!wantsPeople) {
+      extra.push('person, people, human, face, portrait, character, figure, head, body');
+      extra.push('girl, boy, woman, man');
+    }
     if (!wantsLandscape) extra.push('landscape, forest, mountains, field, meadow');
-    return [baseNegativePrompt, ...extra].join(', ');
-  }, [prompt]);
+    const strictExtras = strictPrompt
+      ? ['unrelated objects', 'off-topic elements', 'random scene', 'extra props']
+      : [];
+    return [baseNegativePrompt, ...extra, ...strictExtras].join(', ');
+  }, [prompt, strictPrompt]);
 
   useEffect(() => {
     return () => {
@@ -302,6 +320,26 @@ export default function CoverGeneratorPage() {
                     placeholder="Autor / Producent"
                     className="rounded-full border border-white/10 bg-black/50 px-4 py-2 text-sm text-white outline-none focus:border-[var(--mpc-accent)]"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/35 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Držet se promptu</p>
+                    <p className="mt-1 text-xs text-[var(--mpc-muted)]">Přísné vs kreativní generování</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStrictPrompt((prev) => !prev)}
+                    className={`rounded-full px-4 py-2 text-xs uppercase tracking-[0.2em] transition ${
+                      strictPrompt
+                        ? 'bg-[var(--mpc-accent)] text-black'
+                        : 'border border-white/10 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                    }`}
+                  >
+                    {strictPrompt ? 'Přísně' : 'Kreativně'}
+                  </button>
                 </div>
               </div>
 
