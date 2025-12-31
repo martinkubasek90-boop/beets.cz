@@ -32,7 +32,6 @@ const toolGroups = [
     label: 'Grafika',
     items: [
       { href: '/cover-generator', label: 'AI Cover Generator' },
-      { href: '/cover-variants', label: 'AI Cover Variants' },
     ],
   },
 ];
