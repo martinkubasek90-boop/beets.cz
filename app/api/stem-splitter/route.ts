@@ -44,20 +44,37 @@ export async function POST(request: Request) {
 
     const model = process.env.HF_DEMUCS_MODEL || 'facebook/demucs';
     const modelId = encodeURI(model);
-    const response = await fetch(`https://router.huggingface.co/hf-inference/models/${modelId}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': contentType,
-        Accept: 'application/zip',
-      },
-      body: arrayBuffer,
-    });
+    const callHf = (url: string) =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': contentType,
+          Accept: 'application/zip',
+        },
+        body: arrayBuffer,
+      });
+
+    let response = await callHf(`https://router.huggingface.co/hf-inference/models/${modelId}`);
+    let fallbackErrorText = '';
+
+    if (response.status === 404) {
+      const fallback = await callHf(`https://api-inference.huggingface.co/models/${modelId}`);
+      if (fallback.ok) {
+        response = fallback;
+      } else {
+        fallbackErrorText = await fallback.text();
+      }
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
+      const extra =
+        response.status === 404 && fallbackErrorText
+          ? ` | legacy: ${fallbackErrorText}`
+          : '';
       return NextResponse.json(
-        { error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}` },
+        { error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}${extra}` },
         { status: response.status }
       );
     }
