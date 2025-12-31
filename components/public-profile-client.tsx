@@ -1658,32 +1658,6 @@ export default function PublicProfileClient({
                   </div>
                 </div>
 
-                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
-                  <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      <span>Vydáno na</span>
-                      {(project.release_formats || []).map((format) => (
-                        <span
-                          key={format}
-                          className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
-                        >
-                          {RELEASE_FORMAT_LABELS[format] || format}
-                        </span>
-                      ))}
-                    </div>
-                    {project.purchase_url && (
-                      <a
-                        href={normalizePurchaseUrl(project.purchase_url) || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                      >
-                        Koupit
-                      </a>
-                    )}
-                  </div>
-                ) : null}
-
                 {project.access_mode === 'request' && (
                   <div className="mt-4 flex justify-center">
                     <Link
@@ -1754,8 +1728,34 @@ export default function PublicProfileClient({
                         </div>
                       </div>
                     </div>
-                  );
-                })()}
+                    );
+                  })()}
+
+                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      <span>Vydáno na</span>
+                      {(project.release_formats || []).map((format) => (
+                        <span
+                          key={format}
+                          className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                        >
+                          {RELEASE_FORMAT_LABELS[format] || format}
+                        </span>
+                      ))}
+                    </div>
+                    {project.purchase_url && (
+                      <a
+                        href={normalizePurchaseUrl(project.purchase_url) || undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                      >
+                        Koupit
+                      </a>
+                    )}
+                  </div>
+                ) : null}
 
                 <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-center justify-between">
