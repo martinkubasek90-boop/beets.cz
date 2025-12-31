@@ -19,6 +19,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Chybí audio soubor.' }, { status: 400 });
     }
 
+    const maxBytes = 25 * 1024 * 1024;
+    if (file.size > maxBytes) {
+      return NextResponse.json(
+        { error: 'Soubor je moc velký pro free HF (max ~25 MB). Zkus kratší/export MP3.' },
+        { status: 413 }
+      );
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const contentType = file.type || 'application/octet-stream';
 
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorText = await response.text();
       return NextResponse.json(
-        { error: `HF chyba: ${response.status} ${errorText}` },
+        { error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}` },
         { status: response.status }
       );
     }

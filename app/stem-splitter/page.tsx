@@ -43,7 +43,7 @@ export default function StemSplitterPage() {
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         const text = payload?.error || (await response.text().catch(() => ''));
-        throw new Error(text || 'Zpracování selhalo.');
+        throw new Error(text || `Zpracování selhalo. (HTTP ${response.status})`);
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
