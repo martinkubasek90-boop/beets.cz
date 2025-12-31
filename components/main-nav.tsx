@@ -21,6 +21,7 @@ const toolLinks = [
   { href: '/reference-match', label: 'Reference Match' },
   { href: '/drum-analyzer', label: 'Drum Analyzer' },
   { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
+  { href: '/cover-generator', label: 'AI Cover Generator' },
 ];
 
 export function MainNav() {
