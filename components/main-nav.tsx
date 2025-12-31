@@ -22,6 +22,7 @@ const toolLinks = [
   { href: '/drum-analyzer', label: 'Drum Analyzer' },
   { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
   { href: '/cover-generator', label: 'AI Cover Generator' },
+  { href: '/cover-variants', label: 'AI Cover Variants' },
 ];
 
 export function MainNav() {
