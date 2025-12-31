@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     '/api/konvertor': ['node_modules/ffmpeg-static/**'],
     '/api/konvertor/route': ['node_modules/ffmpeg-static/**'],
+    '/api/encode-mp3': ['node_modules/ffmpeg-static/**'],
+    '/api/encode-mp3/route': ['node_modules/ffmpeg-static/**'],
   },
 };
 
