@@ -43,7 +43,11 @@ export async function POST(request: Request) {
     const contentType = sourceResponse.headers.get('content-type') || 'application/octet-stream';
 
     const model = process.env.HF_DEMUCS_MODEL || 'facebook/demucs';
+    const endpoint = process.env.HF_DEMUCS_ENDPOINT;
     const modelId = encodeURI(model);
+    const primaryUrl =
+      endpoint?.trim() ||
+      (model.startsWith('http') ? model : `https://router.huggingface.co/hf-inference/models/${modelId}`);
     const callHf = (url: string) =>
       fetch(url, {
         method: 'POST',
@@ -55,10 +59,10 @@ export async function POST(request: Request) {
         body: arrayBuffer,
       });
 
-    let response = await callHf(`https://router.huggingface.co/hf-inference/models/${modelId}`);
+    let response = await callHf(primaryUrl);
     let fallbackErrorText = '';
 
-    if (response.status === 404) {
+    if (response.status === 404 && !endpoint && !model.startsWith('http')) {
       const fallback = await callHf(`https://api-inference.huggingface.co/models/${modelId}`);
       if (fallback.ok) {
         response = fallback;
@@ -74,7 +78,13 @@ export async function POST(request: Request) {
           ? ` | legacy: ${fallbackErrorText}`
           : '';
       return NextResponse.json(
-        { error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}${extra}` },
+        {
+          error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}${extra}`,
+          hint:
+            response.status === 404
+              ? 'Model není dostupný přes HF router. Nastav HF_DEMUCS_ENDPOINT na vlastní endpoint nebo jiný model v HF_DEMUCS_MODEL.'
+              : undefined,
+        },
         { status: response.status }
       );
     }
