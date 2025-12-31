@@ -16,6 +16,10 @@ type AnalysisResult = {
   widthRatio: number | null;
   lowRatio: number;
   highRatio: number;
+  hotPeakCount: number;
+  clipCount: number;
+  peakWindows: number[];
+  peakMoments: number[];
 };
 
 type ChecklistItem = {
@@ -188,15 +192,41 @@ async function analyzeFile(file: File): Promise<AnalysisResult> {
   let midSquares = 0;
   let sideSquares = 0;
 
+  const windowCount = 20;
+  const peakWindows = Array.from({ length: windowCount }, () => 0);
+  const topPeaks: { amp: number; time: number }[] = [];
+  const clipThreshold = 0.999;
+  const hotThreshold = Math.pow(10, -0.3 / 20);
+  let clipCount = 0;
+  let hotPeakCount = 0;
+
   for (let i = 0; i < length; i += stride) {
     const l = left[i];
     const r = right ? right[i] : l;
     const sample = (l + r) * 0.5;
+    const absSample = Math.max(Math.abs(l), Math.abs(r));
 
-    peak = Math.max(peak, Math.abs(l), Math.abs(r));
+    peak = Math.max(peak, absSample);
     sumSquares += sample * sample;
     sum += sample;
     count += 1;
+
+    if (absSample >= clipThreshold) {
+      clipCount += 1;
+    }
+    if (absSample >= hotThreshold) {
+      hotPeakCount += 1;
+    }
+
+    const windowIndex = Math.min(windowCount - 1, Math.floor((i / length) * windowCount));
+    peakWindows[windowIndex] = Math.max(peakWindows[windowIndex], absSample);
+
+    if (topPeaks.length < 5 || absSample > topPeaks[topPeaks.length - 1].amp) {
+      const time = i / sampleRate;
+      topPeaks.push({ amp: absSample, time });
+      topPeaks.sort((a, b) => b.amp - a.amp);
+      topPeaks.splice(5);
+    }
 
     if (right) {
       sumL += l;
@@ -246,6 +276,10 @@ async function analyzeFile(file: File): Promise<AnalysisResult> {
     widthRatio,
     lowRatio: lowRms / Math.max(1e-6, rms),
     highRatio: highRms / Math.max(1e-6, rms),
+    hotPeakCount,
+    clipCount,
+    peakWindows,
+    peakMoments: topPeaks.map((item) => item.time),
   };
 }
 
@@ -552,6 +586,37 @@ export default function MixChecklistPage() {
                           );
                         })}
                       </div>
+                    </div>
+
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        Clipping &amp; Peaks
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
+                        <div className="rounded-xl border border-white/10 bg-black/50 px-3 py-2">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Hot peaks</p>
+                          <p className="mt-1 text-white">{result.hotPeakCount}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-black/50 px-3 py-2">
+                          <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Clipping</p>
+                          <p className="mt-1 text-white">{result.clipCount}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-end gap-1">
+                        {result.peakWindows.map((value, index) => (
+                          <div
+                            key={`${index}-${value}`}
+                            className="flex-1 rounded-t bg-[var(--mpc-accent)]/70"
+                            style={{ height: `${Math.max(6, value * 80)}px` }}
+                            title={`Peak ${(value * 100).toFixed(1)}%`}
+                          />
+                        ))}
+                      </div>
+                      {result.peakMoments.length > 0 && (
+                        <p className="mt-3 text-[11px] text-[var(--mpc-muted)]">
+                          Nejvyšší peaky: {result.peakMoments.map((time) => `${time.toFixed(2)}s`).join(', ')}
+                        </p>
+                      )}
                     </div>
                   </>
                 ) : (
