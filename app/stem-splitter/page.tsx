@@ -41,8 +41,9 @@ export default function StemSplitterPage() {
       formData.append('file', file, file.name);
       const response = await fetch('/api/stem-splitter', { method: 'POST', body: formData });
       if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || 'Zpracování selhalo.');
+        const payload = await response.json().catch(() => null);
+        const text = payload?.error || (await response.text().catch(() => ''));
+        throw new Error(text || 'Zpracování selhalo.');
       }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
