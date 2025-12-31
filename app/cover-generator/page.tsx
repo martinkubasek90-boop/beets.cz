@@ -104,8 +104,8 @@ export default function CoverGeneratorPage() {
   const [strictPrompt, setStrictPrompt] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [baseUrl, setBaseUrl] = useState<string | null>(null);
-  const [outputUrl, setOutputUrl] = useState<string | null>(null);
+  const [baseUrls, setBaseUrls] = useState<string[]>([]);
+  const [outputUrls, setOutputUrls] = useState<string[]>([]);
 
   const stylePrompt = useMemo(
     () => stylePresets.find((preset) => preset.id === styleId)?.prompt ?? '',
@@ -159,56 +159,62 @@ export default function CoverGeneratorPage() {
 
   useEffect(() => {
     return () => {
-      if (baseUrl) URL.revokeObjectURL(baseUrl);
+      baseUrls.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [baseUrl]);
+  }, [baseUrls]);
 
   useEffect(() => {
     let active = true;
     const build = async () => {
-      if (!baseUrl) {
-        setOutputUrl(null);
+      if (baseUrls.length === 0) {
+        setOutputUrls([]);
         return;
       }
       if (!addText || (!title.trim() && !artist.trim())) {
-        setOutputUrl(baseUrl);
+        setOutputUrls(baseUrls);
         return;
       }
-      const url = await renderTextOverlay(baseUrl, title, artist);
+      const overlays = await Promise.all(baseUrls.map((url) => renderTextOverlay(url, title, artist)));
       if (active) {
-        setOutputUrl(url);
+        setOutputUrls(overlays);
       }
     };
     void build();
     return () => {
       active = false;
     };
-  }, [addText, artist, baseUrl, title]);
+  }, [addText, artist, baseUrls, title]);
 
   const generateCover = async () => {
     if (!composedPrompt) return;
     setLoading(true);
     setError(null);
-    setOutputUrl(null);
+    setOutputUrls([]);
     try {
-      const response = await fetch('/api/cover-generator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: composedPrompt,
-          negativePrompt,
-          width: 1024,
-          height: 1024,
-        }),
-      });
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error(payload?.error || 'Generování selhalo.');
+      const responses = await Promise.all(
+        Array.from({ length: 3 }).map(() =>
+          fetch('/api/cover-generator', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: composedPrompt,
+              negativePrompt,
+              width: 1024,
+              height: 1024,
+            }),
+          })
+        )
+      );
+      for (const response of responses) {
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error(payload?.error || 'Generování selhalo.');
+        }
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      if (baseUrl) URL.revokeObjectURL(baseUrl);
-      setBaseUrl(url);
+      const blobs = await Promise.all(responses.map((response) => response.blob()));
+      const urls = blobs.map((blob) => URL.createObjectURL(blob));
+      if (baseUrls.length) baseUrls.forEach((url) => URL.revokeObjectURL(url));
+      setBaseUrls(urls);
     } catch (err: any) {
       setError(err?.message || 'Generování selhalo.');
     } finally {
@@ -349,16 +355,21 @@ export default function CoverGeneratorPage() {
                   disabled={!composedPrompt || loading}
                   className="inline-flex items-center gap-2 rounded-full bg-[var(--mpc-accent)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? 'Generuju…' : 'Vygenerovat cover'}
+                  {loading ? 'Generuju…' : 'Vygenerovat 3 varianty'}
                 </button>
-                {outputUrl && (
-                  <a
-                    href={outputUrl}
-                    download="beets-cover.png"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-white hover:border-[var(--mpc-accent)]"
-                  >
-                    Stáhnout PNG
-                  </a>
+                {outputUrls.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {outputUrls.map((url, index) => (
+                      <a
+                        key={url}
+                        href={url}
+                        download={`beets-cover-${index + 1}.png`}
+                        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.25em] text-white hover:border-[var(--mpc-accent)]"
+                      >
+                        Stáhnout {index + 1}
+                      </a>
+                    ))}
+                  </div>
                 )}
               </div>
 
@@ -367,11 +378,15 @@ export default function CoverGeneratorPage() {
 
             <div className="rounded-2xl border border-white/10 bg-black/35 p-6">
               <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent-2)]">Preview</p>
-              <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/50">
-                {outputUrl ? (
-                  <img src={outputUrl} alt="AI cover preview" className="h-full w-full object-cover" />
+              <div className="mt-4 grid gap-4">
+                {outputUrls.length > 0 ? (
+                  outputUrls.map((url, index) => (
+                    <div key={url} className="overflow-hidden rounded-2xl border border-white/10 bg-black/50">
+                      <img src={url} alt={`AI cover preview ${index + 1}`} className="h-full w-full object-cover" />
+                    </div>
+                  ))
                 ) : (
-                  <div className="grid aspect-square place-items-center text-xs text-[var(--mpc-muted)]">
+                  <div className="grid aspect-square place-items-center rounded-2xl border border-white/10 bg-black/50 text-xs text-[var(--mpc-muted)]">
                     Zatím nic nevygenerováno.
                   </div>
                 )}
