@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const contentType = sourceResponse.headers.get('content-type') || 'application/octet-stream';
 
     const model = process.env.HF_DEMUCS_MODEL || 'facebook/demucs';
-    const modelId = encodeURIComponent(model);
+    const modelId = encodeURI(model);
     const response = await fetch(`https://router.huggingface.co/hf-inference/models/${modelId}`, {
       method: 'POST',
       headers: {
