@@ -24,6 +24,108 @@ type ChecklistItem = {
   detail: string;
 };
 
+type MixTarget = {
+  id: string;
+  label: string;
+  lufsMin: number;
+  lufsMax: number;
+  crestMin: number;
+  crestMax: number;
+  lowMin: number;
+  lowMax: number;
+  highMin: number;
+  highMax: number;
+  widthMin: number;
+  widthMax: number;
+};
+
+const mixTargets: MixTarget[] = [
+  {
+    id: 'hiphop',
+    label: 'Hip-Hop / Trap',
+    lufsMin: -9,
+    lufsMax: -7,
+    crestMin: 7,
+    crestMax: 11,
+    lowMin: 0.45,
+    lowMax: 0.65,
+    highMin: 0.16,
+    highMax: 0.32,
+    widthMin: 0.18,
+    widthMax: 0.45,
+  },
+  {
+    id: 'lofi',
+    label: 'Lo-Fi / Chillhop',
+    lufsMin: -14,
+    lufsMax: -10,
+    crestMin: 10,
+    crestMax: 16,
+    lowMin: 0.3,
+    lowMax: 0.55,
+    highMin: 0.12,
+    highMax: 0.25,
+    widthMin: 0.2,
+    widthMax: 0.55,
+  },
+  {
+    id: 'boombap',
+    label: 'BoomBap',
+    lufsMin: -10,
+    lufsMax: -8,
+    crestMin: 9,
+    crestMax: 13,
+    lowMin: 0.4,
+    lowMax: 0.6,
+    highMin: 0.14,
+    highMax: 0.3,
+    widthMin: 0.15,
+    widthMax: 0.4,
+  },
+  {
+    id: 'drill',
+    label: 'Drill / UK Drill',
+    lufsMin: -9,
+    lufsMax: -7,
+    crestMin: 6,
+    crestMax: 10,
+    lowMin: 0.5,
+    lowMax: 0.7,
+    highMin: 0.18,
+    highMax: 0.35,
+    widthMin: 0.12,
+    widthMax: 0.35,
+  },
+  {
+    id: 'pop',
+    label: 'Pop / R&B',
+    lufsMin: -10,
+    lufsMax: -8,
+    crestMin: 8,
+    crestMax: 12,
+    lowMin: 0.3,
+    lowMax: 0.5,
+    highMin: 0.2,
+    highMax: 0.4,
+    widthMin: 0.25,
+    widthMax: 0.6,
+  },
+  {
+    id: 'edm',
+    label: 'EDM / Club',
+    lufsMin: -8,
+    lufsMax: -6,
+    crestMin: 5,
+    crestMax: 9,
+    lowMin: 0.35,
+    lowMax: 0.6,
+    highMin: 0.22,
+    highMax: 0.45,
+    widthMin: 0.3,
+    widthMax: 0.7,
+  },
+];
+
 const MAX_SAMPLE_POINTS = 1_000_000;
 
 function dbfs(value: number) {
@@ -222,8 +324,13 @@ export default function MixChecklistPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [targetId, setTargetId] = useState(mixTargets[0].id);
 
   const checklist = useMemo(() => (result ? buildChecklist(result) : []), [result]);
+  const activeTarget = useMemo(
+    () => mixTargets.find((target) => target.id === targetId) ?? mixTargets[0],
+    [targetId]
+  );
 
   const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -362,6 +469,89 @@ export default function MixChecklistPage() {
                           <p className="mt-1 text-white normal-case tracking-normal text-sm">{item.detail}</p>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-black/40 p-4">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        Porovnání s cílem (žánr)
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {mixTargets.map((target) => (
+                          <button
+                            key={target.id}
+                            type="button"
+                            onClick={() => setTargetId(target.id)}
+                            className={`rounded-full px-3 py-2 text-[10px] uppercase tracking-[0.2em] transition ${
+                              target.id === targetId
+                                ? 'bg-[var(--mpc-accent)] text-black'
+                                : 'border border-white/10 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                            }`}
+                          >
+                            {target.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                        {[
+                          {
+                            label: 'Loudness (RMS)',
+                            value: result.rmsDb,
+                            min: activeTarget.lufsMin,
+                            max: activeTarget.lufsMax,
+                            format: (v: number) => `${v.toFixed(1)} dBFS`,
+                          },
+                          {
+                            label: 'Crest factor',
+                            value: result.crestDb,
+                            min: activeTarget.crestMin,
+                            max: activeTarget.crestMax,
+                            format: (v: number) => `${v.toFixed(1)} dB`,
+                          },
+                          {
+                            label: 'Low ratio',
+                            value: result.lowRatio,
+                            min: activeTarget.lowMin,
+                            max: activeTarget.lowMax,
+                            format: (v: number) => v.toFixed(2),
+                          },
+                          {
+                            label: 'High ratio',
+                            value: result.highRatio,
+                            min: activeTarget.highMin,
+                            max: activeTarget.highMax,
+                            format: (v: number) => v.toFixed(2),
+                          },
+                          {
+                            label: 'Stereo width',
+                            value: result.widthRatio ?? NaN,
+                            min: activeTarget.widthMin,
+                            max: activeTarget.widthMax,
+                            format: (v: number) => (Number.isFinite(v) ? v.toFixed(2) : 'Mono'),
+                          },
+                        ].map((item) => {
+                          const ok = Number.isFinite(item.value)
+                            ? item.value >= item.min && item.value <= item.max
+                            : false;
+                          return (
+                            <div
+                              key={item.label}
+                              className={`rounded-xl border px-3 py-2 ${
+                                ok
+                                  ? 'border-[rgba(0,86,63,0.6)] bg-[rgba(0,86,63,0.18)] text-white'
+                                  : 'border-[rgba(243,116,51,0.6)] bg-[rgba(243,116,51,0.12)] text-white'
+                              }`}
+                            >
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                                {item.label}
+                              </p>
+                              <p className="mt-1 text-white">{item.format(item.value)}</p>
+                              <p className="mt-1 text-[10px] text-[var(--mpc-muted)]">
+                                Cíl {item.min} – {item.max}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </>
                 ) : (
