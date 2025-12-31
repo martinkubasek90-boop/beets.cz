@@ -32,6 +32,7 @@ const toolGroups = [
     label: 'Grafika',
     items: [
       { href: '/cover-generator', label: 'AI Cover Generator' },
+      { href: '/video-generator', label: 'AI Video Generator' },
     ],
   },
 ];
