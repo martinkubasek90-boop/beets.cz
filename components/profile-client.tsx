@@ -101,6 +101,12 @@ const normalizeProjectTracks = (raw?: ProjectItem['tracks_json']) => {
     .filter((t) => Boolean(t.url));
 };
 
+const normalizePurchaseUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 type CollabThread = {
   id: string;
   title: string;
@@ -3595,6 +3601,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         }
 
                         const firstUrl = finalTracks[0]?.url || editingProject.project_url || null;
+                        const normalizedPurchaseUrl = normalizePurchaseUrl(projectEditPurchaseUrl);
 
                         const { error: updateErr } = await supabase
                           .from('projects')
@@ -3605,7 +3612,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                             tracks_json: finalTracks,
                             cover_url: coverUrl,
                             release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
-                            purchase_url: projectEditPurchaseUrl.trim() || null,
+                            purchase_url: normalizedPurchaseUrl,
                           })
                           .eq('id', editingProject.id);
                         if (updateErr) throw updateErr;
@@ -3621,7 +3628,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                   tracks_json: finalTracks,
                                   cover_url: coverUrl,
                                   release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
-                                  purchase_url: projectEditPurchaseUrl.trim() || null,
+                                  purchase_url: normalizedPurchaseUrl,
                                 }
                               : p
                           )

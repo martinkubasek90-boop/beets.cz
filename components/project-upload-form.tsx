@@ -14,6 +14,11 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
   const inputClass =
     'mt-1 w-full rounded-lg border border-white/15 bg-white/95 px-3 py-2 text-sm text-black shadow-sm outline-none focus:border-[var(--mpc-accent)]';
   const helperClass = 'mt-1 text-[11px] text-neutral-500';
+  const normalizePurchaseUrl = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -145,7 +150,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
         user_id: user.id,
         access_mode: accessMode,
         release_formats: releaseFormats.length ? releaseFormats : null,
-        purchase_url: purchaseUrl.trim() || null,
+        purchase_url: normalizePurchaseUrl(purchaseUrl),
       };
 
       if (coverUrl) {

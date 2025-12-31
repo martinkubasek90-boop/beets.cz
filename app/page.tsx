@@ -57,6 +57,8 @@ type Project = {
   user_id?: string | null;
   author_name?: string | null;
   project_url?: string | null;
+  release_formats?: string[] | null;
+  purchase_url?: string | null;
   tracks?: Array<{
     id: number | string;
     title: string;
@@ -67,6 +69,18 @@ type Project = {
 }>;
   tracks_json?: Array<{ name: string; url: string }>;
   display_name?: string | null;
+};
+
+const RELEASE_FORMAT_LABELS: Record<string, string> = {
+  vinyl: 'Vinyl',
+  cassette: 'Kazeta',
+  cd: 'CD',
+  digital: 'Digital',
+};
+
+const normalizePurchaseUrl = (value?: string | null) => {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 };
 
 // Lokální demo beaty – fallback, když Supabase spadne
@@ -431,7 +445,7 @@ export default function Home() {
       try {
         const { data: d1, error: err1 } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
           .eq('access_mode', 'public')
           .order('id', { ascending: false })
           .limit(2);
@@ -440,7 +454,7 @@ export default function Home() {
       } catch (innerErr) {
         const { data: d2, error: err2 } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode, release_formats, purchase_url')
           .eq('access_mode', 'public')
           .order('id', { ascending: false })
           .limit(2);
@@ -741,7 +755,7 @@ export default function Home() {
         try {
           const { data: d1, error: err1 } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode')
+            .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
             .eq('access_mode', 'public')
             .order('id', { ascending: false })
             .limit(2);
@@ -752,7 +766,7 @@ export default function Home() {
           console.warn('Fallback načítání projektů bez author_name:', innerErr);
             const { data: d2, error: err2 } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode')
+            .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode, release_formats, purchase_url')
             .eq('access_mode', 'public')
             .order('id', { ascending: false })
             .limit(2);
@@ -1407,6 +1421,34 @@ export default function Home() {
                     {project.description || 'Instrumentální beat tape.'}
                   </p>
                 </div>
+
+                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                  <div className="w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        <span>Vydáno na</span>
+                        {(project.release_formats || []).map((format) => (
+                          <span
+                            key={format}
+                            className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                          >
+                            {RELEASE_FORMAT_LABELS[format] || format}
+                          </span>
+                        ))}
+                      </div>
+                      {project.purchase_url && (
+                        <a
+                          href={normalizePurchaseUrl(project.purchase_url) || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                        >
+                          Koupit
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
                   <div className="mx-auto flex max-w-3xl items-center gap-3">

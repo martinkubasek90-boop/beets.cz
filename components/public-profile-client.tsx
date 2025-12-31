@@ -94,6 +94,11 @@ const RELEASE_FORMAT_LABELS: Record<string, string> = {
   digital: 'Digital',
 };
 
+const normalizePurchaseUrl = (value?: string | null) => {
+  if (!value) return null;
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+};
+
 const isProjectTrack = (value: unknown): value is ProjectTrack =>
   !!value &&
   typeof value === 'object' &&
@@ -1668,7 +1673,7 @@ export default function PublicProfileClient({
                     </div>
                     {project.purchase_url && (
                       <a
-                        href={project.purchase_url}
+                        href={normalizePurchaseUrl(project.purchase_url) || undefined}
                         target="_blank"
                         rel="noreferrer"
                         className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
