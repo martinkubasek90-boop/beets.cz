@@ -14,16 +14,26 @@ const links = [
   { href: '/live', label: 'Live' },
   { href: '/faq', label: 'FAQ' },
 ];
-const toolLinks = [
-  { href: '/konvertor', label: 'Konvertor MP3' },
-  { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
-  { href: '/mix-checklist', label: 'AI Mix Checklist' },
-  { href: '/reference-match', label: 'Reference Match' },
-  { href: '/drum-analyzer', label: 'Drum Analyzer' },
-  { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
-  { href: '/cover-generator', label: 'AI Cover Generator' },
-  { href: '/cover-variants', label: 'AI Cover Variants' },
-  { href: '/mix-targets', label: 'Mix Target Finder' },
+const toolGroups = [
+  {
+    label: 'Audio',
+    items: [
+      { href: '/konvertor', label: 'Konvertor MP3' },
+      { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
+      { href: '/mix-checklist', label: 'AI Mix Checklist' },
+      { href: '/reference-match', label: 'Reference Match' },
+      { href: '/drum-analyzer', label: 'Drum Analyzer' },
+      { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
+      { href: '/mix-targets', label: 'Mix Target Finder' },
+    ],
+  },
+  {
+    label: 'Grafika',
+    items: [
+      { href: '/cover-generator', label: 'AI Cover Generator' },
+      { href: '/cover-variants', label: 'AI Cover Variants' },
+    ],
+  },
 ];
 
 export function MainNav() {
@@ -181,18 +191,27 @@ export function MainNav() {
               />
             </button>
             {toolsOpen && (
-              <div className="absolute left-1/2 mt-3 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur z-50 pointer-events-auto">
-              {toolLinks.map((tool) => (
-                <Link
-                  key={tool.href}
-                  className="relative block py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
-                  href={tool.href}
-                  onClick={() => setToolsOpen(false)}
-                >
-                  {tool.label}
-                  <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
-                </Link>
-              ))}
+              <div className="absolute left-1/2 mt-3 -translate-x-1/2 rounded-xl border border-white/10 bg-black/90 p-3 shadow-lg backdrop-blur z-50 pointer-events-auto min-w-[220px]">
+                {toolGroups.map((group) => (
+                  <div key={group.label} className="px-2 py-2">
+                    <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                      {group.label}
+                    </p>
+                    <div className="mt-2">
+                      {group.items.map((tool) => (
+                        <Link
+                          key={tool.href}
+                          className="relative block py-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-[var(--mpc-muted)] hover:text-white"
+                          href={tool.href}
+                          onClick={() => setToolsOpen(false)}
+                        >
+                          {tool.label}
+                          <span className="absolute inset-x-0 -bottom-1 h-[2px] origin-center scale-x-0 bg-[var(--mpc-accent)] transition-transform duration-200 hover:scale-x-100" />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -227,11 +246,20 @@ export function MainNav() {
               ))}
               <div className="pt-2">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Nástroje</p>
-                <div className="mt-2 flex flex-col gap-2">
-                  {toolLinks.map((tool) => (
-                    <Link key={tool.href} className="py-1 hover:text-white" href={tool.href}>
-                      {tool.label}
-                    </Link>
+                <div className="mt-3 space-y-3">
+                  {toolGroups.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--mpc-muted)]">
+                        {group.label}
+                      </p>
+                      <div className="mt-2 flex flex-col gap-2">
+                        {group.items.map((tool) => (
+                          <Link key={tool.href} className="py-1 hover:text-white" href={tool.href}>
+                            {tool.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
