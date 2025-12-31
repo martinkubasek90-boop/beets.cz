@@ -1,15 +1,44 @@
 'use client';
 
 import type { ChangeEvent, DragEvent } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MainNav } from '@/components/main-nav';
+import { createClient } from '@/lib/supabase/client';
 
 export default function StemSplitterPage() {
+  const supabase = createClient();
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setUserId(data.session?.user?.id ?? null);
+      setAuthReady(true);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+      setAuthReady(true);
+    });
+
+    return () => {
+      alive = false;
+      authListener?.subscription?.unsubscribe();
+    };
+  }, [supabase]);
+
+  useEffect(() => {
+    return () => {
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+    };
+  }, [downloadUrl]);
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -33,13 +62,37 @@ export default function StemSplitterPage() {
 
   const runSplit = async () => {
     if (!file) return;
+    if (!userId) {
+      setError('Stem splitter je dostupný pouze pro přihlášené uživatele.');
+      return;
+    }
     setLoading(true);
     setError(null);
     setDownloadUrl(null);
+    let uploadPath: string | null = null;
     try {
-      const formData = new FormData();
-      formData.append('file', file, file.name);
-      const response = await fetch('/api/stem-splitter', { method: 'POST', body: formData });
+      const safeName = file.name.replace(/[^a-z0-9._-]+/gi, '_');
+      uploadPath = `${userId}/input/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('stems').upload(uploadPath, file, {
+        contentType: file.type || 'application/octet-stream',
+        upsert: true,
+      });
+      if (uploadError) {
+        throw new Error('Nahrání do úložiště selhalo. Zkus to prosím znovu.');
+      }
+
+      const { data: signed, error: signedErr } = await supabase.storage
+        .from('stems')
+        .createSignedUrl(uploadPath, 600);
+      if (signedErr || !signed?.signedUrl) {
+        throw new Error('Nepodařilo se vytvořit dočasný odkaz pro zpracování.');
+      }
+
+      const response = await fetch('/api/stem-splitter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: signed.signedUrl }),
+      });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
         const text = payload?.error || (await response.text().catch(() => ''));
@@ -51,6 +104,9 @@ export default function StemSplitterPage() {
     } catch (err: any) {
       setError(err?.message || 'Zpracování selhalo.');
     } finally {
+      if (uploadPath) {
+        await supabase.storage.from('stems').remove([uploadPath]);
+      }
       setLoading(false);
     }
   };
@@ -66,6 +122,9 @@ export default function StemSplitterPage() {
               <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">Stem Splitter</h1>
               <p className="text-sm text-[var(--mpc-muted)]">
                 Rozdělení mixu na stems (vocals, drums, bass, other) přes HF Demucs.
+              </p>
+              <p className="text-xs text-[var(--mpc-muted)]">
+                Pouze pro přihlášené. Soubor se nahraje dočasně a po exportu se smaže.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-xs text-[var(--mpc-muted)]">
@@ -105,7 +164,7 @@ export default function StemSplitterPage() {
                 </label>
                 <button
                   onClick={runSplit}
-                  disabled={!file || loading}
+                  disabled={!file || loading || !userId}
                   className="inline-flex items-center gap-2 rounded-full bg-[var(--mpc-accent)] px-6 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? 'Zpracovávám…' : 'Rozdělit do stems'}
@@ -123,7 +182,11 @@ export default function StemSplitterPage() {
             <div className="rounded-2xl border border-white/10 bg-black/35 p-6">
               <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent-2)]">Výstup</p>
               <div className="mt-4 space-y-4 text-sm text-[var(--mpc-muted)]">
-                {downloadUrl ? (
+                {!authReady ? (
+                  <p>Načítám účet…</p>
+                ) : !userId ? (
+                  <p>Přihlas se pro použití stem splitteru.</p>
+                ) : downloadUrl ? (
                   <>
                     <p>Stems jsou připravené ke stažení.</p>
                     <a

@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+type RequestPayload = {
+  url?: string;
+};
+
 export async function POST(request: Request) {
   try {
     const token = process.env.HUGGINGFACE_API_KEY;
@@ -12,23 +16,31 @@ export async function POST(request: Request) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file');
-
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json({ error: 'Chybí audio soubor.' }, { status: 400 });
+    const payload = (await request.json().catch(() => ({}))) as RequestPayload;
+    if (!payload.url) {
+      return NextResponse.json({ error: 'Chybí URL souboru.' }, { status: 400 });
     }
 
+    const sourceResponse = await fetch(payload.url);
+    if (!sourceResponse.ok) {
+      const text = await sourceResponse.text();
+      return NextResponse.json(
+        { error: `Nepodařilo se stáhnout soubor: ${sourceResponse.status} ${text}` },
+        { status: 400 }
+      );
+    }
+
+    const contentLength = Number(sourceResponse.headers.get('content-length') || 0);
     const maxBytes = 25 * 1024 * 1024;
-    if (file.size > maxBytes) {
+    if (contentLength && contentLength > maxBytes) {
       return NextResponse.json(
         { error: 'Soubor je moc velký pro free HF (max ~25 MB). Zkus kratší/export MP3.' },
         { status: 413 }
       );
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const contentType = file.type || 'application/octet-stream';
+    const arrayBuffer = await sourceResponse.arrayBuffer();
+    const contentType = sourceResponse.headers.get('content-type') || 'application/octet-stream';
 
     const response = await fetch('https://router.huggingface.co/hf-inference/models/facebook/demucs', {
       method: 'POST',
