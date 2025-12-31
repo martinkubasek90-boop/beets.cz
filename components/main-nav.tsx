@@ -23,6 +23,7 @@ const toolLinks = [
   { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
   { href: '/cover-generator', label: 'AI Cover Generator' },
   { href: '/cover-variants', label: 'AI Cover Variants' },
+  { href: '/mix-targets', label: 'Mix Target Finder' },
 ];
 
 export function MainNav() {
