@@ -50,8 +50,8 @@ const palettePresets: Preset[] = [
   { id: 'olive', label: 'Olive Cream', prompt: 'olive green, cream, muted gold, soft contrast' },
 ];
 
-const negativePrompt =
-  'text, logo, watermark, signature, blurry, low quality, jpeg artifacts, frame, cartoon';
+const baseNegativePrompt =
+  'text, typography, letters, words, logo, watermark, signature, blurry, low quality, jpeg artifacts, frame, cartoon';
 
 async function renderTextOverlay(baseUrl: string, title: string, artist: string) {
   const image = new Image();
@@ -117,8 +117,27 @@ export default function CoverGeneratorPage() {
 
   const composedPrompt = useMemo(() => {
     if (!prompt.trim()) return '';
-    return `${prompt.trim()}. ${stylePrompt}. Color palette: ${palettePrompt}. Square album cover, graphic design, high detail, cinematic lighting, no text.`;
+    const subject = prompt.trim();
+    return [
+      `Primary subject: ${subject}.`,
+      'Keep the main subject centered and dominant.',
+      stylePrompt,
+      `Color palette: ${palettePrompt}.`,
+      'Square album cover, graphic design, high detail, cinematic lighting, no text.',
+    ].join(' ');
   }, [prompt, stylePrompt, palettePrompt]);
+
+  const negativePrompt = useMemo(() => {
+    const subject = prompt.toLowerCase();
+    const wantsPeople = /person|people|man|woman|portrait|face|girl|boy|human|figura|postava|portr[eé]t|člověk|lidé/.test(
+      subject
+    );
+    const wantsLandscape = /landscape|forest|mountain|field|nature|countryside|les|hory|pole|příroda/.test(subject);
+    const extra: string[] = [];
+    if (!wantsPeople) extra.push('person, people, human');
+    if (!wantsLandscape) extra.push('landscape, forest, mountains, field, meadow');
+    return [baseNegativePrompt, ...extra].join(', ');
+  }, [prompt]);
 
   useEffect(() => {
     return () => {
