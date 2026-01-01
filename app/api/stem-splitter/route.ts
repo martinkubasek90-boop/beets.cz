@@ -187,7 +187,7 @@ async function runReplicate(url: string) {
     const { buffer, contentType } = await fetchBinary(output);
     const isZip = output.toLowerCase().endsWith('.zip') || contentType.includes('zip');
     if (isZip) {
-      return new NextResponse(buffer, {
+      return new NextResponse(new Uint8Array(buffer), {
         status: 200,
         headers: {
           'Content-Type': 'application/zip',
@@ -200,7 +200,7 @@ async function runReplicate(url: string) {
     const zipBuffer = await zipBuffers([
       { name: filenameFromUrl(output, 'stem-1.wav'), data: buffer },
     ]);
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
@@ -223,7 +223,7 @@ async function runReplicate(url: string) {
   );
 
   const zipBuffer = await zipBuffers(files);
-  return new NextResponse(zipBuffer, {
+  return new NextResponse(new Uint8Array(zipBuffer), {
     status: 200,
     headers: {
       'Content-Type': 'application/zip',
