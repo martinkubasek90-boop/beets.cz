@@ -27,6 +27,7 @@ const toolGroups = [
       { href: '/stem-splitter', label: 'Stem Splitter' },
       { href: '/mix-targets', label: 'Mix Target Finder' },
       { href: '/project-share', label: 'Private Share Link' },
+      { href: '/ai-mastering', label: 'AI Mastering' },
     ],
   },
   {
