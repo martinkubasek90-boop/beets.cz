@@ -121,14 +121,14 @@ export default function StemSplitterPage() {
               <p className="text-[11px] uppercase tracking-[0.45em] text-[var(--mpc-muted)]">Stem Splitter</p>
               <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">Stem Splitter</h1>
               <p className="text-sm text-[var(--mpc-muted)]">
-                Rozdělení mixu na stems (vocals, drums, bass, other) přes HF Demucs.
+                Rozdělení mixu na stems (vocals, drums, bass, other) přes Replicate Demucs.
               </p>
               <p className="text-xs text-[var(--mpc-muted)]">
                 Pouze pro přihlášené. Soubor se nahraje dočasně a po exportu se smaže.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-xs text-[var(--mpc-muted)]">
-              <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent)]">HF Serverless</p>
+              <p className="uppercase tracking-[0.24em] text-[var(--mpc-accent)]">Replicate GPU</p>
               <p className="mt-2">Výstup je ZIP se stemmy.</p>
             </div>
           </div>

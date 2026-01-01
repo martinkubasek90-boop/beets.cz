@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { PassThrough } from 'node:stream';
+import path from 'node:path';
+import archiver from 'archiver';
 
 export const runtime = 'nodejs';
 
@@ -6,91 +9,198 @@ type RequestPayload = {
   url?: string;
 };
 
-export async function POST(request: Request) {
+type ReplicatePrediction = {
+  id: string;
+  status: string;
+  output?: unknown;
+  error?: string | null;
+  urls?: {
+    get?: string;
+  };
+};
+
+const MAX_REPLICATE_WAIT_MS = 120_000;
+const REPLICATE_POLL_INTERVAL_MS = 3_000;
+
+function sanitizeName(value: string) {
+  const base = path.basename(value);
+  const cleaned = base.replace(/[^\w.-]+/g, '_');
+  return cleaned || 'stem.wav';
+}
+
+function ensureExtension(name: string, fallbackExt = '.wav') {
+  if (path.extname(name)) return name;
+  return `${name}${fallbackExt}`;
+}
+
+function filenameFromUrl(url: string, fallback: string) {
   try {
-    const token = process.env.HUGGINGFACE_API_KEY;
-    if (!token) {
+    const base = path.basename(new URL(url).pathname);
+    return sanitizeName(base || fallback);
+  } catch {
+    return sanitizeName(fallback);
+  }
+}
+
+async function fetchBinary(url: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    throw new Error(`Stažení výstupu selhalo: ${response.status} ${text}`);
+  }
+  const buffer = new Uint8Array(await response.arrayBuffer());
+  return {
+    buffer,
+    contentType: response.headers.get('content-type') || '',
+  };
+}
+
+async function zipBuffers(files: Array<{ name: string; data: Uint8Array }>) {
+  return new Promise<Buffer>((resolve, reject) => {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const stream = new PassThrough();
+    const chunks: Buffer[] = [];
+
+    stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+    stream.on('error', reject);
+    archive.on('error', reject);
+
+    for (const file of files) {
+      archive.append(Buffer.from(file.data), { name: file.name });
+    }
+
+    archive.pipe(stream);
+    void archive.finalize();
+  });
+}
+
+function collectOutputUrls(output: unknown) {
+  const urls: Array<{ url: string; name: string }> = [];
+
+  const pushUrl = (value: string, nameHint?: string) => {
+    const fallback = nameHint ? ensureExtension(nameHint) : `stem-${urls.length + 1}.wav`;
+    urls.push({ url: value, name: filenameFromUrl(value, fallback) });
+  };
+
+  const walk = (value: unknown, key?: string) => {
+    if (!value) return;
+    if (typeof value === 'string') {
+      pushUrl(value, key);
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((entry, idx) => walk(entry, key ? `${key}-${idx + 1}` : undefined));
+      return;
+    }
+    if (typeof value === 'object') {
+      Object.entries(value as Record<string, unknown>).forEach(([childKey, childValue]) =>
+        walk(childValue, childKey)
+      );
+    }
+  };
+
+  walk(output);
+  return urls;
+}
+
+async function runReplicate(url: string) {
+  const token = process.env.REPLICATE_API_TOKEN;
+  if (!token) {
+    return NextResponse.json(
+      { error: 'Chybí REPLICATE_API_TOKEN. Doplň ho do env.' },
+      { status: 500 }
+    );
+  }
+
+  const version = process.env.REPLICATE_DEMUCS_VERSION;
+  if (!version) {
+    return NextResponse.json(
+      { error: 'Chybí REPLICATE_DEMUCS_VERSION. Zadej version ID modelu z Replicate.' },
+      { status: 500 }
+    );
+  }
+
+  const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      version,
+      input: { audio: url },
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const text = await createResponse.text();
+    return NextResponse.json(
+      { error: `Replicate chyba: ${createResponse.status} ${text || 'Bez detailu'}` },
+      { status: createResponse.status }
+    );
+  }
+
+  let prediction = (await createResponse.json()) as ReplicatePrediction;
+  const start = Date.now();
+
+  while (!['succeeded', 'failed', 'canceled'].includes(prediction.status)) {
+    if (Date.now() - start > MAX_REPLICATE_WAIT_MS) {
       return NextResponse.json(
-        { error: 'Chybí HUGGINGFACE_API_KEY. Doplň ho do env.' },
+        { error: 'Replicate timeout. Zkus to prosím znovu.' },
+        { status: 504 }
+      );
+    }
+    if (!prediction.urls?.get) {
+      return NextResponse.json(
+        { error: 'Replicate neposlal URL pro polling.' },
         { status: 500 }
       );
     }
-
-    const payload = (await request.json().catch(() => ({}))) as RequestPayload;
-    if (!payload.url) {
-      return NextResponse.json({ error: 'Chybí URL souboru.' }, { status: 400 });
-    }
-
-    const sourceResponse = await fetch(payload.url);
-    if (!sourceResponse.ok) {
-      const text = await sourceResponse.text();
+    await new Promise((resolve) => setTimeout(resolve, REPLICATE_POLL_INTERVAL_MS));
+    const pollResponse = await fetch(prediction.urls.get, {
+      headers: { Authorization: `Token ${token}` },
+    });
+    if (!pollResponse.ok) {
+      const text = await pollResponse.text();
       return NextResponse.json(
-        { error: `Nepodařilo se stáhnout soubor: ${sourceResponse.status} ${text}` },
-        { status: 400 }
+        { error: `Replicate polling chyba: ${pollResponse.status} ${text || 'Bez detailu'}` },
+        { status: pollResponse.status }
       );
     }
+    prediction = (await pollResponse.json()) as ReplicatePrediction;
+  }
 
-    const contentLength = Number(sourceResponse.headers.get('content-length') || 0);
-    const maxBytes = 25 * 1024 * 1024;
-    if (contentLength && contentLength > maxBytes) {
-      return NextResponse.json(
-        { error: 'Soubor je moc velký pro free HF (max ~25 MB). Zkus kratší/export MP3.' },
-        { status: 413 }
-      );
-    }
+  if (prediction.status !== 'succeeded') {
+    return NextResponse.json(
+      { error: `Replicate selhal: ${prediction.error || 'Bez detailu'}` },
+      { status: 500 }
+    );
+  }
 
-    const arrayBuffer = await sourceResponse.arrayBuffer();
-    const contentType = sourceResponse.headers.get('content-type') || 'application/octet-stream';
+  const output = prediction.output;
+  if (!output) {
+    return NextResponse.json({ error: 'Replicate neposlal žádný výstup.' }, { status: 500 });
+  }
 
-    const model = process.env.HF_DEMUCS_MODEL || 'facebook/demucs';
-    const endpoint = process.env.HF_DEMUCS_ENDPOINT;
-    const modelId = encodeURI(model);
-    const primaryUrl =
-      endpoint?.trim() ||
-      (model.startsWith('http') ? model : `https://router.huggingface.co/hf-inference/models/${modelId}`);
-    const callHf = (url: string) =>
-      fetch(url, {
-        method: 'POST',
+  if (typeof output === 'string') {
+    const { buffer, contentType } = await fetchBinary(output);
+    const isZip = output.toLowerCase().endsWith('.zip') || contentType.includes('zip');
+    if (isZip) {
+      return new NextResponse(buffer, {
+        status: 200,
         headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': contentType,
-          Accept: 'application/zip',
+          'Content-Type': 'application/zip',
+          'Content-Disposition': 'attachment; filename="stems.zip"',
+          'Cache-Control': 'no-store',
         },
-        body: arrayBuffer,
       });
-
-    let response = await callHf(primaryUrl);
-    let fallbackErrorText = '';
-
-    if (response.status === 404 && !endpoint && !model.startsWith('http')) {
-      const fallback = await callHf(`https://api-inference.huggingface.co/models/${modelId}`);
-      if (fallback.ok) {
-        response = fallback;
-      } else {
-        fallbackErrorText = await fallback.text();
-      }
     }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      const extra =
-        response.status === 404 && fallbackErrorText
-          ? ` | legacy: ${fallbackErrorText}`
-          : '';
-      return NextResponse.json(
-        {
-          error: `HF chyba: ${response.status} ${errorText || 'Bez detailu'}${extra}`,
-          hint:
-            response.status === 404
-              ? 'Model není dostupný přes HF router. Nastav HF_DEMUCS_ENDPOINT na vlastní endpoint nebo jiný model v HF_DEMUCS_MODEL.'
-              : undefined,
-        },
-        { status: response.status }
-      );
-    }
-
-    const buffer = await response.arrayBuffer();
-    return new NextResponse(buffer, {
+    const zipBuffer = await zipBuffers([
+      { name: filenameFromUrl(output, 'stem-1.wav'), data: buffer },
+    ]);
+    return new NextResponse(zipBuffer, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
@@ -98,6 +208,39 @@ export async function POST(request: Request) {
         'Cache-Control': 'no-store',
       },
     });
+  }
+
+  const urls = collectOutputUrls(output);
+  if (!urls.length) {
+    return NextResponse.json({ error: 'Replicate výstup je neznámý formát.' }, { status: 500 });
+  }
+
+  const files = await Promise.all(
+    urls.map(async (item) => {
+      const { buffer } = await fetchBinary(item.url);
+      return { name: item.name, data: buffer };
+    })
+  );
+
+  const zipBuffer = await zipBuffers(files);
+  return new NextResponse(zipBuffer, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/zip',
+      'Content-Disposition': 'attachment; filename="stems.zip"',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = (await request.json().catch(() => ({}))) as RequestPayload;
+    if (!payload.url) {
+      return NextResponse.json({ error: 'Chybí URL souboru.' }, { status: 400 });
+    }
+
+    return await runReplicate(payload.url);
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message || 'Neočekávaná chyba při zpracování.' },
