@@ -171,6 +171,9 @@ export default function AiMasteringPage() {
   const [preset, setPreset] = useState<StylePreset>('rap');
   const [processing, setProcessing] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [mp3Url, setMp3Url] = useState<string | null>(null);
+  const [mp3Loading, setMp3Loading] = useState(false);
+  const [wavBlob, setWavBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<{ peak: number; rms: number } | null>(null);
 
@@ -179,14 +182,16 @@ export default function AiMasteringPage() {
   useEffect(() => {
     return () => {
       if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+      if (mp3Url) URL.revokeObjectURL(mp3Url);
     };
-  }, [downloadUrl]);
+  }, [downloadUrl, mp3Url]);
 
   const handleProcess = async () => {
     if (!file) return;
     setProcessing(true);
     setError(null);
     setStats(null);
+    setMp3Url(null);
 
     try {
       const { buffer, peak, rms } = await renderMaster(file, settings, -1);
@@ -194,6 +199,7 @@ export default function AiMasteringPage() {
       const blob = new Blob([wavData], { type: 'audio/wav' });
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
+      setWavBlob(blob);
       setStats({
         peak: 20 * Math.log10(peak || 1e-6),
         rms: 20 * Math.log10(rms || 1e-6),
@@ -202,6 +208,28 @@ export default function AiMasteringPage() {
       setError(err?.message || 'Mastering selhal.');
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleMp3 = async () => {
+    if (!wavBlob) return;
+    setMp3Loading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', wavBlob, 'master.wav');
+      const res = await fetch('/api/ai-mastering-mp3', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'MP3 export selhal.');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setMp3Url(url);
+    } catch (err: any) {
+      setError(err?.message || 'MP3 export selhal.');
+    } finally {
+      setMp3Loading(false);
     }
   };
 
@@ -284,13 +312,32 @@ export default function AiMasteringPage() {
                     <source src={downloadUrl} />
                     Váš prohlížeč nepodporuje přehrávání.
                   </audio>
-                  <a
-                    href={downloadUrl}
-                    download={`beets-master-${Date.now()}.wav`}
-                    className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)]"
-                  >
-                    Stáhnout WAV
-                  </a>
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href={downloadUrl}
+                      download={`beets-master-${Date.now()}.wav`}
+                      className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)]"
+                    >
+                      Stáhnout WAV
+                    </a>
+                    {mp3Url ? (
+                      <a
+                        href={mp3Url}
+                        download={`beets-master-${Date.now()}.mp3`}
+                        className="inline-flex items-center rounded-full border border-white/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white"
+                      >
+                        Stáhnout MP3
+                      </a>
+                    ) : (
+                      <button
+                        onClick={handleMp3}
+                        disabled={mp3Loading}
+                        className="inline-flex items-center rounded-full border border-white/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
+                      >
+                        {mp3Loading ? 'MP3 export…' : 'Vytvořit MP3'}
+                      </button>
+                    )}
+                  </div>
                   {stats && (
                     <div className="text-xs text-[var(--mpc-muted)]">
                       Peak: {stats.peak.toFixed(2)} dBFS · RMS: {stats.rms.toFixed(2)} dBFS
