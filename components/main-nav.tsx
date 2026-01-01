@@ -23,12 +23,10 @@ const toolGroups = [
       { href: '/mix-checklist', label: 'AI Mix Checklist' },
       { href: '/reference-match', label: 'Reference Match' },
       { href: '/drum-analyzer', label: 'Drum Analyzer' },
-      { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
       { href: '/mix-master', label: 'Mix + Master' },
       { href: '/stem-splitter', label: 'Stem Splitter' },
       { href: '/mix-targets', label: 'Mix Target Finder' },
       { href: '/project-share', label: 'Private Share Link' },
-      { href: '/ai-mastering', label: 'AI Mastering' },
     ],
   },
   {
