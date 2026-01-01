@@ -107,6 +107,55 @@ const faqs = [
       },
     ],
   },
+  {
+    title: "Nástroje a generátory",
+    items: [
+      {
+        q: "Kde najdu nástroje?",
+        a: "V horním menu otevři sekci NÁSTROJE. Nástroje jsou rozdělené na Audio a Grafika.",
+      },
+      {
+        q: "Co umí Mix + Master?",
+        a: "Na stránce /mix-master si vybereš režim (mix / master / mix+master). Mix analyzuje low/high balance, stereo width a navrhne úpravy. Mastering přidá lehký EQ + kompresi a cílový peak. Výstup je WAV, MP3 se generuje přes ffmpeg na serveru.",
+      },
+      {
+        q: "Jak funguje Stem Splitter?",
+        a: "Stem Splitter používá externí GPU provider (aktuálně Replicate). Pokud dojde kredit, zpracování může selhat. Výstup je ZIP se stemmy.",
+      },
+      {
+        q: "Co je Reference Match?",
+        a: "Porovná tvůj mix s referencí (peak, RMS, crest, low/high ratio, stereo). Zobrazí rozdíly a doporučení.",
+      },
+      {
+        q: "Jak funguje AI Mix Checklist?",
+        a: "Analyzuje mix a ukáže, co je mimo doporučené rozsahy. Ber to jako orientační vodítko, ne jako dogma.",
+      },
+      {
+        q: "K čemu je Drum Analyzer?",
+        a: "Vytáhne základní metriky bicích a jejich energii v pásmech. Pomáhá s A/B porovnáním proti referencím.",
+      },
+      {
+        q: "Co umí Mix Target Finder?",
+        a: "Pro zvolený žánr ukáže cílové hodnoty (LUFS/RMS, crest factor, low/high ratio).",
+      },
+      {
+        q: "Konvertory – WAV → MP3 a MPC 3000?",
+        a: "Konvertor MP3 převádí WAV (16–32bit) do MP3 a vrací ZIP. MPC 3000 Konvertor převádí WAV → SND + PGM v MPC stylu.",
+      },
+      {
+        q: "AI Cover Generator / AI Video Generator?",
+        a: "Cover Generator vytváří covery z promptu (včetně variant), Video Generator generuje krátká AI videa. Oba nástroje mají tlačítko stažení.",
+      },
+      {
+        q: "IG/TikTok Preview Generator?",
+        a: "Lokální generátor preview videa s coverem a waveformem. Exportuje WebM (bez uploadu na server).",
+      },
+      {
+        q: "Private Share Link pro projekt?",
+        a: "Na /project-share vytvoříš privátní odkaz s expirací. Umožní přehrát projekt bez přihlášení a volitelně povolit download.",
+      },
+    ],
+  },
 ];
 
 export default function FaqPage() {
