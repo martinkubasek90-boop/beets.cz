@@ -26,12 +26,15 @@ const toolGroups = [
       { href: '/auto-mix-fix', label: 'Auto Mix Fix' },
       { href: '/stem-splitter', label: 'Stem Splitter' },
       { href: '/mix-targets', label: 'Mix Target Finder' },
+      { href: '/project-share', label: 'Private Share Link' },
     ],
   },
   {
     label: 'Grafika',
     items: [
       { href: '/cover-generator', label: 'AI Cover Generator' },
+      { href: '/video-generator', label: 'AI Video Generator' },
+      { href: '/preview-generator', label: 'IG/TikTok Preview' },
     ],
   },
 ];
