@@ -348,6 +348,38 @@ export default function Home() {
     try {
       setIsLoadingBeats(true);
 
+      try {
+        const { data: viewData, error: viewError } = await supabase
+          .from('home_beats')
+          .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at, display_name, avatar_url, slug, monthly_fires')
+          .order('monthly_fires', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(12);
+
+        if (!viewError && viewData && viewData.length > 0) {
+          const mappedBeats = (viewData as any[]).map((b) => ({
+            ...b,
+            artist: b.user_id ? b.display_name || b.artist || '' : b.artist || '',
+            author_avatar: b.user_id ? b.avatar_url ?? null : null,
+            author_slug: b.user_id ? b.slug ?? null : null,
+            monthlyFires: b.monthly_fires ?? 0,
+          })) as Beat[];
+
+          setBeatAuthorNames(
+            Object.fromEntries(
+              mappedBeats
+                .filter((b) => b.user_id && b.artist)
+                .map((b) => [b.user_id as string, b.artist])
+            )
+          );
+          setBeats(mappedBeats);
+          setBeatsError(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Načtení home_beats selhalo, spouštím fallback.', err);
+      }
+
       const startOfMonth = new Date();
       startOfMonth.setUTCDate(1);
       startOfMonth.setUTCHours(0, 0, 0, 0);
@@ -442,6 +474,23 @@ export default function Home() {
 
   const loadProjects = async () => {
     try {
+      try {
+        const { data: viewData, error: viewError } = await supabase
+          .from('home_projects')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
+          .eq('access_mode', 'public')
+          .order('id', { ascending: false })
+          .limit(2);
+
+        if (!viewError && viewData && viewData.length > 0) {
+          setProjects(viewData as Project[]);
+          setProjectsError(null);
+          return;
+        }
+      } catch (err) {
+        console.warn('Načtení home_projects selhalo, spouštím fallback.', err);
+      }
+
       let data: any[] | null = null;
       try {
         const { data: d1, error: err1 } = await supabase
