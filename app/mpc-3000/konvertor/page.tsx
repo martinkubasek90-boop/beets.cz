@@ -669,9 +669,9 @@ export default function MPC3000ConverterPage() {
                       >
                         CLEAR ALL
                       </button>
-        </div>
-      </div>
-    </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
