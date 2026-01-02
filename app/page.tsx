@@ -11,6 +11,7 @@ import { MainNav } from '@/components/main-nav';
 
 const CMS_KEYS = [
   'home.hero.title',
+  'home.hero.image',
   'home.hero.subtitle',
   'home.projects.title',
   'home.beats.title',
@@ -671,6 +672,7 @@ export default function Home() {
     return val ?? fallback;
   };
   const heroTitle = cms('home.hero.title', t('hero.title', 'Beets.cz'));
+  const heroImageUrl = cms('home.hero.image', '').trim();
   const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const visibleBeats = beatList.length
     ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
@@ -1452,9 +1454,18 @@ export default function Home() {
           <div className="pointer-events-none absolute -left-12 top-6 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(26,138,98,0.35),rgba(26,138,98,0))] blur-2xl" />
           <div className="pointer-events-none absolute -right-10 bottom-0 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(243,116,51,0.32),rgba(243,116,51,0))] blur-3xl" />
           <div className="relative flex flex-col items-center gap-4 text-center sm:gap-5">
-            <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
-              {heroTitle}
-            </h1>
+            {heroImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={heroImageUrl}
+                alt={heroTitle}
+                className="max-w-[760px] w-full h-auto drop-shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
+              />
+            ) : (
+              <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+                {heroTitle}
+              </h1>
+            )}
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {cms('home.hero.subtitle', subtitleCleaned)}
               <br />
