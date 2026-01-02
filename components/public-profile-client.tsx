@@ -1571,11 +1571,27 @@ export default function PublicProfileClient({
                     className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
                   >
                     <div
-                      className="relative overflow-hidden rounded-xl border border-white/5 p-4"
+                      className="relative overflow-hidden rounded-xl border border-white/5 p-4 pr-16"
                       style={{
                         background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
                       }}
                     >
+                      <div className="absolute right-3 top-3 flex items-center gap-2">
+                        {currentUserRole === 'curator' && (
+                          <button
+                            onClick={() => handleCuratorStar('beat', String(beat.id))}
+                            className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                            title="Kurátorská hvězda"
+                          >
+                            ★
+                          </button>
+                        )}
+                        <FireButton
+                          itemType="beat"
+                          itemId={String(beat.id)}
+                          className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                        />
+                      </div>
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
                           <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
@@ -1589,26 +1605,12 @@ export default function PublicProfileClient({
                           <div>
                             <div className="mb-1 flex items-center gap-2">
                               <p className="text-base font-semibold text-white">{beat.title}</p>
-                              <FireButton
-                                itemType="beat"
-                                itemId={String(beat.id)}
-                                className="-ml-1 shrink-0 scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
-                              />
                             </div>
                             <p className="text-[12px] text-[var(--mpc-muted)]">
                               {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
                             </p>
                           </div>
                         </div>
-                        {currentUserRole === 'curator' && (
-                          <button
-                            onClick={() => handleCuratorStar('beat', String(beat.id))}
-                            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                            title="Kurátorská hvězda"
-                          >
-                            ★
-                          </button>
-                        )}
                         <button
                           onClick={() =>
                             handlePlayTrack({
