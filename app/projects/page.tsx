@@ -21,6 +21,7 @@ type Project = {
   user_id?: string | null;
   author_name?: string | null;
   project_url?: string | null;
+  embed_html?: string | null;
   release_formats?: string[] | null;
   purchase_url?: string | null;
   access_mode?: "public" | "request" | "private";
@@ -83,12 +84,21 @@ export default function ProjectsPage() {
         const CURATOR_ROLES = ["curator"];
         let rows: any[] = [];
         // Vybereme jen sloupce, které DB opravdu má (bez legacy "tracks" a bez autor_name/year)
-        const { data, error: err } = await supabase
-          .from("projects")
-          .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,release_formats,purchase_url")
-          .order("id", { ascending: false });
-        if (err) throw err;
-        rows = data ?? [];
+        try {
+          const { data, error: err } = await supabase
+            .from("projects")
+            .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,release_formats,purchase_url,embed_html")
+            .order("id", { ascending: false });
+          if (err) throw err;
+          rows = data ?? [];
+        } catch (innerErr) {
+          const { data, error: err } = await supabase
+            .from("projects")
+            .select("id,title,description,cover_url,user_id,project_url,tracks_json,access_mode,release_formats,purchase_url")
+            .order("id", { ascending: false });
+          if (err) throw err;
+          rows = data ?? [];
+        }
 
         const { data: fireRows, error: fireErr } = await supabase
           .from("fires")
@@ -558,6 +568,16 @@ export default function ProjectsPage() {
                         })}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {project.embed_html && (
+                  <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
+                    <div
+                      className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-black/60 [&_iframe]:h-[120px] [&_iframe]:w-full [&_iframe]:border-0"
+                      dangerouslySetInnerHTML={{ __html: project.embed_html }}
+                    />
                   </div>
                 )}
 
