@@ -1698,6 +1698,22 @@ export default function PublicProfileClient({
                           }
                     }
                   >
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
+                      {currentUserRole === 'curator' && (
+                        <button
+                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                          title="Kurátorská hvězda"
+                        >
+                          ★
+                        </button>
+                      )}
+                      <FireButton
+                        itemType="project"
+                        itemId={`project-${project.id}`}
+                        className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                      />
+                    </div>
                     <div className="flex flex-col items-center gap-3 text-center">
                       <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
                         {project.cover_url ? (
@@ -1710,16 +1726,6 @@ export default function PublicProfileClient({
                     <div className="space-y-1">
                     <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
                       <span>{project.title}</span>
-                      {currentUserRole === 'curator' && (
-                        <button
-                          onClick={() => handleCuratorStar('project', `project-${project.id}`)}
-                          className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                          title="Kurátorská hvězda"
-                        >
-                          ★
-                        </button>
-                      )}
-                      <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                     </div>
                     <p className="text-[12px] text-[var(--mpc-muted)]">
                       {project.description || t('publicProfile.projects.defaultDescription', 'Projekt')}
