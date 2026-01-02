@@ -59,7 +59,7 @@ export default function ArtistsPage() {
         }
 
         const [beatsResp, projectsResp] = await Promise.all([
-          supabase.from('beats').select('user_id'),
+          supabase.from('beats').select('user_id').eq('visibility', 'public'),
           supabase.from('projects').select('user_id'),
         ]);
 

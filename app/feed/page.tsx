@@ -10,6 +10,7 @@ async function loadFeed() {
     supabase
       .from('beats')
       .select('id, title, user_id, created_at, audio_url, cover_url, profiles!inner(display_name, slug)')
+      .eq('visibility', 'public')
       .order('created_at', { ascending: false })
       .limit(10),
     supabase
