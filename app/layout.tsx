@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { GlobalPlayerProvider } from "@/components/global-player-provider";
 import "./globals.css";
@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   },
 };
 
-const brandFont = localFont({
-  src: "../public/fonts/luthgy.ttf",
-  variable: "--font-brand",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   display: "swap",
+  subsets: ["latin"],
 });
 
 export default function RootLayout({
@@ -31,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${brandFont.className} antialiased`}>
+      <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
