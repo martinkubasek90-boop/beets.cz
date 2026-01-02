@@ -223,6 +223,7 @@ export default function AdminPage() {
   const [entries, setEntries] = useState<Record<string, string>>({});
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [uploadingHero, setUploadingHero] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -314,6 +315,30 @@ export default function AdminPage() {
     }
   };
 
+  const uploadHeroImage = async (file: File) => {
+    setUploadingHero(true);
+    setError(null);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `hero/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('blog_covers').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('blog_covers').getPublicUrl(path);
+      const url = data.publicUrl;
+      const { error: upsertError } = await supabase.from('cms_content').upsert({ key: 'home.hero.image', value: url });
+      if (upsertError) throw upsertError;
+      setEntries((prev) => ({ ...prev, 'home.hero.image': url }));
+    } catch (err: any) {
+      console.error('Chyba nahrávání hero obrázku:', err);
+      setError('Nahrání hero obrázku selhalo.');
+    } finally {
+      setUploadingHero(false);
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[var(--mpc-deck)] text-white p-6">
@@ -369,6 +394,7 @@ export default function AdminPage() {
               const current = entries[field.key] ?? field.defaultValue;
               const isEmbedField = field.key === 'stream.embed.url' || field.key === 'live.embed.url';
               const showEmbedWarning = isEmbedField && current.trim() !== '' && isInvalidEmbed(current);
+              const isHeroImage = field.key === 'home.hero.image';
               return (
                 <div key={field.key} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
@@ -391,6 +417,32 @@ export default function AdminPage() {
                     value={current}
                     onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
                   />
+                  {isHeroImage && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void uploadHeroImage(file);
+                          }}
+                          className="w-full text-[12px] text-white"
+                        />
+                        {uploadingHero && (
+                          <span className="text-[11px] text-[var(--mpc-muted)]">Nahrávám…</span>
+                        )}
+                      </div>
+                      {current && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={current}
+                          alt="Hero náhled"
+                          className="h-24 w-auto rounded-md border border-white/10 bg-black/40 object-contain"
+                        />
+                      )}
+                    </div>
+                  )}
                   {showEmbedWarning && (
                     <p className="mt-2 text-[12px] text-red-300">
                       Neplatný embed. Vlož přímý URL (např. https://www.youtube.com/embed/VIDEO_ID) nebo celé &lt;iframe&gt; s platným src.
