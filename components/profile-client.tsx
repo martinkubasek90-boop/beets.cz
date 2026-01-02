@@ -4617,9 +4617,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       </button>
                       {openSections.beatUpload && (
                         <div className="mt-4">
-                          <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                            WAV? Využij <Link href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</Link>.
-                          </p>
                           <BeatUploadForm />
                         </div>
                       )}
@@ -4634,9 +4631,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       </button>
                       {openSections.projectUpload && (
                         <div className="mt-4">
-                          <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                            WAV? Využij <Link href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</Link>.
-                          </p>
                           <ProjectUploadForm />
                         </div>
                       )}

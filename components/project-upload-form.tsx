@@ -270,6 +270,9 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
           <label className={labelClass}>Audio soubory (MP3)</label>
         </div>
         <p className={helperClass}>Můžeš nahrát více souborů a každému dát název. {tracks.length}/{MAX_TRACKS}</p>
+        <p className={helperClass}>
+          WAV? Využij <a href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</a>.
+        </p>
         <div className="space-y-3">
           {tracks.map((track, idx) => (
             <div key={idx} className="rounded-lg border border-white/10 bg-white/5 p-3 space-y-2">

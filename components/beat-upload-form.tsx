@@ -214,6 +214,9 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
           className="mt-1 block w-full text-sm text-neutral-800"
         />
         <p className={helperClass}>Stačí MP3. Velikost drž raději při zemi kvůli limitům.</p>
+        <p className={helperClass}>
+          WAV? Využij <a href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</a>.
+        </p>
       </div>
 
       <div>
