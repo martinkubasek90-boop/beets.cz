@@ -1452,13 +1452,8 @@ export default function Home() {
           <div className="pointer-events-none absolute -left-12 top-6 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(26,138,98,0.35),rgba(26,138,98,0))] blur-2xl" />
           <div className="pointer-events-none absolute -right-10 bottom-0 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(243,116,51,0.32),rgba(243,116,51,0))] blur-3xl" />
           <div className="relative flex flex-col items-center gap-4 text-center sm:gap-5">
-            <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/60">
-                BEETS
-              </span>
-              <span className="ml-2 text-transparent bg-clip-text bg-gradient-to-r from-[#1a8a62] via-[#f37433] to-[#f59e0b]">
-                .CZ
-              </span>
+            <h1 className="font-[var(--font-geist-sans)] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-[#1a8a62] via-[#1a8a62] to-[#f37433] drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+              {heroTitle}
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {cms('home.hero.subtitle', subtitleCleaned)}
