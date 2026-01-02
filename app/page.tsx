@@ -1377,7 +1377,7 @@ export default function Home() {
                       ★
                     </button>
                   )}
-                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-100" />
+                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
                 </div>
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
@@ -1735,7 +1735,7 @@ export default function Home() {
                       ★
                     </button>
                   )}
-                  <FireButton itemType="beat" itemId={String(beat.id)} className="scale-100" />
+                  <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
                 </div>
                 <div className="flex flex-col items-center gap-4">
                   <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
