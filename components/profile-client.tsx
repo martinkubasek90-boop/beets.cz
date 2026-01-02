@@ -51,6 +51,7 @@ type ProjectItem = {
   description: string | null;
   cover_url: string | null;
   project_url: string | null;
+  embed_html?: string | null;
   release_formats?: string[] | null;
   purchase_url?: string | null;
   access_mode?: 'public' | 'request' | 'private';
@@ -63,6 +64,7 @@ type ImportMetadata = {
   cover?: string | null;
   link: string;
   provider?: string | null;
+  embed_html?: string | null;
 };
 
 type PlayerMeta = {
@@ -979,7 +981,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         try {
           const { data, error } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
+            .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
             .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(5);
@@ -2727,12 +2729,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
       }
+      if (importMetadata.embed_html) {
+        payload.embed_html = importMetadata.embed_html;
+      }
 
-      const { data, error } = await supabase
-        .from('projects')
-        .insert(payload)
-        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
-        .single();
+      let data: any = null;
+      let error: any = null;
+      const attemptInsert = async (body: Record<string, any>) =>
+        supabase
+          .from('projects')
+          .insert(body)
+          .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
+          .single();
+
+      ({ data, error } = await attemptInsert(payload));
+      if (error && String(error.message || '').toLowerCase().includes('embed_html')) {
+        delete payload.embed_html;
+        ({ data, error } = await attemptInsert(payload));
+      }
       if (error) throw error;
       if (data) {
         setProjects((prev) => [data as ProjectItem, ...prev]);

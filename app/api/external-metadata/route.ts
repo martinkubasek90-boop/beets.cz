@@ -62,6 +62,7 @@ export async function GET(request: Request) {
       author_name?: string;
       thumbnail_url?: string;
       provider_name?: string;
+      html?: string;
     };
 
     return NextResponse.json({
@@ -70,6 +71,7 @@ export async function GET(request: Request) {
       cover: data.thumbnail_url || null,
       link: target,
       provider: data.provider_name || provider.name,
+      embed_html: data.html || null,
     });
   } catch (err) {
     console.error('external-metadata error', err);

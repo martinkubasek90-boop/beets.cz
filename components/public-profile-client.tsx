@@ -82,6 +82,7 @@ type Project = {
   cover_url: string | null;
   access_mode?: 'public' | 'request' | 'private' | null;
   project_url: string | null;
+  embed_html?: string | null;
   release_formats?: string[] | null;
   purchase_url?: string | null;
   tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
@@ -305,12 +306,28 @@ export default function PublicProfileClient({
   }, [profileId, supabase]);
 
   const loadProjects = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
-      .eq('user_id', profileId)
-      .order('id', { ascending: false })
-      .limit(6);
+    let data: any[] | null = null;
+    let error: any = null;
+    try {
+      ({ data, error } = await supabase
+        .from('projects')
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
+        .eq('user_id', profileId)
+        .order('id', { ascending: false })
+        .limit(6));
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Fallback select projects bez embed_html:', err);
+      const fallback = await supabase
+        .from('projects')
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
+        .eq('user_id', profileId)
+        .order('id', { ascending: false })
+        .limit(6);
+      data = fallback.data as any[] | null;
+      error = fallback.error as any;
+    }
+
     if (error) {
       const message =
         error && typeof error === 'object' && 'message' in error && typeof (error as any).message === 'string'
@@ -1854,6 +1871,16 @@ export default function PublicProfileClient({
                   </div>
                 )}
               </div>
+
+              {project.embed_html && (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
+                  <div
+                    className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/60 [&_iframe]:h-[120px] [&_iframe]:w-full [&_iframe]:border-0"
+                    dangerouslySetInnerHTML={{ __html: project.embed_html }}
+                  />
+                </div>
+              )}
 
               {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
