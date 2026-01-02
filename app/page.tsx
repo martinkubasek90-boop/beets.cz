@@ -1549,6 +1549,81 @@ export default function Home() {
         </section>
 
 
+        {/* ARTISTS (carousel) */}
+        <section className="w-full py-8" id="artists">
+          <div className="relative mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
+            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Umělci</h2>
+            <Link
+              href="/artists"
+              className="absolute right-0 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
+            >
+              Zobrazit vše
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, idx) => {
+              const list = artists.length ? artists : dummyArtists;
+              const artist = list[(artistIndex + idx) % list.length];
+              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
+              const colors = [
+                'from-emerald-600 to-emerald-900',
+                'from-amber-400 to-orange-600',
+                'from-indigo-500 to-indigo-900',
+                'from-purple-500 to-purple-800',
+                'from-rose-500 to-rose-800',
+                'from-sky-500 to-sky-900',
+              ];
+              const gradient = colors[idx % colors.length];
+              return (
+                <Link
+                  href={`/u/${artist.id}`}
+                  key={artist.id}
+                  className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
+                >
+                  <div
+                  className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
+                >
+                  {artist.avatar_url ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                    </>
+                  ) : (
+                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
+                        {artist.initials}
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1 text-center w-full">
+                    <p className="text-sm font-semibold text-white">{artist.name}</p>
+                    <p className="text-[11px] text-[var(--mpc-muted)]">{stats}</p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex items-center justify-center gap-3">
+            <button
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev - 1 + list.length) % list.length);
+              }}
+              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+            >
+              ←
+            </button>
+            <button
+              onClick={() => {
+                const list = artists.length ? artists : dummyArtists;
+                setArtistIndex((prev) => (prev + 1) % list.length);
+              }}
+              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
+            >
+              →
+            </button>
+          </div>
+        </section>
+
         {/* BLOG */}
         <section className="w-full py-8" id="blog">
           <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3 text-center">
@@ -1754,81 +1829,6 @@ export default function Home() {
               )}
             </div>
           )}
-        </section>
-
-        {/* ARTISTS (carousel) */}
-        <section className="w-full py-8" id="artists">
-          <div className="relative mb-4 flex w-full flex-wrap items-center justify-center gap-3 text-center">
-            <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">Umělci</h2>
-            <Link
-              href="/artists"
-              className="absolute right-0 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white hover:border-[var(--mpc-accent)]"
-            >
-              Zobrazit vše
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, idx) => {
-              const list = artists.length ? artists : dummyArtists;
-              const artist = list[(artistIndex + idx) % list.length];
-              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
-              const colors = [
-                'from-emerald-600 to-emerald-900',
-                'from-amber-400 to-orange-600',
-                'from-indigo-500 to-indigo-900',
-                'from-purple-500 to-purple-800',
-                'from-rose-500 to-rose-800',
-                'from-sky-500 to-sky-900',
-              ];
-              const gradient = colors[idx % colors.length];
-              return (
-                <Link
-                  href={`/u/${artist.id}`}
-                  key={artist.id}
-                  className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
-                >
-                  <div
-                  className={`relative h-20 w-20 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_8px_18px_rgba(0,0,0,0.35)]`}
-                >
-                  {artist.avatar_url ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                    </>
-                  ) : (
-                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
-                        {artist.initials}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 text-center w-full">
-                    <p className="text-sm font-semibold text-white">{artist.name}</p>
-                    <p className="text-[11px] text-[var(--mpc-muted)]">{stats}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <button
-              onClick={() => {
-                const list = artists.length ? artists : dummyArtists;
-                setArtistIndex((prev) => (prev - 1 + list.length) % list.length);
-              }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => {
-                const list = artists.length ? artists : dummyArtists;
-                setArtistIndex((prev) => (prev + 1) % list.length);
-              }}
-              className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
-            >
-              →
-            </button>
-          </div>
         </section>
 
         {/* BEATS */}
