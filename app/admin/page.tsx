@@ -80,6 +80,13 @@ const fields: CmsField[] = [
     category: 'Homepage',
   },
   {
+    key: 'home.hero.image',
+    label: 'Homepage – hero obrázek (nahrazuje titulek)',
+    description: 'Vlož URL obrázku (např. ze storage). Když je vyplněno, použije se místo textu.',
+    defaultValue: '',
+    category: 'Homepage',
+  },
+  {
     key: 'home.hero.subtitle',
     label: 'Homepage – podtitulek',
     defaultValue: 'Nahrávej beaty, sdílej instrumentály, feedback od CZ/SK komunity.',
