@@ -57,6 +57,14 @@ type ProjectItem = {
   tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
 };
 
+type ImportMetadata = {
+  title: string;
+  artist?: string | null;
+  cover?: string | null;
+  link: string;
+  provider?: string | null;
+};
+
 type PlayerMeta = {
   projectId?: string;
   trackIndex?: number;
@@ -319,6 +327,15 @@ const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator
   const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [importProjectOpen, setImportProjectOpen] = useState(false);
+  const [importProjectUrl, setImportProjectUrl] = useState('');
+  const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
+  const [importTitle, setImportTitle] = useState('');
+  const [importArtist, setImportArtist] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importSaving, setImportSaving] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [myAccessRequests, setMyAccessRequests] = useState<ProjectAccessRequest[]>([]);
   const [myAccessRequestsError, setMyAccessRequestsError] = useState<string | null>(null);
   const [myAccessRequestsLoading, setMyAccessRequestsLoading] = useState(false);
@@ -2640,6 +2657,100 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   }
 
+  const resetImportState = () => {
+    setImportProjectUrl('');
+    setImportMetadata(null);
+    setImportTitle('');
+    setImportArtist('');
+    setImportError(null);
+    setImportSuccess(null);
+  };
+
+  const handleFetchImportMetadata = async () => {
+    const trimmed = importProjectUrl.trim();
+    if (!trimmed) {
+      setImportError('Zadej URL z Spotify, SoundCloud nebo Bandcamp.');
+      return;
+    }
+    setImportError(null);
+    setImportSuccess(null);
+    setImportMetadata(null);
+    setImportLoading(true);
+    try {
+      const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(trimmed)}`);
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error(payload?.error || 'Nepodařilo se načíst metadata.');
+      }
+      const meta = (await response.json()) as ImportMetadata;
+      setImportMetadata(meta);
+      setImportTitle(meta.title || '');
+      setImportArtist(meta.artist || '');
+    } catch (err: any) {
+      setImportError(err?.message || 'Nepodařilo se načíst metadata.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportProject = async () => {
+    if (!userId) {
+      setImportError('Nejsi přihlášený.');
+      return;
+    }
+    if (!importMetadata?.link) {
+      setImportError('Nejdřív načti metadata z odkazu.');
+      return;
+    }
+    const title = (importTitle || importMetadata.title || '').trim();
+    if (!title) {
+      setImportError('Zadej název projektu.');
+      return;
+    }
+    setImportSaving(true);
+    setImportError(null);
+    setImportSuccess(null);
+    try {
+      const descriptionParts = [];
+      if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
+      if (importMetadata.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
+      const payload: Record<string, any> = {
+        title,
+        description: descriptionParts.length ? descriptionParts.join(' · ') : null,
+        project_url: null,
+        tracks_json: [],
+        user_id: userId,
+        access_mode: 'public',
+        release_formats: null,
+        purchase_url: normalizePurchaseUrl(importMetadata.link),
+      };
+      if (importMetadata.cover) {
+        payload.cover_url = importMetadata.cover;
+      }
+
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(payload)
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
+        .single();
+      if (error) throw error;
+      if (data) {
+        setProjects((prev) => [data as ProjectItem, ...prev]);
+      }
+      setImportProjectUrl('');
+      setImportMetadata(null);
+      setImportTitle('');
+      setImportArtist('');
+      setImportError(null);
+      setImportSuccess('Projekt byl importován.');
+      setImportProjectOpen(false);
+    } catch (err: any) {
+      setImportError(err?.message || 'Nepodařilo se projekt importovat.');
+    } finally {
+      setImportSaving(false);
+    }
+  };
+
   const activeThread = selectedThreadId
     ? collabThreads.find((t) => t.id === selectedThreadId) ?? null
     : null;
@@ -4629,9 +4740,119 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       >
                         {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
                       </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => {
+                            setImportProjectOpen((prev) => !prev);
+                            setImportError(null);
+                            setImportSuccess(null);
+                          }}
+                          className="mt-3 w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white hover:border-[var(--mpc-accent)]"
+                        >
+                          {importProjectOpen ? 'Schovat import' : 'Import projektu z Spotify / SoundCloud / Bandcamp'}
+                        </button>
+                      )}
                       {openSections.projectUpload && (
                         <div className="mt-4">
                           <ProjectUploadForm />
+                        </div>
+                      )}
+                      {isSuperAdmin && importProjectOpen && (
+                        <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-black/30 p-4">
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                              Odkaz na projekt
+                            </label>
+                            <input
+                              value={importProjectUrl}
+                              onChange={(e) => setImportProjectUrl(e.target.value)}
+                              placeholder="https://open.spotify.com/..., https://soundcloud.com/..., https://bandcamp.com/..."
+                              className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={handleFetchImportMetadata}
+                              disabled={importLoading}
+                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                            >
+                              {importLoading ? 'Načítám…' : 'Načíst metadata'}
+                            </button>
+                            <button
+                              onClick={resetImportState}
+                              className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-white/40"
+                            >
+                              Vyčistit
+                            </button>
+                          </div>
+                          {importError && (
+                            <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-200">
+                              {importError}
+                            </div>
+                          )}
+                          {importSuccess && (
+                            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-200">
+                              {importSuccess}
+                            </div>
+                          )}
+                          {importMetadata && (
+                            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/40 p-3">
+                              <div className="h-14 w-14 overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                                {importMetadata.cover ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={importMetadata.cover} alt={importMetadata.title} className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="grid h-full w-full place-items-center text-[10px] text-white/40">NO COVER</div>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-white">{importMetadata.title}</p>
+                                <p className="text-[11px] text-[var(--mpc-muted)]">
+                                  {importMetadata.artist || 'Neznámý autor'}
+                                  {importMetadata.provider ? ` · ${importMetadata.provider}` : ''}
+                                </p>
+                              </div>
+                              <a
+                                href={importMetadata.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
+                              >
+                                Otevřít
+                              </a>
+                            </div>
+                          )}
+                          {importMetadata && (
+                            <div className="grid gap-3">
+                              <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                  Název projektu
+                                </label>
+                                <input
+                                  value={importTitle}
+                                  onChange={(e) => setImportTitle(e.target.value)}
+                                  className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                                  Autor
+                                </label>
+                                <input
+                                  value={importArtist}
+                                  onChange={(e) => setImportArtist(e.target.value)}
+                                  className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                />
+                              </div>
+                              <button
+                                onClick={handleImportProject}
+                                disabled={importSaving}
+                                className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)] disabled:opacity-60"
+                              >
+                                {importSaving ? 'Importuji…' : 'Importovat projekt'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
