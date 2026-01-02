@@ -9,6 +9,7 @@ export default async function BeatDetail({ params }: { params: { id: string } })
     .from('beats')
     .select('id,title,audio_url,cover_url,user_id,profiles!inner(display_name,slug)')
     .eq('id', params.id)
+    .eq('visibility', 'public')
     .maybeSingle();
 
   if (error || !beat) {

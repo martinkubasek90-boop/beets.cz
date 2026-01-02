@@ -48,6 +48,7 @@ export default function BeatsPage() {
         const { data, error: err } = await supabase
           .from('beats')
           .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at')
+          .eq('visibility', 'public')
           .order('id', { ascending: false })
           .limit(30);
         if (err) throw err;

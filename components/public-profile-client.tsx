@@ -276,6 +276,7 @@ export default function PublicProfileClient({
       .from('beats')
       .select('id, title, bpm, mood, audio_url, cover_url')
       .eq('user_id', profileId)
+      .eq('visibility', 'public')
       .order('id', { ascending: false })
       .limit(10);
     if (error) {
