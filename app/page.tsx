@@ -657,6 +657,7 @@ export default function Home() {
           .from('beats')
           .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at')
           .not('audio_url', 'is', null)
+          .eq('visibility', 'public')
           .order('created_at', { ascending: false })
           .limit(12);
 

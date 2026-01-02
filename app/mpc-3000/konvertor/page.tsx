@@ -302,16 +302,15 @@ export default function MPC3000ConverterPage() {
   }, [showThankYou]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200 flex flex-col items-center justify-center gap-4 p-4">
-      <div className="w-full max-w-4xl flex justify-start">
+    <div className="min-h-screen bg-gradient-to-b from-stone-200 via-stone-100 to-stone-200 flex items-center justify-center p-4">
+      <div className="w-full max-w-6xl flex flex-col items-start gap-4 md:flex-row">
         <Link
           href="/"
-          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+          className="shrink-0 rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
         >
           Zpět
         </Link>
-      </div>
-      <div
+        <div
         className="w-full max-w-4xl"
         style={{
           filter: 'drop-shadow(0 25px 60px rgba(0,0,0,0.35)) drop-shadow(0 12px 24px rgba(0,0,0,0.25))',
@@ -670,9 +669,9 @@ export default function MPC3000ConverterPage() {
                       >
                         CLEAR ALL
                       </button>
-                    </div>
-                  </div>
-                </div>
+        </div>
+      </div>
+    </div>
               </div>
             </div>
           </div>
