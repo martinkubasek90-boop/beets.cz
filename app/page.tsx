@@ -207,6 +207,32 @@ const dummyBlog: BlogPost[] = [
 
 const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spolupráce', 'Workflow'];
 
+const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
+const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
+const HOME_PROJECTS_CACHE_KEY = 'home-projects-v1';
+
+const readHomeCache = <T,>(key: string): T | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { ts?: number; data?: T };
+    if (!parsed?.ts || Date.now() - parsed.ts > HOME_CACHE_TTL_MS) return null;
+    return parsed.data ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const writeHomeCache = <T,>(key: string, data: T) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch {
+    // ignore cache write errors
+  }
+};
+
 const videoItems = [
   { id: 1, title: 'Showcase 1', url: 'https://www.youtube.com/embed/BdzEQd1L0zk' },
   { id: 2, title: 'Showcase 2', url: 'https://www.youtube.com/embed/8LZURmGPQhc' },
@@ -348,13 +374,28 @@ export default function Home() {
     try {
       setIsLoadingBeats(true);
 
+      const cachedBeats = readHomeCache<Beat[]>(HOME_BEATS_CACHE_KEY);
+      if (cachedBeats && cachedBeats.length > 0) {
+        setBeats(cachedBeats);
+        setBeatAuthorNames(
+          Object.fromEntries(
+            cachedBeats
+              .filter((b) => b.user_id && b.artist)
+              .map((b) => [b.user_id as string, b.artist])
+          )
+        );
+        setBeatsError(null);
+        setIsLoadingBeats(false);
+        return;
+      }
+
       try {
         const { data: viewData, error: viewError } = await supabase
           .from('home_beats')
           .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at, display_name, avatar_url, slug, monthly_fires')
           .order('monthly_fires', { ascending: false })
           .order('created_at', { ascending: false })
-          .limit(12);
+          .limit(8);
 
         if (!viewError && viewData && viewData.length > 0) {
           const mappedBeats = (viewData as any[]).map((b) => ({
@@ -373,6 +414,7 @@ export default function Home() {
             )
           );
           setBeats(mappedBeats);
+          writeHomeCache(HOME_BEATS_CACHE_KEY, mappedBeats);
           setBeatsError(null);
           return;
         }
@@ -390,7 +432,7 @@ export default function Home() {
         .not('audio_url', 'is', null)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
-        .limit(12);
+        .limit(8);
 
       if (error) {
         setBeatsError(`Nepodařilo se načíst beaty ze Supabase: ${error.message}. Zobrazuji lokální demo data.`);
@@ -456,6 +498,7 @@ export default function Home() {
         }
 
         setBeats(mappedBeats);
+        writeHomeCache(HOME_BEATS_CACHE_KEY, mappedBeats);
         setBeatsError(null);
       } else {
         setBeats(dummyBeats);
@@ -474,6 +517,13 @@ export default function Home() {
 
   const loadProjects = async () => {
     try {
+      const cachedProjects = readHomeCache<Project[]>(HOME_PROJECTS_CACHE_KEY);
+      if (cachedProjects && cachedProjects.length > 0) {
+        setProjects(cachedProjects);
+        setProjectsError(null);
+        return;
+      }
+
       try {
         const { data: viewData, error: viewError } = await supabase
           .from('home_projects')
@@ -484,6 +534,7 @@ export default function Home() {
 
         if (!viewError && viewData && viewData.length > 0) {
           setProjects(viewData as Project[]);
+          writeHomeCache(HOME_PROJECTS_CACHE_KEY, viewData as Project[]);
           setProjectsError(null);
           return;
         }
@@ -526,6 +577,7 @@ export default function Home() {
           return { ...p, author_name: p.author_name || fromProfile } as Project;
         });
         setProjects(withNames.slice(0, 2));
+        writeHomeCache(HOME_PROJECTS_CACHE_KEY, withNames.slice(0, 2));
         setProjectsError(null);
       } else {
         setProjects(dummyProjects.slice(0, 2));
