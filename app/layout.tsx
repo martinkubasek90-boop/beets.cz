@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Geist } from "next/font/google";
 import Script from "next/script";
 import { ThemeProvider } from "next-themes";
 import { GlobalPlayerProvider } from "@/components/global-player-provider";
@@ -20,10 +20,10 @@ export const metadata: Metadata = {
   },
 };
 
-const brandFont = localFont({
-  src: "../public/fonts/Jaoren.ttf",
-  variable: "--font-brand",
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   display: "swap",
+  subsets: ["latin"],
 });
 
 export default function RootLayout({
@@ -56,7 +56,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={`${brandFont.className} antialiased`}>
+      <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
