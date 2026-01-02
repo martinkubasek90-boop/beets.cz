@@ -207,7 +207,7 @@ const dummyBlog: BlogPost[] = [
 
 const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spolupráce', 'Workflow'];
 
-const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
+const HOME_CACHE_TTL_MS = 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
 const HOME_PROJECTS_CACHE_KEY = 'home-projects-v1';
 
@@ -230,6 +230,25 @@ const writeHomeCache = <T,>(key: string, data: T) => {
     window.localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
   } catch {
     // ignore cache write errors
+  }
+};
+
+const toSupabaseThumb = (url: string, width = 640, quality = 70) => {
+  if (!url) return url;
+  if (url.includes('/storage/v1/render/image/public/')) return url;
+  const marker = '/storage/v1/object/public/';
+  if (!url.includes(marker)) return url;
+  try {
+    const [base, rest] = url.split(marker);
+    const path = rest.split('?')[0];
+    const params = new URLSearchParams({
+      width: String(width),
+      quality: String(quality),
+      resize: 'contain',
+    });
+    return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
+  } catch {
+    return url;
   }
 };
 
@@ -1486,7 +1505,13 @@ export default function Home() {
                       <Link href={`/u/${project.user_id}`} className="block h-full w-full">
                         {project.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                          <img
+                            src={toSupabaseThumb(project.cover_url, 640)}
+                            alt={project.title}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                             NO COVER
@@ -1495,7 +1520,13 @@ export default function Home() {
                       </Link>
                     ) : project.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                      <img
+                        src={toSupabaseThumb(project.cover_url, 640)}
+                        alt={project.title}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                         NO COVER
@@ -1844,7 +1875,13 @@ export default function Home() {
                       <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
                         {beat.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                          <img
+                            src={toSupabaseThumb(beat.cover_url, 512)}
+                            alt={beat.title}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                             NO COVER
@@ -1853,7 +1890,13 @@ export default function Home() {
                       </Link>
                     ) : beat.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                      <img
+                        src={toSupabaseThumb(beat.cover_url, 512)}
+                        alt={beat.title}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                         NO COVER
