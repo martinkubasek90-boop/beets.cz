@@ -3419,7 +3419,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                           )}
                           <input
                             type="file"
-                            accept=".wav,.mp3,audio/wav,audio/mpeg"
+                            accept=".mp3,audio/mpeg"
                             onChange={(e) =>
                               setProjectEditTracks((prev) =>
                                 prev.map((p, i) => (i === idx ? { ...p, file: e.target.files?.[0] ?? null } : p))
@@ -3466,8 +3466,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         for (const tr of projectEditTracks) {
                           if (tr.file) {
                             const ext = tr.file.name.split('.').pop()?.toLowerCase();
-                            if (ext && !['wav', 'mp3'].includes(ext)) {
-                              throw new Error('Audio musí být WAV nebo MP3.');
+                            if (ext && ext !== 'mp3') {
+                              throw new Error('Audio musí být MP3.');
                             }
                             const safe = tr.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
                             const path = `${userId}/projects/audio/${Date.now()}-${safe}`;
@@ -4510,9 +4510,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       </button>
                       {openSections.beatUpload && (
                         <div className="mt-4">
-                          <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                            WAV? Využij <Link href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</Link>.
-                          </p>
                           <BeatUploadForm />
                         </div>
                       )}
@@ -4527,9 +4524,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
                       </button>
                       {openSections.projectUpload && (
                         <div className="mt-4">
-                          <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                            WAV? Využij <Link href="/konvertor" className="text-[var(--mpc-accent)]">Konvertor MP3</Link>.
-                          </p>
                           <ProjectUploadForm />
                         </div>
                       )}
