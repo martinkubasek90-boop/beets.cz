@@ -50,7 +50,7 @@ const regions: RegionDef[] = [
   { id: 'nitrianskykraj', label: 'Nitriansky kraj', lat: 48.2, lng: 18.3, color: '#d2d7ff', border: '#5649ff' },
   { id: 'zilinskykraj', label: 'Žilinský kraj', lat: 49.1, lng: 19.2, color: '#cfd4ff', border: '#5649ff' },
   { id: 'banskobystrickykraj', label: 'Banskobystrický kraj', lat: 48.6, lng: 19.5, color: '#cbd2ff', border: '#5649ff' },
-  { id: 'presovskykraj', label: 'Prešovský kraj', lat: 49.0, lng: 21.2, color: '#ffcad2', border: '#e1007a' },
+  { id: 'presovskykraj', label: 'Prešovský kraj', lat: 49.0, lng: 21.2, color: '#cdd6ff', border: '#5649ff' },
   { id: 'kosickykraj', label: 'Košický kraj', lat: 48.6, lng: 21.3, color: '#cde8c7', border: '#0a8f5c' },
 ];
 
@@ -119,11 +119,11 @@ export default function OfflinePage() {
     let layerGroup: any;
     import('leaflet').then((L) => {
       map = L.map('offline-map', {
-        zoomControl: false,
+        zoomControl: true,
         attributionControl: false,
         center: [49.3, 16.0],
         zoom: 6.2,
-        scrollWheelZoom: false,
+        scrollWheelZoom: true,
       });
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         opacity: 0.4,
