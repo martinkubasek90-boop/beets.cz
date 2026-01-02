@@ -1527,7 +1527,6 @@ export default function PublicProfileClient({
                               <FireButton
                                 itemType="beat"
                                 itemId={String(beat.id)}
-                                variant="accent"
                                 className="-ml-1 shrink-0 scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
                               />
                             </div>
