@@ -125,25 +125,65 @@ export default function OfflinePage() {
         zoom: 6.2,
         scrollWheelZoom: false,
       });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        opacity: 0.25,
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        opacity: 0.4,
       }).addTo(map);
 
       layerGroup = L.layerGroup().addTo(map);
 
+      const countsMap: Record<string, number> = {};
+      regions.forEach((r) => {
+        countsMap[r.id] = 0;
+      });
+      profiles.forEach((p) => {
+        const id = normalizeRegion(p.region);
+        if (countsMap[id] !== undefined) countsMap[id] += 1;
+      });
+      const maxCount = Math.max(1, ...Object.values(countsMap));
+
       const regionMap: Record<string, RegionDef> = {};
       regions.forEach((r) => {
+        const count = countsMap[r.id] ?? 0;
+        const intensity = count ? Math.min(count / maxCount, 1) : 0;
+        const baseOpacity = 0.18 + intensity * 0.5;
+        const isActive = filterRegion === r.id;
         const hex = makeHex(r.lat, r.lng, 0.45);
         const polygon = L.polygon(hex, {
-          color: r.border,
-          weight: 3,
+          color: isActive ? '#f37a2e' : r.border,
+          weight: isActive ? 4 : 2,
           fillColor: r.color,
-          fillOpacity: 0.9,
+          fillOpacity: baseOpacity,
         })
           .on('click', () => setFilterRegion(r.id))
           .addTo(layerGroup);
-        polygon.bindTooltip(r.label, { permanent: true, direction: 'center', className: 'map-label' });
+        polygon.bindTooltip(`${r.label} · ${count} profilů`, {
+          permanent: false,
+          direction: 'center',
+          className: 'map-tooltip',
+        });
+        polygon.on('mouseover', () => {
+          polygon.setStyle({ weight: 4, fillOpacity: Math.min(0.85, baseOpacity + 0.15) });
+        });
+        polygon.on('mouseout', () => {
+          polygon.setStyle({ weight: isActive ? 4 : 2, fillOpacity: baseOpacity });
+        });
         regionMap[r.id] = r;
+
+        if (count > 0) {
+          const bubbleSize = 22 + Math.round(intensity * 30);
+          const bubble = L.marker([r.lat, r.lng], {
+            icon: L.divIcon({
+              className: '',
+              html: `<div style="width:${bubbleSize}px;height:${bubbleSize}px;border-radius:999px;background:rgba(12,16,24,0.8);border:1px solid ${r.border};display:flex;align-items:center;justify-content:center;color:#f8fafc;font-size:11px;font-weight:700;letter-spacing:0.06em;">${count}</div>`,
+              iconSize: [bubbleSize, bubbleSize],
+              iconAnchor: [bubbleSize / 2, bubbleSize / 2],
+            }),
+            interactive: true,
+          })
+            .on('click', () => setFilterRegion(r.id))
+            .addTo(layerGroup);
+          bubble.bindTooltip(`${r.label} · ${count} profilů`, { permanent: false, direction: 'top', className: 'map-tooltip' });
+        }
       });
 
       profiles.forEach((p) => {
@@ -154,13 +194,13 @@ export default function OfflinePage() {
         const lat = region.lat + jitter.lat;
         const lng = region.lng + jitter.lng;
         const marker = L.circleMarker([lat, lng], {
-          radius: 7,
+          radius: 4,
           color: region.border,
-          weight: 2,
-          fillOpacity: 0.9,
+          weight: 1,
+          fillOpacity: 0.7,
           fillColor: '#0f1117',
         }).addTo(layerGroup);
-        marker.bindTooltip(p.name, { permanent: false, direction: 'top' });
+        marker.bindTooltip(p.name, { permanent: false, direction: 'top', className: 'map-tooltip' });
       });
     });
     return () => {
@@ -169,7 +209,7 @@ export default function OfflinePage() {
         if (layerGroup) layerGroup.clearLayers();
       });
     };
-  }, [profiles]);
+  }, [profiles, filterRegion]);
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -290,8 +330,37 @@ export default function OfflinePage() {
             </button>
           )}
         </div>
-        <div id="offline-map" className="mt-3 h-[360px] w-full rounded-xl border border-white/10" />
+        <div className="relative mt-3">
+          <div id="offline-map" className="h-[360px] w-full rounded-xl border border-white/10" />
+          <div className="pointer-events-none absolute right-3 top-3 rounded-xl border border-white/10 bg-black/70 px-3 py-2 text-[11px] uppercase tracking-[0.12em] text-white/70 shadow-[0_12px_24px_rgba(0,0,0,0.45)] backdrop-blur">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#e1007a]" />
+              <span>CZ region</span>
+            </div>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#5649ff]" />
+              <span>SK region</span>
+            </div>
+            <div className="mt-2 text-[10px] text-white/50">Bubliny = počet profilů</div>
+          </div>
+        </div>
       </div>
+      <style jsx global>{`
+        .map-tooltip {
+          background: rgba(12, 16, 24, 0.92);
+          color: #f8fafc;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 10px;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        }
+        .map-tooltip.leaflet-tooltip:before {
+          border-top-color: rgba(12, 16, 24, 0.92);
+        }
+      `}</style>
     </main>
   );
 }
