@@ -1452,17 +1452,13 @@ export default function Home() {
           <div className="pointer-events-none absolute -left-12 top-6 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(26,138,98,0.35),rgba(26,138,98,0))] blur-2xl" />
           <div className="pointer-events-none absolute -right-10 bottom-0 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(243,116,51,0.32),rgba(243,116,51,0))] blur-3xl" />
           <div className="relative flex flex-col items-center gap-4 text-center sm:gap-5">
-            <div className="flex items-center gap-3 rounded-full border border-white/15 bg-black/40 px-4 py-2 text-left shadow-[0_10px_25px_rgba(0,0,0,0.35)] backdrop-blur">
-              <div className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-[conic-gradient(from_120deg,#0b5b3b,#1a8a62,#f37433,#0b5b3b)] text-sm font-black text-black shadow-[0_8px_20px_rgba(0,0,0,0.4)]">
-                B
-              </div>
-              <div className="leading-tight">
-                <div className="text-[10px] uppercase tracking-[0.24em] text-white/60">Beat komunita</div>
-                <div className="text-sm font-semibold text-white">BEETS.CZ</div>
-              </div>
-            </div>
-            <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.6rem)] font-black uppercase leading-tight tracking-[0.12em] text-white drop-shadow-[0_10px_30px_rgba(0,0,0,0.55)]">
-              {heroTitle}
+            <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white to-white/60">
+                BEETS
+              </span>
+              <span className="ml-2 text-transparent bg-clip-text bg-gradient-to-r from-[#1a8a62] via-[#f37433] to-[#f59e0b]">
+                .CZ
+              </span>
             </h1>
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {cms('home.hero.subtitle', subtitleCleaned)}
