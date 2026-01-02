@@ -1589,6 +1589,11 @@ export default function PublicProfileClient({
                             ★
                           </button>
                         )}
+                        <FireButton
+                          itemType="beat"
+                          itemId={String(beat.id)}
+                          className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                        />
                       </div>
                       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center gap-3">
@@ -1603,11 +1608,6 @@ export default function PublicProfileClient({
                           <div>
                             <div className="mb-1 flex items-center gap-2">
                               <p className="text-base font-semibold text-white">{beat.title}</p>
-                              <FireButton
-                                itemType="beat"
-                                itemId={String(beat.id)}
-                                className="-ml-1 shrink-0 scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!p-0 [&>button]:!shadow-none [&>button]:hover:!brightness-100"
-                              />
                             </div>
                             <p className="text-[12px] text-[var(--mpc-muted)]">
                               {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}

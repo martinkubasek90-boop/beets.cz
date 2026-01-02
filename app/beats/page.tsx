@@ -277,6 +277,9 @@ export default function BeatsPage() {
               key={beat.id}
               className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
             >
+              <div className="absolute right-4 top-4">
+                <FireButton itemType="beat" itemId={String(beat.id)} className="scale-100" />
+              </div>
               <div className="flex flex-col items-center gap-4">
                 <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
                   {beat.user_id ? (
@@ -313,7 +316,6 @@ export default function BeatsPage() {
                 >
                   {current?.id === beat.id && isPlaying ? 'Pause' : 'Play'}
                 </button>
-                <FireButton itemType="beat" itemId={String(beat.id)} className="mt-1" />
                 {current?.id === beat.id && (
                   <div className="w-full">
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">

@@ -475,6 +475,11 @@ export default function ProjectsPage() {
                     : undefined
                 }
               >
+                {userId && (
+                  <div className="absolute right-4 top-4">
+                    <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
+                  </div>
+                )}
                 <div className="absolute left-4 top-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em]">
                   {isRequest && (
                     <span className="rounded-full border border-amber-400/60 bg-amber-500/20 px-3 py-1 text-amber-200">
@@ -512,7 +517,6 @@ export default function ProjectsPage() {
                     )}
                     <div className="flex items-center justify-center gap-2">
                       <p className="text-lg font-semibold text-white">{project.title}</p>
-                      {userId && <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />}
                     </div>
                     {curatorNames.length > 0 && (
                       <p className="flex items-center justify-center gap-1 text-[11px] uppercase tracking-[0.12em] text-orange-200">
