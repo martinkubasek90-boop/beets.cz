@@ -623,7 +623,26 @@ export default function PublicProfileClient({
 
   useEffect(() => {
     let active = true;
+    const cacheKey = 'beets-embed-cache';
+    const readCache = () => {
+      if (typeof window === 'undefined') return {};
+      try {
+        return JSON.parse(window.localStorage.getItem(cacheKey) || '{}') as Record<string, string>;
+      } catch {
+        return {};
+      }
+    };
+    const writeCache = (next: Record<string, string>) => {
+      if (typeof window === 'undefined') return;
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    };
+
     const fetchEmbeds = async () => {
+      const cache = readCache();
       const targets = projects.filter((project) => {
         if (project.embed_html || projectEmbeds[project.id]) return false;
         if (!project.purchase_url) return false;
@@ -634,12 +653,20 @@ export default function PublicProfileClient({
       await Promise.all(
         targets.map(async (project) => {
           try {
-            const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(project.purchase_url || '')}`);
+            const url = project.purchase_url || '';
+            const cachedHtml = cache[url];
+            if (cachedHtml && active) {
+              setProjectEmbeds((prev) => ({ ...prev, [project.id]: cachedHtml }));
+              return;
+            }
+            const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(url)}`);
             if (!response.ok) return;
             const payload = await response.json();
             const html = payload?.embed_html;
             if (html && active) {
               setProjectEmbeds((prev) => ({ ...prev, [project.id]: html }));
+              cache[url] = html;
+              writeCache(cache);
             }
           } catch {
             // ignore
