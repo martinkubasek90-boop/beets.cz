@@ -697,5 +697,6 @@ export default function MPC3000ConverterPage() {
         }
       `}</style>
     </div>
+    </div>
   );
 }
