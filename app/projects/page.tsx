@@ -57,6 +57,7 @@ export default function ProjectsPage() {
   const [curatorEndorsements, setCuratorEndorsements] = useState<Record<string, string[]>>({});
   const [curatorProfiles, setCuratorProfiles] = useState<Record<string, string>>({});
   const [curatorFilter, setCuratorFilter] = useState<"all" | "curated" | string>("all");
+  const [projectEmbeds, setProjectEmbeds] = useState<Record<number, string>>({});
 
   const { play, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
   const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
@@ -64,6 +65,38 @@ export default function ProjectsPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, [supabase]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchEmbeds = async () => {
+      const targets = projects.filter((project) => {
+        if (project.embed_html || projectEmbeds[project.id]) return false;
+        if (!project.purchase_url) return false;
+        const hasTracks = (project.tracks ?? []).length > 0;
+        return !hasTracks && !project.project_url;
+      });
+      if (!targets.length) return;
+      await Promise.all(
+        targets.map(async (project) => {
+          try {
+            const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(project.purchase_url || "")}`);
+            if (!response.ok) return;
+            const payload = await response.json();
+            const html = payload?.embed_html;
+            if (html && active) {
+              setProjectEmbeds((prev) => ({ ...prev, [project.id]: html }));
+            }
+          } catch {
+            // ignore
+          }
+        })
+      );
+    };
+    fetchEmbeds();
+    return () => {
+      active = false;
+    };
+  }, [projects, projectEmbeds]);
 
   const publicUrlFromPath = (path?: string | null) =>
     path ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}` : "";
@@ -571,12 +604,12 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {project.embed_html && (
+                {(project.embed_html || projectEmbeds[project.id]) && (
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                     <div
                       className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-black/60 [&_iframe]:h-[120px] [&_iframe]:w-full [&_iframe]:border-0"
-                      dangerouslySetInnerHTML={{ __html: project.embed_html }}
+                      dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] }}
                     />
                   </div>
                 )}

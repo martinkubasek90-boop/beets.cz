@@ -2729,24 +2729,11 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
       }
-      if (importMetadata.embed_html) {
-        payload.embed_html = importMetadata.embed_html;
-      }
-
-      let data: any = null;
-      let error: any = null;
-      const attemptInsert = async (body: Record<string, any>) =>
-        supabase
-          .from('projects')
-          .insert(body)
-          .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
-          .single();
-
-      ({ data, error } = await attemptInsert(payload));
-      if (error && String(error.message || '').toLowerCase().includes('embed_html')) {
-        delete payload.embed_html;
-        ({ data, error } = await attemptInsert(payload));
-      }
+      const { data, error } = await supabase
+        .from('projects')
+        .insert(payload)
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
+        .single();
       if (error) throw error;
       if (data) {
         setProjects((prev) => [data as ProjectItem, ...prev]);

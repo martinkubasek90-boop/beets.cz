@@ -211,6 +211,7 @@ export default function PublicProfileClient({
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+  const [projectEmbeds, setProjectEmbeds] = useState<Record<string, string>>({});
   const [tabsOpen, setTabsOpen] = useState(false);
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
@@ -619,6 +620,38 @@ export default function PublicProfileClient({
       supabase.removeChannel(channel);
     };
   }, [currentUserId, incomingCall, loadAcapellas, loadBeats, loadCollabs, loadProjects, profileId, router, supabase]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchEmbeds = async () => {
+      const targets = projects.filter((project) => {
+        if (project.embed_html || projectEmbeds[project.id]) return false;
+        if (!project.purchase_url) return false;
+        const tracks = normalizeProjectTracks(project.tracks_json);
+        return tracks.length === 0 && !project.project_url;
+      });
+      if (!targets.length) return;
+      await Promise.all(
+        targets.map(async (project) => {
+          try {
+            const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(project.purchase_url || '')}`);
+            if (!response.ok) return;
+            const payload = await response.json();
+            const html = payload?.embed_html;
+            if (html && active) {
+              setProjectEmbeds((prev) => ({ ...prev, [project.id]: html }));
+            }
+          } catch {
+            // ignore
+          }
+        })
+      );
+    };
+    fetchEmbeds();
+    return () => {
+      active = false;
+    };
+  }, [projects, projectEmbeds]);
 
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
@@ -1872,12 +1905,12 @@ export default function PublicProfileClient({
                 )}
               </div>
 
-              {project.embed_html && (
+              {(project.embed_html || projectEmbeds[project.id]) && (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   <div
                     className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/60 [&_iframe]:h-[120px] [&_iframe]:w-full [&_iframe]:border-0"
-                    dangerouslySetInnerHTML={{ __html: project.embed_html }}
+                    dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] }}
                   />
                 </div>
               )}
