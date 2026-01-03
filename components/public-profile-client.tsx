@@ -655,7 +655,8 @@ export default function PublicProfileClient({
       const targets = projects.filter((project) => {
         if (project.embed_html || projectEmbeds[project.id]) return false;
         const tracks = normalizeProjectTracks(project.tracks_json);
-        if (tracks.length > 0) return false;
+        const hasPlayable = tracks.some((track) => !!track.url);
+        if (hasPlayable) return false;
         return !!(project.project_url || project.purchase_url);
       });
       if (!targets.length) return;
@@ -1685,8 +1686,9 @@ export default function PublicProfileClient({
             <div className="space-y-3">
               {projects.filter((p) => p.access_mode !== 'private').map((project) => {
                 const tracks = normalizeProjectTracks(project.tracks_json);
+                const playableTracks = tracks.filter((track) => !!track.url);
                 const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
-                const isExternalProject = tracks.length === 0 && !!project.project_url;
+                const isExternalProject = playableTracks.length === 0 && !!project.project_url;
                 return (
                   <div
                     key={project.id}
@@ -1760,7 +1762,7 @@ export default function PublicProfileClient({
 
                 {(() => {
                   if (isExternalProject) return null;
-                  const playableIdx = tracks.findIndex((t) => t.url);
+                  const playableIdx = playableTracks.length ? tracks.findIndex((t) => t.url) : -1;
                   const primary =
                     playableIdx >= 0
                       ? {
@@ -1873,9 +1875,10 @@ export default function PublicProfileClient({
                           </Link>
                         )}
                       </div>
-                    ) : tracks.length > 0 ? (
+                    ) : playableTracks.length > 0 ? (
                       <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
                         {tracks.map((t, idx) => {
+                          if (!t.url) return null;
                           const trackId = `project-${project.id}-${idx}`;
                           const isCurrent = currentTrack?.id === trackId;
                           const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
