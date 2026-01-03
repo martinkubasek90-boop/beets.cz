@@ -115,8 +115,8 @@ export default function ProjectsPage() {
       const cache = readCache();
       const targets = projects.filter((project) => {
         if (project.embed_html || projectEmbeds[project.id]) return false;
-        const hasTracks = (project.tracks ?? []).length > 0;
-        if (hasTracks) return false;
+        const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
+        if (hasPlayable) return false;
         return !!(project.project_url || project.purchase_url);
       });
       if (!targets.length) return;
@@ -477,9 +477,10 @@ export default function ProjectsPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {filteredProjects.map((project) => {
             const tracks = project.tracks_json && project.tracks_json.length ? project.tracks_json : [];
-            const primaryTrack = tracks[0];
+            const playableTracks = tracks.filter((track) => !!track.url);
+            const primaryTrack = playableTracks[0];
             const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
-            const isExternalProject = tracks.length === 0 && !!project.project_url;
+            const isExternalProject = playableTracks.length === 0 && !!project.project_url;
             const isRequest = project.access_mode === "request";
             const isCurrentPrimary = current?.id === `project-${project.id}-0`;
             const progressPct =
@@ -648,7 +649,7 @@ export default function ProjectsPage() {
                 </div>
 
                 {/* Tracklist */}
-                {tracks.length > 0 && project.hasAccess && (
+                {playableTracks.length > 0 && project.hasAccess && (
                   <div className="mt-4 rounded-lg border border-white/10 bg-black/35 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
@@ -667,7 +668,7 @@ export default function ProjectsPage() {
                     </div>
                     {expanded[project.id] && (
                       <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
-                        {tracks.map((t, idx) => {
+                        {playableTracks.map((t, idx) => {
                           const trackId = `project-${project.id}-${idx}`;
                           const isCurrent = current?.id === trackId;
                           return (
