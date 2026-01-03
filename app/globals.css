@@ -12,6 +12,16 @@
   font-family: 'Luthgy', 'Space Grotesk', 'Geist', system-ui, sans-serif;
 }
 
+@font-face {
+  font-family: 'Nueva Garcia';
+  src: url('/fonts/NuevaGarcia.ttf') format('truetype');
+  font-display: swap;
+}
+
+.font-hero-nueva {
+  font-family: 'Nueva Garcia', 'Space Grotesk', 'Geist', system-ui, sans-serif;
+}
+
 :root {
   /* Dark base + oranžová/zelena paleta */
   --mpc-deck: #050505;
