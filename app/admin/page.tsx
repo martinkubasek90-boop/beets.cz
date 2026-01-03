@@ -87,6 +87,20 @@ const fields: CmsField[] = [
     category: 'Homepage',
   },
   {
+    key: 'home.hero.mode',
+    label: 'Homepage – režim hero obrázku',
+    description: 'banner = nahradí text, background = pozadí pod textem',
+    defaultValue: 'banner',
+    category: 'Homepage',
+  },
+  {
+    key: 'home.hero.background',
+    label: 'Homepage – hero background (za titulkem)',
+    description: 'Vlož URL obrázku. Použije se jen v režimu background.',
+    defaultValue: '',
+    category: 'Homepage',
+  },
+  {
     key: 'home.hero.subtitle',
     label: 'Homepage – podtitulek',
     defaultValue: 'Nahrávej beaty, sdílej instrumentály, feedback od CZ/SK komunity.',
@@ -224,6 +238,7 @@ export default function AdminPage() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [uploadingHero, setUploadingHero] = useState(false);
+  const [uploadingHeroBg, setUploadingHeroBg] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -339,6 +354,45 @@ export default function AdminPage() {
     }
   };
 
+  const uploadHeroBackground = async (file: File) => {
+    setUploadingHeroBg(true);
+    setError(null);
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const path = `hero-bg/${Date.now()}-${safeName}`;
+      const { error: uploadError } = await supabase.storage.from('blog_covers').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('blog_covers').getPublicUrl(path);
+      const url = data.publicUrl;
+      const { error: upsertError } = await supabase.from('cms_content').upsert({ key: 'home.hero.background', value: url });
+      if (upsertError) throw upsertError;
+      setEntries((prev) => ({ ...prev, 'home.hero.background': url }));
+    } catch (err: any) {
+      console.error('Chyba nahrávání hero background:', err);
+      setError('Nahrání hero background selhalo.');
+    } finally {
+      setUploadingHeroBg(false);
+    }
+  };
+
+  const clearCmsValue = async (key: string) => {
+    setSaving((prev) => ({ ...prev, [key]: true }));
+    setError(null);
+    try {
+      const { error: upsertError } = await supabase.from('cms_content').upsert({ key, value: '' });
+      if (upsertError) throw upsertError;
+      setEntries((prev) => ({ ...prev, [key]: '' }));
+    } catch (err: any) {
+      console.error('Chyba mazání CMS hodnoty:', err);
+      setError('Vymazání se nepodařilo.');
+    } finally {
+      setSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[var(--mpc-deck)] text-white p-6">
@@ -395,6 +449,8 @@ export default function AdminPage() {
               const isEmbedField = field.key === 'stream.embed.url' || field.key === 'live.embed.url';
               const showEmbedWarning = isEmbedField && current.trim() !== '' && isInvalidEmbed(current);
               const isHeroImage = field.key === 'home.hero.image';
+              const isHeroBackground = field.key === 'home.hero.background';
+              const isHeroMode = field.key === 'home.hero.mode';
               return (
                 <div key={field.key} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
                   <div className="flex items-start justify-between gap-3">
@@ -403,20 +459,42 @@ export default function AdminPage() {
                       <p className="text-[11px] text-[var(--mpc-muted)]">{field.key}</p>
                       {field.description && <p className="text-[11px] text-[var(--mpc-muted)]">{field.description}</p>}
                     </div>
-                    <button
-                      onClick={() => void handleSave(field.key, current)}
-                      disabled={saving[field.key]}
-                      className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-                    >
-                      {saving[field.key] ? 'Ukládám…' : 'Uložit'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {(isHeroImage || isHeroBackground) && (
+                        <button
+                          onClick={() => void clearCmsValue(field.key)}
+                          disabled={saving[field.key]}
+                          className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/80 hover:border-white/40"
+                        >
+                          Vymazat
+                        </button>
+                      )}
+                      <button
+                        onClick={() => void handleSave(field.key, current)}
+                        disabled={saving[field.key]}
+                        className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                      >
+                        {saving[field.key] ? 'Ukládám…' : 'Uložit'}
+                      </button>
+                    </div>
                   </div>
-                  <textarea
-                    className="mt-3 w-full rounded-md border border-[var(--mpc-dark)] bg-black/50 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                    rows={3}
-                    value={current}
-                    onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
-                  />
+                  {isHeroMode ? (
+                    <select
+                      className="mt-3 w-full rounded-md border border-[var(--mpc-dark)] bg-black/50 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                      value={current}
+                      onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                    >
+                      <option value="banner">banner – nahradí text</option>
+                      <option value="background">background – pod text</option>
+                    </select>
+                  ) : (
+                    <textarea
+                      className="mt-3 w-full rounded-md border border-[var(--mpc-dark)] bg-black/50 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                      rows={3}
+                      value={current}
+                      onChange={(e) => setEntries((prev) => ({ ...prev, [field.key]: e.target.value }))}
+                    />
+                  )}
                   {isHeroImage && (
                     <div className="mt-3 space-y-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -438,6 +516,32 @@ export default function AdminPage() {
                         <img
                           src={current}
                           alt="Hero náhled"
+                          className="h-24 w-auto rounded-md border border-white/10 bg-black/40 object-contain"
+                        />
+                      )}
+                    </div>
+                  )}
+                  {isHeroBackground && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void uploadHeroBackground(file);
+                          }}
+                          className="w-full text-[12px] text-white"
+                        />
+                        {uploadingHeroBg && (
+                          <span className="text-[11px] text-[var(--mpc-muted)]">Nahrávám…</span>
+                        )}
+                      </div>
+                      {current && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={current}
+                          alt="Hero background náhled"
                           className="h-24 w-auto rounded-md border border-white/10 bg-black/40 object-contain"
                         />
                       )}
