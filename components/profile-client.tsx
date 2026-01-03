@@ -2762,11 +2762,17 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setImportError('Nejsi přihlášený.');
       return;
     }
-    if (!importMetadata?.link) {
-      setImportError('Nejdřív načti metadata z odkazu.');
+    const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
+    const normalizedLink = importMetadata?.link
+      ? normalizePurchaseUrl(importMetadata.link)
+      : importProjectUrl.trim()
+        ? normalizePurchaseUrl(importProjectUrl.trim())
+        : null;
+    if (!manualEmbed && !normalizedLink) {
+      setImportError('Zadej URL projektu nebo vlož embed.');
       return;
     }
-    const title = (importTitle || importMetadata.title || '').trim();
+    const title = (importTitle || importMetadata?.title || '').trim();
     if (!title) {
       setImportError('Zadej název projektu.');
       return;
@@ -2775,11 +2781,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setImportError(null);
     setImportSuccess(null);
     try {
-      const normalizedLink = normalizePurchaseUrl(importMetadata.link);
       const descriptionParts = [];
       if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
-      if (importMetadata.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
-      const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
+      if (importMetadata?.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
       const payload: Record<string, any> = {
         title,
         description: descriptionParts.length ? descriptionParts.join(' · ') : null,
@@ -2789,7 +2793,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         access_mode: 'public',
         release_formats: null,
         purchase_url: null,
-        embed_html: manualEmbed || importMetadata.embed_html || null,
+        embed_html: manualEmbed || importMetadata?.embed_html || null,
       };
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
@@ -4872,6 +4876,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 Vložit Bandcamp embed
                               </button>
                             </div>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">Můžeš importovat i bez URL — stačí vložit embed.</p>
                             <p className="text-[10px] text-[var(--mpc-muted)]">Podporujeme Spotify/SoundCloud/Bandcamp iframe. Vložené jiné HTML se ignoruje.</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
