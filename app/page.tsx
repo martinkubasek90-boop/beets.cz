@@ -12,6 +12,8 @@ import { MainNav } from '@/components/main-nav';
 const CMS_KEYS = [
   'home.hero.title',
   'home.hero.image',
+  'home.hero.mode',
+  'home.hero.background',
   'home.hero.subtitle',
   'home.projects.title',
   'home.beats.title',
@@ -673,6 +675,8 @@ export default function Home() {
   };
   const heroTitle = cms('home.hero.title', t('hero.title', 'Beets.cz'));
   const heroImageUrl = cms('home.hero.image', '').trim();
+  const heroMode = cms('home.hero.mode', 'banner').trim();
+  const heroBackgroundUrl = cms('home.hero.background', '').trim();
   const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
   const visibleBeats = beatList.length
     ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
@@ -1454,7 +1458,7 @@ export default function Home() {
           <div className="pointer-events-none absolute -left-12 top-6 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(26,138,98,0.35),rgba(26,138,98,0))] blur-2xl" />
           <div className="pointer-events-none absolute -right-10 bottom-0 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(243,116,51,0.32),rgba(243,116,51,0))] blur-3xl" />
           <div className="relative flex flex-col items-center gap-4 text-center sm:gap-5">
-            {heroImageUrl ? (
+            {heroMode === 'banner' && heroImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={heroImageUrl}
@@ -1462,9 +1466,24 @@ export default function Home() {
                 className="max-w-[760px] w-full h-auto drop-shadow-[0_12px_36px_rgba(0,0,0,0.6)]"
               />
             ) : (
-              <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
-                {heroTitle}
-              </h1>
+              <div
+                className={`inline-flex items-center justify-center rounded-2xl px-6 py-4 ${
+                  heroBackgroundUrl ? 'border border-white/10 shadow-[0_18px_40px_rgba(0,0,0,0.45)]' : ''
+                }`}
+                style={
+                  heroBackgroundUrl
+                    ? {
+                        backgroundImage: `linear-gradient(120deg, rgba(0,0,0,0.65), rgba(0,0,0,0.35)), url(${heroBackgroundUrl})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }
+                    : undefined
+                }
+              >
+                <h1 className="font-['Space_Grotesk'] text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+                  {heroTitle}
+                </h1>
+              </div>
             )}
             <p className="max-w-3xl text-[var(--mpc-muted)] text-[15px] leading-relaxed sm:text-base">
               {cms('home.hero.subtitle', subtitleCleaned)}
