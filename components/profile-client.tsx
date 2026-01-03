@@ -93,6 +93,19 @@ const extractIframeHtml = (value: string) => {
   return match ? match[0] : '';
 };
 
+const extractIframeSrc = (value: string) => {
+  const match = value.match(/src=["']([^"']+)["']/i);
+  return match ? match[1] : '';
+};
+
+const getEmbedDefaultTitle = (src: string) => {
+  if (!src) return '';
+  if (src.includes('open.spotify.com')) return 'Spotify projekt';
+  if (src.includes('soundcloud.com')) return 'SoundCloud projekt';
+  if (src.includes('bandcamp.com')) return 'Bandcamp projekt';
+  return '';
+};
+
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
   if (cover.startsWith('http')) return cover;
@@ -345,6 +358,15 @@ const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator
   const [importSaving, setImportSaving] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (importTitle.trim()) return;
+    const src = extractIframeSrc(importEmbedHtml);
+    const fallbackTitle = getEmbedDefaultTitle(src);
+    if (fallbackTitle) {
+      setImportTitle(fallbackTitle);
+    }
+  }, [importEmbedHtml, importTitle]);
   const [myAccessRequests, setMyAccessRequests] = useState<ProjectAccessRequest[]>([]);
   const [myAccessRequestsError, setMyAccessRequestsError] = useState<string | null>(null);
   const [myAccessRequestsLoading, setMyAccessRequestsLoading] = useState(false);
