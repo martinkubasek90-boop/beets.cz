@@ -632,7 +632,7 @@ export default function ProjectsPage() {
                     </div>
                   ) : isExternalProject ? (
                     <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
-                      <p>Poslechnout na platformě</p>
+                      <p>Vydáno na</p>
                       <a
                         href={project.project_url || undefined}
                         target="_blank"
@@ -709,7 +709,7 @@ export default function ProjectsPage() {
                 {isExternalProject ? (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      Poslechnout na platformě
+                      Vydáno na
                     </span>
                     <a
                       href={project.project_url || undefined}

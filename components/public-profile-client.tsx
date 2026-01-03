@@ -1831,6 +1831,7 @@ export default function PublicProfileClient({
                   </div>
                 )}
 
+                {!isExternalProject && (
                 <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
@@ -1927,24 +1928,13 @@ export default function PublicProfileClient({
                           );
                         })}
                       </div>
-                    ) : isExternalProject ? (
-                      <div className="space-y-3 rounded border border-white/10 bg-black/50 p-3 text-[12px] text-[var(--mpc-muted)]">
-                        <p>Tracklist není k dispozici.</p>
-                        <a
-                          href={project.project_url || undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                        >
-                          {externalPlatform || 'Otevřít'}
-                        </a>
-                      </div>
                     ) : (
                       <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
                     )}
                   </div>
                 )}
               </div>
+                )}
 
               {(project.embed_html || projectEmbeds[project.id]) && (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
@@ -1958,7 +1948,7 @@ export default function PublicProfileClient({
 
               {isExternalProject ? (
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Poslechnout na platformě</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
                   <a
                     href={project.project_url || undefined}
                     target="_blank"

@@ -73,7 +73,7 @@ export default function AcapellaUploadForm({ onCreated }: { onCreated?: () => vo
         }
         const safeName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/covers/${Date.now()}-${safeName}`;
-        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 420, quality: 0.75 });
         const { error: coverErr } = await supabase.storage.from('acapella_covers').upload(coverPath, coverToUpload, { upsert: true });
         if (coverErr) throw coverErr;
         coverUrl = supabase.storage.from('acapella_covers').getPublicUrl(coverPath).data.publicUrl;
