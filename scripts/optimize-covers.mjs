@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import sharp from "sharp";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,20 +25,6 @@ const parseStorageUrl = (url) => {
   return { bucket, path: parts.join("/") };
 };
 
-const buildRenderUrl = (url) => {
-  const marker = "/storage/v1/object/public/";
-  const index = url.indexOf(marker);
-  if (index === -1) return null;
-  const base = url.slice(0, index);
-  const params = new URLSearchParams({
-    url: url,
-    width: String(MAX_SIZE),
-    quality: String(QUALITY),
-    format: "webp",
-  });
-  return `${base}/storage/v1/render/image?${params.toString()}`;
-};
-
 const toOptimizedPath = (path) => {
   const cleaned = path.replace(/^optimized\//, "");
   return `optimized/${cleaned.replace(/\.[^/.]+$/, ".webp")}`;
@@ -51,16 +38,19 @@ const optimizeRow = async (table, row) => {
   const storage = parseStorageUrl(coverUrl);
   if (!storage) return false;
 
-  const renderUrl = buildRenderUrl(coverUrl);
-  if (!renderUrl) return false;
-
-  const response = await fetch(renderUrl);
-  if (!response.ok) {
-    console.warn(`Failed render fetch (${table} ${row.id}):`, response.status);
+  const { data: download, error: downloadError } = await supabase.storage
+    .from(storage.bucket)
+    .download(storage.path);
+  if (downloadError || !download) {
+    console.warn(`Failed download (${table} ${row.id}):`, downloadError?.message || "no data");
     return false;
   }
 
-  const buffer = new Uint8Array(await response.arrayBuffer());
+  const inputBuffer = Buffer.from(await download.arrayBuffer());
+  const buffer = await sharp(inputBuffer)
+    .resize({ width: MAX_SIZE, height: MAX_SIZE, fit: "inside" })
+    .webp({ quality: QUALITY })
+    .toBuffer();
   const optimizedPath = toOptimizedPath(storage.path);
   const { error: uploadError } = await supabase.storage
     .from(storage.bucket)
