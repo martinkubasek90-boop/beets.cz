@@ -93,6 +93,11 @@ const extractIframeHtml = (value: string) => {
   return match ? match[0] : '';
 };
 
+const extractIframeAnchorHref = (value: string) => {
+  const match = value.match(/<a[^>]+href=["']([^"']+)["']/i);
+  return match ? match[1] : '';
+};
+
 const extractIframeSrc = (value: string) => {
   const match = value.match(/src=["']([^"']+)["']/i);
   return match ? match[1] : '';
@@ -104,6 +109,41 @@ const getEmbedDefaultTitle = (src: string) => {
   if (src.includes('soundcloud.com')) return 'SoundCloud projekt';
   if (src.includes('bandcamp.com')) return 'Bandcamp projekt';
   return '';
+};
+
+const getEmbedProviderFromUrl = (value: string) => {
+  if (!value) return '';
+  if (value.includes('spotify.com')) return 'Spotify';
+  if (value.includes('soundcloud.com')) return 'SoundCloud';
+  if (value.includes('bandcamp.com')) return 'Bandcamp';
+  return '';
+};
+
+const getProjectUrlFromEmbedSrc = (src: string) => {
+  if (!src) return '';
+  if (src.includes('open.spotify.com/embed/')) {
+    return src.replace('open.spotify.com/embed/', 'open.spotify.com/');
+  }
+  if (src.includes('w.soundcloud.com/player/')) {
+    try {
+      const url = new URL(src);
+      const raw = url.searchParams.get('url');
+      return raw ? decodeURIComponent(raw) : '';
+    } catch {
+      return '';
+    }
+  }
+  if (src.includes('soundcloud.com') || src.includes('spotify.com') || src.includes('bandcamp.com')) {
+    return src;
+  }
+  return '';
+};
+
+const getProjectUrlFromEmbedHtml = (value: string) => {
+  const href = extractIframeAnchorHref(value);
+  if (href) return href;
+  const src = extractIframeSrc(value);
+  return getProjectUrlFromEmbedSrc(src);
 };
 
 const resolveProjectCoverUrl = (cover: string | null) => {
@@ -2702,7 +2742,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   const handleFetchImportMetadata = async () => {
     const trimmed = importProjectUrl.trim();
+    const manualEmbedRaw = importEmbedHtml.trim();
+    const manualEmbed = extractIframeHtml(manualEmbedRaw);
     if (!trimmed) {
+      if (manualEmbed) {
+        const src = extractIframeSrc(manualEmbedRaw);
+        const derivedLink = getProjectUrlFromEmbedHtml(manualEmbedRaw);
+        const provider = getEmbedProviderFromUrl(derivedLink || src);
+        setImportMetadata({
+          title: importTitle.trim() || getEmbedDefaultTitle(src),
+          artist: importArtist.trim(),
+          provider: provider || null,
+          link: derivedLink || null,
+          cover: null,
+          embed_html: manualEmbed,
+        });
+        setImportError(null);
+        setImportSuccess('Embed připraven.');
+        return;
+      }
       setImportError('Zadej URL z Spotify, SoundCloud nebo Bandcamp.');
       return;
     }
@@ -2785,6 +2843,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       return;
     }
     const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
+    const derivedEmbedLink = manualEmbed ? getProjectUrlFromEmbedHtml(importEmbedHtml.trim()) : '';
     const normalizedLink = importMetadata?.link
       ? normalizePurchaseUrl(importMetadata.link)
       : importProjectUrl.trim()
@@ -2805,11 +2864,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
     try {
       const descriptionParts = [];
       if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
-      if (importMetadata?.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
+      const providerName = importMetadata?.provider || getEmbedProviderFromUrl(derivedEmbedLink);
+      if (providerName) descriptionParts.push(`Zdroj: ${providerName}`);
       const payload: Record<string, any> = {
         title,
         description: descriptionParts.length ? descriptionParts.join(' · ') : null,
-        project_url: normalizedLink,
+        project_url: normalizedLink || normalizePurchaseUrl(derivedEmbedLink),
         tracks_json: [],
         user_id: userId,
         access_mode: 'public',
