@@ -2817,7 +2817,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         purchase_url: null,
         embed_html: manualEmbed || importMetadata?.embed_html || null,
       };
-      if (importMetadata.cover) {
+      if (importMetadata?.cover) {
         payload.cover_url = importMetadata.cover;
       }
       const { data, error } = await supabase
