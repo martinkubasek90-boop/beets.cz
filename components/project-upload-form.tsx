@@ -127,7 +127,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
 
         const safeCoverName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/projects/covers/${Date.now()}-${safeCoverName}`;
-        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 420, quality: 0.75 });
 
         const { error: coverUploadError } = await supabase.storage
           .from('projects')

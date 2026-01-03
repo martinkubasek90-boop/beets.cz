@@ -13,8 +13,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
-const MAX_SIZE = 512;
-const QUALITY = 70;
+const MAX_SIZE = 420;
+const QUALITY = 75;
+const CLEANUP_ORIGINALS = process.env.CLEANUP_ORIGINALS === "true";
 
 const parseStorageUrl = (url) => {
   const marker = "/storage/v1/object/public/";
@@ -70,6 +71,15 @@ const optimizeRow = async (table, row) => {
   if (updateError) {
     console.warn(`Update failed (${table} ${row.id}):`, updateError.message);
     return false;
+  }
+
+  if (CLEANUP_ORIGINALS) {
+    const { error: removeError } = await supabase.storage
+      .from(storage.bucket)
+      .remove([storage.path]);
+    if (removeError) {
+      console.warn(`Cleanup failed (${table} ${row.id}):`, removeError.message);
+    }
   }
 
   return true;

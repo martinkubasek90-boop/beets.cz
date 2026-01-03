@@ -113,7 +113,7 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
 
         const safeName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/covers/${Date.now()}-${safeName}`;
-        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 420, quality: 0.75 });
 
         const { error: coverUploadError } = await supabase.storage
           .from('beat_covers')
