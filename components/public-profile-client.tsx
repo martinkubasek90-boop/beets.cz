@@ -1944,7 +1944,7 @@ export default function PublicProfileClient({
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   <div
-                    className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/60 [&_iframe]:h-[120px] [&_iframe]:w-full [&_iframe]:border-0"
+                    className="mt-2 overflow-hidden rounded-xl border border-white/10 bg-black/60 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
                     dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] }}
                   />
                 </div>

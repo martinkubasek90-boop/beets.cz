@@ -2711,12 +2711,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
     if (!match) return '';
     const [, type, id] = match;
     const src = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
-    return `<iframe data-testid="embed-iframe" style="border-radius:12px" src="${src}" width="100%" height="352" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+    return `<iframe data-testid="embed-iframe" style="border-radius:12px" src="${src}" width="100%" height="120" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
   };
 
   const buildSoundcloudEmbed = (url: string) => {
     const src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
-    return `<iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src="${src}"></iframe>`;
+    return `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="${src}"></iframe>`;
   };
 
   const handleInsertEmbed = async (provider: 'spotify' | 'soundcloud' | 'bandcamp') => {
