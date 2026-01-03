@@ -495,7 +495,7 @@ export default function ProjectsPage() {
                 style={
                   project.cover_url
                     ? {
-                        backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.78), rgba(0,0,0,0.92)), url(${toSupabaseThumb(project.cover_url, 720) ?? project.cover_url})`,
+                        backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.78), rgba(0,0,0,0.92)), url(${project.cover_url})`,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                       }
@@ -527,6 +527,13 @@ export default function ProjectsPage() {
                           <img
                             src={toSupabaseThumb(project.cover_url, 420) ?? project.cover_url}
                             alt={project.title}
+                            loading="lazy"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              if (target.dataset.fallback === "true") return;
+                              target.dataset.fallback = "true";
+                              target.src = project.cover_url || "";
+                            }}
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -538,6 +545,13 @@ export default function ProjectsPage() {
                       <img
                         src={toSupabaseThumb(project.cover_url, 420) ?? project.cover_url}
                         alt={project.title}
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (target.dataset.fallback === "true") return;
+                          target.dataset.fallback = "true";
+                          target.src = project.cover_url || "";
+                        }}
                         className="h-full w-full object-cover"
                       />
                     ) : (
