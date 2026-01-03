@@ -60,6 +60,7 @@ type Project = {
   user_id?: string | null;
   author_name?: string | null;
   project_url?: string | null;
+  embed_html?: string | null;
   release_formats?: string[] | null;
   purchase_url?: string | null;
   tracks?: Array<{
@@ -84,6 +85,15 @@ const RELEASE_FORMAT_LABELS: Record<string, string> = {
 const normalizePurchaseUrl = (value?: string | null) => {
   if (!value) return null;
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+};
+
+const getExternalPlatform = (value?: string | null) => {
+  if (!value) return null;
+  const host = value.toLowerCase();
+  if (host.includes('soundcloud.com')) return 'SoundCloud';
+  if (host.includes('spotify.com')) return 'Spotify';
+  if (host.includes('bandcamp.com')) return 'Bandcamp';
+  return null;
 };
 
 // Lokální demo beaty – fallback, když Supabase spadne
@@ -212,7 +222,7 @@ const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spoluprác
 
 const HOME_CACHE_TTL_MS = 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
-const HOME_PROJECTS_CACHE_KEY = 'home-projects-v1';
+const HOME_PROJECTS_CACHE_KEY = 'home-projects-v2';
 
 const readHomeCache = <T,>(key: string): T | null => {
   if (typeof window === 'undefined') return null;
@@ -269,6 +279,7 @@ export default function Home() {
   const [beatAuthorNames, setBeatAuthorNames] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>(dummyProjects);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectEmbeds, setProjectEmbeds] = useState<Record<number, string>>({});
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(dummyBlog);
   const [blogError, setBlogError] = useState<string | null>(null);
   const [isLoadingBlog, setIsLoadingBlog] = useState<boolean>(true);
@@ -537,6 +548,31 @@ export default function Home() {
     }
   };
 
+  const mapProjectTracks = (p: any) => {
+    const raw = p?.tracks_json;
+    const parsed =
+      Array.isArray(raw)
+        ? raw
+        : typeof raw === 'string'
+          ? (() => {
+              try {
+                const json = JSON.parse(raw);
+                return Array.isArray(json) ? json : null;
+              } catch {
+                return null;
+              }
+            })()
+          : null;
+    const tracksSource = parsed ?? [];
+    return tracksSource.length > 0
+      ? tracksSource.map((t: any, idx: number) => ({
+          id: `${p.id}-${idx + 1}`,
+          title: t?.name || t?.title || `Track ${idx + 1}`,
+          url: t?.url || t?.audio_url || '',
+        }))
+      : [];
+  };
+
   const loadProjects = async () => {
     try {
       const cachedProjects = readHomeCache<Project[]>(HOME_PROJECTS_CACHE_KEY);
@@ -549,14 +585,19 @@ export default function Home() {
       try {
         const { data: viewData, error: viewError } = await supabase
           .from('home_projects')
-          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url, embed_html')
           .eq('access_mode', 'public')
           .order('id', { ascending: false })
           .limit(2);
 
         if (!viewError && viewData && viewData.length > 0) {
-          setProjects(viewData as Project[]);
-          writeHomeCache(HOME_PROJECTS_CACHE_KEY, viewData as Project[]);
+          const mapped = (viewData as any[]).map((p) => ({
+            ...p,
+            tracks: mapProjectTracks(p),
+            author_name: (p as any).author_name || null,
+          }));
+          setProjects(mapped as Project[]);
+          writeHomeCache(HOME_PROJECTS_CACHE_KEY, mapped as Project[]);
           setProjectsError(null);
           return;
         }
@@ -568,7 +609,7 @@ export default function Home() {
       try {
         const { data: d1, error: err1 } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url, embed_html')
           .eq('access_mode', 'public')
           .order('id', { ascending: false })
           .limit(2);
@@ -577,7 +618,7 @@ export default function Home() {
       } catch (innerErr) {
         const { data: d2, error: err2 } = await supabase
           .from('projects')
-          .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode, release_formats, purchase_url')
+          .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
           .eq('access_mode', 'public')
           .order('id', { ascending: false })
           .limit(2);
@@ -596,7 +637,11 @@ export default function Home() {
         }
         const withNames = (data as Project[]).map((p: any) => {
           const fromProfile = p.user_id ? profileNames[p.user_id] || null : null;
-          return { ...p, author_name: p.author_name || fromProfile } as Project;
+          return {
+            ...p,
+            tracks: mapProjectTracks(p),
+            author_name: p.author_name || fromProfile,
+          } as Project;
         });
         setProjects(withNames.slice(0, 2));
         writeHomeCache(HOME_PROJECTS_CACHE_KEY, withNames.slice(0, 2));
@@ -611,6 +656,66 @@ export default function Home() {
       setProjects(dummyProjects.slice(0, 2));
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    const cacheKey = 'beets-embed-cache';
+    const readCache = () => {
+      if (typeof window === 'undefined') return {};
+      try {
+        return JSON.parse(window.localStorage.getItem(cacheKey) || '{}') as Record<string, string>;
+      } catch {
+        return {};
+      }
+    };
+    const writeCache = (next: Record<string, string>) => {
+      if (typeof window === 'undefined') return;
+      try {
+        window.localStorage.setItem(cacheKey, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+    };
+
+    const fetchEmbeds = async () => {
+      const cache = readCache();
+      const targets = projects.filter((project) => {
+        if (project.embed_html || projectEmbeds[project.id]) return false;
+        const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
+        if (hasPlayable) return false;
+        return !!(project.project_url || project.purchase_url);
+      });
+      if (!targets.length) return;
+      await Promise.all(
+        targets.map(async (project) => {
+          try {
+            const url = project.project_url || project.purchase_url || '';
+            const cachedHtml = cache[url];
+            if (cachedHtml && active) {
+              setProjectEmbeds((prev) => ({ ...prev, [project.id]: cachedHtml }));
+              return;
+            }
+            const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(url)}`);
+            if (!response.ok) return;
+            const payload = await response.json();
+            const html = payload?.embed_html;
+            if (html && active) {
+              setProjectEmbeds((prev) => ({ ...prev, [project.id]: html }));
+              cache[url] = html;
+              writeCache(cache);
+            }
+          } catch (err) {
+            console.warn('Embed fetch selhal:', err);
+          }
+        })
+      );
+    };
+
+    fetchEmbeds();
+    return () => {
+      active = false;
+    };
+  }, [projects, projectEmbeds]);
 
   const loadForum = async () => {
     try {
@@ -1519,6 +1624,13 @@ export default function Home() {
                 key={project.id}
                 className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
               >
+                {(() => {
+                  const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
+                  const isExternalProject = !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
+                  const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
+                  const externalUrl = project.project_url || project.purchase_url;
+                  return (
+                    <>
                 <div className="absolute right-4 top-4 flex items-center gap-2">
                   {userRole === 'curator' && (
                     <button
@@ -1589,36 +1701,46 @@ export default function Home() {
                 </div>
 
                 <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                  <div className="mx-auto flex max-w-3xl items-center gap-3">
-                    <button
-                      onClick={() =>
-                        project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
-                      }
-                      className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                    >
-                      {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
-                    </button>
-                    <div className="flex-1">
-                      <p className="text-center text-sm font-semibold text-white">
-                        {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
-                      </p>
-                      <div className="mt-2 space-y-1">
-                        <div className="h-3 overflow-hidden rounded-full bg-black/70">
-                          <div
-                            className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
-                            style={{ width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%` }}
-                          />
-                        </div>
-                        <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                          <span>0 s</span>
-                          <span>{duration ? formatTime(duration) : '-- s'}</span>
+                  {isExternalProject ? (
+                    <div className="space-y-2">
+                      <p className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
+                      <div
+                        className="overflow-hidden rounded-lg border border-white/10 bg-black/60 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                        dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] || '' }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mx-auto flex max-w-3xl items-center gap-3">
+                      <button
+                        onClick={() =>
+                          project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
+                        }
+                        className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                      >
+                        {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
+                      </button>
+                      <div className="flex-1">
+                        <p className="text-center text-sm font-semibold text-white">
+                          {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          <div className="h-3 overflow-hidden rounded-full bg-black/70">
+                            <div
+                              className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
+                              style={{ width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                            <span>0 s</span>
+                            <span>{duration ? formatTime(duration) : '-- s'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                {project.tracks && project.tracks.length > 1 && (
+                {!isExternalProject && project.tracks && project.tracks.length > 1 && (
                   <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
@@ -1682,7 +1804,23 @@ export default function Home() {
                   </div>
                 )}
 
-                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                {isExternalProject ? (
+                  <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
+                      {externalUrl && (
+                        <a
+                          href={normalizePurchaseUrl(externalUrl) || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                        >
+                          {externalPlatform || 'Otevřít'}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
                   <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -1709,6 +1847,9 @@ export default function Home() {
                     </div>
                   </div>
                 ) : null}
+                </>
+                  );
+                })()}
                 </div>
               </div>
             ))}

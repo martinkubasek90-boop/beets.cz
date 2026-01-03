@@ -632,16 +632,8 @@ export default function ProjectsPage() {
                       )}
                     </div>
                   ) : isExternalProject ? (
-                    <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
-                      <p>Vydáno na</p>
-                      <a
-                        href={project.project_url || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                      >
-                        {externalPlatform || "Otevřít"}
-                      </a>
+                    <div className="text-sm text-[var(--mpc-muted)] text-center">
+                      Externí projekt – přehrávač je níže.
                     </div>
                   ) : (
                     <p className="text-sm text-[var(--mpc-muted)]">Tracklist není dostupný.</p>
