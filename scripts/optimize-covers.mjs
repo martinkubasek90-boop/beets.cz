@@ -24,18 +24,25 @@ const parseStorageUrl = (url) => {
   return { bucket, path: parts.join("/") };
 };
 
+const encodePath = (path) =>
+  path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+
 const buildRenderUrl = (url) => {
   const marker = "/storage/v1/object/public/";
   const index = url.indexOf(marker);
   if (index === -1) return null;
   const base = url.slice(0, index);
   const path = url.slice(index + marker.length);
+  const encodedPath = encodePath(path);
   const params = new URLSearchParams({
     width: String(MAX_SIZE),
     quality: String(QUALITY),
     format: "webp",
   });
-  return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
+  return `${base}/storage/v1/render/image/public/${encodedPath}?${params.toString()}`;
 };
 
 const toOptimizedPath = (path) => {
