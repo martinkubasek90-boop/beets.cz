@@ -25,6 +25,22 @@ const dummyBeats: Beat[] = [
   { id: 3, title: 'Beton Dreams', artist: 'LoFi Karel', bpm: 82, mood: 'Lo-fi', audio_url: null, cover_url: null },
 ];
 
+const toSupabaseThumb = (url?: string | null, width = 320) => {
+  if (!url) return url ?? null;
+  if (url.includes('/storage/v1/render/image/public/')) return url;
+  const marker = '/storage/v1/object/public/';
+  const index = url.indexOf(marker);
+  if (index === -1) return url;
+  const base = url.slice(0, index);
+  const path = url.slice(index + marker.length);
+  const params = new URLSearchParams({
+    width: String(width),
+    quality: '70',
+    format: 'webp',
+  });
+  return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
+};
+
 export default function BeatsPage() {
   const supabase = createClient();
   const { current, isPlaying, currentTime, duration, setQueue } = useGlobalPlayer();
@@ -286,7 +302,7 @@ export default function BeatsPage() {
                     <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
                       {beat.cover_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                        <img src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
                       ) : (
                         <div className="grid h-full w-full place-items-center bg-gradient-to-br from-[var(--mpc-accent)] to-[var(--mpc-accent-2,#f37433)] text-xl font-black text-white">
                           {beat.title.slice(0, 2).toUpperCase()}
@@ -295,7 +311,7 @@ export default function BeatsPage() {
                     </Link>
                   ) : beat.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                    <img src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
                   ) : (
                     <div className="grid h-full w-full place-items-center bg-gradient-to-br from-[var(--mpc-accent)] to-[var(--mpc-accent-2,#f37433)] text-xl font-black text-white">
                       {beat.title.slice(0, 2).toUpperCase()}

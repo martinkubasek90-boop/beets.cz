@@ -43,6 +43,22 @@ const normalizePurchaseUrl = (value?: string | null) => {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 };
 
+const toSupabaseThumb = (url?: string | null, width = 720) => {
+  if (!url) return url ?? null;
+  if (url.includes("/storage/v1/render/image/public/")) return url;
+  const marker = "/storage/v1/object/public/";
+  const index = url.indexOf(marker);
+  if (index === -1) return url;
+  const base = url.slice(0, index);
+  const path = url.slice(index + marker.length);
+  const params = new URLSearchParams({
+    width: String(width),
+    quality: "70",
+    format: "webp",
+  });
+  return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
+};
+
 export default function ProjectsPage() {
   const supabase = createClient();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -468,7 +484,7 @@ export default function ProjectsPage() {
                 style={
                   project.cover_url
                     ? {
-                        backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.78), rgba(0,0,0,0.92)), url(${project.cover_url})`,
+                        backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.78), rgba(0,0,0,0.92)), url(${toSupabaseThumb(project.cover_url, 720) ?? project.cover_url})`,
                         backgroundSize: "cover",
                         backgroundPosition: "center",
                       }
@@ -497,14 +513,22 @@ export default function ProjectsPage() {
                       <Link href={`/u/${project.user_id}`} className="block h-full w-full">
                         {project.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                          <img
+                            src={toSupabaseThumb(project.cover_url, 420) ?? project.cover_url}
+                            alt={project.title}
+                            className="h-full w-full object-cover"
+                          />
                         ) : (
                           <span className="grid h-full w-full place-items-center">{project.title.slice(0, 2)}</span>
                         )}
                       </Link>
                     ) : project.cover_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                      <img
+                        src={toSupabaseThumb(project.cover_url, 420) ?? project.cover_url}
+                        alt={project.title}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
                       <span>{project.title.slice(0, 2)}</span>
                     )}
