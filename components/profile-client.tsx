@@ -2753,7 +2753,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
           title: importTitle.trim() || getEmbedDefaultTitle(src),
           artist: importArtist.trim(),
           provider: provider || null,
-          link: derivedLink || null,
+          link: derivedLink || '',
           cover: null,
           embed_html: manualEmbed,
         });
