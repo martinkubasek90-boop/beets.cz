@@ -24,6 +24,24 @@ const providers: Provider[] = [
   },
 ];
 
+const extractMeta = (html: string, key: string) => {
+  const patterns = [
+    new RegExp(`<meta[^>]+property=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i'),
+    new RegExp(`<meta[^>]+name=["']${key}["'][^>]+content=["']([^"']+)["']`, 'i'),
+  ];
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return null;
+};
+
+const extractBandcampArtist = (description?: string | null) => {
+  if (!description) return null;
+  const match = description.match(/by\\s+([^|•]+)/i);
+  return match?.[1]?.trim() || null;
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const target = searchParams.get('url')?.trim();
@@ -54,6 +72,34 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
+      if (provider.name === 'Bandcamp') {
+        try {
+          const pageResponse = await fetch(target, {
+            headers: {
+              'User-Agent': 'beets-metadata',
+              Accept: 'text/html',
+            },
+            cache: 'no-store',
+          });
+          if (pageResponse.ok) {
+            const html = await pageResponse.text();
+            const title = extractMeta(html, 'og:title') || 'Bandcamp projekt';
+            const cover = extractMeta(html, 'og:image');
+            const description = extractMeta(html, 'og:description');
+            const artist = extractBandcampArtist(description);
+            return NextResponse.json({
+              title,
+              artist,
+              cover,
+              link: target,
+              provider: provider.name,
+              embed_html: null,
+            });
+          }
+        } catch (err) {
+          console.error('bandcamp fallback error', err);
+        }
+      }
       return NextResponse.json({ error: 'Metadata se nepodařilo načíst.' }, { status: 502 });
     }
 
