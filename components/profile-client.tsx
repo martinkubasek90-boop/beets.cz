@@ -88,6 +88,11 @@ const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', '
 const SIGNAL_CACHE_KEY = 'beets-signals-cache';
 const SHOW_SHARE_FEATURE = false;
 
+const extractIframeHtml = (value: string) => {
+  const match = value.match(/<iframe[\s\S]*?<\/iframe>/i);
+  return match ? match[0] : '';
+};
+
 const resolveProjectCoverUrl = (cover: string | null) => {
   if (!cover) return null;
   if (cover.startsWith('http')) return cover;
@@ -2723,6 +2728,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       const descriptionParts = [];
       if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
       if (importMetadata.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
+      const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
       const payload: Record<string, any> = {
         title,
         description: descriptionParts.length ? descriptionParts.join(' · ') : null,
@@ -2732,7 +2738,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         access_mode: 'public',
         release_formats: null,
         purchase_url: null,
-        embed_html: importEmbedHtml.trim() || importMetadata.embed_html || null,
+        embed_html: manualEmbed || importMetadata.embed_html || null,
       };
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
@@ -4792,7 +4798,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               rows={3}
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
-                            <p className="text-[10px] text-[var(--mpc-muted)]">Pokud je prázdné, zkusí se automaticky načíst z odkazu.</p>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">Podporujeme Spotify/SoundCloud/Bandcamp iframe. Vložené jiné HTML se ignoruje.</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <button
