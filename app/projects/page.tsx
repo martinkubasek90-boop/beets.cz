@@ -43,6 +43,15 @@ const normalizePurchaseUrl = (value?: string | null) => {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 };
 
+const getExternalPlatform = (value?: string | null) => {
+  if (!value) return null;
+  const host = value.toLowerCase();
+  if (host.includes("soundcloud.com")) return "SoundCloud";
+  if (host.includes("spotify.com")) return "Spotify";
+  if (host.includes("bandcamp.com")) return "Bandcamp";
+  return null;
+};
+
 const toSupabaseThumb = (url?: string | null, width = 720) => {
   if (!url) return url ?? null;
   if (url.includes("/storage/v1/render/image/public/")) return url;
@@ -469,6 +478,8 @@ export default function ProjectsPage() {
           {filteredProjects.map((project) => {
             const tracks = project.tracks_json && project.tracks_json.length ? project.tracks_json : [];
             const primaryTrack = tracks[0];
+            const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
+            const isExternalProject = tracks.length === 0 && !!project.project_url;
             const isRequest = project.access_mode === "request";
             const isCurrentPrimary = current?.id === `project-${project.id}-0`;
             const progressPct =
@@ -605,6 +616,18 @@ export default function ProjectsPage() {
                         <p className="text-[12px] text-amber-200">Žádost odeslána, čeká na schválení.</p>
                       )}
                     </div>
+                  ) : isExternalProject ? (
+                    <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
+                      <p>Poslechnout na platformě</p>
+                      <a
+                        href={project.project_url || undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                      >
+                        {externalPlatform || "Otevřít"}
+                      </a>
+                    </div>
                   ) : (
                     <p className="text-sm text-[var(--mpc-muted)]">Tracklist není dostupný.</p>
                   )}
@@ -669,7 +692,21 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                {isExternalProject ? (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                      Poslechnout na platformě
+                    </span>
+                    <a
+                      href={project.project_url || undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                    >
+                      {externalPlatform || "Otevřít"}
+                    </a>
+                  </div>
+                ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                       <span>Vydáno na</span>

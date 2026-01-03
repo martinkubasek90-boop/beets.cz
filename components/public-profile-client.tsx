@@ -100,6 +100,15 @@ const normalizePurchaseUrl = (value?: string | null) => {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 };
 
+const getExternalPlatform = (value?: string | null) => {
+  if (!value) return null;
+  const host = value.toLowerCase();
+  if (host.includes('soundcloud.com')) return 'SoundCloud';
+  if (host.includes('spotify.com')) return 'Spotify';
+  if (host.includes('bandcamp.com')) return 'Bandcamp';
+  return null;
+};
+
 const isProjectTrack = (value: unknown): value is ProjectTrack =>
   !!value &&
   typeof value === 'object' &&
@@ -1676,6 +1685,8 @@ export default function PublicProfileClient({
             <div className="space-y-3">
               {projects.filter((p) => p.access_mode !== 'private').map((project) => {
                 const tracks = normalizeProjectTracks(project.tracks_json);
+                const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
+                const isExternalProject = tracks.length === 0 && !!project.project_url;
                 return (
                   <div
                     key={project.id}
@@ -1756,14 +1767,7 @@ export default function PublicProfileClient({
                           id: `project-${project.id}-${playableIdx}`,
                           meta: { projectId: project.id, trackIndex: playableIdx },
                         }
-                      : project.project_url
-                        ? {
-                            id: `project-${project.id}`,
-                            name: project.title,
-                            url: project.project_url,
-                            meta: { projectId: project.id, trackIndex: -1 },
-                          }
-                        : null;
+                      : null;
                   if (!primary) return null;
                   const isCurrent = currentTrack?.id === primary.id;
                   const primaryMeta = primary.meta ?? { projectId: project.id, trackIndex: playableIdx >= 0 ? playableIdx : -1 };
@@ -1808,6 +1812,24 @@ export default function PublicProfileClient({
                     </div>
                     );
                   })()}
+
+                {isExternalProject && (
+                  <div className="mt-4 w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">
+                        Poslechnout na platformě
+                      </span>
+                      <a
+                        href={project.project_url || undefined}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                      >
+                        {externalPlatform || 'Otevřít'}
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-center justify-between">
@@ -1905,25 +1927,17 @@ export default function PublicProfileClient({
                           );
                         })}
                       </div>
-                    ) : project.project_url ? (
-                      <div className="flex items-center justify-between rounded border border-white/5 bg-black/30 px-3 py-2">
-                        <span>{project.title || 'Ukázka projektu'}</span>
-                        <button
-                          onClick={() =>
-                            handlePlayTrack({
-                              id: `project-${project.id}`,
-                              title: project.title,
-                              url: project.project_url || '',
-                              source: 'project',
-                              cover_url: project.cover_url,
-                              subtitle: profile?.display_name || null,
-                              meta: { projectId: project.id, trackIndex: -1 },
-                            })
-                          }
-                          className="text-[11px] text-[var(--mpc-accent)] hover:text-white"
+                    ) : isExternalProject ? (
+                      <div className="space-y-3 rounded border border-white/10 bg-black/50 p-3 text-[12px] text-[var(--mpc-muted)]">
+                        <p>Tracklist není k dispozici.</p>
+                        <a
+                          href={project.project_url || undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
                         >
-                          {currentTrack?.id === `project-${project.id}` && isPlaying ? '▮▮' : '►'}
-                        </button>
+                          {externalPlatform || 'Otevřít'}
+                        </a>
                       </div>
                     ) : (
                       <p className="text-[12px] text-[var(--mpc-muted)]">Tracklist není k dispozici.</p>
@@ -1942,7 +1956,19 @@ export default function PublicProfileClient({
                 </div>
               )}
 
-              {(project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+              {isExternalProject ? (
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Poslechnout na platformě</span>
+                  <a
+                    href={project.project_url || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                  >
+                    {externalPlatform || 'Otevřít'}
+                  </a>
+                </div>
+              ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                   <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                     <span>Vydáno na</span>

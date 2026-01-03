@@ -2713,18 +2713,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setImportError(null);
     setImportSuccess(null);
     try {
+      const normalizedLink = normalizePurchaseUrl(importMetadata.link);
       const descriptionParts = [];
       if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
       if (importMetadata.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
       const payload: Record<string, any> = {
         title,
         description: descriptionParts.length ? descriptionParts.join(' · ') : null,
-        project_url: null,
+        project_url: normalizedLink,
         tracks_json: [],
         user_id: userId,
         access_mode: 'public',
         release_formats: null,
-        purchase_url: normalizePurchaseUrl(importMetadata.link),
+        purchase_url: null,
+        embed_html: importMetadata.embed_html ?? null,
       };
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
