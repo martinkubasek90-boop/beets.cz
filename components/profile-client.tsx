@@ -335,6 +335,7 @@ const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator
   const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
   const [importTitle, setImportTitle] = useState('');
   const [importArtist, setImportArtist] = useState('');
+  const [importEmbedHtml, setImportEmbedHtml] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importSaving, setImportSaving] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -2692,6 +2693,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setImportMetadata(meta);
       setImportTitle(meta.title || '');
       setImportArtist(meta.artist || '');
+      setImportEmbedHtml(meta.embed_html || '');
     } catch (err: any) {
       setImportError(err?.message || 'Nepodařilo se načíst metadata.');
     } finally {
@@ -2730,7 +2732,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
         access_mode: 'public',
         release_formats: null,
         purchase_url: null,
-        embed_html: importMetadata.embed_html ?? null,
+        embed_html: importEmbedHtml.trim() || importMetadata.embed_html || null,
       };
       if (importMetadata.cover) {
         payload.cover_url = importMetadata.cover;
@@ -2748,6 +2750,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setImportMetadata(null);
       setImportTitle('');
       setImportArtist('');
+      setImportEmbedHtml('');
       setImportError(null);
       setImportSuccess('Projekt byl importován.');
       setImportProjectOpen(false);
@@ -4777,6 +4780,19 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               placeholder="https://open.spotify.com/..., https://soundcloud.com/..., https://bandcamp.com/..."
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                              Embed iframe (volitelné)
+                            </label>
+                            <textarea
+                              value={importEmbedHtml}
+                              onChange={(e) => setImportEmbedHtml(e.target.value)}
+                              placeholder="<iframe ...></iframe>"
+                              rows={3}
+                              className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                            />
+                            <p className="text-[10px] text-[var(--mpc-muted)]">Pokud je prázdné, zkusí se automaticky načíst z odkazu.</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <button
