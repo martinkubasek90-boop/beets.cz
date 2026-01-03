@@ -1480,7 +1480,7 @@ export default function Home() {
                     : undefined
                 }
               >
-                <h1 className="font-hero-nueva text-[2.1rem] sm:text-[clamp(2rem,3vw+1rem,3.8rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
+                <h1 className="font-hero-nueva text-[2.4rem] sm:text-[clamp(2.3rem,3vw+1rem,4.4rem)] font-black uppercase leading-tight tracking-[0.18em] text-white drop-shadow-[0_12px_36px_rgba(0,0,0,0.55)]">
                   {heroTitle}
                 </h1>
               </div>
