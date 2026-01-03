@@ -90,7 +90,9 @@ const SHOW_SHARE_FEATURE = false;
 
 const extractIframeHtml = (value: string) => {
   const match = value.match(/<iframe[\s\S]*?<\/iframe>/i);
-  return match ? match[0] : '';
+  if (match) return match[0];
+  const openTag = value.match(/<iframe[^>]*>/i);
+  return openTag ? `${openTag[0]}</iframe>` : '';
 };
 
 const extractIframeAnchorHref = (value: string) => {
