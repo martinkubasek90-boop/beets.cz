@@ -93,6 +93,11 @@ const extractIframeHtml = (value: string) => {
   return match ? match[0] : '';
 };
 
+const extractIframeAnchorHref = (value: string) => {
+  const match = value.match(/<a[^>]+href=["']([^"']+)["']/i);
+  return match ? match[1] : '';
+};
+
 const extractIframeSrc = (value: string) => {
   const match = value.match(/src=["']([^"']+)["']/i);
   return match ? match[1] : '';
@@ -104,6 +109,41 @@ const getEmbedDefaultTitle = (src: string) => {
   if (src.includes('soundcloud.com')) return 'SoundCloud projekt';
   if (src.includes('bandcamp.com')) return 'Bandcamp projekt';
   return '';
+};
+
+const getEmbedProviderFromUrl = (value: string) => {
+  if (!value) return '';
+  if (value.includes('spotify.com')) return 'Spotify';
+  if (value.includes('soundcloud.com')) return 'SoundCloud';
+  if (value.includes('bandcamp.com')) return 'Bandcamp';
+  return '';
+};
+
+const getProjectUrlFromEmbedSrc = (src: string) => {
+  if (!src) return '';
+  if (src.includes('open.spotify.com/embed/')) {
+    return src.replace('open.spotify.com/embed/', 'open.spotify.com/');
+  }
+  if (src.includes('w.soundcloud.com/player/')) {
+    try {
+      const url = new URL(src);
+      const raw = url.searchParams.get('url');
+      return raw ? decodeURIComponent(raw) : '';
+    } catch {
+      return '';
+    }
+  }
+  if (src.includes('soundcloud.com') || src.includes('spotify.com') || src.includes('bandcamp.com')) {
+    return src;
+  }
+  return '';
+};
+
+const getProjectUrlFromEmbedHtml = (value: string) => {
+  const href = extractIframeAnchorHref(value);
+  if (href) return href;
+  const src = extractIframeSrc(value);
+  return getProjectUrlFromEmbedSrc(src);
 };
 
 const resolveProjectCoverUrl = (cover: string | null) => {
@@ -262,6 +302,12 @@ type ForumThreadSummary = {
   updated_at?: string | null;
 };
 
+type IncomingCall = {
+  id: string;
+  room_name: string;
+  caller_id: string;
+};
+
 type NewMessageForm = {
   to: string;
   toUserId: string;
@@ -312,6 +358,8 @@ export default function ProfileClient() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [incomingCallerName, setIncomingCallerName] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     hardware: '',
@@ -436,9 +484,10 @@ const canWriteArticles = isAdmin;
   const [startingCollabCall, setStartingCollabCall] = useState(false);
   const profileCompleteness = useMemo(() => {
     const missing: string[] = [];
+    const regionValue = editRegion.trim() || profile.region?.trim() || '';
     if (!profile.avatar_url) missing.push('avatar');
     if (!profile.bio?.trim()) missing.push('bio');
-    if (!profile.region?.trim()) missing.push('město/region');
+    if (!regionValue) missing.push('kraj');
     if (!profile.role) missing.push('role');
     if (!(profile.seeking_signals?.length || profile.offering_signals?.length)) missing.push('tagy');
 
@@ -451,7 +500,7 @@ const canWriteArticles = isAdmin;
     const done = total - missing.length;
     const percent = Math.round((done / total) * 100);
     return { missing, percent };
-  }, [acapellas.length, beats.length, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
+  }, [acapellas.length, beats.length, editRegion, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -508,7 +557,6 @@ const canWriteArticles = isAdmin;
   const [currentBeat, setCurrentBeat] = useState<BeatItem | null>(null);
   const [currentAcapella, setCurrentAcapella] = useState<AcapellaItem | null>(null);
   const [playerMessage, setPlayerMessage] = useState<string | null>(null);
-  const [openBeatMenuId, setOpenBeatMenuId] = useState<number | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBpm, setEditBpm] = useState('');
@@ -833,6 +881,42 @@ const canWriteArticles = isAdmin;
 
     loadProfile();
   }, [supabase, router]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel('calls-listener-profile')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        async (payload) => {
+          const row: any = payload.new;
+          if (!row || row.status !== 'ringing') return;
+          setIncomingCall({ id: row.id, room_name: row.room_name, caller_id: row.caller_id });
+          if (row.caller_id) {
+            const { data: prof } = await supabase.from('profiles').select('display_name').eq('id', row.caller_id).maybeSingle();
+            setIncomingCallerName(prof?.display_name || null);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'calls', filter: `callee_id=eq.${userId}` },
+        (payload) => {
+          const row: any = payload.new;
+          if (!row || !incomingCall || row.id !== incomingCall.id) return;
+          if (row.status && row.status !== 'ringing') {
+            setIncomingCall(null);
+            setIncomingCallerName(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [incomingCall, supabase, userId]);
 
   
   // Vlákna přímých zpráv seskupená podle protistrany
@@ -1779,7 +1863,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
       const { error } = await supabase.from('beats').delete().eq('id', id);
       if (error) throw error;
       setBeats((prev) => prev.filter((b) => b.id !== id));
-      setOpenBeatMenuId(null);
       if (editingBeatId === id) {
         setEditingBeatId(null);
       }
@@ -1801,7 +1884,6 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setEditBpm(beat.bpm ? String(beat.bpm) : '');
     setEditMood(beat.mood || '');
     setEditCoverUrl(beat.cover_url || '');
-    setOpenBeatMenuId(null);
   }
 
   async function handleSaveBeat() {
@@ -1906,6 +1988,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setProjectsError('Nepodařilo se uložit změnu přístupu.');
     }
   };
+
+  async function handleDeleteProject(id: string | number) {
+    if (!confirm('Opravdu smazat tento projekt?')) return;
+    const targetId = typeof id === 'string' ? Number(id) : id;
+    if (!Number.isFinite(targetId)) {
+      setPlayerMessage('Neplatné ID projektu.');
+      return;
+    }
+    try {
+      const { error } = await supabase.from('projects').delete().eq('id', targetId).eq('user_id', userId);
+      if (error) throw error;
+      setProjects((prev) => prev.filter((p) => String(p.id) !== String(id)));
+      if (editingProject?.id && String(editingProject.id) === String(id)) {
+        setEditingProject(null);
+      }
+    } catch (err) {
+      console.error('Chyba při mazání projektu:', err);
+      setPlayerMessage('Nepodařilo se smazat projekt.');
+    }
+  }
 
   const handleRevokeGrant = async (projectId: string, grantId: string) => {
     try {
@@ -2303,6 +2405,34 @@ function handleFieldChange(field: keyof Profile, value: string) {
     await saveMilestones(threadId, updated, thread.deadline ?? null);
   };
 
+  const acceptIncomingCall = async () => {
+    if (!incomingCall) return;
+    window.open(`https://meet.jit.si/${incomingCall.room_name}`, '_blank', 'noopener,noreferrer');
+    try {
+      await supabase
+        .from('calls')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při označení hovoru jako přijatého:', err);
+    } finally {
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
+
+  const declineIncomingCall = async () => {
+    if (!incomingCall) return;
+    try {
+      await supabase.from('calls').update({ status: 'declined', ended_at: new Date().toISOString() }).eq('id', incomingCall.id);
+    } catch (err) {
+      console.error('Chyba při odmítnutí hovoru:', err);
+    } finally {
+      setIncomingCall(null);
+      setIncomingCallerName(null);
+    }
+  };
+
   const buildRoomName = (a: string, b: string) => {
     const sorted = [a, b].sort();
     return `beets-${sorted[0]}-${sorted[1]}`;
@@ -2612,7 +2742,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   const handleFetchImportMetadata = async () => {
     const trimmed = importProjectUrl.trim();
+    const manualEmbedRaw = importEmbedHtml.trim();
+    const manualEmbed = extractIframeHtml(manualEmbedRaw);
     if (!trimmed) {
+      if (manualEmbed) {
+        const src = extractIframeSrc(manualEmbedRaw);
+        const derivedLink = getProjectUrlFromEmbedHtml(manualEmbedRaw);
+        const provider = getEmbedProviderFromUrl(derivedLink || src);
+        setImportMetadata({
+          title: importTitle.trim() || getEmbedDefaultTitle(src),
+          artist: importArtist.trim(),
+          provider: provider || null,
+          link: derivedLink || null,
+          cover: null,
+          embed_html: manualEmbed,
+        });
+        setImportError(null);
+        setImportSuccess('Embed připraven.');
+        return;
+      }
       setImportError('Zadej URL z Spotify, SoundCloud nebo Bandcamp.');
       return;
     }
@@ -2695,6 +2843,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       return;
     }
     const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
+    const derivedEmbedLink = manualEmbed ? getProjectUrlFromEmbedHtml(importEmbedHtml.trim()) : '';
     const normalizedLink = importMetadata?.link
       ? normalizePurchaseUrl(importMetadata.link)
       : importProjectUrl.trim()
@@ -2715,11 +2864,12 @@ function handleFieldChange(field: keyof Profile, value: string) {
     try {
       const descriptionParts = [];
       if (importArtist.trim()) descriptionParts.push(`Autor: ${importArtist.trim()}`);
-      if (importMetadata?.provider) descriptionParts.push(`Zdroj: ${importMetadata.provider}`);
+      const providerName = importMetadata?.provider || getEmbedProviderFromUrl(derivedEmbedLink);
+      if (providerName) descriptionParts.push(`Zdroj: ${providerName}`);
       const payload: Record<string, any> = {
         title,
         description: descriptionParts.length ? descriptionParts.join(' · ') : null,
-        project_url: normalizedLink,
+        project_url: normalizedLink || normalizePurchaseUrl(derivedEmbedLink),
         tracks_json: [],
         user_id: userId,
         access_mode: 'public',
@@ -2773,6 +2923,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+      {incomingCall && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--mpc-accent)]/60 bg-[var(--mpc-panel)] p-5 text-sm text-white shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+            <p className="text-xs uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Příchozí hovor</p>
+            <p className="mt-1 text-base font-semibold">{incomingCallerName || 'Uživatel'} volá…</p>
+            <p className="mt-1 text-[12px] text-[var(--mpc-muted)]">Chceš hovor přijmout?</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={acceptIncomingCall}
+                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)]"
+              >
+                Přijmout
+              </button>
+              <button
+                onClick={declineIncomingCall}
+                className="rounded-full border border-white/25 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white hover:border-red-400 hover:text-red-200"
+              >
+                Položit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Hero / cover */}
       <section
         className="relative overflow-hidden border-b border-[var(--mpc-dark)]"
@@ -3301,40 +3474,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         >
                           {currentBeat?.id === beat.id && gpCurrent?.id === `beat-${beat.id}` && gpIsPlaying ? '▮▮' : '▶'}
                         </button>
-                        <div className="relative">
+                        <button
+                          onClick={() => startEditBeat(beat)}
+                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                        >
+                          Upravit
+                        </button>
+                        {SHOW_SHARE_FEATURE && (
                           <button
-                            onClick={() =>
-                              setOpenBeatMenuId((prev) => (prev === beat.id ? null : beat.id))
-                            }
-                            className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            onClick={() => void createShareLink('beat', String(beat.id))}
+                            className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
                           >
-                            •••
+                            Sdílet
                           </button>
-                          {openBeatMenuId === beat.id && (
-                            <div className="absolute right-0 top-10 z-20 min-w-[140px] rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[12px] text-[var(--mpc-light)] shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
-                              <button
-                                onClick={() => startEditBeat(beat)}
-                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                              >
-                                Upravit beat
-                              </button>
-                              {SHOW_SHARE_FEATURE && (
-                                <button
-                                  onClick={() => void createShareLink('beat', String(beat.id))}
-                                  className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)]"
-                                >
-                                  Sdílet
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDeleteBeat(beat.id)}
-                                className="block w-full px-3 py-2 text-left hover:bg-[var(--mpc-deck)] text-red-400"
-                              >
-                                Smazat beat
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        )}
+                        <button
+                          onClick={() => handleDeleteBeat(beat.id)}
+                          className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                        >
+                          Smazat
+                        </button>
                       </div>
                       {editingBeatId === beat.id && (
                         <div className="mt-3 space-y-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-3">
@@ -3839,9 +3998,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
                             {project.description || 'Bez popisu'}
                           </p>
                         </div>
-                        <div className="flex flex-col items-end gap-1 text-[11px] text-[var(--mpc-muted)]">
-                          <span>Projekt</span>
-                          <button
+                        <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
                               onClick={() => {
                                 setEditingProject(project);
                                 setProjectEditTitle(project.title || '');
@@ -3850,34 +4010,41 @@ function handleFieldChange(field: keyof Profile, value: string) {
                                 setProjectEditPurchaseUrl(project.purchase_url || '');
                                 const tracks = Array.isArray(project.tracks_json)
                                   ? project.tracks_json.map((t: any) => {
-                                    const path = t.path || null;
-                                    const urlFallback =
-                                      path && (!t.url || t.url.startsWith('http') === false)
-                                        ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                        : '';
-                                    return {
-                                      name: t.name || '',
-                                      url: t.url || urlFallback,
-                                      path,
-                                    };
-                                  })
-                                : [];
-                              setProjectEditTracks(
-                                tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                              );
-                            }}
-                            className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                          >
-                            Upravit
-                          </button>
-                          {SHOW_SHARE_FEATURE && (
-                            <button
-                              onClick={() => void createShareLink('project', String(project.id))}
-                              className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                      const path = t.path || null;
+                                      const urlFallback =
+                                        path && (!t.url || t.url.startsWith('http') === false)
+                                          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                          : '';
+                                      return {
+                                        name: t.name || '',
+                                        url: t.url || urlFallback,
+                                        path,
+                                      };
+                                    })
+                                  : [];
+                                setProjectEditTracks(
+                                  tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                                );
+                              }}
+                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
                             >
-                              Sdílet
+                              Upravit
                             </button>
-                          )}
+                            {SHOW_SHARE_FEATURE && (
+                              <button
+                                onClick={() => void createShareLink('project', String(project.id))}
+                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Sdílet
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                            >
+                              Smazat
+                            </button>
+                          </div>
                           <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                             <label className="text-[var(--mpc-muted)]">Přístup</label>
                             <select
@@ -4951,7 +5118,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
 
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
-                        Kraj (povinné)
+                        Kraj
                       </label>
                       <select
                         value={editRegion}
@@ -5444,5 +5611,5 @@ function handleFieldChange(field: keyof Profile, value: string) {
         </div>
       </section>
     </main>
-);
+  );
 }
