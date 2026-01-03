@@ -302,7 +302,18 @@ export default function BeatsPage() {
                     <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
                       {beat.cover_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                        <img
+                          src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url}
+                          alt={beat.title}
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.dataset.fallback === 'true') return;
+                            target.dataset.fallback = 'true';
+                            target.src = beat.cover_url || '';
+                          }}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <div className="grid h-full w-full place-items-center bg-gradient-to-br from-[var(--mpc-accent)] to-[var(--mpc-accent-2,#f37433)] text-xl font-black text-white">
                           {beat.title.slice(0, 2).toUpperCase()}
@@ -311,7 +322,18 @@ export default function BeatsPage() {
                     </Link>
                   ) : beat.cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                    <img
+                      src={toSupabaseThumb(beat.cover_url, 320) ?? beat.cover_url}
+                      alt={beat.title}
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        if (target.dataset.fallback === 'true') return;
+                        target.dataset.fallback = 'true';
+                        target.src = beat.cover_url || '';
+                      }}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <div className="grid h-full w-full place-items-center bg-gradient-to-br from-[var(--mpc-accent)] to-[var(--mpc-accent-2,#f37433)] text-xl font-black text-white">
                       {beat.title.slice(0, 2).toUpperCase()}
