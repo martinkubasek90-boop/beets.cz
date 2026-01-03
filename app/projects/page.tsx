@@ -115,15 +115,15 @@ export default function ProjectsPage() {
       const cache = readCache();
       const targets = projects.filter((project) => {
         if (project.embed_html || projectEmbeds[project.id]) return false;
-        if (!project.purchase_url) return false;
         const hasTracks = (project.tracks ?? []).length > 0;
-        return !hasTracks && !project.project_url;
+        if (hasTracks) return false;
+        return !!(project.project_url || project.purchase_url);
       });
       if (!targets.length) return;
       await Promise.all(
         targets.map(async (project) => {
           try {
-            const url = project.purchase_url || "";
+            const url = project.project_url || project.purchase_url || "";
             const cachedHtml = cache[url];
             if (cachedHtml && active) {
               setProjectEmbeds((prev) => ({ ...prev, [project.id]: cachedHtml }));

@@ -654,15 +654,15 @@ export default function PublicProfileClient({
       const cache = readCache();
       const targets = projects.filter((project) => {
         if (project.embed_html || projectEmbeds[project.id]) return false;
-        if (!project.purchase_url) return false;
         const tracks = normalizeProjectTracks(project.tracks_json);
-        return tracks.length === 0 && !project.project_url;
+        if (tracks.length > 0) return false;
+        return !!(project.project_url || project.purchase_url);
       });
       if (!targets.length) return;
       await Promise.all(
         targets.map(async (project) => {
           try {
-            const url = project.purchase_url || '';
+            const url = project.project_url || project.purchase_url || '';
             const cachedHtml = cache[url];
             if (cachedHtml && active) {
               setProjectEmbeds((prev) => ({ ...prev, [project.id]: cachedHtml }));
