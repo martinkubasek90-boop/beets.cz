@@ -1756,6 +1756,7 @@ export default function PublicProfileClient({
                 )}
 
                 {(() => {
+                  if (isExternalProject) return null;
                   const playableIdx = tracks.findIndex((t) => t.url);
                   const primary =
                     playableIdx >= 0
