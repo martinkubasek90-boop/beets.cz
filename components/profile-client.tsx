@@ -2706,6 +2706,57 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
+  const buildSpotifyEmbed = (url: string) => {
+    const match = url.match(/open\.spotify\.com\/(album|track|playlist)\/([a-zA-Z0-9]+)/);
+    if (!match) return '';
+    const [, type, id] = match;
+    const src = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
+    return `<iframe data-testid="embed-iframe" style="border-radius:12px" src="${src}" width="100%" height="352" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+  };
+
+  const buildSoundcloudEmbed = (url: string) => {
+    const src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
+    return `<iframe width="100%" height="300" scrolling="no" frameborder="no" allow="autoplay" src="${src}"></iframe>`;
+  };
+
+  const handleInsertEmbed = async (provider: 'spotify' | 'soundcloud' | 'bandcamp') => {
+    const url = importProjectUrl.trim();
+    if (!url) {
+      setImportError('Nejdřív vlož odkaz na projekt.');
+      return;
+    }
+    setImportError(null);
+    try {
+      const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(url)}`);
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload?.embed_html) {
+          setImportEmbedHtml(payload.embed_html);
+          return;
+        }
+      }
+    } catch {
+      // ignore, fallback below
+    }
+
+    if (provider === 'spotify') {
+      const html = buildSpotifyEmbed(url);
+      if (!html) {
+        setImportError('Neplatný Spotify odkaz.');
+        return;
+      }
+      setImportEmbedHtml(html);
+      return;
+    }
+
+    if (provider === 'soundcloud') {
+      setImportEmbedHtml(buildSoundcloudEmbed(url));
+      return;
+    }
+
+    setImportError('Bandcamp embed vlož prosím ručně.');
+  };
+
   const handleImportProject = async () => {
     if (!userId) {
       setImportError('Nejsi přihlášený.');
@@ -4798,6 +4849,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
                               rows={3}
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleInsertEmbed('spotify')}
+                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
+                              >
+                                Vložit Spotify embed
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertEmbed('soundcloud')}
+                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
+                              >
+                                Vložit SoundCloud embed
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleInsertEmbed('bandcamp')}
+                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
+                              >
+                                Vložit Bandcamp embed
+                              </button>
+                            </div>
                             <p className="text-[10px] text-[var(--mpc-muted)]">Podporujeme Spotify/SoundCloud/Bandcamp iframe. Vložené jiné HTML se ignoruje.</p>
                           </div>
                           <div className="flex flex-wrap gap-2">
