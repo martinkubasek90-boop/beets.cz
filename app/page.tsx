@@ -1699,6 +1699,7 @@ export default function Home() {
                     {project.description || 'Instrumentální beat tape.'}
                   </p>
                 </div>
+                </div>
 
                 <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
                   {isExternalProject ? (
