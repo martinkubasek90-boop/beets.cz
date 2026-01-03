@@ -2,6 +2,7 @@
 
 import { FormEvent, useState, ChangeEvent } from 'react';
 import { createClient } from '../lib/supabase/client';
+import { resizeImageFile } from '../lib/image-utils';
 
 type BeatUploadFormProps = {
   onCreated?: () => void; // zatím nepovinné, můžeš ignorovat
@@ -112,10 +113,11 @@ export default function BeatUploadForm({ onCreated }: BeatUploadFormProps) {
 
         const safeName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/covers/${Date.now()}-${safeName}`;
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
 
         const { error: coverUploadError } = await supabase.storage
           .from('beat_covers')
-          .upload(coverPath, coverFile, { upsert: true });
+          .upload(coverPath, coverToUpload, { upsert: true });
 
         if (coverUploadError) {
           throw coverUploadError;

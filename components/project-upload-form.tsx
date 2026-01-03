@@ -2,6 +2,7 @@
 
 import { ChangeEvent, FormEvent, useState } from 'react';
 import { createClient } from '../lib/supabase/client';
+import { resizeImageFile } from '../lib/image-utils';
 
 type ProjectUploadFormProps = {
   onCreated?: () => void;
@@ -126,10 +127,11 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
 
         const safeCoverName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/projects/covers/${Date.now()}-${safeCoverName}`;
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
 
         const { error: coverUploadError } = await supabase.storage
           .from('projects')
-          .upload(coverPath, coverFile, { upsert: true });
+          .upload(coverPath, coverToUpload, { upsert: true });
 
         if (coverUploadError) {
           throw coverUploadError;

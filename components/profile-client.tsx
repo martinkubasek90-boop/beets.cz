@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, FormEvent, ChangeEvent, useCallback } fro
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
+import { resizeImageFile } from '../lib/image-utils';
 import { translate } from '../lib/i18n';
 import { useLanguage } from '../lib/useLanguage';
 import BeatUploadForm from './beat-upload-form';
@@ -1706,7 +1707,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (editAcapellaCoverFile) {
         const safe = editAcapellaCoverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const path = `${userId}/acapellas/covers/${Date.now()}-${safe}`;
-        const { error: uploadErr } = await supabase.storage.from('acapella_covers').upload(path, editAcapellaCoverFile, { upsert: true });
+        const coverToUpload = await resizeImageFile(editAcapellaCoverFile, { maxSize: 512, quality: 0.8 });
+        const { error: uploadErr } = await supabase.storage.from('acapella_covers').upload(path, coverToUpload, { upsert: true });
         if (uploadErr) throw uploadErr;
         const { data: pub } = supabase.storage.from('acapella_covers').getPublicUrl(path);
         coverUrl = pub.publicUrl;
@@ -1824,7 +1826,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
       if (editCoverFile) {
         const safe = editCoverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const path = `${userId}/beats/covers/${Date.now()}-${safe}`;
-        const { error: uploadErr } = await supabase.storage.from('beats').upload(path, editCoverFile, { upsert: true });
+        const coverToUpload = await resizeImageFile(editCoverFile, { maxSize: 512, quality: 0.8 });
+        const { error: uploadErr } = await supabase.storage.from('beats').upload(path, coverToUpload, { upsert: true });
         if (uploadErr) throw uploadErr;
         const { data: pub } = supabase.storage.from('beats').getPublicUrl(path);
         coverUrl = pub.publicUrl;
@@ -3666,9 +3669,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
                         if (projectEditCover.file) {
                           const safeCover = projectEditCover.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
                           const coverPath = `${userId}/projects/covers/${Date.now()}-${safeCover}`;
+                          const coverToUpload = await resizeImageFile(projectEditCover.file, { maxSize: 512, quality: 0.8 });
                           const { error: coverErr } = await supabase.storage
                             .from('projects')
-                            .upload(coverPath, projectEditCover.file, { upsert: true });
+                            .upload(coverPath, coverToUpload, { upsert: true });
                           if (coverErr) throw coverErr;
                           const { data: pubCover } = supabase.storage.from('projects').getPublicUrl(coverPath);
                           coverUrl = pubCover.publicUrl;

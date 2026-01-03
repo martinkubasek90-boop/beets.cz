@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { createClient } from '../lib/supabase/client';
+import { resizeImageFile } from '../lib/image-utils';
 
 export default function AcapellaUploadForm({ onCreated }: { onCreated?: () => void }) {
   const supabase = createClient();
@@ -72,7 +73,8 @@ export default function AcapellaUploadForm({ onCreated }: { onCreated?: () => vo
         }
         const safeName = coverFile.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
         const coverPath = `${user.id}/covers/${Date.now()}-${safeName}`;
-        const { error: coverErr } = await supabase.storage.from('acapella_covers').upload(coverPath, coverFile, { upsert: true });
+        const coverToUpload = await resizeImageFile(coverFile, { maxSize: 512, quality: 0.8 });
+        const { error: coverErr } = await supabase.storage.from('acapella_covers').upload(coverPath, coverToUpload, { upsert: true });
         if (coverErr) throw coverErr;
         coverUrl = supabase.storage.from('acapella_covers').getPublicUrl(coverPath).data.publicUrl;
       }
