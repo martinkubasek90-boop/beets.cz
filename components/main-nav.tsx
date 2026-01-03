@@ -155,12 +155,12 @@ export function MainNav() {
     <header className="sticky top-0 z-50 bg-black/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 relative">
         <Link href="/" className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-[conic-gradient(from_90deg,var(--mpc-accent),var(--mpc-accent-2),var(--mpc-accent))] text-xs font-black text-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.35)]">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-[conic-gradient(from_90deg,var(--mpc-accent),var(--mpc-accent-2),var(--mpc-accent))] text-xs text-[#050505] shadow-[0_10px_24px_rgba(0,0,0,0.35)] font-hero-nueva">
             B
           </div>
           <div className="leading-tight">
             <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Beat komunita</p>
-            <p className="text-sm font-bold uppercase tracking-[0.08em] text-white">Beets.cz</p>
+            <p className="text-sm uppercase tracking-[0.08em] text-white font-hero-nueva">Beets.cz</p>
           </div>
         </Link>
         <button
