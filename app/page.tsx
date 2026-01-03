@@ -1619,18 +1619,18 @@ export default function Home() {
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
-              >
-                {(() => {
-                  const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
-                  const isExternalProject = !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
-                  const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
-                  const externalUrl = project.project_url || project.purchase_url;
-                  return (
-                    <>
+            {projects.map((project) => {
+              const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
+              const isExternalProject =
+                !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
+              const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
+              const externalUrl = project.project_url || project.purchase_url;
+
+              return (
+                <div
+                  key={project.id}
+                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+                >
                 <div className="absolute right-4 top-4 flex items-center gap-2">
                   {userRole === 'curator' && (
                     <button
@@ -1847,12 +1847,9 @@ export default function Home() {
                     </div>
                   </div>
                 ) : null}
-                </>
-                  );
-                })()}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
