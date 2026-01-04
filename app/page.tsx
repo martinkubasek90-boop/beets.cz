@@ -96,6 +96,26 @@ const getExternalPlatform = (value?: string | null) => {
   return null;
 };
 
+const normalizeEmbedHtml = (html: string) => {
+  if (!html) return '';
+  return html.replace(/src=["']([^"']+)["']/i, (match, src) => {
+    try {
+      const url = new URL(src);
+      if (url.hostname.includes('open.spotify.com')) {
+        url.searchParams.set('theme', '0');
+      }
+      if (url.hostname.includes('w.soundcloud.com')) {
+        if (!url.searchParams.get('color')) {
+          url.searchParams.set('color', '#111111');
+        }
+      }
+      return `src="${url.toString()}"`;
+    } catch {
+      return match;
+    }
+  });
+};
+
 // Lokální demo beaty – fallback, když Supabase spadne
 const dummyBeats: Beat[] = [
   {
@@ -222,7 +242,7 @@ const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spoluprác
 
 const HOME_CACHE_TTL_MS = 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
-const HOME_PROJECTS_CACHE_KEY = 'home-projects-v2';
+const HOME_PROJECTS_CACHE_KEY = 'home-projects-v3';
 
 const readHomeCache = <T,>(key: string): T | null => {
   if (typeof window === 'undefined') return null;
@@ -1706,8 +1726,8 @@ export default function Home() {
                     <div className="space-y-2">
                       <p className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                       <div
-                        className="overflow-hidden rounded-lg border border-white/10 bg-black/60 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                        dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] || '' }}
+                        className="min-h-[120px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
                       />
                     </div>
                   ) : (

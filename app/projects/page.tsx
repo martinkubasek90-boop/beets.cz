@@ -52,6 +52,26 @@ const getExternalPlatform = (value?: string | null) => {
   return null;
 };
 
+const normalizeEmbedHtml = (html: string) => {
+  if (!html) return "";
+  return html.replace(/src=["']([^"']+)["']/i, (match, src) => {
+    try {
+      const url = new URL(src);
+      if (url.hostname.includes("open.spotify.com")) {
+        url.searchParams.set("theme", "0");
+      }
+      if (url.hostname.includes("w.soundcloud.com")) {
+        if (!url.searchParams.get("color")) {
+          url.searchParams.set("color", "#111111");
+        }
+      }
+      return `src="${url.toString()}"`;
+    } catch {
+      return match;
+    }
+  });
+};
+
 const toSupabaseThumb = (url?: string | null, width = 720) => {
   if (!url) return url ?? null;
   if (url.includes("/storage/v1/render/image/public/")) return url;
@@ -693,8 +713,8 @@ export default function ProjectsPage() {
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                     <div
-                      className="mt-2 overflow-hidden rounded-lg border border-white/10 bg-black/60 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                      dangerouslySetInnerHTML={{ __html: project.embed_html || projectEmbeds[project.id] }}
+                      className="mt-2 min-h-[120px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                      dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
                     />
                   </div>
                 )}
