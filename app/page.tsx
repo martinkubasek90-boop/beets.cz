@@ -584,13 +584,11 @@ export default function Home() {
             })()
           : null;
     const tracksSource = parsed ?? [];
-    return tracksSource.length > 0
-      ? tracksSource.map((t: any, idx: number) => ({
-          id: `${p.id}-${idx + 1}`,
-          title: t?.name || t?.title || `Track ${idx + 1}`,
-          url: t?.url || t?.audio_url || '',
-        }))
-      : [];
+    return tracksSource.map((t: any, idx: number) => ({
+      id: `${p.id}-${idx + 1}`,
+      title: t?.name || t?.title || `Track ${idx + 1}`,
+      url: t?.url || t?.audio_url || '',
+    }));
   };
 
   const loadProjects = async () => {

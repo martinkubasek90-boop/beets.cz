@@ -2780,7 +2780,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setImportMetadata(meta);
       setImportTitle(meta.title || '');
       setImportArtist(meta.artist || '');
-      setImportEmbedHtml(meta.embed_html || '');
+      setImportEmbedHtml((prev) => meta.embed_html || prev);
     } catch (err: any) {
       setImportError(err?.message || 'Nepodařilo se načíst metadata.');
     } finally {
