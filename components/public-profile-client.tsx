@@ -109,9 +109,11 @@ const getExternalPlatform = (value?: string | null) => {
   return null;
 };
 
+const EMBED_HEIGHT = 152;
+
 const normalizeEmbedHtml = (html: string) => {
   if (!html) return '';
-  return html.replace(/src=["']([^"']+)["']/i, (match, src) => {
+  const withSrc = html.replace(/src=["']([^"']+)["']/i, (match, src) => {
     try {
       const url = new URL(src);
       if (url.hostname.includes('open.spotify.com')) {
@@ -127,6 +129,36 @@ const normalizeEmbedHtml = (html: string) => {
     } catch {
       return match;
     }
+  });
+  return withSrc.replace(/<iframe[^>]*>/i, (tag) => {
+    const styleMatch = tag.match(/style=["']([^"']*)["']/i);
+    const originalStyle = styleMatch?.[1] || '';
+    const cleaned = originalStyle
+      .split(';')
+      .map((part) => part.trim())
+      .filter((part) => part && !part.startsWith('height') && !part.startsWith('width') && !part.startsWith('border'));
+    const mergedStyle = [
+      'border:0',
+      'width:100%',
+      `height:${EMBED_HEIGHT}px`,
+      'border-radius:12px',
+      'background:#111111',
+      'display:block',
+      ...cleaned,
+    ].join('; ');
+    let next = tag;
+    if (styleMatch) {
+      next = next.replace(/style=["'][^"']*["']/i, `style="${mergedStyle}"`);
+    } else {
+      next = next.replace('<iframe', `<iframe style="${mergedStyle}"`);
+    }
+    next = next.replace(/height=["'][^"']*["']/i, `height="${EMBED_HEIGHT}"`);
+    next = next.replace(/width=["'][^"']*["']/i, 'width="100%"');
+    next = next.replace(/loading=["'][^"']*["']/i, 'loading="eager"');
+    if (!/loading=/.test(next)) {
+      next = next.replace('<iframe', '<iframe loading="eager"');
+    }
+    return next;
   });
 };
 
