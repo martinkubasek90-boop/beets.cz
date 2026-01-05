@@ -122,6 +122,7 @@ export async function POST(request: Request) {
   const limit = Math.min(Number(body?.limit) || 25, 100);
   const force = Boolean(body?.force);
   const externalOnly = body?.externalOnly !== false;
+  const debug = Boolean(body?.debug);
 
   const supabase = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   try {
@@ -157,6 +158,46 @@ export async function POST(request: Request) {
     }
 
     rows = force ? rows : rows.filter((row) => !row.embed_html || row.embed_html.trim() === '');
+
+    if (debug) {
+      const [{ count: totalCount }, { count: externalCount }] = await Promise.all([
+        supabase.from('projects').select('id', { count: 'exact', head: true }),
+        supabase
+          .from('projects')
+          .select('id', { count: 'exact', head: true })
+          .or(
+            [
+              'project_url.ilike.%spotify.com%',
+              'project_url.ilike.%soundcloud.com%',
+              'project_url.ilike.%bandcamp.com%',
+              'purchase_url.ilike.%spotify.com%',
+              'purchase_url.ilike.%soundcloud.com%',
+              'purchase_url.ilike.%bandcamp.com%',
+              'embed_html.ilike.%spotify.com%',
+              'embed_html.ilike.%soundcloud.com%',
+              'embed_html.ilike.%bandcamp.com%',
+            ].join(',')
+          ),
+      ]);
+      const sample = rows.slice(0, 3).map((row) => ({
+        id: row.id,
+        project_url: row.project_url,
+        purchase_url: row.purchase_url,
+        embed_html: row.embed_html ? row.embed_html.slice(0, 160) : null,
+      }));
+      return NextResponse.json({
+        updated: [],
+        count: 0,
+        skipped: [],
+        skippedCount: 0,
+        debug: {
+          totalCount: totalCount ?? null,
+          externalCount: externalCount ?? null,
+          matched: rows.length,
+          sample,
+        },
+      });
+    }
 
     const updated: number[] = [];
     const skipped: Array<{ id: number; reason: string; target?: string | null }> = [];
