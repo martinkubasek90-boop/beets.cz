@@ -145,7 +145,10 @@ const getProjectUrlFromEmbedHtml = (value: string) => {
   const href = extractIframeAnchorHref(value);
   if (href) return href;
   const src = extractIframeSrc(value);
-  return getProjectUrlFromEmbedSrc(src);
+  const fromSrc = getProjectUrlFromEmbedSrc(src);
+  if (fromSrc) return fromSrc;
+  const rawUrl = value.match(/https?:\/\/[^\s"']+/i)?.[0] || '';
+  return getProjectUrlFromEmbedSrc(rawUrl) || rawUrl;
 };
 
 const resolveProjectCoverUrl = (cover: string | null) => {
@@ -2742,14 +2745,26 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setImportSuccess(null);
   };
 
+  const coerceEmbedHtml = (raw: string) => {
+    const trimmed = raw.trim();
+    if (!trimmed) return '';
+    const extracted = extractIframeHtml(trimmed);
+    if (extracted) return extracted;
+    const src = extractIframeSrc(trimmed) || extractIframeAnchorHref(trimmed) || trimmed;
+    if (src.includes('open.spotify.com')) return buildSpotifyEmbed(src);
+    if (src.includes('soundcloud.com')) return buildSoundcloudEmbed(src);
+    if (src.includes('bandcamp.com')) return buildEmbedFromSrc(src);
+    return '';
+  };
+
   const handleFetchImportMetadata = async () => {
     const trimmed = importProjectUrl.trim();
     const manualEmbedRaw = importEmbedHtml.trim();
-    const manualEmbed = extractIframeHtml(manualEmbedRaw);
+    const manualEmbed = coerceEmbedHtml(manualEmbedRaw);
     if (!trimmed) {
       if (manualEmbed) {
-        const src = extractIframeSrc(manualEmbedRaw);
-        const derivedLink = getProjectUrlFromEmbedHtml(manualEmbedRaw);
+        const src = extractIframeSrc(manualEmbed) || extractIframeSrc(manualEmbedRaw);
+        const derivedLink = getProjectUrlFromEmbedHtml(manualEmbed);
         const provider = getEmbedProviderFromUrl(derivedLink || src);
         setImportMetadata({
           title: importTitle.trim() || getEmbedDefaultTitle(src),
@@ -2788,18 +2803,24 @@ function handleFieldChange(field: keyof Profile, value: string) {
     }
   };
 
-  const buildSpotifyEmbed = (url: string) => {
-    const match = url.match(/open\.spotify\.com\/(album|track|playlist)\/([a-zA-Z0-9]+)/);
-    if (!match) return '';
-    const [, type, id] = match;
-    const src = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
-    return `<iframe data-testid="embed-iframe" style="border-radius:12px" src="${src}" width="100%" height="120" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
-  };
+const buildSpotifyEmbed = (url: string) => {
+  const normalized = url.replace('open.spotify.com/embed/', 'open.spotify.com/');
+  const match = normalized.match(/open\.spotify\.com\/(album|track|playlist)\/([a-zA-Z0-9]+)/);
+  if (!match) return '';
+  const [, type, id] = match;
+  const src = `https://open.spotify.com/embed/${type}/${id}?utm_source=generator`;
+  return `<iframe data-testid="embed-iframe" style="border-radius:12px" src="${src}" width="100%" height="120" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+};
 
-  const buildSoundcloudEmbed = (url: string) => {
-    const src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
-    return `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="${src}"></iframe>`;
-  };
+const buildSoundcloudEmbed = (url: string) => {
+  const src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=true`;
+  return `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="${src}"></iframe>`;
+};
+
+const buildEmbedFromSrc = (src: string) => {
+  if (!src) return '';
+  return `<iframe style="border: 0; width: 100%; height: 152px;" src="${src}" seamless></iframe>`;
+};
 
   const handleInsertEmbed = async (provider: 'spotify' | 'soundcloud' | 'bandcamp') => {
     const url = importProjectUrl.trim();
@@ -2844,8 +2865,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
       setImportError('Nejsi přihlášený.');
       return;
     }
-    const manualEmbed = extractIframeHtml(importEmbedHtml.trim());
-    const derivedEmbedLink = manualEmbed ? getProjectUrlFromEmbedHtml(importEmbedHtml.trim()) : '';
+    const manualEmbed = coerceEmbedHtml(importEmbedHtml.trim());
+    const derivedEmbedLink = manualEmbed
+      ? getProjectUrlFromEmbedHtml(manualEmbed)
+      : getProjectUrlFromEmbedHtml(importEmbedHtml.trim());
     const normalizedLink = importMetadata?.link
       ? normalizePurchaseUrl(importMetadata.link)
       : importProjectUrl.trim()
