@@ -461,6 +461,7 @@ const isMcOnly = currentRole === 'mc';
 const canUpload = !isMcOnly;
 const canUploadAcapellas = currentRole === 'mc';
 const canWriteArticles = isAdmin;
+const canImportExternal = currentRole !== 'mc';
   const [newMessage, setNewMessage] = useState<NewMessageForm>({ to: '', toUserId: '', body: '' });
   const [sendingMessage, setSendingMessage] = useState<boolean>(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
@@ -4933,7 +4934,7 @@ const buildAppleEmbed = (url: string) => {
                       >
                         {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
                       </button>
-                      {isSuperAdmin && (
+                      {canImportExternal && (
                         <button
                           onClick={() => {
                             setImportProjectOpen((prev) => !prev);
@@ -4950,7 +4951,7 @@ const buildAppleEmbed = (url: string) => {
                           <ProjectUploadForm />
                         </div>
                       )}
-                      {isSuperAdmin && importProjectOpen && (
+                      {canImportExternal && importProjectOpen && (
                         <div className="mt-4 space-y-3 rounded-xl border border-white/10 bg-black/30 p-4">
                           <div className="space-y-2">
                             <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
@@ -4977,9 +4978,6 @@ const buildAppleEmbed = (url: string) => {
                             <p className="text-[10px] text-[var(--mpc-muted)]">
                               Stačí vložit URL nebo embed — systém automaticky pozná Spotify/SoundCloud/Bandcamp/Apple Music.
                             </p>
-                            <p className="text-[10px] text-[var(--mpc-muted)]">
-                              Vložené jiné HTML se ignoruje.
-                            </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <button
@@ -4987,7 +4985,7 @@ const buildAppleEmbed = (url: string) => {
                               disabled={importLoading}
                               className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
                             >
-                              {importLoading ? 'Načítám…' : 'Načíst metadata'}
+                              {importLoading ? 'Načítám…' : 'Načíst'}
                             </button>
                             <button
                               onClick={resetImportState}
