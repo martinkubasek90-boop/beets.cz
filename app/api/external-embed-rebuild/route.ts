@@ -36,6 +36,38 @@ const extractMeta = (html: string, key: string) => {
 const buildIframe = (src: string) =>
   `<iframe style="border: 0; width: 100%; height: 152px;" src="${src}" seamless></iframe>`;
 
+const extractEmbedSrc = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/src=["']([^"']+)["']/i);
+  return match?.[1] || null;
+};
+
+const extractEmbedAnchor = (value?: string | null) => {
+  if (!value) return null;
+  const match = value.match(/<a[^>]+href=["']([^"']+)["']/i);
+  return match?.[1] || null;
+};
+
+const extractProjectUrlFromEmbed = (value?: string | null) => {
+  const anchor = extractEmbedAnchor(value);
+  if (anchor) return anchor;
+  const src = extractEmbedSrc(value);
+  if (!src) return null;
+  if (src.includes('w.soundcloud.com/player/')) {
+    try {
+      const url = new URL(src);
+      const raw = url.searchParams.get('url');
+      return raw ? decodeURIComponent(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+  if (src.includes('open.spotify.com/embed/')) {
+    return src.replace('open.spotify.com/embed/', 'open.spotify.com/');
+  }
+  return src;
+};
+
 const fetchEmbed = async (target: string) => {
   let parsed: URL;
   try {
@@ -104,7 +136,18 @@ export async function POST(request: Request) {
     const updated: number[] = [];
     const skipped: Array<{ id: number; reason: string; target?: string | null }> = [];
     for (const row of data || []) {
-      const target = row.project_url || row.purchase_url;
+      let target = row.project_url || row.purchase_url;
+      if (!target && row.embed_html) {
+        const derived = extractProjectUrlFromEmbed(row.embed_html);
+        if (derived) {
+          target = derived;
+          try {
+            await supabase.from('projects').update({ project_url: derived }).eq('id', row.id);
+          } catch (err) {
+            console.warn('Uložení odvozeného odkazu selhalo:', err);
+          }
+        }
+      }
       if (!target) {
         skipped.push({ id: row.id, reason: 'no_target' });
         continue;
