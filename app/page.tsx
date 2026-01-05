@@ -107,6 +107,11 @@ const normalizeEmbedHtml = (html: string) => {
         url.searchParams.set('theme', '0');
         url.searchParams.set('view', 'coverart');
       }
+      if (url.hostname.includes('embed.music.apple.com')) {
+        if (!url.searchParams.get('theme')) {
+          url.searchParams.set('theme', 'dark');
+        }
+      }
       if (url.hostname.includes('w.soundcloud.com')) {
         if (!url.searchParams.get('color')) {
           url.searchParams.set('color', '#111111');

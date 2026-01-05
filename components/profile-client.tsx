@@ -110,6 +110,7 @@ const getEmbedDefaultTitle = (src: string) => {
   if (src.includes('open.spotify.com')) return 'Spotify projekt';
   if (src.includes('soundcloud.com')) return 'SoundCloud projekt';
   if (src.includes('bandcamp.com')) return 'Bandcamp projekt';
+  if (src.includes('music.apple.com') || src.includes('embed.music.apple.com')) return 'Apple Music projekt';
   return '';
 };
 
@@ -118,6 +119,7 @@ const getEmbedProviderFromUrl = (value: string) => {
   if (value.includes('spotify.com')) return 'Spotify';
   if (value.includes('soundcloud.com')) return 'SoundCloud';
   if (value.includes('bandcamp.com')) return 'Bandcamp';
+  if (value.includes('music.apple.com')) return 'Apple Music';
   return '';
 };
 
@@ -134,6 +136,9 @@ const getProjectUrlFromEmbedSrc = (src: string) => {
     } catch {
       return '';
     }
+  }
+  if (src.includes('embed.music.apple.com')) {
+    return src.replace('embed.music.apple.com', 'music.apple.com');
   }
   if (src.includes('soundcloud.com') || src.includes('spotify.com') || src.includes('bandcamp.com')) {
     return src;
@@ -2754,6 +2759,7 @@ function handleFieldChange(field: keyof Profile, value: string) {
     if (src.includes('open.spotify.com')) return buildSpotifyEmbed(src);
     if (src.includes('soundcloud.com')) return buildSoundcloudEmbed(src);
     if (src.includes('bandcamp.com')) return buildEmbedFromSrc(src);
+    if (src.includes('music.apple.com') || src.includes('embed.music.apple.com')) return buildAppleEmbed(src);
     return '';
   };
 
@@ -2820,6 +2826,14 @@ const buildSoundcloudEmbed = (url: string) => {
 const buildEmbedFromSrc = (src: string) => {
   if (!src) return '';
   return `<iframe style="border: 0; width: 100%; height: 152px;" src="${src}" seamless></iframe>`;
+};
+
+const buildAppleEmbed = (url: string) => {
+  if (!url) return '';
+  const src = url.includes('embed.music.apple.com')
+    ? url
+    : url.replace('music.apple.com', 'embed.music.apple.com');
+  return buildEmbedFromSrc(src);
 };
 
   const handleInsertEmbed = async (provider: 'spotify' | 'soundcloud' | 'bandcamp') => {
@@ -4945,7 +4959,7 @@ const buildEmbedFromSrc = (src: string) => {
                             <input
                               value={importProjectUrl}
                               onChange={(e) => setImportProjectUrl(e.target.value)}
-                              placeholder="https://open.spotify.com/..., https://soundcloud.com/..., https://bandcamp.com/..."
+                              placeholder="https://open.spotify.com/..., https://soundcloud.com/..., https://bandcamp.com/..., https://music.apple.com/..."
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
                           </div>
@@ -4960,31 +4974,12 @@ const buildEmbedFromSrc = (src: string) => {
                               rows={3}
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleInsertEmbed('spotify')}
-                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
-                              >
-                                Vložit Spotify embed
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleInsertEmbed('soundcloud')}
-                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
-                              >
-                                Vložit SoundCloud embed
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleInsertEmbed('bandcamp')}
-                                className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
-                              >
-                                Vložit Bandcamp embed
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-[var(--mpc-muted)]">Můžeš importovat i bez URL — stačí vložit embed.</p>
-                            <p className="text-[10px] text-[var(--mpc-muted)]">Podporujeme Spotify/SoundCloud/Bandcamp iframe. Vložené jiné HTML se ignoruje.</p>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">
+                              Stačí vložit URL nebo embed — systém automaticky pozná Spotify/SoundCloud/Bandcamp/Apple Music.
+                            </p>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">
+                              Vložené jiné HTML se ignoruje.
+                            </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <button

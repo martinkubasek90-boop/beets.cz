@@ -22,6 +22,11 @@ const providers: Provider[] = [
     match: (host) => host === 'bandcamp.com' || host.endsWith('.bandcamp.com'),
     buildUrl: (target) => `https://bandcamp.com/oembed?format=json&url=${encodeURIComponent(target)}`,
   },
+  {
+    name: 'Apple Music',
+    match: (host) => host === 'music.apple.com' || host.endsWith('.music.apple.com'),
+    buildUrl: (target) => `https://embed.music.apple.com/oembed?url=${encodeURIComponent(target)}`,
+  },
 ];
 
 const extractMeta = (html: string, key: string) => {
@@ -58,7 +63,7 @@ export async function GET(request: Request) {
 
   const provider = providers.find((item) => item.match(parsed.hostname));
   if (!provider) {
-    return NextResponse.json({ error: 'Podporujeme pouze Spotify, SoundCloud nebo Bandcamp.' }, { status: 400 });
+    return NextResponse.json({ error: 'Podporujeme pouze Spotify, SoundCloud, Bandcamp nebo Apple Music.' }, { status: 400 });
   }
 
   try {

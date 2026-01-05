@@ -19,6 +19,11 @@ const providers = [
     match: (host: string) => host === 'bandcamp.com' || host.endsWith('.bandcamp.com'),
     buildUrl: (target: string) => `https://bandcamp.com/oembed?format=json&url=${encodeURIComponent(target)}`,
   },
+  {
+    name: 'Apple Music',
+    match: (host: string) => host === 'music.apple.com' || host.endsWith('.music.apple.com'),
+    buildUrl: (target: string) => `https://embed.music.apple.com/oembed?url=${encodeURIComponent(target)}`,
+  },
 ];
 
 const extractMeta = (html: string, key: string) => {
@@ -138,12 +143,18 @@ export async function POST(request: Request) {
           'project_url.ilike.%spotify.com%',
           'project_url.ilike.%soundcloud.com%',
           'project_url.ilike.%bandcamp.com%',
+          'project_url.ilike.%music.apple.com%',
+          'project_url.ilike.%embed.music.apple.com%',
           'purchase_url.ilike.%spotify.com%',
           'purchase_url.ilike.%soundcloud.com%',
           'purchase_url.ilike.%bandcamp.com%',
+          'purchase_url.ilike.%music.apple.com%',
+          'purchase_url.ilike.%embed.music.apple.com%',
           'embed_html.ilike.%spotify.com%',
           'embed_html.ilike.%soundcloud.com%',
           'embed_html.ilike.%bandcamp.com%',
+          'embed_html.ilike.%music.apple.com%',
+          'embed_html.ilike.%embed.music.apple.com%',
         ].join(',')
       );
     }
@@ -170,12 +181,18 @@ export async function POST(request: Request) {
               'project_url.ilike.%spotify.com%',
               'project_url.ilike.%soundcloud.com%',
               'project_url.ilike.%bandcamp.com%',
+              'project_url.ilike.%music.apple.com%',
+              'project_url.ilike.%embed.music.apple.com%',
               'purchase_url.ilike.%spotify.com%',
               'purchase_url.ilike.%soundcloud.com%',
               'purchase_url.ilike.%bandcamp.com%',
+              'purchase_url.ilike.%music.apple.com%',
+              'purchase_url.ilike.%embed.music.apple.com%',
               'embed_html.ilike.%spotify.com%',
               'embed_html.ilike.%soundcloud.com%',
               'embed_html.ilike.%bandcamp.com%',
+              'embed_html.ilike.%music.apple.com%',
+              'embed_html.ilike.%embed.music.apple.com%',
             ].join(',')
           ),
       ]);
