@@ -912,13 +912,6 @@ export default function PublicProfileClient({
       }));
   }, [beats, profile?.display_name]);
 
-  const beatsSliderRef = useRef<HTMLDivElement | null>(null);
-  const scrollBeatsSlider = (direction: 'left' | 'right') => {
-    const container = beatsSliderRef.current;
-    if (!container) return;
-    const offset = direction === 'left' ? -360 : 360;
-    container.scrollBy({ left: offset, behavior: 'smooth' });
-  };
   const renderBeatCard = (beat: Beat) => {
     const trackId = `beat-${beat.id}`;
     const isCurrent = currentTrack?.id === trackId;
@@ -1734,47 +1727,10 @@ export default function PublicProfileClient({
           {beats.length === 0 ? (
             <p className="text-sm text-[var(--mpc-muted)]">Žádné beaty k zobrazení.</p>
           ) : (
-            <div className="space-y-3">
-              {beats.slice(0, 3).map((beat) => (
+            <div className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+              {beats.map((beat) => (
                 <div key={beat.id}>{renderBeatCard(beat)}</div>
               ))}
-              {beats.length > 3 && (
-                <div className="mt-4 rounded-2xl border border-white/5 bg-black/20 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--mpc-muted)]">
-                      Další beaty
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => scrollBeatsSlider('left')}
-                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                        aria-label="Posunout vlevo"
-                      >
-                        ←
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => scrollBeatsSlider('right')}
-                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                        aria-label="Posunout vpravo"
-                      >
-                        →
-                      </button>
-                    </div>
-                  </div>
-                  <div
-                    ref={beatsSliderRef}
-                    className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
-                  >
-                    {beats.slice(3).map((beat) => (
-                      <div key={beat.id} className="min-w-[320px] max-w-[360px] flex-shrink-0">
-                        {renderBeatCard(beat)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
