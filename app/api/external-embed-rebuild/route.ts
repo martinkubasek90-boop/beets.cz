@@ -121,21 +121,41 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const limit = Math.min(Number(body?.limit) || 25, 100);
   const force = Boolean(body?.force);
+  const externalOnly = body?.externalOnly !== false;
 
   const supabase = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
   try {
     const baseQuery = supabase
       .from('projects')
       .select('id, project_url, purchase_url, embed_html')
+      .order('id', { ascending: false })
       .limit(limit);
-    const { data, error } = force
-      ? await baseQuery
-      : await baseQuery.or('embed_html.is.null,embed_html.eq.""');
+    let query = baseQuery;
+    if (externalOnly) {
+      query = query.or(
+        [
+          'project_url.ilike.%spotify.com%',
+          'project_url.ilike.%soundcloud.com%',
+          'project_url.ilike.%bandcamp.com%',
+          'purchase_url.ilike.%spotify.com%',
+          'purchase_url.ilike.%soundcloud.com%',
+          'purchase_url.ilike.%bandcamp.com%',
+          'embed_html.ilike.%spotify.com%',
+          'embed_html.ilike.%soundcloud.com%',
+          'embed_html.ilike.%bandcamp.com%',
+        ].join(',')
+      );
+    }
+    const { data, error } = await query;
     if (error) throw error;
+
+    const rows = force
+      ? data || []
+      : (data || []).filter((row) => !row.embed_html || row.embed_html.trim() === '');
 
     const updated: number[] = [];
     const skipped: Array<{ id: number; reason: string; target?: string | null }> = [];
-    for (const row of data || []) {
+    for (const row of rows) {
       let target = row.project_url || row.purchase_url;
       if (!target && row.embed_html) {
         const derived = extractProjectUrlFromEmbed(row.embed_html);
