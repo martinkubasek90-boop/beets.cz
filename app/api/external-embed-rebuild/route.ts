@@ -41,17 +41,17 @@ const fetchEmbed = async (target: string) => {
   try {
     parsed = new URL(target);
   } catch {
-    return null;
+    return { html: null, reason: 'invalid_url' } as const;
   }
   const provider = providers.find((item) => item.match(parsed.hostname));
-  if (!provider) return null;
+  if (!provider) return { html: null, reason: 'unsupported_host' } as const;
   const response = await fetch(provider.buildUrl(target), {
     headers: { 'User-Agent': 'beets-metadata', Accept: 'application/json' },
     cache: 'no-store',
   });
   if (response.ok) {
     const data = (await response.json()) as { html?: string };
-    if (data?.html) return data.html;
+    if (data?.html) return { html: data.html, reason: null } as const;
   }
 
   if (provider.name === 'Bandcamp') {
@@ -60,16 +60,17 @@ const fetchEmbed = async (target: string) => {
         headers: { 'User-Agent': 'beets-metadata', Accept: 'text/html' },
         cache: 'no-store',
       });
-      if (!pageResponse.ok) return null;
+      if (!pageResponse.ok) return { html: null, reason: `bandcamp_status_${pageResponse.status}` } as const;
       const html = await pageResponse.text();
       const videoSrc = extractMeta(html, 'og:video') || extractMeta(html, 'twitter:player');
-      if (videoSrc) return buildIframe(videoSrc);
+      if (videoSrc) return { html: buildIframe(videoSrc), reason: null } as const;
+      return { html: null, reason: 'bandcamp_no_player' } as const;
     } catch {
-      return null;
+      return { html: null, reason: 'bandcamp_fetch_failed' } as const;
     }
   }
 
-  return null;
+  return { html: null, reason: `oembed_status_${response.status}` } as const;
 };
 
 export async function POST(request: Request) {
@@ -101,30 +102,35 @@ export async function POST(request: Request) {
     if (error) throw error;
 
     const updated: number[] = [];
-    const skipped: number[] = [];
+    const skipped: Array<{ id: number; reason: string; target?: string | null }> = [];
     for (const row of data || []) {
       const target = row.project_url || row.purchase_url;
       if (!target) {
-        skipped.push(row.id);
+        skipped.push({ id: row.id, reason: 'no_target' });
         continue;
       }
       if (!force && row.embed_html && row.embed_html.includes('<iframe')) {
-        skipped.push(row.id);
+        skipped.push({ id: row.id, reason: 'already_has_embed', target });
         continue;
       }
-      const html = await fetchEmbed(target);
-      if (!html) {
-        skipped.push(row.id);
+      const result = await fetchEmbed(target);
+      if (!result.html) {
+        skipped.push({ id: row.id, reason: result.reason || 'no_embed', target });
         continue;
       }
       const { error: updateError } = await supabase
         .from('projects')
-        .update({ embed_html: html })
+        .update({ embed_html: result.html })
         .eq('id', row.id);
       if (!updateError) updated.push(row.id);
     }
 
-    return NextResponse.json({ updated, count: updated.length, skipped, skippedCount: skipped.length });
+    return NextResponse.json({
+      updated,
+      count: updated.length,
+      skipped,
+      skippedCount: skipped.length,
+    });
   } catch (err: any) {
     console.error('external-embed-rebuild failed:', err);
     return NextResponse.json({ error: err?.message || 'embed rebuild failed' }, { status: 500 });
