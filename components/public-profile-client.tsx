@@ -912,6 +912,100 @@ export default function PublicProfileClient({
       }));
   }, [beats, profile?.display_name]);
 
+  const beatsSliderRef = useRef<HTMLDivElement | null>(null);
+  const scrollBeatsSlider = (direction: 'left' | 'right') => {
+    const container = beatsSliderRef.current;
+    if (!container) return;
+    const offset = direction === 'left' ? -360 : 360;
+    container.scrollBy({ left: offset, behavior: 'smooth' });
+  };
+  const renderBeatCard = (beat: Beat) => {
+    const trackId = `beat-${beat.id}`;
+    const isCurrent = currentTrack?.id === trackId;
+    const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
+    return (
+      <div className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]">
+        <div
+          className="relative overflow-hidden rounded-xl border border-white/5 p-4"
+          style={{
+            background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
+          }}
+        >
+          <div className="absolute right-3 top-3 flex items-center gap-2">
+            {currentUserRole === 'curator' && (
+              <button
+                onClick={() => handleCuratorStar('beat', String(beat.id))}
+                className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+                title="Kurátorská hvězda"
+              >
+                ★
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                {beat.cover_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                ) : (
+                  <span>{beat.title.slice(0, 2)}</span>
+                )}
+              </div>
+              <div>
+                <div className="mb-1 flex items-center gap-2">
+                  <p className="text-base font-semibold text-white">{beat.title}</p>
+                  <FireButton
+                    itemType="beat"
+                    itemId={String(beat.id)}
+                    className="-ml-1 shrink-0 scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
+                  />
+                </div>
+                <p className="text-[12px] text-[var(--mpc-muted)]">
+                  {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() =>
+                handlePlayTrack({
+                  id: `beat-${beat.id}`,
+                  title: beat.title,
+                  url: beat.audio_url || '',
+                  source: 'beat',
+                  cover_url: beat.cover_url,
+                  subtitle: profile?.display_name || null,
+                })
+              }
+              disabled={!beat.audio_url}
+              className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0 md:mr-6"
+            >
+              {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
+            </button>
+          </div>
+          <div
+            className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+            onClick={(e) => {
+              if (!isCurrent) return;
+              handleTrackProgressClick(trackId, e);
+            }}
+          >
+            <div
+              className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
+              style={{ width: progressPct }}
+            />
+          </div>
+          {isCurrent && (
+            <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const acapellaTracks = useMemo<CurrentTrack[]>(() => {
     return acapellas
       .filter((item) => Boolean(item.audio_url))
@@ -1641,95 +1735,46 @@ export default function PublicProfileClient({
             <p className="text-sm text-[var(--mpc-muted)]">Žádné beaty k zobrazení.</p>
           ) : (
             <div className="space-y-3">
-              {beats.map((beat) => {
-                const trackId = `beat-${beat.id}`;
-                const isCurrent = currentTrack?.id === trackId;
-                const progressPct = isCurrent && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : '0%';
-                return (
-                  <div
-                    key={beat.id}
-                    className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
-                  >
-                    <div
-                      className="relative overflow-hidden rounded-xl border border-white/5 p-4"
-                      style={{
-                        background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
-                      }}
-                    >
-                      <div className="absolute right-3 top-3 flex items-center gap-2">
-                        {currentUserRole === 'curator' && (
-                          <button
-                            onClick={() => handleCuratorStar('beat', String(beat.id))}
-                            className="grid h-9 w-9 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                            title="Kurátorská hvězda"
-                          >
-                            ★
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                            {beat.cover_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
-                            ) : (
-                              <span>{beat.title.slice(0, 2)}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="mb-1 flex items-center gap-2">
-                              <p className="text-base font-semibold text-white">{beat.title}</p>
-                              <FireButton
-                                itemType="beat"
-                                itemId={String(beat.id)}
-                                className="-ml-1 shrink-0 scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
-                              />
-                            </div>
-                            <p className="text-[12px] text-[var(--mpc-muted)]">
-                              {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() =>
-                            handlePlayTrack({
-                              id: `beat-${beat.id}`,
-                              title: beat.title,
-                              url: beat.audio_url || '',
-                              source: 'beat',
-                              cover_url: beat.cover_url,
-                              subtitle: profile?.display_name || null,
-                            })
-                          }
-                          disabled={!beat.audio_url}
-                          className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0 md:mr-6"
-                        >
-                          {isCurrent && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                        </button>
-                      </div>
-                      <div
-                        className="mt-3 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                        onClick={(e) => {
-                          if (!isCurrent) return;
-                          handleTrackProgressClick(trackId, e);
-                        }}
+              {beats.slice(0, 3).map((beat) => (
+                <div key={beat.id}>{renderBeatCard(beat)}</div>
+              ))}
+              {beats.length > 3 && (
+                <div className="mt-4 rounded-2xl border border-white/5 bg-black/20 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--mpc-muted)]">
+                      Další beaty
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => scrollBeatsSlider('left')}
+                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                        aria-label="Posunout vlevo"
                       >
-                        <div
-                          className="h-full rounded-full bg-[var(--mpc-accent)] shadow-[0_6px_16px_rgba(255,75,129,0.35)]"
-                          style={{ width: progressPct }}
-                        />
-                      </div>
-                      {isCurrent && (
-                        <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--mpc-muted)]">
-                          <span>{formatTime(currentTime)}</span>
-                          <span>{formatTime(duration)}</span>
-                        </div>
-                      )}
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollBeatsSlider('right')}
+                        className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                        aria-label="Posunout vpravo"
+                      >
+                        →
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+                  <div
+                    ref={beatsSliderRef}
+                    className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                  >
+                    {beats.slice(3).map((beat) => (
+                      <div key={beat.id} className="min-w-[320px] max-w-[360px] flex-shrink-0">
+                        {renderBeatCard(beat)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
