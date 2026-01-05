@@ -149,9 +149,14 @@ export async function POST(request: Request) {
     const { data, error } = await query;
     if (error) throw error;
 
-    const rows = force
-      ? data || []
-      : (data || []).filter((row) => !row.embed_html || row.embed_html.trim() === '');
+    let rows = data || [];
+    if (externalOnly && rows.length === 0) {
+      const { data: fallback, error: fallbackError } = await baseQuery;
+      if (fallbackError) throw fallbackError;
+      rows = fallback || [];
+    }
+
+    rows = force ? rows : rows.filter((row) => !row.embed_html || row.embed_html.trim() === '');
 
     const updated: number[] = [];
     const skipped: Array<{ id: number; reason: string; target?: string | null }> = [];
