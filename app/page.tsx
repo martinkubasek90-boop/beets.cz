@@ -103,6 +103,7 @@ const normalizeEmbedHtml = (html: string) => {
       const url = new URL(src);
       if (url.hostname.includes('open.spotify.com')) {
         url.searchParams.set('theme', '0');
+        url.searchParams.set('view', 'coverart');
       }
       if (url.hostname.includes('w.soundcloud.com')) {
         if (!url.searchParams.get('color')) {
@@ -242,7 +243,7 @@ const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spoluprác
 
 const HOME_CACHE_TTL_MS = 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
-const HOME_PROJECTS_CACHE_KEY = 'home-projects-v3';
+const HOME_PROJECTS_CACHE_KEY = 'home-projects-v4';
 
 const readHomeCache = <T,>(key: string): T | null => {
   if (typeof window === 'undefined') return null;
@@ -591,13 +592,33 @@ export default function Home() {
     }));
   };
 
+  const enrichProjectEmbeds = async (items: Project[]) => {
+    const ids = items.map((p) => p.id).filter(Boolean);
+    if (!ids.length) return items;
+    try {
+      const { data } = await supabase
+        .from('projects')
+        .select('id, embed_html, project_url, purchase_url')
+        .in('id', ids);
+      if (!data) return items;
+      const map = Object.fromEntries((data as any[]).map((row) => [row.id, row]));
+      return items.map((p) => ({
+        ...p,
+        embed_html: p.embed_html || map[p.id]?.embed_html || null,
+        project_url: p.project_url || map[p.id]?.project_url || null,
+        purchase_url: p.purchase_url || map[p.id]?.purchase_url || null,
+      }));
+    } catch {
+      return items;
+    }
+  };
+
   const loadProjects = async () => {
     try {
       const cachedProjects = readHomeCache<Project[]>(HOME_PROJECTS_CACHE_KEY);
       if (cachedProjects && cachedProjects.length > 0) {
         setProjects(cachedProjects);
         setProjectsError(null);
-        return;
       }
 
       try {
@@ -609,11 +630,12 @@ export default function Home() {
           .limit(2);
 
         if (!viewError && viewData && viewData.length > 0) {
-          const mapped = (viewData as any[]).map((p) => ({
+          let mapped = (viewData as any[]).map((p) => ({
             ...p,
             tracks: mapProjectTracks(p),
             author_name: (p as any).author_name || null,
           }));
+          mapped = await enrichProjectEmbeds(mapped as Project[]);
           setProjects(mapped as Project[]);
           writeHomeCache(HOME_PROJECTS_CACHE_KEY, mapped as Project[]);
           setProjectsError(null);
@@ -661,8 +683,9 @@ export default function Home() {
             author_name: p.author_name || fromProfile,
           } as Project;
         });
-        setProjects(withNames.slice(0, 2));
-        writeHomeCache(HOME_PROJECTS_CACHE_KEY, withNames.slice(0, 2));
+        const enriched = await enrichProjectEmbeds(withNames.slice(0, 2));
+        setProjects(enriched);
+        writeHomeCache(HOME_PROJECTS_CACHE_KEY, enriched);
         setProjectsError(null);
       } else {
         setProjects(dummyProjects.slice(0, 2));
@@ -1724,7 +1747,7 @@ export default function Home() {
                     <div className="space-y-2">
                       <p className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                       <div
-                        className="min-h-[120px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                        className="min-h-[152px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
                         dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
                       />
                     </div>

@@ -59,6 +59,7 @@ const normalizeEmbedHtml = (html: string) => {
       const url = new URL(src);
       if (url.hostname.includes("open.spotify.com")) {
         url.searchParams.set("theme", "0");
+        url.searchParams.set("view", "coverart");
       }
       if (url.hostname.includes("w.soundcloud.com")) {
         if (!url.searchParams.get("color")) {
@@ -713,7 +714,7 @@ export default function ProjectsPage() {
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                     <div
-                      className="mt-2 min-h-[120px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                      className="mt-2 min-h-[152px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
                       dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
                     />
                   </div>
