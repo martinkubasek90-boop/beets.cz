@@ -159,7 +159,11 @@ export default function ProjectsPage() {
               cache[url] = html;
               writeCache(cache);
               try {
-                await supabase.from("projects").update({ embed_html: html }).eq("id", project.id);
+                await fetch("/api/external-embed-cache", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ projectId: project.id, embed_html: html }),
+                });
               } catch (err) {
                 console.warn("Uložení embedu do DB selhalo:", err);
               }
