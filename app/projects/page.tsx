@@ -698,7 +698,7 @@ export default function ProjectsPage() {
                         <p className="text-[12px] text-amber-200">Žádost odeslána, čeká na schválení.</p>
                       )}
                     </div>
-                  ) : (
+                  ) : isExternalProject ? null : (
                     <p className="text-sm text-[var(--mpc-muted)]">Tracklist není dostupný.</p>
                   )}
                 </div>
