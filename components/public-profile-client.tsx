@@ -1878,24 +1878,6 @@ export default function PublicProfileClient({
                     );
                   })()}
 
-                {isExternalProject && (
-                  <div className="mt-4 w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">
-                        Poslechnout na platformě
-                      </span>
-                      <a
-                        href={project.project_url || undefined}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                      >
-                        {externalPlatform || 'Otevřít'}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
                 {!isExternalProject && (
                 <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-center justify-between">
