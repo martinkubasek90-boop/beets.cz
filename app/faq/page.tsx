@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-const faqs = [
+type FaqSection = {
+  id?: string;
+  title: string;
+  items: { q: string; a: string }[];
+};
+
+const faqs: FaqSection[] = [
   {
     title: "Účet a přihlášení",
     items: [
@@ -57,6 +63,36 @@ const faqs = [
       {
         q: "Proč se tracky neukazují?",
         a: "Zkontroluj, že audio bylo opravdu nahrané (nejen název) a že projekt není zamčený bez uděleného přístupu. U zamčených projektů musí mít uživatel schválený grant.",
+      },
+    ],
+  },
+  {
+    id: "import-externi-projekty",
+    title: "Import externích projektů (Spotify/SoundCloud/Bandcamp/Apple Music)",
+    items: [
+      {
+        q: "Jak importovat externí projekt?",
+        a: "V profilu otevři „Import projektu“. Vlož URL projektu a/nebo embed iframe. Klikni na „Načíst“ a poté projekt ulož.",
+      },
+      {
+        q: "Kde najdu embed pro Spotify?",
+        a: "Spotify: otevři album/playlist → klikni na „…“ → Sdílet → Vložit → zkopíruj iframe.\nNápověda: https://support.spotify.com/",
+      },
+      {
+        q: "Kde najdu embed pro SoundCloud?",
+        a: "SoundCloud: Share → Embed → zkopíruj iframe.\nNápověda: https://help.soundcloud.com/",
+      },
+      {
+        q: "Kde najdu embed pro Bandcamp?",
+        a: "Bandcamp: Share/Embed → zkopíruj iframe.\nNápověda: https://get.bandcamp.help/",
+      },
+      {
+        q: "Kde najdu embed pro Apple Music?",
+        a: "Apple Music: Share → Embed (musí být povolený iframe).\nNápověda: https://artists.apple.com/support/1106-embed-apple-music",
+      },
+      {
+        q: "Co když mám jen URL bez embedu?",
+        a: "Stačí URL – systém si stáhne metadata a případně embed doplní. Embed je ale nejlepší pro správné zobrazení přehrávače.",
       },
     ],
   },
@@ -187,6 +223,7 @@ export default function FaqPage() {
           {faqs.map((section) => (
             <section
               key={section.title}
+              id={'id' in section ? section.id : undefined}
               className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/60 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
             >
               <h2 className="text-xl font-semibold text-[var(--mpc-light)]">{section.title}</h2>

@@ -4976,7 +4976,14 @@ const buildAppleEmbed = (url: string) => {
                               className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                             />
                             <p className="text-[10px] text-[var(--mpc-muted)]">
-                              Stačí vložit URL nebo embed — systém automaticky pozná Spotify/SoundCloud/Bandcamp/Apple Music.
+                              Stačí vložit URL a embed — systém automaticky pozná Spotify/SoundCloud/Bandcamp/Apple Music.
+                            </p>
+                            <p className="text-[10px] text-[var(--mpc-muted)]">
+                              Pokud nevíš, jak získat embed z těchto platforem,{" "}
+                              <Link href="/faq#import-externi-projekty" className="text-[var(--mpc-accent)] hover:underline">
+                                zde je návod
+                              </Link>
+                              .
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2">
