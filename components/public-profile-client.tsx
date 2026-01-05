@@ -343,11 +343,11 @@ export default function PublicProfileClient({
   const loadBeats = useCallback(async () => {
     const { data, error } = await supabase
       .from('beats')
-      .select('id, title, bpm, mood, audio_url, cover_url')
+      .select('id, title, bpm, mood, audio_url, cover_url, sort_order')
       .eq('user_id', profileId)
       .eq('visibility', 'public')
-      .order('id', { ascending: false })
-      .limit(10);
+      .order('sort_order', { ascending: true, nullsFirst: true })
+      .order('created_at', { ascending: false });
     if (error) {
       console.error('Chyba načítání beatů:', error);
       setBeatsError('Nepodařilo se načíst beaty.');
@@ -379,19 +379,19 @@ export default function PublicProfileClient({
     try {
       ({ data, error } = await supabase
         .from('projects')
-        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html, sort_order')
         .eq('user_id', profileId)
-        .order('id', { ascending: false })
-        .limit(6));
+        .order('sort_order', { ascending: true, nullsFirst: true })
+        .order('created_at', { ascending: false }));
       if (error) throw error;
     } catch (err) {
       console.warn('Fallback select projects bez embed_html:', err);
       const fallback = await supabase
         .from('projects')
-        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url')
+        .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, sort_order')
         .eq('user_id', profileId)
-        .order('id', { ascending: false })
-        .limit(6);
+        .order('sort_order', { ascending: true, nullsFirst: true })
+        .order('created_at', { ascending: false });
       data = fallback.data as any[] | null;
       error = fallback.error as any;
     }
@@ -615,11 +615,11 @@ export default function PublicProfileClient({
     const loadBeats = async () => {
         const { data, error } = await supabase
           .from('beats')
-          .select('id, title, bpm, mood, audio_url, cover_url')
+          .select('id, title, bpm, mood, audio_url, cover_url, sort_order')
           .eq('user_id', profileId)
           .eq('visibility', 'public')
-          .order('id', { ascending: false })
-          .limit(10);
+          .order('sort_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: false });
       if (error) {
         console.error('Chyba načítání beatů:', error);
         setBeatsError('Nepodařilo se načíst beaty.');

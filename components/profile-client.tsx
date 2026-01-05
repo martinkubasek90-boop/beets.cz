@@ -34,6 +34,7 @@ type BeatItem = {
   mood: string | null;
   audio_url: string | null;
   cover_url?: string | null;
+  sort_order?: number | null;
 };
 
 type AcapellaItem = {
@@ -57,6 +58,7 @@ type ProjectItem = {
   purchase_url?: string | null;
   access_mode?: 'public' | 'request' | 'private';
   tracks_json?: Array<{ name: string; url: string; path?: string | null }>;
+  sort_order?: number | null;
 };
 
 type ImportMetadata = {
@@ -391,13 +393,17 @@ export default function ProfileClient() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null>('creator');
+  const [defaultRole, setDefaultRole] = useState<'superadmin' | 'admin' | 'creator' | 'mc' | 'curator' | null>('creator');
   const [beats, setBeats] = useState<BeatItem[]>([]);
   const [beatsError, setBeatsError] = useState<string | null>(null);
+  const [dragBeatId, setDragBeatId] = useState<number | null>(null);
+  const [dragOverBeatId, setDragOverBeatId] = useState<number | null>(null);
   const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
   const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [dragProjectId, setDragProjectId] = useState<string | null>(null);
+  const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
   const [importProjectOpen, setImportProjectOpen] = useState(false);
   const [importProjectUrl, setImportProjectUrl] = useState('');
   const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
@@ -1041,10 +1047,10 @@ function handleFieldChange(field: keyof Profile, value: string) {
       // načti beaty
       const { data: beatData, error: beatErr } = await supabase
         .from('beats')
-        .select('id, title, bpm, mood, audio_url, cover_url')
+        .select('id, title, bpm, mood, audio_url, cover_url, sort_order')
         .eq('user_id', userId)
-        .order('id', { ascending: false })
-        .limit(10);
+        .order('sort_order', { ascending: true, nullsFirst: true })
+        .order('created_at', { ascending: false });
 
       if (beatErr) {
         console.error('Chyba při načítání beatů:', beatErr);
@@ -1061,20 +1067,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
         try {
           const { data, error } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html')
+            .select('id, title, description, cover_url, project_url, tracks_json, access_mode, release_formats, purchase_url, embed_html, sort_order')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(5);
+            .order('sort_order', { ascending: true, nullsFirst: true })
+            .order('created_at', { ascending: false });
           if (error) throw error;
           projectData = data || [];
         } catch (innerErr) {
           console.warn('Fallback select projects bez project_url/tracks_json:', innerErr);
           const { data, error } = await supabase
             .from('projects')
-            .select('id, title, description, cover_url, access_mode, release_formats, purchase_url')
+            .select('id, title, description, cover_url, access_mode, release_formats, purchase_url, sort_order')
             .eq('user_id', userId)
-            .order('created_at', { ascending: false })
-            .limit(5);
+            .order('sort_order', { ascending: true, nullsFirst: true })
+            .order('created_at', { ascending: false });
           if (error) throw error;
           projectData = data || [];
         }
@@ -1743,6 +1749,65 @@ function handleFieldChange(field: keyof Profile, value: string) {
       item_type: 'beat',
     });
   }
+
+  const reorderList = <T,>(list: T[], fromIndex: number, toIndex: number) => {
+    const next = [...list];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    return next;
+  };
+
+  const persistBeatOrder = async (next: BeatItem[]) => {
+    const payload = next.map((beat, index) => ({
+      id: beat.id,
+      sort_order: index + 1,
+    }));
+    const { error } = await supabase.from('beats').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+  };
+
+  const persistProjectOrder = async (next: ProjectItem[]) => {
+    const payload = next.map((project, index) => ({
+      id: project.id,
+      sort_order: index + 1,
+    }));
+    const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+  };
+
+  const handleBeatDrop = async (targetId: number) => {
+    if (dragBeatId === null || dragBeatId === targetId) return;
+    const fromIndex = beats.findIndex((beat) => beat.id === dragBeatId);
+    const toIndex = beats.findIndex((beat) => beat.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const next = reorderList(beats, fromIndex, toIndex);
+    setBeats(next);
+    setDragBeatId(null);
+    setDragOverBeatId(null);
+    try {
+      await persistBeatOrder(next);
+    } catch (err) {
+      console.error('Chyba při ukládání pořadí beatů:', err);
+      setBeatsError('Nepodařilo se uložit pořadí beatů.');
+    }
+  };
+
+  const handleProjectDrop = async (targetId: string) => {
+    if (!dragProjectId || dragProjectId === targetId) return;
+    const fromIndex = projects.findIndex((project) => project.id === dragProjectId);
+    const toIndex = projects.findIndex((project) => project.id === targetId);
+    if (fromIndex === -1 || toIndex === -1) return;
+    const next = reorderList(projects, fromIndex, toIndex);
+    setProjects(next);
+    setDragProjectId(null);
+    setDragOverProjectId(null);
+    try {
+      await persistProjectOrder(next);
+    } catch (err) {
+      console.error('Chyba při ukládání pořadí projektů:', err);
+      setProjectsError('Nepodařilo se uložit pořadí projektů.');
+    }
+  };
 
   function handlePlayAcapella(item: AcapellaItem) {
     if (!item.audio_url) {
@@ -3454,15 +3519,18 @@ const buildAppleEmbed = (url: string) => {
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
-                      {t('profile.beats.title', 'Moje beaty')}
-                    </h2>
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
-                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
-                    <span className="text-[var(--mpc-dark)]">•</span>
-                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
+                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
+                    {t('profile.beats.title', 'Moje beaty')}
+                  </h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{beats.length} {t('profile.items', 'položek')}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Přetáhni pro změnu pořadí
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
+                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
+                  <span className="text-[var(--mpc-dark)]">•</span>
+                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
                   </div>
                 </div>
                 {SHOW_SHARE_FEATURE && shareMessage && (
@@ -3481,10 +3549,33 @@ const buildAppleEmbed = (url: string) => {
                 </div>
                 ) : (
                 <div className="space-y-3">
-                  {beats.map((beat) => (
+                  {beats.map((beat) => {
+                    const isDragOver = dragOverBeatId === beat.id && dragBeatId !== beat.id;
+                    const isDragging = dragBeatId === beat.id;
+                    return (
                     <div
                       key={beat.id}
-                      className={`rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)] ${currentBeat?.id === beat.id ? 'bg-[var(--mpc-panel)]/80' : ''}`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', String(beat.id));
+                        setDragBeatId(beat.id);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverBeatId(beat.id);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        void handleBeatDrop(beat.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragBeatId(null);
+                        setDragOverBeatId(null);
+                      }}
+                      className={`rounded-2xl border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
+                        isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
+                      } ${isDragging ? 'opacity-70' : ''} ${currentBeat?.id === beat.id ? 'bg-[var(--mpc-panel)]/80' : 'bg-[var(--mpc-panel)]'} hover:border-[var(--mpc-accent)]`}
                       style={
                         beat.cover_url
                           ? {
@@ -3499,7 +3590,10 @@ const buildAppleEmbed = (url: string) => {
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-base font-semibold text-[var(--mpc-light)]">{beat.title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">{beat.title}</p>
+                          </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
                           </p>
@@ -3645,7 +3739,8 @@ const buildAppleEmbed = (url: string) => {
                         )}
                       </div>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>
@@ -3992,6 +4087,9 @@ const buildAppleEmbed = (url: string) => {
                     {t('profile.projects.title', 'Moje projekty')}
                   </h2>
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{projects.length} {t('profile.items', 'položek')}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Přetáhni pro změnu pořadí
+                  </p>
                 </div>
               </div>
               {projectsError && (
@@ -4026,14 +4124,39 @@ const buildAppleEmbed = (url: string) => {
                           backgroundPosition: 'center',
                         }
                       : undefined;
+                    const isDragOver = dragOverProjectId === project.id && dragProjectId !== project.id;
+                    const isDragging = dragProjectId === project.id;
                     return (
                       <div
                         key={project.id}
-                        className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)]"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', project.id);
+                          setDragProjectId(project.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOverProjectId(project.id);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          void handleProjectDrop(project.id);
+                        }}
+                        onDragEnd={() => {
+                          setDragProjectId(null);
+                          setDragOverProjectId(null);
+                        }}
+                        className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
+                          isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
+                        } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
                         style={projectStyle}
                       >
                         <div>
-                          <p className="font-semibold">{project.title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
+                            <p className="font-semibold">{project.title}</p>
+                          </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {project.description || 'Bez popisu'}
                           </p>
