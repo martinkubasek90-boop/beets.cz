@@ -158,9 +158,14 @@ export default function ProjectsPage() {
               setProjectEmbeds((prev) => ({ ...prev, [project.id]: html }));
               cache[url] = html;
               writeCache(cache);
+              try {
+                await supabase.from("projects").update({ embed_html: html }).eq("id", project.id);
+              } catch (err) {
+                console.warn("Uložení embedu do DB selhalo:", err);
+              }
             }
-          } catch {
-            // ignore
+          } catch (err) {
+            console.warn("Embed fetch selhal:", err);
           }
         })
       );
