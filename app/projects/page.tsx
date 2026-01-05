@@ -648,60 +648,60 @@ export default function ProjectsPage() {
                 </div>
 
                 {/* Hlavní track */}
-                <div className="mt-5 w-full rounded-xl border border-white/10 bg-black/40 p-3">
-                  {primaryTrack && project.hasAccess ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between gap-3">
-                        <button
-                          onClick={() => handlePlay(project, primaryTrack, 0)}
-                          disabled={!primaryTrack.url}
-                          className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)] disabled:opacity-40"
-                        >
-                          {isCurrentPrimary && isPlaying ? "▮▮" : "►"}
-                        </button>
-                        <div className="flex-1 min-w-[180px]">
-                          <p className="text-center text-sm font-semibold text-white">
-                            {primaryTrack.name || "Track"}
-                          </p>
-                          <div
-                            className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
-                            onClick={(e) => {
-                              if (!isCurrentPrimary) return;
-                              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                              seek((e.clientX - rect.left) / rect.width);
-                            }}
+                {(primaryTrack && project.hasAccess) || (project.access_mode === "request" && !project.hasAccess) ? (
+                  <div className="mt-5 w-full rounded-xl border border-white/10 bg-black/40 p-3">
+                    {primaryTrack && project.hasAccess ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <button
+                            onClick={() => handlePlay(project, primaryTrack, 0)}
+                            disabled={!primaryTrack.url}
+                            className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)] disabled:opacity-40"
                           >
+                            {isCurrentPrimary && isPlaying ? "▮▮" : "►"}
+                          </button>
+                          <div className="flex-1 min-w-[180px]">
+                            <p className="text-center text-sm font-semibold text-white">
+                              {primaryTrack.name || "Track"}
+                            </p>
                             <div
-                              className="h-full rounded-full bg-[var(--mpc-accent)]"
-                              style={{ width: progressPct }}
-                            />
-                          </div>
-                          <div className="mt-1 flex justify-between text-[10px] text-[var(--mpc-muted)]">
-                            <span>{Math.floor(isCurrentPrimary ? currentTime : 0)} s</span>
-                            <span>{isCurrentPrimary && duration ? Math.floor(duration) : "--"} s</span>
+                              className="mt-2 h-2 cursor-pointer overflow-hidden rounded-full bg-white/10"
+                              onClick={(e) => {
+                                if (!isCurrentPrimary) return;
+                                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                                seek((e.clientX - rect.left) / rect.width);
+                              }}
+                            >
+                              <div
+                                className="h-full rounded-full bg-[var(--mpc-accent)]"
+                                style={{ width: progressPct }}
+                              />
+                            </div>
+                            <div className="mt-1 flex justify-between text-[10px] text-[var(--mpc-muted)]">
+                              <span>{Math.floor(isCurrentPrimary ? currentTime : 0)} s</span>
+                              <span>{isCurrentPrimary && duration ? Math.floor(duration) : "--"} s</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ) : project.access_mode === "request" && !project.hasAccess ? (
-                    <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
-                      <p>Projekt je na žádost.</p>
-                      <button
-                        type="button"
-                        onClick={() => requestAccess(project.id)}
-                        disabled={requesting[project.id]}
-                        className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
-                      >
-                        {requesting[project.id] ? "Odesílám…" : "Požádat o přístup"}
-                      </button>
-                      {myRequests[project.id] === "pending" && (
-                        <p className="text-[12px] text-amber-200">Žádost odeslána, čeká na schválení.</p>
-                      )}
-                    </div>
-                  ) : isExternalProject ? null : (
-                    <p className="text-sm text-[var(--mpc-muted)]">Tracklist není dostupný.</p>
-                  )}
-                </div>
+                    ) : (
+                      <div className="space-y-3 text-sm text-[var(--mpc-muted)] text-center flex flex-col items-center">
+                        <p>Projekt je na žádost.</p>
+                        <button
+                          type="button"
+                          onClick={() => requestAccess(project.id)}
+                          disabled={requesting[project.id]}
+                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-60"
+                        >
+                          {requesting[project.id] ? "Odesílám…" : "Požádat o přístup"}
+                        </button>
+                        {myRequests[project.id] === "pending" && (
+                          <p className="text-[12px] text-amber-200">Žádost odeslána, čeká na schválení.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
                 {/* Tracklist */}
                 {playableTracks.length > 0 && project.hasAccess && (
