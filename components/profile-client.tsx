@@ -1758,20 +1758,29 @@ function handleFieldChange(field: keyof Profile, value: string) {
   };
 
   const persistBeatOrder = async (next: BeatItem[]) => {
-    const payload = next.map((beat, index) => ({
-      id: beat.id,
-      sort_order: index + 1,
-    }));
-    const { error } = await supabase.from('beats').upsert(payload, { onConflict: 'id' });
+    if (!userId) throw new Error('Missing userId');
+    const updates = next.map((beat, index) =>
+      supabase
+        .from('beats')
+        .update({ sort_order: index + 1 })
+        .eq('id', beat.id)
+        .eq('user_id', userId)
+    );
+    const results = await Promise.all(updates);
+    const error = results.find((res) => res.error)?.error;
     if (error) throw error;
   };
 
   const persistProjectOrder = async (next: ProjectItem[]) => {
-    const payload = next.map((project, index) => ({
-      id: project.id,
-      sort_order: index + 1,
-    }));
-    const { error } = await supabase.from('projects').upsert(payload, { onConflict: 'id' });
+    if (!userId) throw new Error('Missing userId');
+    const updates = next.map((project, index) =>
+      supabase
+        .from('projects')
+        .update({ sort_order: index + 1 })
+        .eq('id', project.id)
+        .eq('user_id', userId)
+    );
+    const error = (await Promise.all(updates)).find((res) => res.error)?.error;
     if (error) throw error;
   };
 
@@ -1786,9 +1795,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setDragOverBeatId(null);
     try {
       await persistBeatOrder(next);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chyba při ukládání pořadí beatů:', err);
-      setBeatsError('Nepodařilo se uložit pořadí beatů.');
+      const message = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
+      if (message.includes('sort_order')) {
+        setBeatsError('Nepodařilo se uložit pořadí beatů. Chybí sloupec sort_order v DB.');
+      } else {
+        setBeatsError('Nepodařilo se uložit pořadí beatů.');
+      }
     }
   };
 
@@ -1803,9 +1817,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setDragOverProjectId(null);
     try {
       await persistProjectOrder(next);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chyba při ukládání pořadí projektů:', err);
-      setProjectsError('Nepodařilo se uložit pořadí projektů.');
+      const message = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
+      if (message.includes('sort_order')) {
+        setProjectsError('Nepodařilo se uložit pořadí projektů. Chybí sloupec sort_order v DB.');
+      } else {
+        setProjectsError('Nepodařilo se uložit pořadí projektů.');
+      }
     }
   };
 
