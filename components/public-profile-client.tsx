@@ -331,6 +331,7 @@ export default function PublicProfileClient({
     duration,
     play,
     pause,
+    prefetch,
     toggle,
     seek,
     setOnEnded,
@@ -1000,6 +1001,9 @@ export default function PublicProfileClient({
                   subtitle: profile?.display_name || null,
                 })
               }
+              onMouseEnter={() => prefetch(beat.audio_url || '')}
+              onFocus={() => prefetch(beat.audio_url || '')}
+              onTouchStart={() => prefetch(beat.audio_url || '')}
               disabled={!beat.audio_url}
               className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0 md:mr-6"
             >
@@ -1708,6 +1712,9 @@ export default function PublicProfileClient({
                                 subtitle: profile?.display_name || null,
                               })
                             }
+                            onMouseEnter={() => prefetch(item.audio_url || '')}
+                            onFocus={() => prefetch(item.audio_url || '')}
+                            onTouchStart={() => prefetch(item.audio_url || '')}
                             disabled={!item.audio_url}
                             className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                           >
@@ -1888,6 +1895,9 @@ export default function PublicProfileClient({
                               meta: primaryMeta,
                             })
                           }
+                          onMouseEnter={() => prefetch(primary.url || '')}
+                          onFocus={() => prefetch(primary.url || '')}
+                          onTouchStart={() => prefetch(primary.url || '')}
                           className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
                         >
                           {isCurrent && isPlaying ? '▮▮' : '►'}
@@ -1984,6 +1994,9 @@ export default function PublicProfileClient({
                                       meta: { projectId: project.id, trackIndex: idx },
                                     })
                                   }
+                                  onMouseEnter={() => prefetch(t.url || '')}
+                                  onFocus={() => prefetch(t.url || '')}
+                                  onTouchStart={() => prefetch(t.url || '')}
                                   disabled={!t.url}
                                   className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
                                 >
@@ -2210,6 +2223,9 @@ export default function PublicProfileClient({
                             subtitle: col.partners.join(' • ') || profile?.display_name || null,
                           })
                         }
+                        onMouseEnter={() => prefetch(col.audio_url || '')}
+                        onFocus={() => prefetch(col.audio_url || '')}
+                        onTouchStart={() => prefetch(col.audio_url || '')}
                         disabled={!col.audio_url}
                         className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
                       >

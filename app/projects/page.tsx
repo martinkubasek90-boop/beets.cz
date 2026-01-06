@@ -144,7 +144,7 @@ export default function ProjectsPage() {
   const [curatorFilter, setCuratorFilter] = useState<"all" | "curated" | string>("all");
   const [projectEmbeds, setProjectEmbeds] = useState<Record<number, string>>({});
 
-  const { play, pause, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const { play, pause, prefetch, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
   const [embedResetNonce, setEmbedResetNonce] = useState(0);
   const prevPlayingRef = useRef(false);
   const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
@@ -666,6 +666,9 @@ export default function ProjectsPage() {
                         <div className="flex items-center justify-between gap-3">
                           <button
                             onClick={() => handlePlay(project, primaryTrack, 0)}
+                            onMouseEnter={() => prefetch(primaryTrack.url || "")}
+                            onFocus={() => prefetch(primaryTrack.url || "")}
+                            onTouchStart={() => prefetch(primaryTrack.url || "")}
                             disabled={!primaryTrack.url}
                             className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mpc-accent)] text-black font-bold shadow-[0_10px_24px_rgba(243,116,51,0.35)] disabled:opacity-40"
                           >
@@ -750,6 +753,9 @@ export default function ProjectsPage() {
                                 <button
                                   disabled={!t.url}
                                   onClick={() => handlePlay(project, t, idx)}
+                                  onMouseEnter={() => prefetch(t.url || "")}
+                                  onFocus={() => prefetch(t.url || "")}
+                                  onTouchStart={() => prefetch(t.url || "")}
                                   className="rounded-full border border-[var(--mpc-accent)] px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white disabled:opacity-40"
                                 >
                                   {isCurrent && isPlaying ? "▮▮" : "►"}

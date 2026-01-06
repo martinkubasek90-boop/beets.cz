@@ -25,6 +25,7 @@ type PlayerCtx = {
   currentTime: number;
   duration: number;
   play: (track: Track) => void;
+  prefetch: (url: string) => void;
   setQueue: (tracks: Track[], startId?: Track["id"], autoplay?: boolean) => void;
   toggle: () => void;
   pause: () => void;
@@ -57,6 +58,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
+      audioRef.current.preload = "metadata";
     }
     const el = audioRef.current;
     if (!el) return;
@@ -87,6 +89,20 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       .play()
       .then(() => setIsPlaying(true))
       .catch(() => setIsPlaying(false));
+  }, []);
+
+  const prefetchedRef = useRef<Set<string>>(new Set());
+  const prefetch = useCallback((url: string) => {
+    if (!url || prefetchedRef.current.has(url)) return;
+    try {
+      const audio = new Audio();
+      audio.preload = "metadata";
+      audio.src = url;
+      audio.load();
+      prefetchedRef.current.add(url);
+    } catch {
+      // ignore prefetch errors
+    }
   }, []);
 
   const toggle = useCallback(() => {
@@ -230,6 +246,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       currentTime,
       duration,
       play,
+      prefetch,
       setQueue,
       toggle,
       pause,
@@ -238,7 +255,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       setOnNext,
       setOnPrev,
     }),
-    [current, isPlaying, currentTime, duration, play, setQueue, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
+    [current, isPlaying, currentTime, duration, play, prefetch, setQueue, toggle, pause, seek, setOnEnded, setOnNext, setOnPrev]
   );
 
   const derivedItemType =

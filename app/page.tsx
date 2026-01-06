@@ -920,6 +920,7 @@ export default function Home() {
   const [embedResetNonce, setEmbedResetNonce] = useState(0);
   const {
     play: gpPlay,
+    prefetch: gpPrefetch,
     toggle: gpToggle,
     pause: gpPause,
     current: gpCurrent,
@@ -1009,217 +1010,8 @@ export default function Home() {
   }, [supabase]);
 
   useEffect(() => {
-    const loadBeats = async () => {
-      try {
-        setIsLoadingBeats(true);
-
-        const startOfMonth = new Date();
-        startOfMonth.setUTCDate(1);
-        startOfMonth.setUTCHours(0, 0, 0, 0);
-
-        const { data, error } = await supabase
-          .from('beats')
-          .select('id, title, artist, user_id, bpm, mood, audio_url, cover_url, created_at')
-          .not('audio_url', 'is', null)
-          .eq('visibility', 'public')
-          .order('created_at', { ascending: false })
-          .limit(12);
-
-        if (error) {
-          setBeatsError(`Nepodařilo se načíst beaty ze Supabase: ${error.message}. Zobrazuji lokální demo data.`);
-          setBeats(dummyBeats);
-          setBeatAuthorNames({});
-        } else if (data && data.length > 0) {
-          const ids = Array.from(new Set((data as any[]).map((b) => b.user_id).filter(Boolean) as string[]));
-          const beatIds = Array.from(new Set((data as any[]).map((b) => b.id).filter(Boolean)));
-
-          // Jména autorů
-          let profileProfiles: Record<string, { name: string; avatar_url: string | null; slug: string | null }> = {};
-          if (ids.length) {
-            const { data: profiles } = await supabase
-              .from('profiles')
-              .select('id, display_name, avatar_url, slug')
-              .in('id', ids);
-            if (profiles) {
-              profileProfiles = Object.fromEntries(
-                (profiles as any[]).map((p) => [
-                  p.id,
-                  { name: p.display_name || '', avatar_url: p.avatar_url || null, slug: (p as any)?.slug ?? null },
-                ])
-              );
-              setBeatAuthorNames(Object.fromEntries(Object.entries(profileProfiles).map(([id, v]) => [id, v.name])));
-            }
-          }
-
-          // Měsíční ohně pro každého beatu
-          let firesMap: Record<string, number> = {};
-          if (beatIds.length) {
-            const { data: fires } = await supabase
-              .from('fires')
-              .select('item_id, created_at')
-              .eq('item_type', 'beat')
-              .in('item_id', beatIds.map(String))
-              .gte('created_at', startOfMonth.toISOString());
-            firesMap = (fires ?? []).reduce<Record<string, number>>((acc, row: any) => {
-              const id = String(row.item_id);
-              acc[id] = (acc[id] || 0) + 1;
-              return acc;
-            }, {});
-          }
-
-          const mappedBeats = (data as any[]).map((b) => ({
-            ...b,
-            artist: b.user_id ? profileProfiles[b.user_id]?.name || b.artist || '' : b.artist || '',
-            author_avatar: b.user_id ? profileProfiles[b.user_id]?.avatar_url ?? null : null,
-            author_slug: b.user_id ? profileProfiles[b.user_id]?.slug ?? null : null,
-            monthlyFires: firesMap[String(b.id)] || 0,
-          })) as Beat[];
-
-          mappedBeats.sort((a, b) => {
-            const fireDiff = (b.monthlyFires || 0) - (a.monthlyFires || 0);
-            if (fireDiff !== 0) return fireDiff;
-            const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return bDate - aDate;
-          });
-
-          if (!mappedBeats.length) {
-            setBeats(dummyBeats);
-            setBeatsError(null);
-            setBeatAuthorNames({});
-            return;
-          }
-
-          setBeats(mappedBeats);
-          setBeatsError(null);
-        } else {
-          setBeats(dummyBeats);
-          setBeatsError(null);
-          setBeatAuthorNames({});
-        }
-      } catch (err) {
-        console.error('Neočekávaná chyba při načítání beatů:', err);
-        setBeatsError('Neočekávaná chyba při načítání beatů. Zobrazuji lokální demo data.');
-        setBeats(dummyBeats);
-        setBeatAuthorNames({});
-      } finally {
-        setIsLoadingBeats(false);
-      }
-    };
-
-    loadBeats();
-  }, [supabase]);
-
-  useEffect(() => {
     setBeatPage(0);
   }, [beats.length]);
-
-  useEffect(() => {
-    const loadProjects = async () => {
-      setIsLoadingProjects(true);
-      try {
-        let data: any[] | null = null;
-        try {
-          const { data: d1, error: err1 } = await supabase
-            .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json, author_name, access_mode, release_formats, purchase_url')
-            .eq('access_mode', 'public')
-            .order('id', { ascending: false })
-            .limit(2);
-          if (err1) throw err1;
-          data = d1 as any[] | null;
-        } catch (innerErr) {
-          // Fallback pro schéma bez author_name
-          console.warn('Fallback načítání projektů bez author_name:', innerErr);
-            const { data: d2, error: err2 } = await supabase
-            .from('projects')
-            .select('id, title, description, cover_url, user_id, project_url, tracks_json, access_mode, release_formats, purchase_url')
-            .eq('access_mode', 'public')
-            .order('id', { ascending: false })
-            .limit(2);
-          if (err2) throw err2;
-          data = d2 as any[] | null;
-        }
-
-        if (data && data.length > 0) {
-          const mapped = (data as any[]).map((p) => {
-            const raw = (p as any).tracks_json;
-            const parsed =
-              Array.isArray(raw)
-                ? raw
-                : typeof raw === 'string'
-                  ? (() => {
-                      try {
-                        const json = JSON.parse(raw);
-                        return Array.isArray(json) ? json : null;
-                      } catch {
-                        return null;
-                      }
-                    })()
-                  : null;
-            const tracksSource = parsed ?? [];
-            const tracks =
-              tracksSource.length > 0
-                ? tracksSource.map((t: any, idx: number) => ({
-                    id: `${p.id}-${idx + 1}`,
-                    title: t?.name || t?.title || `Track ${idx + 1}`,
-                    url: t?.url || t?.audio_url || '',
-                  }))
-                : (p as any).project_url
-                  ? [
-                      {
-                        id: `${p.id}-1`,
-                        title: p.title || 'Ukázka projektu',
-                        url: (p as any).project_url,
-                      },
-                    ]
-                  : [];
-
-            return {
-              ...p,
-              tracks,
-              author_name: (p as any).author_name || null,
-            };
-          });
-          const userIds = Array.from(
-            new Set(mapped.map((p: any) => p.user_id).filter(Boolean) as string[]),
-          );
-          let profileNames: Record<string, string> = {};
-          if (userIds.length) {
-            const { data: profiles } = await supabase
-              .from('profiles')
-              .select('id, display_name')
-              .in('id', userIds);
-            if (profiles) {
-              profileNames = Object.fromEntries(
-                (profiles as any[]).map((pr) => [pr.id, pr.display_name || ''])
-              );
-            }
-          }
-          const withNames = mapped.map((p: any) => {
-            const fromProfile = p.user_id ? profileNames[p.user_id] || null : null;
-            return {
-              ...p,
-              author_name: p.author_name || fromProfile,
-            };
-          });
-          setProjects((withNames as Project[]).slice(0, 2));
-          setProjectsError(null);
-        } else {
-          setProjects(dummyProjects.slice(0, 2));
-          setProjectsError(null);
-        }
-      } catch (err) {
-        console.error('Neočekávaná chyba při načítání projektů:', err);
-        setProjectsError('Neočekávaná chyba při načítání projektů. Zobrazuji demo data.');
-        setProjects(dummyProjects.slice(0, 2));
-      } finally {
-        setIsLoadingProjects(false);
-      }
-    };
-
-    loadProjects();
-  }, [supabase]);
 
   useEffect(() => {
     const loadForum = async () => {
@@ -1854,11 +1646,11 @@ export default function Home() {
                 </div>
 
                 <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                  {isExternalProject ? (
-                    <div className="space-y-2">
-                      <div
-                        className="flex justify-center"
-                      >
+              {isExternalProject ? (
+                <div className="space-y-2">
+                  <div
+                    className="flex justify-center"
+                  >
                       <div className="relative w-full max-w-[720px]">
                         <div
                           key={`embed-${project.id}-${embedResetNonce}`}
@@ -1883,6 +1675,9 @@ export default function Home() {
                         onClick={() =>
                           project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
                         }
+                        onMouseEnter={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                        onFocus={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                        onTouchStart={() => gpPrefetch(project.tracks?.[0]?.url || '')}
                         className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
                       >
                         {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
@@ -2263,6 +2058,9 @@ export default function Home() {
                           handlePlay(beat.audio_url, beat);
                         }
                       }}
+                      onMouseEnter={() => gpPrefetch(beat.audio_url || '')}
+                      onFocus={() => gpPrefetch(beat.audio_url || '')}
+                      onTouchStart={() => gpPrefetch(beat.audio_url || '')}
                       disabled={!beat.audio_url}
                     >
                       {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
