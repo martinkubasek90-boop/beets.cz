@@ -398,12 +398,14 @@ export default function ProfileClient() {
   const [beatsError, setBeatsError] = useState<string | null>(null);
   const [dragBeatId, setDragBeatId] = useState<number | null>(null);
   const [dragOverBeatId, setDragOverBeatId] = useState<number | null>(null);
+  const [beatsOrderSaved, setBeatsOrderSaved] = useState(false);
   const [acapellas, setAcapellas] = useState<AcapellaItem[]>([]);
   const [acapellasError, setAcapellasError] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
+  const [projectsOrderSaved, setProjectsOrderSaved] = useState(false);
   const [importProjectOpen, setImportProjectOpen] = useState(false);
   const [importProjectUrl, setImportProjectUrl] = useState('');
   const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
@@ -1795,6 +1797,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setDragOverBeatId(null);
     try {
       await persistBeatOrder(next);
+      setBeatsOrderSaved(true);
+      window.setTimeout(() => setBeatsOrderSaved(false), 2000);
     } catch (err: any) {
       console.error('Chyba při ukládání pořadí beatů:', err);
       const message = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
@@ -1817,6 +1821,8 @@ function handleFieldChange(field: keyof Profile, value: string) {
     setDragOverProjectId(null);
     try {
       await persistProjectOrder(next);
+      setProjectsOrderSaved(true);
+      window.setTimeout(() => setProjectsOrderSaved(false), 2000);
     } catch (err: any) {
       console.error('Chyba při ukládání pořadí projektů:', err);
       const message = typeof err?.message === 'string' ? err.message.toLowerCase() : '';
@@ -3562,6 +3568,11 @@ const buildAppleEmbed = (url: string) => {
                     {beatsError}
                   </div>
                 )}
+                {beatsOrderSaved && (
+                  <div className="mb-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                    Pořadí beatů bylo uloženo.
+                  </div>
+                )}
                 {beats.length === 0 ? (
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-6 text-sm text-[var(--mpc-muted)]">
                   Zatím žádné beaty. Nahraj první beat a ukaž se.
@@ -4114,6 +4125,11 @@ const buildAppleEmbed = (url: string) => {
               {projectsError && (
                 <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
                   {projectsError}
+                </div>
+              )}
+              {projectsOrderSaved && (
+                <div className="mb-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                  Pořadí projektů bylo uloženo.
                 </div>
               )}
               {projects.length === 0 ? (
