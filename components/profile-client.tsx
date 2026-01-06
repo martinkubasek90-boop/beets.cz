@@ -5158,7 +5158,16 @@ const buildAppleEmbed = (url: string) => {
                           }}
                           className="mt-3 w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white hover:border-[var(--mpc-accent)]"
                         >
-                          {importProjectOpen ? 'Schovat import' : 'Import projektu z Spotify / SoundCloud / Bandcamp'}
+                          {importProjectOpen ? (
+                            'Schovat import'
+                          ) : (
+                            <span className="flex flex-col leading-tight">
+                              <span>Import projektu</span>
+                              <span className="text-[11px] tracking-[0.2em] text-[var(--mpc-muted)]">
+                                Spotify / SoundCloud / Bandcamp / Apple Music
+                              </span>
+                            </span>
+                          )}
                         </button>
                       )}
                       {openSections.projectUpload && (
