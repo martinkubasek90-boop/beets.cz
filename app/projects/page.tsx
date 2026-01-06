@@ -144,12 +144,21 @@ export default function ProjectsPage() {
   const [curatorFilter, setCuratorFilter] = useState<"all" | "curated" | string>("all");
   const [projectEmbeds, setProjectEmbeds] = useState<Record<number, string>>({});
 
-  const { play, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const { play, pause, seek, current, isPlaying, currentTime, duration, setOnEnded, setOnNext, setOnPrev } = useGlobalPlayer();
+  const [embedResetNonce, setEmbedResetNonce] = useState(0);
+  const prevPlayingRef = useRef(false);
   const projectQueueRef = useRef<{ project: Project; playable: { track: ProjectTrack; idx: number }[]; currentIdx: number } | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
   }, [supabase]);
+
+  useEffect(() => {
+    if (isPlaying && !prevPlayingRef.current) {
+      setEmbedResetNonce((prev) => prev + 1);
+    }
+    prevPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   useEffect(() => {
     let active = true;
@@ -758,10 +767,22 @@ export default function ProjectsPage() {
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                     <div className="mt-2 flex justify-center">
-                      <div
-                        className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
-                      />
+                      <div className="relative w-full max-w-[720px]">
+                        <div
+                          key={`embed-${project.id}-${embedResetNonce}`}
+                          className="min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                          dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
+                        />
+                        {isPlaying && (
+                          <button
+                            type="button"
+                            onClick={() => pause()}
+                            className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
+                          >
+                            Klikni pro vypnutí interního přehrávače
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

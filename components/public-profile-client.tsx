@@ -330,13 +330,23 @@ export default function PublicProfileClient({
     currentTime,
     duration,
     play,
+    pause,
     toggle,
     seek,
     setOnEnded,
     setOnNext,
     setOnPrev,
   } = useGlobalPlayer();
+  const [embedResetNonce, setEmbedResetNonce] = useState(0);
+  const prevPlayingRef = useRef(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isPlaying && !prevPlayingRef.current) {
+      setEmbedResetNonce((prev) => prev + 1);
+    }
+    prevPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   const handleCuratorStar = async (itemType: 'beat' | 'project', itemId: string) => {
     if (!currentUserId || currentUserRole !== 'curator') {
@@ -2014,10 +2024,22 @@ export default function PublicProfileClient({
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   <div className="mt-2 flex justify-center">
-                    <div
-                      className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                      dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
-                    />
+                    <div className="relative w-full max-w-[720px]">
+                      <div
+                        key={`embed-${project.id}-${embedResetNonce}`}
+                        className="min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
+                      />
+                      {isPlaying && (
+                        <button
+                          type="button"
+                          onClick={() => pause()}
+                          className="absolute inset-0 grid place-items-center rounded-xl bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
+                        >
+                          Klikni pro vypnutí interního přehrávače
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

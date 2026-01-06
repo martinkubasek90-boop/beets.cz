@@ -882,6 +882,7 @@ export default function Home() {
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
   const [homeExpandedProjects, setHomeExpandedProjects] = useState<Record<number | string, boolean>>({});
+  const [embedResetNonce, setEmbedResetNonce] = useState(0);
   const {
     play: gpPlay,
     toggle: gpToggle,
@@ -896,6 +897,7 @@ export default function Home() {
     setOnNext,
     setOnPrev,
   } = useGlobalPlayer();
+  const prevGpPlayingRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -905,6 +907,13 @@ export default function Home() {
     setCurrentTime(gpTime);
     setDuration(gpDuration);
   }, [gpCurrent, gpIsPlaying, gpTime, gpDuration]);
+
+  useEffect(() => {
+    if (gpIsPlaying && !prevGpPlayingRef.current) {
+      setEmbedResetNonce((prev) => prev + 1);
+    }
+    prevGpPlayingRef.current = gpIsPlaying;
+  }, [gpIsPlaying]);
 
   const projectTrackProgress = (trackId: number | string) => {
     if (currentTrack?.id === trackId && duration) {
@@ -1807,13 +1816,25 @@ export default function Home() {
                       <div
                         className="flex justify-center"
                       >
+                      <div className="relative w-full max-w-[720px]">
                         <div
-                          className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                          key={`embed-${project.id}-${embedResetNonce}`}
+                          className="min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
                           dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
                         />
+                        {gpIsPlaying && (
+                          <button
+                            type="button"
+                            onClick={() => gpPause()}
+                            className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
+                          >
+                            Klikni pro vypnutí interního přehrávače
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ) : (
+                  </div>
+                ) : (
                     <div className="mx-auto flex max-w-3xl items-center gap-3">
                       <button
                         onClick={() =>
