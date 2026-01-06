@@ -110,6 +110,24 @@ const getExternalPlatform = (value?: string | null) => {
 };
 
 const EMBED_HEIGHT = 152;
+const toSupabaseThumb = (url: string | null | undefined, width = 512, quality = 70) => {
+  if (!url) return url ?? null;
+  if (url.includes('/storage/v1/render/image/public/')) return url;
+  const marker = '/storage/v1/object/public/';
+  if (!url.includes(marker)) return url;
+  try {
+    const [base, rest] = url.split(marker);
+    const path = rest.split('?')[0];
+    const params = new URLSearchParams({
+      width: String(width),
+      quality: String(quality),
+      resize: 'contain',
+    });
+    return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
+  } catch {
+    return url;
+  }
+};
 
 const normalizeEmbedHtml = (html: string) => {
   if (!html) return '';
@@ -146,6 +164,8 @@ const normalizeEmbedHtml = (html: string) => {
       'border:0',
       'width:100%',
       `height:${EMBED_HEIGHT}px`,
+      'max-width:720px',
+      'margin:0 auto',
       'border-radius:12px',
       'background:#111111',
       'display:block',
@@ -940,7 +960,7 @@ export default function PublicProfileClient({
               <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
                 {beat.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
+                  <img src={toSupabaseThumb(beat.cover_url, 256) ?? beat.cover_url} alt={beat.title} className="h-full w-full object-cover" />
                 ) : (
                   <span>{beat.title.slice(0, 2)}</span>
                 )}
@@ -1653,10 +1673,10 @@ export default function PublicProfileClient({
                         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                           <div className="flex items-center gap-3">
                             <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
-                              {item.cover_url ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={item.cover_url} alt={item.title} className="h-full w-full object-cover" />
-                              ) : (
+                                {item.cover_url ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={toSupabaseThumb(item.cover_url, 256) ?? item.cover_url} alt={item.title} className="h-full w-full object-cover" />
+                                ) : (
                                 <span>{item.title.slice(0, 2)}</span>
                               )}
                             </div>
@@ -1773,7 +1793,7 @@ export default function PublicProfileClient({
                     style={
                       project.cover_url
                         ? {
-                            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${project.cover_url})`,
+                            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${toSupabaseThumb(project.cover_url, 960) ?? project.cover_url})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }
@@ -1802,7 +1822,7 @@ export default function PublicProfileClient({
                       <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
                         {project.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={project.cover_url} alt={project.title} className="h-full w-full object-cover" />
+                          <img src={toSupabaseThumb(project.cover_url, 512) ?? project.cover_url} alt={project.title} className="h-full w-full object-cover" />
                         ) : (
                           <span>{project.title.slice(0, 2)}</span>
                         )}
@@ -1993,10 +2013,12 @@ export default function PublicProfileClient({
               {(project.embed_html || projectEmbeds[project.id]) && (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
-                  <div
-                    className="mt-2 min-h-[152px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                    dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
-                  />
+                  <div className="mt-2 flex justify-center">
+                    <div
+                      className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                      dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
+                    />
+                  </div>
                 </div>
               )}
 
