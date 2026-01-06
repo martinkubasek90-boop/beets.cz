@@ -329,15 +329,22 @@ const toSupabaseThumb = (url: string, width = 640, quality = 70) => {
 const CoverImage = ({
   src,
   alt,
+  fallbackSrc,
   className,
   imgClassName,
 }: {
   src: string;
   alt: string;
+  fallbackSrc?: string;
   className?: string;
   imgClassName?: string;
 }) => {
+  const [currentSrc, setCurrentSrc] = useState(src);
   const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setCurrentSrc(src);
+    setLoaded(false);
+  }, [src]);
   return (
     <div className={`relative h-full w-full ${className || ''}`}>
       <div
@@ -345,12 +352,20 @@ const CoverImage = ({
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={currentSrc}
         alt={alt}
         className={`h-full w-full transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName || ''}`}
         loading="lazy"
         decoding="async"
         onLoad={() => setLoaded(true)}
+        onError={() => {
+          if (fallbackSrc && currentSrc !== fallbackSrc) {
+            setCurrentSrc(fallbackSrc);
+            setLoaded(false);
+          } else {
+            setLoaded(true);
+          }
+        }}
       />
     </div>
   );
@@ -1595,6 +1610,7 @@ export default function Home() {
                           <CoverImage
                             src={toSupabaseThumb(project.cover_url, 480)}
                             alt={project.title}
+                            fallbackSrc={project.cover_url}
                             imgClassName="object-cover"
                           />
                         ) : (
@@ -1607,6 +1623,7 @@ export default function Home() {
                       <CoverImage
                         src={toSupabaseThumb(project.cover_url, 480)}
                         alt={project.title}
+                        fallbackSrc={project.cover_url}
                         imgClassName="object-cover"
                       />
                     ) : (
@@ -2010,6 +2027,7 @@ export default function Home() {
                           <CoverImage
                             src={toSupabaseThumb(beat.cover_url, 384)}
                             alt={beat.title}
+                            fallbackSrc={beat.cover_url}
                             imgClassName="object-cover"
                           />
                         ) : (
@@ -2022,6 +2040,7 @@ export default function Home() {
                       <CoverImage
                         src={toSupabaseThumb(beat.cover_url, 384)}
                         alt={beat.title}
+                        fallbackSrc={beat.cover_url}
                         imgClassName="object-cover"
                       />
                     ) : (
