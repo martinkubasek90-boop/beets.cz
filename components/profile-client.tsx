@@ -406,6 +406,14 @@ export default function ProfileClient() {
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
   const [projectsOrderSaved, setProjectsOrderSaved] = useState(false);
+  const beatsListRef = useRef<HTMLDivElement | null>(null);
+  const projectsListRef = useRef<HTMLDivElement | null>(null);
+  const scrollListBy = (ref: React.RefObject<HTMLDivElement>, direction: 'up' | 'down') => {
+    const node = ref.current;
+    if (!node) return;
+    const offset = direction === 'up' ? -260 : 260;
+    node.scrollBy({ top: offset, behavior: 'smooth' });
+  };
   const [importProjectOpen, setImportProjectOpen] = useState(false);
   const [importProjectUrl, setImportProjectUrl] = useState('');
   const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
@@ -3556,8 +3564,31 @@ const buildAppleEmbed = (url: string) => {
                   <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
                   <span className="text-[var(--mpc-dark)]">•</span>
                   <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
-                  </div>
+                  {beats.length > 3 && (
+                    <>
+                      <span className="text-[var(--mpc-dark)]">•</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => scrollListBy(beatsListRef, 'up')}
+                          className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                          aria-label="Posunout beaty nahoru"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollListBy(beatsListRef, 'down')}
+                          className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                          aria-label="Posunout beaty dolů"
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
+              </div>
                 {SHOW_SHARE_FEATURE && shareMessage && (
                   <div className="mb-2 rounded-md border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[12px] text-[var(--mpc-light)]">
                     {shareMessage}
@@ -3578,7 +3609,10 @@ const buildAppleEmbed = (url: string) => {
                   Zatím žádné beaty. Nahraj první beat a ukaž se.
                 </div>
                 ) : (
-                <div className="space-y-3">
+                <div
+                  ref={beatsListRef}
+                  className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                >
                   {beats.map((beat) => {
                     const isDragOver = dragOverBeatId === beat.id && dragBeatId !== beat.id;
                     const isDragging = dragBeatId === beat.id;
@@ -4121,6 +4155,26 @@ const buildAppleEmbed = (url: string) => {
                     Přetáhni pro změnu pořadí
                   </p>
                 </div>
+                {projects.length > 3 && (
+                  <div className="flex items-center gap-1 text-[12px] text-[var(--mpc-muted)]">
+                    <button
+                      type="button"
+                      onClick={() => scrollListBy(projectsListRef, 'up')}
+                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                      aria-label="Posunout projekty nahoru"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollListBy(projectsListRef, 'down')}
+                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                      aria-label="Posunout projekty dolů"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )}
               </div>
               {projectsError && (
                 <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
@@ -4147,7 +4201,10 @@ const buildAppleEmbed = (url: string) => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div
+                  ref={projectsListRef}
+                  className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                >
                   {projects.map((project) => {
                     const projectStyle = project.cover_url
                       ? {
