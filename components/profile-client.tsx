@@ -408,7 +408,7 @@ export default function ProfileClient() {
   const [projectsOrderSaved, setProjectsOrderSaved] = useState(false);
   const beatsListRef = useRef<HTMLDivElement | null>(null);
   const projectsListRef = useRef<HTMLDivElement | null>(null);
-  const scrollListBy = (ref: React.RefObject<HTMLDivElement>, direction: 'up' | 'down') => {
+  const scrollListBy = (ref: React.RefObject<HTMLDivElement | null>, direction: 'up' | 'down') => {
     const node = ref.current;
     if (!node) return;
     const offset = direction === 'up' ? -260 : 260;
