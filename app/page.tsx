@@ -133,6 +133,8 @@ const normalizeEmbedHtml = (html: string) => {
       'border:0',
       'width:100%',
       `height:${EMBED_HEIGHT}px`,
+      'max-width:720px',
+      'margin:0 auto',
       'border-radius:12px',
       'background:#111111',
       'display:block',
@@ -1803,9 +1805,13 @@ export default function Home() {
                   {isExternalProject ? (
                     <div className="space-y-2">
                       <div
-                        className="min-h-[152px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
-                      />
+                        className="flex justify-center"
+                      >
+                        <div
+                          className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                          dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <div className="mx-auto flex max-w-3xl items-center gap-3">

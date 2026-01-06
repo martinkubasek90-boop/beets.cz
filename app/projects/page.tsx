@@ -89,6 +89,8 @@ const normalizeEmbedHtml = (html: string) => {
       "border:0",
       "width:100%",
       `height:${EMBED_HEIGHT}px`,
+      "max-width:720px",
+      "margin:0 auto",
       "border-radius:12px",
       "background:#111111",
       "display:block",
@@ -755,10 +757,12 @@ export default function ProjectsPage() {
                 {(project.embed_html || projectEmbeds[project.id]) && (
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
-                    <div
-                      className="mt-2 min-h-[152px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                      dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
-                    />
+                    <div className="mt-2 flex justify-center">
+                      <div
+                        className="min-h-[152px] w-full max-w-[720px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
+                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
+                      />
+                    </div>
                   </div>
                 )}
 
