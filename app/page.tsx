@@ -317,12 +317,43 @@ const toSupabaseThumb = (url: string, width = 640, quality = 70) => {
     const params = new URLSearchParams({
       width: String(width),
       quality: String(quality),
+      format: 'webp',
       resize: 'contain',
     });
     return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
   } catch {
     return url;
   }
+};
+
+const CoverImage = ({
+  src,
+  alt,
+  className,
+  imgClassName,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  imgClassName?: string;
+}) => {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className={`relative h-full w-full ${className || ''}`}>
+      <div
+        className={`absolute inset-0 bg-white/5 transition-opacity ${loaded ? 'opacity-0' : 'animate-pulse'}`}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt={alt}
+        className={`h-full w-full transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName || ''}`}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
 };
 
 const videoItems = [
@@ -339,6 +370,7 @@ export default function Home() {
   const [beatAuthorNames, setBeatAuthorNames] = useState<Record<string, string>>({});
   const [projects, setProjects] = useState<Project[]>(dummyProjects);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [isLoadingProjects, setIsLoadingProjects] = useState<boolean>(true);
   const [projectEmbeds, setProjectEmbeds] = useState<Record<number, string>>({});
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>(dummyBlog);
   const [blogError, setBlogError] = useState<string | null>(null);
@@ -653,6 +685,7 @@ export default function Home() {
   };
 
   const loadProjects = async () => {
+    setIsLoadingProjects(true);
     try {
       const cachedProjects = readHomeCache<Project[]>(HOME_PROJECTS_CACHE_KEY);
       if (cachedProjects && cachedProjects.length > 0) {
@@ -734,6 +767,8 @@ export default function Home() {
       console.error('Neočekávaná chyba při načítání projektů:', err);
       setProjectsError('Neočekávaná chyba při načítání projektů. Zobrazuji demo data.');
       setProjects(dummyProjects.slice(0, 2));
+    } finally {
+      setIsLoadingProjects(false);
     }
   };
 
@@ -1081,6 +1116,7 @@ export default function Home() {
 
   useEffect(() => {
     const loadProjects = async () => {
+      setIsLoadingProjects(true);
       try {
         let data: any[] | null = null;
         try {
@@ -1177,6 +1213,8 @@ export default function Home() {
         console.error('Neočekávaná chyba při načítání projektů:', err);
         setProjectsError('Neočekávaná chyba při načítání projektů. Zobrazuji demo data.');
         setProjects(dummyProjects.slice(0, 2));
+      } finally {
+        setIsLoadingProjects(false);
       }
     };
 
@@ -1710,10 +1748,21 @@ export default function Home() {
             <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">
               {cms('home.projects.title', t('projects.title', 'Nejnovější projekty'))}
             </h2>
+            {isLoadingProjects && <p className="text-[12px] text-[var(--mpc-muted)]">Načítám projekty…</p>}
           </div>
           {projectsError && (
             <div className="mb-3 inline-flex items-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200">
               <span>⚠</span> {projectsError}
+            </div>
+          )}
+          {isLoadingProjects && !projectsError && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, idx) => (
+                <div
+                  key={`project-skeleton-${idx}`}
+                  className="h-[520px] w-full animate-pulse rounded-2xl border border-white/10 bg-white/5"
+                />
+              ))}
             </div>
           )}
           <div className="grid gap-4 md:grid-cols-2">
@@ -1751,13 +1800,10 @@ export default function Home() {
                     {project.user_id ? (
                       <Link href={`/u/${project.user_id}`} className="block h-full w-full">
                         {project.cover_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={toSupabaseThumb(project.cover_url, 640)}
+                          <CoverImage
+                            src={toSupabaseThumb(project.cover_url, 480)}
                             alt={project.title}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
+                            imgClassName="object-cover"
                           />
                         ) : (
                           <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -1766,13 +1812,10 @@ export default function Home() {
                         )}
                       </Link>
                     ) : project.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={toSupabaseThumb(project.cover_url, 640)}
+                      <CoverImage
+                        src={toSupabaseThumb(project.cover_url, 480)}
                         alt={project.title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
+                        imgClassName="object-cover"
                       />
                     ) : (
                       <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -2169,13 +2212,10 @@ export default function Home() {
                     {beat.user_id ? (
                       <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
                         {beat.cover_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={toSupabaseThumb(beat.cover_url, 512)}
+                          <CoverImage
+                            src={toSupabaseThumb(beat.cover_url, 384)}
                             alt={beat.title}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
+                            imgClassName="object-cover"
                           />
                         ) : (
                           <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -2184,13 +2224,10 @@ export default function Home() {
                         )}
                       </Link>
                     ) : beat.cover_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={toSupabaseThumb(beat.cover_url, 512)}
+                      <CoverImage
+                        src={toSupabaseThumb(beat.cover_url, 384)}
                         alt={beat.title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
+                        imgClassName="object-cover"
                       />
                     ) : (
                       <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
