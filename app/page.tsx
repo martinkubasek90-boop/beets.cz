@@ -1712,6 +1712,11 @@ export default function Home() {
                 !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
               const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
               const externalUrl = project.project_url || project.purchase_url;
+              const cleanedDescription =
+                project.description &&
+                !project.description.toLowerCase().trim().startsWith('zdroj:')
+                  ? project.description
+                  : null;
 
               return (
                 <div
@@ -1782,16 +1787,21 @@ export default function Home() {
                   <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
                     Beat tape / EP
                   </div>
-                  <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
-                    {project.description || 'Instrumentální beat tape.'}
-                  </p>
+                  {cleanedDescription ? (
+                    <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
+                      {cleanedDescription}
+                    </p>
+                  ) : !isExternalProject ? (
+                    <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
+                      Instrumentální beat tape.
+                    </p>
+                  ) : null}
                 </div>
                 </div>
 
                 <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
                   {isExternalProject ? (
                     <div className="space-y-2">
-                      <p className="text-center text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                       <div
                         className="min-h-[152px] overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
                         dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
