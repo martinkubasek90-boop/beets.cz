@@ -696,7 +696,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
                         <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">Kroky</span>
                       </div>
-                      <div className="rounded-full border border-white/10 px-3 py-1 text-[9px] uppercase tracking-[0.2em] text-white/30">
+                      <div className="w-16 rounded-full border border-white/10 px-2 py-1 text-center text-[9px] uppercase tracking-[0.2em] text-white/30">
                         —
                       </div>
                       <div
@@ -706,7 +706,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         {Array.from({ length: STEPS }, (_, colIndex) => (
                           <div
                             key={colIndex}
-                            className="text-center"
+                            className="flex h-6 w-6 items-center justify-center text-center leading-none"
                             style={{
                               borderRight:
                                 (colIndex + 1) % 4 === 0 ? '2px solid #f97316' : undefined,
@@ -740,7 +740,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         />
                         <label
                           htmlFor={`drum-upload-${rowIndex}`}
-                          className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-white/60 hover:text-white"
+                          className="w-16 rounded-full border border-white/15 bg-white/5 px-2 py-1 text-center text-[10px] uppercase tracking-[0.2em] text-white/60 hover:text-white"
                         >
                           {row.fileName ? 'Nahráno' : 'Nahrát'}
                         </label>
@@ -969,7 +969,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         {Array.from({ length: STEPS }, (_, colIndex) => (
                           <div
                             key={colIndex}
-                            className="text-center"
+                            className="flex h-6 w-6 items-center justify-center text-center leading-none"
                             style={{
                               borderRight:
                                 (colIndex + 1) % 4 === 0 ? '2px solid #f97316' : undefined,
