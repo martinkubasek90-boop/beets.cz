@@ -18,6 +18,7 @@ const toolGroups = [
   {
     label: 'Audio',
     items: [
+      { href: '/beat-maker', label: 'Beat Maker' },
       { href: '/konvertor', label: 'Konvertor MP3' },
       { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
       { href: '/mix-checklist', label: 'AI Mix Checklist' },
