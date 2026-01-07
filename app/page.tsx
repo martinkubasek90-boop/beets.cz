@@ -309,6 +309,8 @@ const writeHomeCache = <T,>(key: string, data: T) => {
 const toSupabaseThumb = (url: string, width = 640, quality = 70) => {
   if (!url) return url;
   if (url.includes('/storage/v1/render/image/public/')) return url;
+  if (url.includes('/optimized/')) return url;
+  if (url.toLowerCase().endsWith('.webp')) return url;
   const marker = '/storage/v1/object/public/';
   if (!url.includes(marker)) return url;
   try {
