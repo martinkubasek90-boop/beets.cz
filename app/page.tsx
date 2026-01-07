@@ -280,7 +280,7 @@ const dummyBlog: BlogPost[] = [
 
 const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spolupráce', 'Workflow'];
 
-const HOME_CACHE_TTL_MS = 60 * 1000;
+const HOME_CACHE_TTL_MS = 5 * 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
 const HOME_PROJECTS_CACHE_KEY = 'home-projects-v4';
 
@@ -665,12 +665,14 @@ export default function Home() {
   };
 
   const loadProjects = async () => {
-    setIsLoadingProjects(true);
     try {
       const cachedProjects = readHomeCache<Project[]>(HOME_PROJECTS_CACHE_KEY);
       if (cachedProjects && cachedProjects.length > 0) {
         setProjects(cachedProjects);
         setProjectsError(null);
+        setIsLoadingProjects(false);
+      } else {
+        setIsLoadingProjects(true);
       }
 
       try {
@@ -1520,7 +1522,9 @@ export default function Home() {
             <h2 className="text-lg font-semibold tracking-[0.16em] uppercase">
               {cms('home.projects.title', t('projects.title', 'Nejnovější projekty'))}
             </h2>
-            {isLoadingProjects && <p className="text-[12px] text-[var(--mpc-muted)]">Načítám projekty…</p>}
+            {isLoadingProjects && projects.length === 0 && (
+              <p className="text-[12px] text-[var(--mpc-muted)]">Načítám projekty…</p>
+            )}
           </div>
           {projectsError && (
             <div className="mb-3 inline-flex items-center gap-2 rounded-lg border border-yellow-500/40 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200">
