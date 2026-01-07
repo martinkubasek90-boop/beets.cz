@@ -306,47 +306,18 @@ const writeHomeCache = <T,>(key: string, data: T) => {
   }
 };
 
-const toSupabaseThumb = (url: string, width = 640, quality = 70) => {
-  if (!url) return url;
-  if (url.includes('/storage/v1/render/image/public/')) return url;
-  if (url.includes('/optimized/')) return url;
-  if (url.toLowerCase().endsWith('.webp')) return url;
-  const marker = '/storage/v1/object/public/';
-  if (!url.includes(marker)) return url;
-  try {
-    const [base, rest] = url.split(marker);
-    const path = rest.split('?')[0];
-    const params = new URLSearchParams({
-      width: String(width),
-      quality: String(quality),
-      format: 'webp',
-      resize: 'contain',
-    });
-    return `${base}/storage/v1/render/image/public/${path}?${params.toString()}`;
-  } catch {
-    return url;
-  }
-};
-
 const CoverImage = ({
   src,
   alt,
-  fallbackSrc,
   className,
   imgClassName,
 }: {
   src: string;
   alt: string;
-  fallbackSrc?: string;
   className?: string;
   imgClassName?: string;
 }) => {
-  const [currentSrc, setCurrentSrc] = useState(src);
   const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    setCurrentSrc(src);
-    setLoaded(false);
-  }, [src]);
   return (
     <div className={`relative h-full w-full ${className || ''}`}>
       <div
@@ -354,20 +325,12 @@ const CoverImage = ({
       />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={currentSrc}
+        src={src}
         alt={alt}
         className={`h-full w-full transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName || ''}`}
         loading="lazy"
         decoding="async"
         onLoad={() => setLoaded(true)}
-        onError={() => {
-          if (fallbackSrc && currentSrc !== fallbackSrc) {
-            setCurrentSrc(fallbackSrc);
-            setLoaded(false);
-          } else {
-            setLoaded(true);
-          }
-        }}
       />
     </div>
   );
@@ -1610,9 +1573,8 @@ export default function Home() {
                       <Link href={`/u/${project.user_id}`} className="block h-full w-full">
                         {project.cover_url ? (
                           <CoverImage
-                            src={toSupabaseThumb(project.cover_url, 480)}
+                            src={project.cover_url}
                             alt={project.title}
-                            fallbackSrc={project.cover_url}
                             imgClassName="object-cover"
                           />
                         ) : (
@@ -1623,9 +1585,8 @@ export default function Home() {
                       </Link>
                     ) : project.cover_url ? (
                       <CoverImage
-                        src={toSupabaseThumb(project.cover_url, 480)}
+                        src={project.cover_url}
                         alt={project.title}
-                        fallbackSrc={project.cover_url}
                         imgClassName="object-cover"
                       />
                     ) : (
@@ -2027,9 +1988,8 @@ export default function Home() {
                       <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
                         {beat.cover_url ? (
                           <CoverImage
-                            src={toSupabaseThumb(beat.cover_url, 384)}
+                            src={beat.cover_url}
                             alt={beat.title}
-                            fallbackSrc={beat.cover_url}
                             imgClassName="object-cover"
                           />
                         ) : (
@@ -2040,9 +2000,8 @@ export default function Home() {
                       </Link>
                     ) : beat.cover_url ? (
                       <CoverImage
-                        src={toSupabaseThumb(beat.cover_url, 384)}
+                        src={beat.cover_url}
                         alt={beat.title}
-                        fallbackSrc={beat.cover_url}
                         imgClassName="object-cover"
                       />
                     ) : (
