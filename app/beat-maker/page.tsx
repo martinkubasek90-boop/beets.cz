@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { MainNav } from '@/components/main-nav';
 
 const STEPS = 32;
-const DRUM_ROWS = 16;
+const DRUM_ROWS = 10;
 const SAMPLE_ROWS = 16;
 const MAX_SAMPLE_SECONDS = 5 * 60;
 
@@ -43,18 +43,25 @@ const defaultDrumNames = [
   'Snare',
   'Clap',
   'HiHat',
-  'OpenHat',
-  'Tom 1',
-  'Tom 2',
+  'O.Hat',
+  'Tom',
   'Rim',
-  'Perc 1',
-  'Perc 2',
-  'Fx 1',
-  'Fx 2',
+  'Perc',
+  'FX',
   'Shaker',
-  'Crash',
-  'Ride',
-  'Extra',
+];
+
+const drumColors = [
+  '#f97316',
+  '#ef4444',
+  '#f59e0b',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#eab308',
+  '#10b981',
 ];
 
 const DB_NAME = 'beets-beatmaker';
@@ -430,18 +437,23 @@ export default function BeatMakerPage() {
     const project = savedProjects.find((item) => item.id === selectedProject);
     if (!project) return;
     setBpm(project.bpm);
-    setDrumSteps(project.drumSteps);
-    setSamplerSteps(project.samplerSteps);
-    setSlices(project.slices);
-    setPadAssignments(project.padAssignments);
+    const normalizedDrumSteps = Array.from({ length: DRUM_ROWS }, (_, rowIndex) => {
+      const row = project.drumSteps?.[rowIndex] ?? [];
+      return Array.from({ length: STEPS }, (_, colIndex) => row[colIndex] ?? false);
+    });
+    setDrumSteps(normalizedDrumSteps);
+    setSamplerSteps(project.samplerSteps ?? createStepGrid(SAMPLE_ROWS));
+    setSlices(project.slices ?? []);
+    setPadAssignments(project.padAssignments ?? Array.from({ length: SAMPLE_ROWS }, () => null));
     setSampleFileName(null);
     setSampleFileBlob(null);
     setSampleBuffer(null);
     setSampleDuration(0);
 
     const ctx = ensureAudioContext();
+    const drumKeyList = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumKeys?.[index] ?? null);
     const rows = await Promise.all(
-      project.drumKeys.map(async (key, index) => {
+      drumKeyList.map(async (key, index) => {
         if (!key) {
           return {
             name: defaultDrumNames[index],
@@ -516,14 +528,14 @@ export default function BeatMakerPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       <MainNav />
-      <main className="mx-auto w-full max-w-6xl px-4 pb-16 pt-10">
-        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+      <main className="mx-auto w-full max-w-7xl px-4 pb-16 pt-10">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-7 shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--mpc-muted)]">Beats.cz Tools</p>
               <h1 className="text-3xl font-semibold tracking-tight">Beat Maker</h1>
               <p className="mt-2 max-w-2xl text-sm text-white/60">
-                Sekvencer + sampler v prohlížeči. Část A = bicí (16 zvuků), část B = sampler (16 slice).
+                Sekvencer + sampler v prohlížeči. Část A = bicí (10 zvuků), část B = sampler (16 slice).
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -610,7 +622,7 @@ export default function BeatMakerPage() {
             </div>
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+          <div className="mt-8 space-y-6">
             <div className="space-y-6">
               <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
                 <div className="flex items-center justify-between">
@@ -623,9 +635,15 @@ export default function BeatMakerPage() {
                   <div className="grid gap-2">
                     {drumRows.map((row, rowIndex) => (
                       <div key={row.name} className="flex items-center gap-3">
-                        <label className="w-28 text-xs uppercase tracking-[0.18em] text-white/60">
-                          {row.name}
-                        </label>
+                        <div className="flex w-28 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: drumColors[rowIndex % drumColors.length] }}
+                          />
+                          <label className="text-xs uppercase tracking-[0.18em] text-white/60">
+                            {row.name}
+                          </label>
+                        </div>
                         <input
                           type="file"
                           accept="audio/*"
@@ -651,11 +669,16 @@ export default function BeatMakerPage() {
                               key={colIndex}
                               type="button"
                               onClick={() => toggleStep('drums', rowIndex, colIndex)}
-                              className={`h-5 w-5 rounded-md border border-white/5 transition ${
+                              className={`h-6 w-6 rounded-md border border-white/5 transition ${
                                 drumSteps[rowIndex]?.[colIndex]
-                                  ? 'bg-[var(--mpc-accent)]'
+                                  ? ''
                                   : 'bg-white/5'
                               } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
+                              style={
+                                drumSteps[rowIndex]?.[colIndex]
+                                  ? { backgroundColor: drumColors[rowIndex % drumColors.length] }
+                                  : undefined
+                              }
                             />
                           ))}
                         </div>
@@ -665,53 +688,6 @@ export default function BeatMakerPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                    Část B · Sampler
-                  </h2>
-                  <span className="text-xs text-white/40">{SAMPLE_ROWS} padů</span>
-                </div>
-                <div className="mt-4 overflow-x-auto">
-                  <div className="grid gap-2">
-                    {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
-                      <div key={rowIndex} className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPad(rowIndex)}
-                          className={`w-20 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] ${
-                            selectedPad === rowIndex
-                              ? 'border-[var(--mpc-accent)] text-white'
-                              : 'border-white/20 text-white/60'
-                          }`}
-                        >
-                          Pad {rowIndex + 1}
-                        </button>
-                        <div
-                          className="grid gap-1"
-                          style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
-                        >
-                          {Array.from({ length: STEPS }, (_, colIndex) => (
-                            <button
-                              key={colIndex}
-                              type="button"
-                              onClick={() => toggleStep('sampler', rowIndex, colIndex)}
-                              className={`h-5 w-5 rounded-md border border-white/5 transition ${
-                                samplerSteps[rowIndex]?.[colIndex]
-                                  ? 'bg-emerald-400/80'
-                                  : 'bg-white/5'
-                              } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
               <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
                   Sampler · Waveform
@@ -742,9 +718,9 @@ export default function BeatMakerPage() {
                   <div className="relative">
                     <canvas
                       ref={waveformRef}
-                      width={520}
-                      height={120}
-                      className="h-28 w-full rounded-lg"
+                      width={1200}
+                      height={180}
+                      className="h-40 w-full rounded-lg"
                     />
                     {sampleBuffer && (
                       <div
@@ -828,10 +804,55 @@ export default function BeatMakerPage() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+                    Část B · Sampler
+                  </h2>
+                  <span className="text-xs text-white/40">{SAMPLE_ROWS} padů</span>
+                </div>
+                <div className="mt-4 overflow-x-auto">
+                  <div className="grid gap-2">
+                    {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
+                      <div key={rowIndex} className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPad(rowIndex)}
+                          className={`w-20 rounded-full border px-3 py-1 text-[10px] uppercase tracking-[0.2em] ${
+                            selectedPad === rowIndex
+                              ? 'border-[var(--mpc-accent)] text-white'
+                              : 'border-white/20 text-white/60'
+                          }`}
+                        >
+                          Pad {rowIndex + 1}
+                        </button>
+                        <div
+                          className="grid gap-1"
+                          style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                        >
+                          {Array.from({ length: STEPS }, (_, colIndex) => (
+                            <button
+                              key={colIndex}
+                              type="button"
+                              onClick={() => toggleStep('sampler', rowIndex, colIndex)}
+                              className={`h-6 w-6 rounded-md border border-white/5 transition ${
+                                samplerSteps[rowIndex]?.[colIndex]
+                                  ? 'bg-emerald-400/80'
+                                  : 'bg-white/5'
+                              } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                  Pad grid (Sampler)
+                  Sampler pady
                 </h3>
-                <div className="mt-3 grid grid-cols-4 gap-2">
+                <div className="mt-3 grid grid-cols-4 gap-3">
                   {padAssignments.map((sliceId, index) => (
                     <button
                       key={index}
@@ -840,7 +861,7 @@ export default function BeatMakerPage() {
                         setSelectedPad(index);
                         playPad(index);
                       }}
-                      className={`aspect-square rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/70 ${
+                      className={`aspect-square rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/70 ${
                         selectedPad === index ? 'ring-2 ring-[var(--mpc-accent)]' : ''
                       }`}
                     >
