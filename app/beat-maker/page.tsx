@@ -5,7 +5,7 @@ import { MainNav } from '@/components/main-nav';
 
 const STEPS = 32;
 const DRUM_ROWS = 10;
-const SAMPLE_ROWS = 16;
+const SAMPLE_ROWS = 8;
 const MAX_SAMPLE_SECONDS = 5 * 60;
 
 type DrumRow = {
@@ -62,6 +62,17 @@ const drumColors = [
   '#ec4899',
   '#eab308',
   '#10b981',
+];
+
+const samplerColors = [
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#f97316',
+  '#f59e0b',
+  '#14b8a6',
 ];
 
 const DB_NAME = 'beets-beatmaker';
@@ -442,9 +453,17 @@ export default function BeatMakerPage() {
       return Array.from({ length: STEPS }, (_, colIndex) => row[colIndex] ?? false);
     });
     setDrumSteps(normalizedDrumSteps);
-    setSamplerSteps(project.samplerSteps ?? createStepGrid(SAMPLE_ROWS));
+    const normalizedSamplerSteps = Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => {
+      const row = project.samplerSteps?.[rowIndex] ?? [];
+      return Array.from({ length: STEPS }, (_, colIndex) => row[colIndex] ?? false);
+    });
+    setSamplerSteps(normalizedSamplerSteps);
     setSlices(project.slices ?? []);
-    setPadAssignments(project.padAssignments ?? Array.from({ length: SAMPLE_ROWS }, () => null));
+    const normalizedAssignments = Array.from(
+      { length: SAMPLE_ROWS },
+      (_, index) => project.padAssignments?.[index] ?? null
+    );
+    setPadAssignments(normalizedAssignments);
     setSampleFileName(null);
     setSampleFileBlob(null);
     setSampleBuffer(null);
@@ -535,17 +554,10 @@ export default function BeatMakerPage() {
               <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--mpc-muted)]">Beats.cz Tools</p>
               <h1 className="text-3xl font-semibold tracking-tight">Beat Maker</h1>
               <p className="mt-2 max-w-2xl text-sm text-white/60">
-                Sekvencer + sampler v prohlížeči. Část A = bicí (10 zvuků), část B = sampler (16 slice).
+                Sekvencer + sampler v prohlížeči. Část A = bicí (10 zvuků), část B = sampler (8 padů).
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => (isPlaying ? stopPlayback() : startPlayback())}
-                className="rounded-full border border-white/20 bg-white/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:border-white/40"
-              >
-                {isPlaying ? 'Stop' : 'Play'}
-              </button>
               <button
                 type="button"
                 onClick={resetProject}
@@ -629,10 +641,38 @@ export default function BeatMakerPage() {
                   <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
                     Část A · Bicí
                   </h2>
-                  <span className="text-xs text-white/40">{DRUM_ROWS} zvuků</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-white/40">{DRUM_ROWS} zvuků</span>
+                    <button
+                      type="button"
+                      onClick={() => (isPlaying ? stopPlayback() : startPlayback())}
+                      className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white hover:border-white/40"
+                    >
+                      {isPlaying ? 'Pause' : 'Play'}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4 overflow-x-auto">
                   <div className="grid gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex w-28 items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">Kroky</span>
+                      </div>
+                      <div className="rounded-full border border-white/10 px-3 py-1 text-[9px] uppercase tracking-[0.2em] text-white/30">
+                        —
+                      </div>
+                      <div
+                        className="grid gap-1 text-[10px] text-white/30"
+                        style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                      >
+                        {Array.from({ length: STEPS }, (_, colIndex) => (
+                          <div key={colIndex} className="text-center">
+                            {colIndex + 1}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     {drumRows.map((row, rowIndex) => (
                       <div key={row.name} className="flex items-center gap-3">
                         <div className="flex w-28 items-center gap-2">
@@ -808,10 +848,32 @@ export default function BeatMakerPage() {
                   <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
                     Část B · Sampler
                   </h2>
-                  <span className="text-xs text-white/40">{SAMPLE_ROWS} padů</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-white/40">{SAMPLE_ROWS} padů</span>
+                    <button
+                      type="button"
+                      onClick={() => (isPlaying ? stopPlayback() : startPlayback())}
+                      className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white hover:border-white/40"
+                    >
+                      {isPlaying ? 'Pause' : 'Play'}
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4 overflow-x-auto">
                   <div className="grid gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-20 text-[10px] uppercase tracking-[0.2em] text-white/40">Kroky</div>
+                      <div
+                        className="grid gap-1 text-[10px] text-white/30"
+                        style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                      >
+                        {Array.from({ length: STEPS }, (_, colIndex) => (
+                          <div key={colIndex} className="text-center">
+                            {colIndex + 1}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                     {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
                       <div key={rowIndex} className="flex items-center gap-3">
                         <button
@@ -823,7 +885,13 @@ export default function BeatMakerPage() {
                               : 'border-white/20 text-white/60'
                           }`}
                         >
-                          Pad {rowIndex + 1}
+                          <span className="flex items-center justify-center gap-1">
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: samplerColors[rowIndex % samplerColors.length] }}
+                            />
+                            Pad {rowIndex + 1}
+                          </span>
                         </button>
                         <div
                           className="grid gap-1"
@@ -836,43 +904,20 @@ export default function BeatMakerPage() {
                               onClick={() => toggleStep('sampler', rowIndex, colIndex)}
                               className={`h-6 w-6 rounded-md border border-white/5 transition ${
                                 samplerSteps[rowIndex]?.[colIndex]
-                                  ? 'bg-emerald-400/80'
+                                  ? ''
                                   : 'bg-white/5'
                               } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
+                              style={
+                                samplerSteps[rowIndex]?.[colIndex]
+                                  ? { backgroundColor: samplerColors[rowIndex % samplerColors.length] }
+                                  : undefined
+                              }
                             />
                           ))}
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
-                <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                  Sampler pady
-                </h3>
-                <div className="mt-3 grid grid-cols-4 gap-3">
-                  {padAssignments.map((sliceId, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPad(index);
-                        playPad(index);
-                      }}
-                      className={`aspect-square rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/70 ${
-                        selectedPad === index ? 'ring-2 ring-[var(--mpc-accent)]' : ''
-                      }`}
-                    >
-                      <div className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                        Pad {index + 1}
-                      </div>
-                      <div className="mt-2 text-[11px]">
-                        {sliceId ? slices.find((s) => s.id === sliceId)?.label ?? 'Slice' : '—'}
-                      </div>
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
