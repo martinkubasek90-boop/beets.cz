@@ -4,6 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const slugifyProfileName = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 export default async function ProfileLandingPage({
   params,
 }: {
@@ -27,14 +35,38 @@ export default async function ProfileLandingPage({
     query.or(`slug.eq.${slugOrId},slug.ilike.${slugOrId}`);
   }
 
-  const { data: profile, error } = await query.maybeSingle();
+  let { data: profile, error } = await query.maybeSingle();
+  if (!profile && !isUuid) {
+    const nameVariants = [
+      slugOrId,
+      slugOrId.replace(/-/g, ' ').trim(),
+    ].filter(Boolean);
+    for (const name of nameVariants) {
+      const { data: byName, error: nameError } = await supabase
+        .from('profiles')
+        .select(selectBase)
+        .ilike('display_name', name)
+        .limit(1)
+        .maybeSingle();
+      if (nameError) {
+        error = nameError;
+      }
+      if (byName) {
+        profile = byName;
+        break;
+      }
+    }
+  }
   if (error) {
     console.error('Chyba při načítání profilu (landing):', error);
   }
 
   const profileId = profile?.id || (isUuid ? slugOrId : null);
-  if (isUuid && profile?.slug && profile.slug !== slugOrId) {
-    return redirect(`/profile/${profile.slug}`);
+  if (profile?.display_name && !isUuid) {
+    const canonicalSlug = slugifyProfileName(profile.display_name);
+    if (canonicalSlug && canonicalSlug !== slugOrId) {
+      return redirect(`/profile/${canonicalSlug}`);
+    }
   }
   if (!profileId) {
     notFound();
