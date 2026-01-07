@@ -13,6 +13,7 @@ type DrumRow = {
   fileName: string | null;
   fileBlob: Blob | null;
   buffer: AudioBuffer | null;
+  swing: number;
 };
 
 type Slice = {
@@ -33,6 +34,7 @@ type SavedProject = {
   padAssignments: (string | null)[];
   drumKeys: (string | null)[];
   samplerKey: string | null;
+  drumSwing?: number[];
 };
 
 const createStepGrid = (rows: number) =>
@@ -138,12 +140,13 @@ export default function BeatMakerPage() {
   const [playhead, setPlayhead] = useState(0);
   const [drumSteps, setDrumSteps] = useState(() => createStepGrid(DRUM_ROWS));
   const [samplerSteps, setSamplerSteps] = useState(() => createStepGrid(SAMPLE_ROWS));
-  const [drumRows, setDrumRows] = useState<DrumRow[]>(
+const [drumRows, setDrumRows] = useState<DrumRow[]>(
     defaultDrumNames.map((name) => ({
       name,
       fileName: null,
       fileBlob: null,
       buffer: null,
+      swing: 0,
     }))
   );
 
@@ -153,11 +156,13 @@ export default function BeatMakerPage() {
   const [sampleDuration, setSampleDuration] = useState(0);
   const [sliceStart, setSliceStart] = useState(0);
   const [sliceEnd, setSliceEnd] = useState(0);
+  const [nextSlicePoint, setNextSlicePoint] = useState<'start' | 'end'>('start');
   const [slices, setSlices] = useState<Slice[]>([]);
   const [padAssignments, setPadAssignments] = useState<(string | null)[]>(
     Array.from({ length: SAMPLE_ROWS }, () => null)
   );
   const [selectedPad, setSelectedPad] = useState<number | null>(null);
+  const [waveZoom, setWaveZoom] = useState(1);
 
   const [projectName, setProjectName] = useState('');
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
@@ -172,6 +177,7 @@ export default function BeatMakerPage() {
   const sampleBufferRef = useRef(sampleBuffer);
 
   const waveformRef = useRef<HTMLCanvasElement | null>(null);
+  const waveformWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setSavedProjects(getStoredProjects());
@@ -229,7 +235,23 @@ export default function BeatMakerPage() {
       ctx.lineTo(x, y2);
     }
     ctx.stroke();
-  }, [sampleBuffer]);
+  }, [sampleBuffer, waveZoom]);
+
+  const handleWaveformClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!sampleBuffer || !sampleDuration) return;
+    const canvas = event.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width;
+    const rawTime = Math.max(0, Math.min(sampleDuration, ratio * sampleDuration));
+    const time = Math.round(rawTime * 10) / 10;
+    if (nextSlicePoint === 'start') {
+      setSliceStart(time);
+      setNextSlicePoint('end');
+    } else {
+      setSliceEnd(time);
+      setNextSlicePoint('start');
+    }
+  };
 
   const ensureAudioContext = () => {
     if (!audioRef.current) {
@@ -241,19 +263,25 @@ export default function BeatMakerPage() {
     return audioRef.current;
   };
 
-  const playBuffer = (buffer: AudioBuffer, start?: number, duration?: number) => {
+  const playBuffer = (
+    buffer: AudioBuffer,
+    start?: number,
+    duration?: number,
+    when?: number
+  ) => {
     const ctx = ensureAudioContext();
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
+    const startAt = typeof when === 'number' ? ctx.currentTime + when : ctx.currentTime;
     if (typeof start === 'number' && typeof duration === 'number') {
-      source.start(0, start, duration);
+      source.start(startAt, start, duration);
     } else {
-      source.start(0);
+      source.start(startAt);
     }
   };
 
-  const scheduleStep = (index: number) => {
+  const scheduleStep = (index: number, stepDuration: number) => {
     const drumGrid = drumStepsRef.current;
     const samplerGrid = samplerStepsRef.current;
     const rows = drumRowsRef.current;
@@ -263,7 +291,10 @@ export default function BeatMakerPage() {
 
     rows.forEach((row, rowIndex) => {
       if (drumGrid[rowIndex]?.[index] && row.buffer) {
-        playBuffer(row.buffer);
+        const isSwingStep = index % 2 === 1;
+        const swingAmount = Math.min(0.6, Math.max(0, row.swing));
+        const delay = isSwingStep ? (swingAmount / 100) * stepDuration : 0;
+        playBuffer(row.buffer, undefined, undefined, delay);
       }
     });
 
@@ -290,7 +321,7 @@ export default function BeatMakerPage() {
     const stepDuration = (60 / bpm) / 4;
     intervalRef.current = window.setInterval(() => {
       const current = playheadRef.current;
-      scheduleStep(current);
+      scheduleStep(current, stepDuration);
       const next = (current + 1) % STEPS;
       playheadRef.current = next;
       setPlayhead(next);
@@ -435,6 +466,7 @@ export default function BeatMakerPage() {
       padAssignments,
       drumKeys,
       samplerKey,
+      drumSwing: drumRows.map((row) => row.swing),
     };
 
     const updated = [record, ...getStoredProjects()];
@@ -471,6 +503,7 @@ export default function BeatMakerPage() {
 
     const ctx = ensureAudioContext();
     const drumKeyList = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumKeys?.[index] ?? null);
+    const drumSwing = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumSwing?.[index] ?? 0);
     const rows = await Promise.all(
       drumKeyList.map(async (key, index) => {
         if (!key) {
@@ -479,6 +512,7 @@ export default function BeatMakerPage() {
             fileName: null,
             fileBlob: null,
             buffer: null,
+            swing: drumSwing[index],
           } satisfies DrumRow;
         }
         const blob = await getBlob(key);
@@ -488,6 +522,7 @@ export default function BeatMakerPage() {
             fileName: null,
             fileBlob: null,
             buffer: null,
+            swing: drumSwing[index],
           } satisfies DrumRow;
         }
         const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
@@ -496,6 +531,7 @@ export default function BeatMakerPage() {
           fileName: blob instanceof File ? blob.name : defaultDrumNames[index],
           fileBlob: blob,
           buffer,
+          swing: drumSwing[index],
         } satisfies DrumRow;
       })
     );
@@ -524,6 +560,7 @@ export default function BeatMakerPage() {
         fileName: null,
         fileBlob: null,
         buffer: null,
+        swing: 0,
       }))
     );
     setSampleFileName(null);
@@ -667,7 +704,14 @@ export default function BeatMakerPage() {
                         style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
                       >
                         {Array.from({ length: STEPS }, (_, colIndex) => (
-                          <div key={colIndex} className="text-center">
+                          <div
+                            key={colIndex}
+                            className="text-center"
+                            style={{
+                              borderRight:
+                                (colIndex + 1) % 4 === 0 ? '2px solid #f97316' : undefined,
+                            }}
+                          >
                             {colIndex + 1}
                           </div>
                         ))}
@@ -716,11 +760,43 @@ export default function BeatMakerPage() {
                               } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
                               style={
                                 drumSteps[rowIndex]?.[colIndex]
-                                  ? { backgroundColor: drumColors[rowIndex % drumColors.length] }
-                                  : undefined
+                                  ? {
+                                      backgroundColor: drumColors[rowIndex % drumColors.length],
+                                      borderRight:
+                                        (colIndex + 1) % 4 === 0
+                                          ? '2px solid #f97316'
+                                          : undefined,
+                                    }
+                                  : {
+                                      borderRight:
+                                        (colIndex + 1) % 4 === 0
+                                          ? '2px solid #f97316'
+                                          : undefined,
+                                    }
                               }
                             />
                           ))}
+                        </div>
+                        <div className="flex items-center gap-2 pl-2">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                            Swing
+                          </span>
+                          <input
+                            type="range"
+                            min={0}
+                            max={60}
+                            step={1}
+                            value={row.swing}
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+                              setDrumRows((prev) =>
+                                prev.map((item, idx) =>
+                                  idx === rowIndex ? { ...item, swing: value } : item
+                                )
+                              );
+                            }}
+                            className="w-20 accent-[var(--mpc-accent)]"
+                          />
                         </div>
                       </div>
                     ))}
@@ -755,12 +831,32 @@ export default function BeatMakerPage() {
                 </div>
 
                 <div className="mt-4 rounded-xl border border-white/10 bg-black/60 p-3">
-                  <div className="relative">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                      Zoom
+                    </label>
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/50">
+                      <span>1x</span>
+                      <input
+                        type="range"
+                        min={1}
+                        max={4}
+                        step={0.5}
+                        value={waveZoom}
+                        onChange={(event) => setWaveZoom(Number(event.target.value))}
+                        className="w-28"
+                      />
+                      <span>4x</span>
+                    </div>
+                  </div>
+
+                  <div ref={waveformWrapRef} className="relative mt-3 overflow-x-auto">
                     <canvas
                       ref={waveformRef}
-                      width={1200}
+                      width={Math.round(1200 * waveZoom)}
                       height={180}
-                      className="h-40 w-full rounded-lg"
+                      className="h-40 rounded-lg cursor-crosshair"
+                      onClick={handleWaveformClick}
                     />
                     {sampleBuffer && (
                       <div
@@ -769,6 +865,9 @@ export default function BeatMakerPage() {
                       />
                     )}
                   </div>
+                  <p className="mt-2 text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    Klik do waveformu nastaví {nextSlicePoint === 'start' ? 'START' : 'END'}.
+                  </p>
                   <div className="mt-3 grid gap-2">
                     <label className="text-[10px] uppercase tracking-[0.2em] text-white/50">
                       Start (s)
@@ -868,7 +967,14 @@ export default function BeatMakerPage() {
                         style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
                       >
                         {Array.from({ length: STEPS }, (_, colIndex) => (
-                          <div key={colIndex} className="text-center">
+                          <div
+                            key={colIndex}
+                            className="text-center"
+                            style={{
+                              borderRight:
+                                (colIndex + 1) % 4 === 0 ? '2px solid #f97316' : undefined,
+                            }}
+                          >
                             {colIndex + 1}
                           </div>
                         ))}
@@ -909,8 +1015,19 @@ export default function BeatMakerPage() {
                               } ${playhead === colIndex ? 'ring-2 ring-white/40' : ''}`}
                               style={
                                 samplerSteps[rowIndex]?.[colIndex]
-                                  ? { backgroundColor: samplerColors[rowIndex % samplerColors.length] }
-                                  : undefined
+                                  ? {
+                                      backgroundColor: samplerColors[rowIndex % samplerColors.length],
+                                      borderRight:
+                                        (colIndex + 1) % 4 === 0
+                                          ? '2px solid #f97316'
+                                          : undefined,
+                                    }
+                                  : {
+                                      borderRight:
+                                        (colIndex + 1) % 4 === 0
+                                          ? '2px solid #f97316'
+                                          : undefined,
+                                    }
                               }
                             />
                           ))}
