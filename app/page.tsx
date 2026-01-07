@@ -280,7 +280,7 @@ const dummyBlog: BlogPost[] = [
 
 const allowedForumCategories = ['Akai MPC hardware', 'Mix / Master', 'Spolupráce', 'Workflow'];
 
-const HOME_CACHE_TTL_MS = 5 * 60 * 1000;
+const HOME_CACHE_TTL_MS = 60 * 1000;
 const HOME_BEATS_CACHE_KEY = 'home-beats-v1';
 const HOME_PROJECTS_CACHE_KEY = 'home-projects-v4';
 
