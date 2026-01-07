@@ -37,15 +37,22 @@ export default async function ProfileLandingPage({
 
   let { data: profile, error } = await query.maybeSingle();
   if (!profile && !isUuid) {
-    const nameVariants = [
-      slugOrId,
-      slugOrId.replace(/-/g, ' ').trim(),
-    ].filter(Boolean);
+    const baseName = slugOrId.replace(/-/g, ' ').trim();
+    const nameVariants = [slugOrId, baseName].filter(Boolean);
+    const patterns = new Set<string>();
     for (const name of nameVariants) {
+      patterns.add(name);
+      const fuzzy = name.replace(/[^a-z0-9]+/gi, '%');
+      if (fuzzy && fuzzy !== name) {
+        patterns.add(`%${fuzzy}%`);
+      }
+    }
+
+    for (const pattern of patterns) {
       const { data: byName, error: nameError } = await supabase
         .from('profiles')
         .select(selectBase)
-        .ilike('display_name', name)
+        .ilike('display_name', pattern)
         .limit(1)
         .maybeSingle();
       if (nameError) {
