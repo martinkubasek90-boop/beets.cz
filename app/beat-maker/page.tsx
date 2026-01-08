@@ -7,6 +7,8 @@ const STEPS = 32;
 const DRUM_ROWS = 10;
 const SAMPLE_ROWS = 8;
 const MAX_SAMPLE_SECONDS = 5 * 60;
+const STEP_SIZE = 24;
+const STEP_GAP = 4;
 
 type DrumRow = {
   name: string;
@@ -742,8 +744,11 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         —
                       </div>
                       <div
-                        className="grid gap-1 text-[10px] text-white/30"
-                        style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                        className="grid text-[10px] text-white/30"
+                        style={{
+                          gridTemplateColumns: `repeat(${STEPS}, ${STEP_SIZE}px)`,
+                          columnGap: `${STEP_GAP}px`,
+                        }}
                       >
                         {Array.from({ length: STEPS }, (_, colIndex) => (
                           <div
@@ -787,8 +792,11 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                           {row.fileName ? 'Nahráno' : 'Nahrát'}
                         </label>
                         <div
-                          className="grid gap-1"
-                          style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                          className="grid"
+                          style={{
+                            gridTemplateColumns: `repeat(${STEPS}, ${STEP_SIZE}px)`,
+                            columnGap: `${STEP_GAP}px`,
+                          }}
                         >
                           {Array.from({ length: STEPS }, (_, colIndex) => (
                             <button
@@ -819,7 +827,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                             />
                           ))}
                         </div>
-                        <div className="flex items-center gap-2 pl-2">
+                        <div className="flex w-32 items-center gap-2 pl-2">
                           <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
                             Swing
                           </span>
@@ -837,7 +845,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                                 )
                               );
                             }}
-                            className="w-20 accent-[var(--mpc-accent)]"
+                            className="w-16 accent-[var(--mpc-accent)]"
                           />
                           <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
                             {row.swing > 0 ? `+${row.swing}` : row.swing}
@@ -1021,8 +1029,11 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                     <div className="flex items-center gap-3">
                       <div className="w-20 text-[10px] uppercase tracking-[0.2em] text-white/40">Kroky</div>
                       <div
-                        className="grid gap-1 text-[10px] text-white/30"
-                        style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                        className="grid text-[10px] text-white/30"
+                        style={{
+                          gridTemplateColumns: `repeat(${STEPS}, ${STEP_SIZE}px)`,
+                          columnGap: `${STEP_GAP}px`,
+                        }}
                       >
                         {Array.from({ length: STEPS }, (_, colIndex) => (
                           <div
@@ -1058,8 +1069,11 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                           </span>
                         </button>
                         <div
-                          className="grid gap-1"
-                          style={{ gridTemplateColumns: `repeat(${STEPS}, minmax(0, 1fr))` }}
+                          className="grid"
+                          style={{
+                            gridTemplateColumns: `repeat(${STEPS}, ${STEP_SIZE}px)`,
+                            columnGap: `${STEP_GAP}px`,
+                          }}
                         >
                           {Array.from({ length: STEPS }, (_, colIndex) => (
                             <button
