@@ -18,6 +18,7 @@ type DrumRow = {
   swing: number;
   volume: number;
   pitch: number;
+  eq: { low: number; mid: number; high: number };
 };
 
 type Slice = {
@@ -44,6 +45,8 @@ type SavedProject = {
   drumPitch?: number[];
   samplerVolumes?: number[];
   samplerPitch?: number[];
+  drumEq?: { low: number; mid: number; high: number }[];
+  samplerEq?: { low: number; mid: number; high: number }[];
 };
 
 const createStepGrid = (rows: number) =>
@@ -163,6 +166,7 @@ export default function BeatMakerPage() {
       swing: 0,
       volume: 0.9,
       pitch: 0,
+      eq: { low: 0, mid: 0, high: 0 },
     }))
   );
 
@@ -185,6 +189,9 @@ export default function BeatMakerPage() {
   const [samplerPitch, setSamplerPitch] = useState<number[]>(
     Array.from({ length: SAMPLE_ROWS }, () => 0)
   );
+  const [samplerEq, setSamplerEq] = useState(
+    Array.from({ length: SAMPLE_ROWS }, () => ({ low: 0, mid: 0, high: 0 }))
+  );
 
   const [projectName, setProjectName] = useState('');
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
@@ -196,6 +203,7 @@ export default function BeatMakerPage() {
   const drumRowsRef = useRef(drumRows);
   const samplerVolumesRef = useRef(samplerVolumes);
   const samplerPitchRef = useRef(samplerPitch);
+  const samplerEqRef = useRef(samplerEq);
   const slicesRef = useRef(slices);
   const padAssignmentsRef = useRef(padAssignments);
   const sampleBufferRef = useRef(sampleBuffer);
@@ -222,6 +230,9 @@ export default function BeatMakerPage() {
   useEffect(() => {
     samplerPitchRef.current = samplerPitch;
   }, [samplerPitch]);
+  useEffect(() => {
+    samplerEqRef.current = samplerEq;
+  }, [samplerEq]);
   useEffect(() => {
     slicesRef.current = slices;
   }, [slices]);
@@ -317,7 +328,8 @@ export default function BeatMakerPage() {
     when?: number,
     stopPrevious?: boolean,
     playbackRate = 1,
-    gainValue = 1
+    gainValue = 1,
+    eqSettings: { low: number; mid: number; high: number } = { low: 0, mid: 0, high: 0 }
   ) => {
     const ctx = ensureAudioContext();
     if (stopPrevious && slicePreviewRef.current) {
@@ -330,10 +342,26 @@ export default function BeatMakerPage() {
     }
     const source = ctx.createBufferSource();
     const gainNode = ctx.createGain();
+    const low = ctx.createBiquadFilter();
+    const mid = ctx.createBiquadFilter();
+    const high = ctx.createBiquadFilter();
     source.buffer = buffer;
     source.playbackRate.value = playbackRate;
     gainNode.gain.value = gainValue;
-    source.connect(gainNode);
+    low.type = 'lowshelf';
+    low.frequency.value = 120;
+    low.gain.value = eqSettings.low;
+    mid.type = 'peaking';
+    mid.frequency.value = 1000;
+    mid.Q.value = 1;
+    mid.gain.value = eqSettings.mid;
+    high.type = 'highshelf';
+    high.frequency.value = 8000;
+    high.gain.value = eqSettings.high;
+    source.connect(low);
+    low.connect(mid);
+    mid.connect(high);
+    high.connect(gainNode);
     gainNode.connect(ctx.destination);
     const startAt = typeof when === 'number' ? ctx.currentTime + when : ctx.currentTime;
     if (typeof start === 'number' && typeof duration === 'number') {
@@ -393,7 +421,7 @@ export default function BeatMakerPage() {
         const shouldDelay = swingValue >= 0 ? isSwingStep : !isSwingStep;
         const delay = shouldDelay ? swingOffset : 0;
         const rate = Math.pow(2, row.pitch / 12);
-        playBuffer(row.buffer, undefined, undefined, delay, false, rate, row.volume);
+        playBuffer(row.buffer, undefined, undefined, delay, false, rate, row.volume, row.eq);
       }
     });
 
@@ -408,6 +436,7 @@ export default function BeatMakerPage() {
         stopSamplerPad(rowIndex);
         const padPitch = samplerPitchRef.current[rowIndex] ?? 0;
         const padVolume = samplerVolumesRef.current[rowIndex] ?? 0.9;
+        const padEq = samplerEqRef.current[rowIndex] ?? { low: 0, mid: 0, high: 0 };
         const pitchRate = Math.pow(2, padPitch / 12);
         const source = playBuffer(
           samplerBuffer,
@@ -416,7 +445,8 @@ export default function BeatMakerPage() {
           undefined,
           false,
           samplerRate * pitchRate,
-          padVolume
+          padVolume,
+          padEq
         );
         samplerPadRefs.current[rowIndex] = source ?? null;
         if (source) {
@@ -557,6 +587,7 @@ export default function BeatMakerPage() {
     const samplerRate = getSamplerRate();
     const padPitch = samplerPitchRef.current[padIndex] ?? 0;
     const padVolume = samplerVolumesRef.current[padIndex] ?? 0.9;
+    const padEq = samplerEqRef.current[padIndex] ?? { low: 0, mid: 0, high: 0 };
     const pitchRate = Math.pow(2, padPitch / 12);
     const source = playBuffer(
       buffer,
@@ -565,7 +596,8 @@ export default function BeatMakerPage() {
       undefined,
       false,
       samplerRate * pitchRate,
-      padVolume
+      padVolume,
+      padEq
     );
     samplerPadRefs.current[padIndex] = source ?? null;
     if (source) {
@@ -613,8 +645,10 @@ export default function BeatMakerPage() {
       drumSwing: drumRows.map((row) => row.swing),
       drumVolumes: drumRows.map((row) => row.volume),
       drumPitch: drumRows.map((row) => row.pitch),
+      drumEq: drumRows.map((row) => row.eq),
       samplerVolumes,
       samplerPitch,
+      samplerEq,
     };
 
     const updated = [record, ...getStoredProjects()];
@@ -655,6 +689,10 @@ export default function BeatMakerPage() {
     const drumSwing = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumSwing?.[index] ?? 0);
     const drumVolumes = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumVolumes?.[index] ?? 0.9);
     const drumPitch = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumPitch?.[index] ?? 0);
+    const drumEq = Array.from(
+      { length: DRUM_ROWS },
+      (_, index) => project.drumEq?.[index] ?? { low: 0, mid: 0, high: 0 }
+    );
     const rows = await Promise.all(
       drumKeyList.map(async (key, index) => {
         if (!key) {
@@ -666,6 +704,7 @@ export default function BeatMakerPage() {
             swing: drumSwing[index],
             volume: drumVolumes[index],
             pitch: drumPitch[index],
+            eq: drumEq[index],
           } satisfies DrumRow;
         }
         const blob = await getBlob(key);
@@ -678,6 +717,7 @@ export default function BeatMakerPage() {
             swing: drumSwing[index],
             volume: drumVolumes[index],
             pitch: drumPitch[index],
+            eq: drumEq[index],
           } satisfies DrumRow;
         }
         const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
@@ -689,6 +729,7 @@ export default function BeatMakerPage() {
           swing: drumSwing[index],
           volume: drumVolumes[index],
           pitch: drumPitch[index],
+          eq: drumEq[index],
         } satisfies DrumRow;
       })
     );
@@ -698,6 +739,12 @@ export default function BeatMakerPage() {
     );
     setSamplerPitch(
       Array.from({ length: SAMPLE_ROWS }, (_, index) => project.samplerPitch?.[index] ?? 0)
+    );
+    setSamplerEq(
+      Array.from(
+        { length: SAMPLE_ROWS },
+        (_, index) => project.samplerEq?.[index] ?? { low: 0, mid: 0, high: 0 }
+      )
     );
 
     if (project.samplerKey) {
@@ -726,6 +773,7 @@ export default function BeatMakerPage() {
         swing: 0,
         volume: 0.9,
         pitch: 0,
+        eq: { low: 0, mid: 0, high: 0 },
       }))
     );
     setSampleFileName(null);
@@ -739,6 +787,7 @@ export default function BeatMakerPage() {
     setSampleBpm(bpm);
     setSamplerVolumes(Array.from({ length: SAMPLE_ROWS }, () => 0.9));
     setSamplerPitch(Array.from({ length: SAMPLE_ROWS }, () => 0));
+    setSamplerEq(Array.from({ length: SAMPLE_ROWS }, () => ({ low: 0, mid: 0, high: 0 })));
     setSaveStatus(null);
   };
 
@@ -1254,42 +1303,43 @@ export default function BeatMakerPage() {
 
               <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                  Mixer · Volume & Pitch
+                  Mixer · Volume / Pitch / EQ
                 </h2>
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="mt-4 grid gap-4">
                   <div className="rounded-xl border border-white/10 bg-black/50 p-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Bicí</p>
-                    <div className="mt-3 grid gap-3">
-                      {drumRows.map((row, rowIndex) => (
-                        <div key={row.name} className="grid gap-2">
-                          <div className="flex items-center gap-2 text-xs text-white/70">
+                    <div className="mt-4 grid gap-4 overflow-x-auto">
+                      <div className="flex gap-4">
+                        {drumRows.map((row, rowIndex) => (
+                          <div
+                            key={row.name}
+                            className="flex w-24 flex-col items-center gap-3 rounded-lg border border-white/10 bg-black/60 p-3"
+                          >
                             <span
                               className="h-2.5 w-2.5 rounded-full"
                               style={{ backgroundColor: drumColors[rowIndex % drumColors.length] }}
                             />
-                            <span className="uppercase tracking-[0.18em]">{row.name}</span>
-                          </div>
-                          <div className="grid grid-cols-[1fr_1fr] items-center gap-3">
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                              Volume
-                              <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={row.volume}
-                                onChange={(event) => {
-                                  const value = Number(event.target.value);
-                                  setDrumRows((prev) =>
-                                    prev.map((item, idx) =>
-                                      idx === rowIndex ? { ...item, volume: value } : item
-                                    )
-                                  );
-                                }}
-                                className="mt-1 w-full accent-[var(--mpc-accent)]"
-                              />
-                            </label>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-white/70">
+                              {row.name}
+                            </span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.01}
+                              value={row.volume}
+                              onChange={(event) => {
+                                const value = Number(event.target.value);
+                                setDrumRows((prev) =>
+                                  prev.map((item, idx) =>
+                                    idx === rowIndex ? { ...item, volume: value } : item
+                                  )
+                                );
+                              }}
+                              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                              className="h-24 w-2 accent-[var(--mpc-accent)]"
+                            />
+                            <label className="w-full text-[9px] uppercase tracking-[0.2em] text-white/40">
                               Pitch
                               <input
                                 type="range"
@@ -1308,43 +1358,109 @@ export default function BeatMakerPage() {
                                 className="mt-1 w-full accent-[var(--mpc-accent)]"
                               />
                             </label>
+                            <div className="grid w-full gap-1 text-[9px] uppercase tracking-[0.2em] text-white/40">
+                              <label>
+                                Low
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={row.eq.low}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setDrumRows((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex
+                                          ? { ...item, eq: { ...item.eq, low: value } }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                              <label>
+                                Mid
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={row.eq.mid}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setDrumRows((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex
+                                          ? { ...item, eq: { ...item.eq, mid: value } }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                              <label>
+                                High
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={row.eq.high}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setDrumRows((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex
+                                          ? { ...item, eq: { ...item.eq, high: value } }
+                                          : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   <div className="rounded-xl border border-white/10 bg-black/50 p-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Sampler Pady</p>
-                    <div className="mt-3 grid gap-3">
-                      {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
-                        <div key={rowIndex} className="grid gap-2">
-                          <div className="flex items-center gap-2 text-xs text-white/70">
+                    <div className="mt-4 grid gap-4 overflow-x-auto">
+                      <div className="flex gap-4">
+                        {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
+                          <div
+                            key={rowIndex}
+                            className="flex w-24 flex-col items-center gap-3 rounded-lg border border-white/10 bg-black/60 p-3"
+                          >
                             <span
                               className="h-2.5 w-2.5 rounded-full"
                               style={{ backgroundColor: samplerColors[rowIndex % samplerColors.length] }}
                             />
-                            <span className="uppercase tracking-[0.18em]">Pad {rowIndex + 1}</span>
-                          </div>
-                          <div className="grid grid-cols-[1fr_1fr] items-center gap-3">
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
-                              Volume
-                              <input
-                                type="range"
-                                min={0}
-                                max={1}
-                                step={0.01}
-                                value={samplerVolumes[rowIndex] ?? 0.9}
-                                onChange={(event) => {
-                                  const value = Number(event.target.value);
-                                  setSamplerVolumes((prev) =>
-                                    prev.map((item, idx) => (idx === rowIndex ? value : item))
-                                  );
-                                }}
-                                className="mt-1 w-full accent-[var(--mpc-accent)]"
-                              />
-                            </label>
-                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                            <span className="text-[10px] uppercase tracking-[0.18em] text-white/70">
+                              Pad {rowIndex + 1}
+                            </span>
+                            <input
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.01}
+                              value={samplerVolumes[rowIndex] ?? 0.9}
+                              onChange={(event) => {
+                                const value = Number(event.target.value);
+                                setSamplerVolumes((prev) =>
+                                  prev.map((item, idx) => (idx === rowIndex ? value : item))
+                                );
+                              }}
+                              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                              className="h-24 w-2 accent-[var(--mpc-accent)]"
+                            />
+                            <label className="w-full text-[9px] uppercase tracking-[0.2em] text-white/40">
                               Pitch
                               <input
                                 type="range"
@@ -1361,9 +1477,68 @@ export default function BeatMakerPage() {
                                 className="mt-1 w-full accent-[var(--mpc-accent)]"
                               />
                             </label>
+                            <div className="grid w-full gap-1 text-[9px] uppercase tracking-[0.2em] text-white/40">
+                              <label>
+                                Low
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={samplerEq[rowIndex]?.low ?? 0}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setSamplerEq((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex ? { ...item, low: value } : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                              <label>
+                                Mid
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={samplerEq[rowIndex]?.mid ?? 0}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setSamplerEq((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex ? { ...item, mid: value } : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                              <label>
+                                High
+                                <input
+                                  type="range"
+                                  min={-12}
+                                  max={12}
+                                  step={1}
+                                  value={samplerEq[rowIndex]?.high ?? 0}
+                                  onChange={(event) => {
+                                    const value = Number(event.target.value);
+                                    setSamplerEq((prev) =>
+                                      prev.map((item, idx) =>
+                                        idx === rowIndex ? { ...item, high: value } : item
+                                      )
+                                    );
+                                  }}
+                                  className="mt-1 w-full accent-[var(--mpc-accent)]"
+                                />
+                              </label>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
