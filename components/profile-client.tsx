@@ -5748,14 +5748,14 @@ const buildAppleEmbed = (url: string) => {
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        Embed (YouTube / Bandcamp / SoundCloud)
+                        Embed (YouTube / Spotify / Bandcamp / SoundCloud)
                       </label>
                       <input
                         type="text"
                         value={blogForm.embedUrl}
                         onChange={(e) => setBlogForm((prev) => ({ ...prev, embedUrl: e.target.value }))}
                         className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="https://youtu.be/..., https://bandcamp.com/..., https://soundcloud.com/..."
+                        placeholder="https://youtu.be/..., https://open.spotify.com/..., https://bandcamp.com/..., https://soundcloud.com/..."
                       />
                     </div>
                   </div>

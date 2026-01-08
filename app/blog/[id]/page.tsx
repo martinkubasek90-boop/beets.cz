@@ -25,6 +25,17 @@ function normalizeEmbedUrl(url?: string | null) {
   if (!url) return '';
   try {
     const u = new URL(url);
+    if (u.hostname.includes('open.spotify.com')) {
+      if (u.pathname.startsWith('/embed/')) {
+        return url;
+      }
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2) {
+        const type = parts[0];
+        const id = parts[1];
+        return `https://open.spotify.com/embed/${type}/${id}`;
+      }
+    }
     if (u.hostname.includes('youtu.be')) {
       const id = u.pathname.slice(1);
       return `https://www.youtube.com/embed/${id}`;
