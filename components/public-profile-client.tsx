@@ -148,6 +148,30 @@ const normalizeEmbedHtml = (html: string) => {
           url.searchParams.set('color', '#111111');
         }
       }
+      if (url.hostname.includes('bandcamp.com') && url.pathname.includes('/EmbeddedPlayer/')) {
+        if (url.pathname.includes('bgcol=')) {
+          url.pathname = url.pathname.replace(/bgcol=([0-9a-fA-F]{6})/i, 'bgcol=111111');
+        } else {
+          url.pathname = url.pathname.replace(/\/(linkcol=)/i, '/bgcol=111111/$1');
+          if (!url.pathname.includes('bgcol=')) {
+            url.pathname = `${url.pathname.replace(/\/$/, '')}/bgcol=111111`;
+          }
+        }
+        if (url.pathname.includes('linkcol=')) {
+          url.pathname = url.pathname.replace(/linkcol=([0-9a-fA-F]{6})/i, 'linkcol=e99708');
+        } else {
+          url.pathname = url.pathname.replace(/\/(tracklist=)/i, '/linkcol=e99708/$1');
+          if (!url.pathname.includes('linkcol=')) {
+            url.pathname = `${url.pathname.replace(/\/$/, '')}/linkcol=e99708`;
+          }
+        }
+        if (!url.pathname.includes('transparent=true')) {
+          url.pathname = url.pathname.replace(/\/(tracklist=)/i, '/transparent=true/$1');
+          if (!url.pathname.includes('transparent=true')) {
+            url.pathname = `${url.pathname.replace(/\/$/, '')}/transparent=true`;
+          }
+        }
+      }
       return `src="${url.toString()}"`;
     } catch {
       return match;
