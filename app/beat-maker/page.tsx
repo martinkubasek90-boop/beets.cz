@@ -1336,7 +1336,7 @@ export default function BeatMakerPage() {
                                   )
                                 );
                               }}
-                              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                              style={{ writingMode: 'vertical-rl', WebkitAppearance: 'slider-vertical' }}
                               className="h-24 w-2 accent-[var(--mpc-accent)]"
                             />
                             <label className="w-full text-[9px] uppercase tracking-[0.2em] text-white/40">
@@ -1457,7 +1457,7 @@ export default function BeatMakerPage() {
                                   prev.map((item, idx) => (idx === rowIndex ? value : item))
                                 );
                               }}
-                              style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                              style={{ writingMode: 'vertical-rl', WebkitAppearance: 'slider-vertical' }}
                               className="h-24 w-2 accent-[var(--mpc-accent)]"
                             />
                             <label className="w-full text-[9px] uppercase tracking-[0.2em] text-white/40">
