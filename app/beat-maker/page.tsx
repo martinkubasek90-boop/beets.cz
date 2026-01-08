@@ -977,13 +977,13 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                       <input
                         type="range"
                         min={1}
-                        max={4}
+                        max={8}
                         step={0.5}
                         value={waveZoom}
                         onChange={(event) => setWaveZoom(Number(event.target.value))}
                         className="w-28"
                       />
-                      <span>4x</span>
+                      <span>8x</span>
                     </div>
                   </div>
 
