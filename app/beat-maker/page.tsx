@@ -828,6 +828,19 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                   {sampleFileName && (
                     <span className="text-xs text-white/50">{sampleFileName}</span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!sampleBuffer) return;
+                      const start = Math.max(0, Math.min(sliceStart, sliceEnd));
+                      const end = Math.min(sampleDuration, Math.max(sliceStart, sliceEnd));
+                      const duration = Math.max(0.05, end - start);
+                      playBuffer(sampleBuffer, start, duration);
+                    }}
+                    className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white"
+                  >
+                    Play Slice
+                  </button>
                 </div>
 
                 <div className="mt-4 rounded-xl border border-white/10 bg-black/60 p-3">
