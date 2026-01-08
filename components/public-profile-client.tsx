@@ -2064,11 +2064,20 @@ export default function PublicProfileClient({
                   <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   <div className="mt-2 flex justify-center">
                     <div className="relative w-full max-w-[720px]">
+                      {(() => {
+                        const embedHtml = project.embed_html || projectEmbeds[project.id];
+                        const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
+                        const embedClass = isBandcamp
+                          ? 'min-h-[120px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                          : 'min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
+                        return (
                       <div
                         key={`embed-${project.id}-${embedResetNonce}`}
-                        className="min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id]) }}
+                        className={embedClass}
+                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml || '') }}
                       />
+                        );
+                      })()}
                       {isPlaying && (
                         <button
                           type="button"

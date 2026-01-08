@@ -1662,11 +1662,20 @@ export default function Home() {
                     className="flex justify-center"
                   >
                       <div className="relative w-full max-w-[720px]">
-                        <div
-                          key={`embed-${project.id}-${embedResetNonce}`}
-                          className="min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0"
-                          dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(project.embed_html || projectEmbeds[project.id] || '') }}
-                        />
+                        {(() => {
+                          const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
+                          const isBandcamp = embedHtml.includes('bandcamp.com/EmbeddedPlayer');
+                          const embedClass = isBandcamp
+                            ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                            : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
+                          return (
+                            <div
+                              key={`embed-${project.id}-${embedResetNonce}`}
+                              className={embedClass}
+                              dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
+                            />
+                          );
+                        })()}
                         {gpIsPlaying && (
                           <button
                             type="button"
