@@ -1807,7 +1807,7 @@ export default function Home() {
                           href={normalizePurchaseUrl(externalUrl) || undefined}
                           target="_blank"
                           rel="noreferrer"
-                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                          className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:brightness-110"
                         >
                           {externalPlatform || 'Otevřít'}
                         </a>
