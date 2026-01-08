@@ -2097,14 +2097,28 @@ export default function PublicProfileClient({
                   <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
                   {(project.release_formats || [])
                     .filter((format) => format !== 'digital')
-                    .map((format) => (
-                      <span
-                        key={format}
-                        className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
-                      >
-                        {RELEASE_FORMAT_LABELS[format] || format}
-                      </span>
-                    ))}
+                    .map((format) => {
+                      const label = RELEASE_FORMAT_LABELS[format] || format;
+                      const href = normalizePurchaseUrl(project.purchase_url);
+                      return href ? (
+                        <a
+                          key={format}
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        <span
+                          key={format}
+                          className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
                   <a
                     href={normalizePurchaseUrl(project.purchase_url) || project.project_url || undefined}
                     target="_blank"

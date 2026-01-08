@@ -1791,16 +1791,30 @@ export default function Home() {
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
                       <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        {(project.release_formats || [])
-                          .filter((format) => format !== 'digital')
-                          .map((format) => (
+                      {(project.release_formats || [])
+                        .filter((format) => format !== 'digital')
+                        .map((format) => {
+                          const label = RELEASE_FORMAT_LABELS[format] || format;
+                          const href = normalizePurchaseUrl(project.purchase_url);
+                          return href ? (
+                            <a
+                              key={format}
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                            >
+                              {label}
+                            </a>
+                          ) : (
                             <span
                               key={format}
                               className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
                             >
-                              {RELEASE_FORMAT_LABELS[format] || format}
+                              {label}
                             </span>
-                          ))}
+                          );
+                        })}
                       </div>
                       {externalUrl && (
                         <a
