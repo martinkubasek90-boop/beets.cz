@@ -3811,13 +3811,212 @@ const buildAppleEmbed = (url: string) => {
 
             )}
 
+            {!isMcOnly && (
+            <>
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
+                    {t('profile.projects.title', 'Moje projekty')}
+                  </h2>
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{projects.length} {t('profile.items', 'položek')}</p>
+                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Přetáhni pro změnu pořadí
+                  </p>
+                </div>
+                {projects.length > 3 && (
+                  <div className="flex items-center gap-1 text-[12px] text-[var(--mpc-muted)]">
+                    <button
+                      type="button"
+                      onClick={() => scrollListBy(projectsListRef, 'up')}
+                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                      aria-label="Posunout projekty nahoru"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollListBy(projectsListRef, 'down')}
+                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                      aria-label="Posunout projekty dolů"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )}
+              </div>
+              {projectsError && (
+                <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
+                  {projectsError}
+                </div>
+              )}
+              {projectsOrderSaved && (
+                <div className="mb-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+                  Pořadí projektů bylo uloženo.
+                </div>
+              )}
+              {projects.length === 0 ? (
+                <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-6">
+                  <div className="rounded-md bg-[var(--mpc-panel)] px-3 py-2 text-[var(--mpc-muted)]">📂</div>
+                  <p className="text-sm text-[var(--mpc-light)]">Zatím žádné projekty</p>
+                  <p className="text-xs text-[var(--mpc-muted)]">
+                    Spoj své beaty do projektů – vytvoř první projekt.
+                  </p>
+                  <button
+                    onClick={() => toggleSection('projectUpload')}
+                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white shadow-[0_8px_20px_rgba(255,75,129,0.35)]"
+                  >
+                    Nahrát projekt
+                  </button>
+                </div>
+              ) : (
+                <div
+                  ref={projectsListRef}
+                  className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                >
+                  {projects.map((project) => {
+                    const projectStyle = project.cover_url
+                      ? {
+                          backgroundImage:
+                            'linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.9)), url(' +
+                            (resolveProjectCoverUrl(project.cover_url) || '') +
+                            ')',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                        }
+                      : undefined;
+                    const isDragOver = dragOverProjectId === project.id && dragProjectId !== project.id;
+                    const isDragging = dragProjectId === project.id;
+                    return (
+                      <div
+                        key={project.id}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', project.id);
+                          setDragProjectId(project.id);
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOverProjectId(project.id);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          void handleProjectDrop(project.id);
+                        }}
+                        onDragEnd={() => {
+                          setDragProjectId(null);
+                          setDragOverProjectId(null);
+                        }}
+                        className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
+                          isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
+                        } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
+                        style={projectStyle}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
+                            <p className="font-semibold">{project.title}</p>
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">
+                            {project.description || 'Bez popisu'}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingProject(project);
+                                setProjectEditTitle(project.title || '');
+                                setProjectEditDescription(project.description || '');
+                                setProjectEditReleaseFormats(project.release_formats || []);
+                                setProjectEditPurchaseUrl(project.purchase_url || '');
+                                const tracks = Array.isArray(project.tracks_json)
+                                  ? project.tracks_json.map((t: any) => {
+                                      const path = t.path || null;
+                                      const urlFallback =
+                                        path && (!t.url || t.url.startsWith('http') === false)
+                                          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                          : '';
+                                      return {
+                                        name: t.name || '',
+                                        url: t.url || urlFallback,
+                                        path,
+                                      };
+                                    })
+                                  : [];
+                                setProjectEditTracks(
+                                  tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                                );
+                              }}
+                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                            >
+                              Upravit
+                            </button>
+                            {SHOW_SHARE_FEATURE && (
+                              <button
+                                onClick={() => void createShareLink('project', String(project.id))}
+                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Sdílet
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDeleteProject(project.id)}
+                              className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                            >
+                              Smazat
+                            </button>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
+                            <label className="text-[var(--mpc-muted)]">Přístup</label>
+                            <select
+                              value={project.access_mode || 'public'}
+                              onChange={(e) => handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')}
+                              className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
+                            >
+                              <option value="public">Veřejný</option>
+                              <option value="request">Na žádost</option>
+                              <option value="private">Soukromý</option>
+                            </select>
+                          </div>
+                          {projectGrantsError && (
+                            <p className="text-[11px] text-red-300">{projectGrantsError}</p>
+                          )}
+                          {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
+                            <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
+                              <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
+                              <div className="space-y-1">
+                                {projectGrants[project.id].map((g) => (
+                                  <div key={g.id} className="flex items-center justify-between">
+                                    <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
+                                    <button
+                                      onClick={() => void handleRevokeGrant(project.id, g.id)}
+                                      className="text-[10px] text-red-300 hover:text-white"
+                                    >
+                                      Odebrat
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {!isMcOnly && editingProject && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit projekt</h3>
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">{editingProject.title}</p>
-                        </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit projekt</h3>
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">{editingProject.title}</p>
+                  </div>
                   <button
                     onClick={() => setEditingProject(null)}
                     className="text-[11px] text-[var(--mpc-muted)] hover:text-white"
@@ -4141,205 +4340,6 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               </div>
             )}
-
-            {!isMcOnly && (
-            <>
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
-                    {t('profile.projects.title', 'Moje projekty')}
-                  </h2>
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{projects.length} {t('profile.items', 'položek')}</p>
-                  <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                    Přetáhni pro změnu pořadí
-                  </p>
-                </div>
-                {projects.length > 3 && (
-                  <div className="flex items-center gap-1 text-[12px] text-[var(--mpc-muted)]">
-                    <button
-                      type="button"
-                      onClick={() => scrollListBy(projectsListRef, 'up')}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                      aria-label="Posunout projekty nahoru"
-                    >
-                      ↑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => scrollListBy(projectsListRef, 'down')}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                      aria-label="Posunout projekty dolů"
-                    >
-                      ↓
-                    </button>
-                  </div>
-                )}
-              </div>
-              {projectsError && (
-                <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
-                  {projectsError}
-                </div>
-              )}
-              {projectsOrderSaved && (
-                <div className="mb-2 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-                  Pořadí projektů bylo uloženo.
-                </div>
-              )}
-              {projects.length === 0 ? (
-                <div className="flex flex-col items-start gap-3 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-4 py-6">
-                  <div className="rounded-md bg-[var(--mpc-panel)] px-3 py-2 text-[var(--mpc-muted)]">📂</div>
-                  <p className="text-sm text-[var(--mpc-light)]">Zatím žádné projekty</p>
-                  <p className="text-xs text-[var(--mpc-muted)]">
-                    Spoj své beaty do projektů – vytvoř první projekt.
-                  </p>
-                  <button
-                    onClick={() => toggleSection('projectUpload')}
-                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white shadow-[0_8px_20px_rgba(255,75,129,0.35)]"
-                  >
-                    Nahrát projekt
-                  </button>
-                </div>
-              ) : (
-                <div
-                  ref={projectsListRef}
-                  className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
-                >
-                  {projects.map((project) => {
-                    const projectStyle = project.cover_url
-                      ? {
-                          backgroundImage:
-                            'linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.9)), url(' +
-                            (resolveProjectCoverUrl(project.cover_url) || '') +
-                            ')',
-                          backgroundSize: 'cover',
-                          backgroundPosition: 'center',
-                        }
-                      : undefined;
-                    const isDragOver = dragOverProjectId === project.id && dragProjectId !== project.id;
-                    const isDragging = dragProjectId === project.id;
-                    return (
-                      <div
-                        key={project.id}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('text/plain', project.id);
-                          setDragProjectId(project.id);
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragOverProjectId(project.id);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          void handleProjectDrop(project.id);
-                        }}
-                        onDragEnd={() => {
-                          setDragProjectId(null);
-                          setDragOverProjectId(null);
-                        }}
-                        className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
-                          isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
-                        } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
-                        style={projectStyle}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
-                            <p className="font-semibold">{project.title}</p>
-                          </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">
-                            {project.description || 'Bez popisu'}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              onClick={() => {
-                                setEditingProject(project);
-                                setProjectEditTitle(project.title || '');
-                                setProjectEditDescription(project.description || '');
-                                setProjectEditReleaseFormats(project.release_formats || []);
-                                setProjectEditPurchaseUrl(project.purchase_url || '');
-                                const tracks = Array.isArray(project.tracks_json)
-                                  ? project.tracks_json.map((t: any) => {
-                                      const path = t.path || null;
-                                      const urlFallback =
-                                        path && (!t.url || t.url.startsWith('http') === false)
-                                          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                          : '';
-                                      return {
-                                        name: t.name || '',
-                                        url: t.url || urlFallback,
-                                        path,
-                                      };
-                                    })
-                                  : [];
-                                setProjectEditTracks(
-                                  tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                                );
-                              }}
-                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
-                            >
-                              Upravit
-                            </button>
-                            {SHOW_SHARE_FEATURE && (
-                              <button
-                                onClick={() => void createShareLink('project', String(project.id))}
-                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                              >
-                                Sdílet
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleDeleteProject(project.id)}
-                              className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
-                            >
-                              Smazat
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
-                            <label className="text-[var(--mpc-muted)]">Přístup</label>
-                            <select
-                              value={project.access_mode || 'public'}
-                              onChange={(e) => handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')}
-                              className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
-                            >
-                              <option value="public">Veřejný</option>
-                              <option value="request">Na žádost</option>
-                              <option value="private">Soukromý</option>
-                            </select>
-                          </div>
-                          {projectGrantsError && (
-                            <p className="text-[11px] text-red-300">{projectGrantsError}</p>
-                          )}
-                          {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
-                            <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
-                              <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
-                              <div className="space-y-1">
-                                {projectGrants[project.id].map((g) => (
-                                  <div key={g.id} className="flex items-center justify-between">
-                                    <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
-                                    <button
-                                      onClick={() => void handleRevokeGrant(project.id, g.id)}
-                                      className="text-[10px] text-red-300 hover:text-white"
-                                    >
-                                      Odebrat
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
               <div className="flex items-center justify-between">
