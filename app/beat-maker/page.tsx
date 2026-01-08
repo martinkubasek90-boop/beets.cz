@@ -16,6 +16,8 @@ type DrumRow = {
   fileBlob: Blob | null;
   buffer: AudioBuffer | null;
   swing: number;
+  volume: number;
+  pitch: number;
 };
 
 type Slice = {
@@ -38,6 +40,10 @@ type SavedProject = {
   drumKeys: (string | null)[];
   samplerKey: string | null;
   drumSwing?: number[];
+  drumVolumes?: number[];
+  drumPitch?: number[];
+  samplerVolumes?: number[];
+  samplerPitch?: number[];
 };
 
 const createStepGrid = (rows: number) =>
@@ -148,13 +154,15 @@ export default function BeatMakerPage() {
   const [playhead, setPlayhead] = useState(0);
   const [drumSteps, setDrumSteps] = useState(() => createStepGrid(DRUM_ROWS));
   const [samplerSteps, setSamplerSteps] = useState(() => createStepGrid(SAMPLE_ROWS));
-const [drumRows, setDrumRows] = useState<DrumRow[]>(
+  const [drumRows, setDrumRows] = useState<DrumRow[]>(
     defaultDrumNames.map((name) => ({
       name,
       fileName: null,
       fileBlob: null,
       buffer: null,
       swing: 0,
+      volume: 0.9,
+      pitch: 0,
     }))
   );
 
@@ -171,6 +179,12 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
   );
   const [selectedPad, setSelectedPad] = useState<number | null>(null);
   const [waveZoom, setWaveZoom] = useState(1);
+  const [samplerVolumes, setSamplerVolumes] = useState<number[]>(
+    Array.from({ length: SAMPLE_ROWS }, () => 0.9)
+  );
+  const [samplerPitch, setSamplerPitch] = useState<number[]>(
+    Array.from({ length: SAMPLE_ROWS }, () => 0)
+  );
 
   const [projectName, setProjectName] = useState('');
   const [savedProjects, setSavedProjects] = useState<SavedProject[]>([]);
@@ -180,6 +194,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
   const drumStepsRef = useRef(drumSteps);
   const samplerStepsRef = useRef(samplerSteps);
   const drumRowsRef = useRef(drumRows);
+  const samplerVolumesRef = useRef(samplerVolumes);
+  const samplerPitchRef = useRef(samplerPitch);
   const slicesRef = useRef(slices);
   const padAssignmentsRef = useRef(padAssignments);
   const sampleBufferRef = useRef(sampleBuffer);
@@ -200,6 +216,12 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
   useEffect(() => {
     drumRowsRef.current = drumRows;
   }, [drumRows]);
+  useEffect(() => {
+    samplerVolumesRef.current = samplerVolumes;
+  }, [samplerVolumes]);
+  useEffect(() => {
+    samplerPitchRef.current = samplerPitch;
+  }, [samplerPitch]);
   useEffect(() => {
     slicesRef.current = slices;
   }, [slices]);
@@ -294,7 +316,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     duration?: number,
     when?: number,
     stopPrevious?: boolean,
-    playbackRate = 1
+    playbackRate = 1,
+    gainValue = 1
   ) => {
     const ctx = ensureAudioContext();
     if (stopPrevious && slicePreviewRef.current) {
@@ -306,9 +329,12 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       slicePreviewRef.current = null;
     }
     const source = ctx.createBufferSource();
+    const gainNode = ctx.createGain();
     source.buffer = buffer;
     source.playbackRate.value = playbackRate;
-    source.connect(ctx.destination);
+    gainNode.gain.value = gainValue;
+    source.connect(gainNode);
+    gainNode.connect(ctx.destination);
     const startAt = typeof when === 'number' ? ctx.currentTime + when : ctx.currentTime;
     if (typeof start === 'number' && typeof duration === 'number') {
       source.start(startAt, start, duration);
@@ -366,7 +392,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
         const swingOffset = Math.abs(swingValue) / 100 * stepDuration;
         const shouldDelay = swingValue >= 0 ? isSwingStep : !isSwingStep;
         const delay = shouldDelay ? swingOffset : 0;
-        playBuffer(row.buffer, undefined, undefined, delay);
+        const rate = Math.pow(2, row.pitch / 12);
+        playBuffer(row.buffer, undefined, undefined, delay, false, rate, row.volume);
       }
     });
 
@@ -379,7 +406,18 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
         if (!slice) return;
         const duration = Math.max(0.01, slice.end - slice.start);
         stopSamplerPad(rowIndex);
-        const source = playBuffer(samplerBuffer, slice.start, duration, undefined, false, samplerRate);
+        const padPitch = samplerPitchRef.current[rowIndex] ?? 0;
+        const padVolume = samplerVolumesRef.current[rowIndex] ?? 0.9;
+        const pitchRate = Math.pow(2, padPitch / 12);
+        const source = playBuffer(
+          samplerBuffer,
+          slice.start,
+          duration,
+          undefined,
+          false,
+          samplerRate * pitchRate,
+          padVolume
+        );
         samplerPadRefs.current[rowIndex] = source ?? null;
         if (source) {
           source.onended = () => {
@@ -517,7 +555,18 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     const duration = Math.max(0.01, slice.end - slice.start);
     stopSamplerPad(padIndex);
     const samplerRate = getSamplerRate();
-    const source = playBuffer(buffer, slice.start, duration, undefined, false, samplerRate);
+    const padPitch = samplerPitchRef.current[padIndex] ?? 0;
+    const padVolume = samplerVolumesRef.current[padIndex] ?? 0.9;
+    const pitchRate = Math.pow(2, padPitch / 12);
+    const source = playBuffer(
+      buffer,
+      slice.start,
+      duration,
+      undefined,
+      false,
+      samplerRate * pitchRate,
+      padVolume
+    );
     samplerPadRefs.current[padIndex] = source ?? null;
     if (source) {
       source.onended = () => {
@@ -562,6 +611,10 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       drumKeys,
       samplerKey,
       drumSwing: drumRows.map((row) => row.swing),
+      drumVolumes: drumRows.map((row) => row.volume),
+      drumPitch: drumRows.map((row) => row.pitch),
+      samplerVolumes,
+      samplerPitch,
     };
 
     const updated = [record, ...getStoredProjects()];
@@ -600,6 +653,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     const ctx = ensureAudioContext();
     const drumKeyList = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumKeys?.[index] ?? null);
     const drumSwing = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumSwing?.[index] ?? 0);
+    const drumVolumes = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumVolumes?.[index] ?? 0.9);
+    const drumPitch = Array.from({ length: DRUM_ROWS }, (_, index) => project.drumPitch?.[index] ?? 0);
     const rows = await Promise.all(
       drumKeyList.map(async (key, index) => {
         if (!key) {
@@ -609,6 +664,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
             fileBlob: null,
             buffer: null,
             swing: drumSwing[index],
+            volume: drumVolumes[index],
+            pitch: drumPitch[index],
           } satisfies DrumRow;
         }
         const blob = await getBlob(key);
@@ -619,6 +676,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
             fileBlob: null,
             buffer: null,
             swing: drumSwing[index],
+            volume: drumVolumes[index],
+            pitch: drumPitch[index],
           } satisfies DrumRow;
         }
         const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
@@ -628,10 +687,18 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
           fileBlob: blob,
           buffer,
           swing: drumSwing[index],
+          volume: drumVolumes[index],
+          pitch: drumPitch[index],
         } satisfies DrumRow;
       })
     );
     setDrumRows(rows);
+    setSamplerVolumes(
+      Array.from({ length: SAMPLE_ROWS }, (_, index) => project.samplerVolumes?.[index] ?? 0.9)
+    );
+    setSamplerPitch(
+      Array.from({ length: SAMPLE_ROWS }, (_, index) => project.samplerPitch?.[index] ?? 0)
+    );
 
     if (project.samplerKey) {
       const blob = await getBlob(project.samplerKey);
@@ -657,6 +724,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
         fileBlob: null,
         buffer: null,
         swing: 0,
+        volume: 0.9,
+        pitch: 0,
       }))
     );
     setSampleFileName(null);
@@ -668,6 +737,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     setSliceStart(0);
     setSliceEnd(0);
     setSampleBpm(bpm);
+    setSamplerVolumes(Array.from({ length: SAMPLE_ROWS }, () => 0.9));
+    setSamplerPitch(Array.from({ length: SAMPLE_ROWS }, () => 0));
     setSaveStatus(null);
   };
 
@@ -1177,6 +1248,123 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/40 p-4">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
+                  Mixer · Volume & Pitch
+                </h2>
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 bg-black/50 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Bicí</p>
+                    <div className="mt-3 grid gap-3">
+                      {drumRows.map((row, rowIndex) => (
+                        <div key={row.name} className="grid gap-2">
+                          <div className="flex items-center gap-2 text-xs text-white/70">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: drumColors[rowIndex % drumColors.length] }}
+                            />
+                            <span className="uppercase tracking-[0.18em]">{row.name}</span>
+                          </div>
+                          <div className="grid grid-cols-[1fr_1fr] items-center gap-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                              Volume
+                              <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={row.volume}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setDrumRows((prev) =>
+                                    prev.map((item, idx) =>
+                                      idx === rowIndex ? { ...item, volume: value } : item
+                                    )
+                                  );
+                                }}
+                                className="mt-1 w-full accent-[var(--mpc-accent)]"
+                              />
+                            </label>
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                              Pitch
+                              <input
+                                type="range"
+                                min={-12}
+                                max={12}
+                                step={1}
+                                value={row.pitch}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setDrumRows((prev) =>
+                                    prev.map((item, idx) =>
+                                      idx === rowIndex ? { ...item, pitch: value } : item
+                                    )
+                                  );
+                                }}
+                                className="mt-1 w-full accent-[var(--mpc-accent)]"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-black/50 p-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-white/50">Sampler Pady</p>
+                    <div className="mt-3 grid gap-3">
+                      {Array.from({ length: SAMPLE_ROWS }, (_, rowIndex) => (
+                        <div key={rowIndex} className="grid gap-2">
+                          <div className="flex items-center gap-2 text-xs text-white/70">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: samplerColors[rowIndex % samplerColors.length] }}
+                            />
+                            <span className="uppercase tracking-[0.18em]">Pad {rowIndex + 1}</span>
+                          </div>
+                          <div className="grid grid-cols-[1fr_1fr] items-center gap-3">
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                              Volume
+                              <input
+                                type="range"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={samplerVolumes[rowIndex] ?? 0.9}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setSamplerVolumes((prev) =>
+                                    prev.map((item, idx) => (idx === rowIndex ? value : item))
+                                  );
+                                }}
+                                className="mt-1 w-full accent-[var(--mpc-accent)]"
+                              />
+                            </label>
+                            <label className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                              Pitch
+                              <input
+                                type="range"
+                                min={-12}
+                                max={12}
+                                step={1}
+                                value={samplerPitch[rowIndex] ?? 0}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  setSamplerPitch((prev) =>
+                                    prev.map((item, idx) => (idx === rowIndex ? value : item))
+                                  );
+                                }}
+                                className="mt-1 w-full accent-[var(--mpc-accent)]"
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
