@@ -131,6 +131,8 @@ const toSupabaseThumb = (url: string | null | undefined, width = 512, quality = 
 
 const normalizeEmbedHtml = (html: string) => {
   if (!html) return '';
+  const isBandcamp = /bandcamp\.com\/EmbeddedPlayer/i.test(html);
+  const iframeHeight = isBandcamp ? 120 : EMBED_HEIGHT;
   const withSrc = html.replace(/src=["']([^"']+)["']/i, (match, src) => {
     try {
       const url = new URL(src);
@@ -187,7 +189,7 @@ const normalizeEmbedHtml = (html: string) => {
     const mergedStyle = [
       'border:0',
       'width:100%',
-      `height:${EMBED_HEIGHT}px`,
+      `height:${iframeHeight}px`,
       'max-width:720px',
       'margin:0 auto',
       'border-radius:12px',
@@ -201,7 +203,7 @@ const normalizeEmbedHtml = (html: string) => {
     } else {
       next = next.replace('<iframe', `<iframe style="${mergedStyle}"`);
     }
-    next = next.replace(/height=["'][^"']*["']/i, `height="${EMBED_HEIGHT}"`);
+    next = next.replace(/height=["'][^"']*["']/i, `height="${iframeHeight}"`);
     next = next.replace(/width=["'][^"']*["']/i, 'width="100%"');
     next = next.replace(/loading=["'][^"']*["']/i, 'loading="eager"');
     if (!/loading=/.test(next)) {
