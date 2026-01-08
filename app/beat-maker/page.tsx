@@ -134,6 +134,7 @@ export default function BeatMakerPage() {
   const audioRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
   const playheadRef = useRef(0);
+  const slicePreviewRef = useRef<AudioBufferSourceNode | null>(null);
 
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -202,6 +203,18 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     sampleBufferRef.current = sampleBuffer;
   }, [sampleBuffer]);
 
+  const waveWindow = useMemo(() => {
+    if (!sampleDuration) return 0;
+    return sampleDuration / Math.max(1, waveZoom);
+  }, [sampleDuration, waveZoom]);
+
+  const waveViewStart = useMemo(() => {
+    if (!sampleDuration || !waveWindow) return 0;
+    const anchor = 0.2;
+    const rawStart = sliceStart - waveWindow * anchor;
+    return Math.max(0, Math.min(sampleDuration - waveWindow, rawStart));
+  }, [sampleDuration, waveWindow, sliceStart]);
+
   useEffect(() => {
     const canvas = waveformRef.current;
     if (!canvas || !sampleBuffer) return;
@@ -215,15 +228,20 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     ctx.fillRect(0, 0, width, height);
 
     const data = sampleBuffer.getChannelData(0);
-    const step = Math.max(1, Math.floor(data.length / width));
+    const viewEnd = Math.min(sampleDuration, waveViewStart + waveWindow);
+    const startIndex = Math.floor(waveViewStart * sampleBuffer.sampleRate);
+    const endIndex = Math.min(data.length, Math.floor(viewEnd * sampleBuffer.sampleRate));
+    const span = Math.max(1, endIndex - startIndex);
+    const step = Math.max(1, Math.floor(span / width));
+
     ctx.strokeStyle = '#f27a2f';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let x = 0; x < width; x += 1) {
       let min = 1;
       let max = -1;
-      const start = x * step;
-      const end = Math.min(start + step, data.length);
+      const start = startIndex + x * step;
+      const end = Math.min(start + step, endIndex);
       for (let i = start; i < end; i += 1) {
         const value = data[i];
         if (value < min) min = value;
@@ -235,15 +253,15 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       ctx.lineTo(x, y2);
     }
     ctx.stroke();
-  }, [sampleBuffer, waveZoom]);
+  }, [sampleBuffer, sampleDuration, waveViewStart, waveWindow]);
 
   const handleWaveformClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!sampleBuffer || !sampleDuration) return;
+    if (!sampleBuffer || !sampleDuration || !waveWindow) return;
     const canvas = event.currentTarget;
     const rect = canvas.getBoundingClientRect();
     const ratio = (event.clientX - rect.left) / rect.width;
-    const rawTime = Math.max(0, Math.min(sampleDuration, ratio * sampleDuration));
-    const time = Math.round(rawTime * 10) / 10;
+    const rawTime = waveViewStart + ratio * waveWindow;
+    const time = Math.round(Math.max(0, Math.min(sampleDuration, rawTime)) * 10) / 10;
     if (nextSlicePoint === 'start') {
       setSliceStart(time);
       setNextSlicePoint('end');
@@ -267,9 +285,18 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     buffer: AudioBuffer,
     start?: number,
     duration?: number,
-    when?: number
+    when?: number,
+    stopPrevious?: boolean
   ) => {
     const ctx = ensureAudioContext();
+    if (stopPrevious && slicePreviewRef.current) {
+      try {
+        slicePreviewRef.current.stop();
+      } catch {
+        // ignore
+      }
+      slicePreviewRef.current = null;
+    }
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(ctx.destination);
@@ -278,6 +305,14 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       source.start(startAt, start, duration);
     } else {
       source.start(startAt);
+    }
+    if (stopPrevious) {
+      slicePreviewRef.current = source;
+      source.onended = () => {
+        if (slicePreviewRef.current === source) {
+          slicePreviewRef.current = null;
+        }
+      };
     }
   };
 
@@ -292,8 +327,10 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     rows.forEach((row, rowIndex) => {
       if (drumGrid[rowIndex]?.[index] && row.buffer) {
         const isSwingStep = index % 2 === 1;
-        const swingAmount = Math.min(0.6, Math.max(0, row.swing));
-        const delay = isSwingStep ? (swingAmount / 100) * stepDuration : 0;
+        const swingValue = Math.max(-60, Math.min(60, row.swing));
+        const swingOffset = Math.abs(swingValue) / 100 * stepDuration;
+        const shouldDelay = swingValue >= 0 ? isSwingStep : !isSwingStep;
+        const delay = shouldDelay ? swingOffset : 0;
         playBuffer(row.buffer, undefined, undefined, delay);
       }
     });
@@ -575,11 +612,16 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
   };
 
   const selectionStyle = useMemo(() => {
-    if (!sampleDuration) return { left: '0%', width: '0%' };
-    const left = (Math.min(sliceStart, sliceEnd) / sampleDuration) * 100;
-    const width = (Math.abs(sliceEnd - sliceStart) / sampleDuration) * 100;
-    return { left: `${left}%`, width: `${width}%` };
-  }, [sampleDuration, sliceStart, sliceEnd]);
+    if (!sampleDuration || !waveWindow) return { left: '0%', width: '0%' };
+    const start = Math.min(sliceStart, sliceEnd);
+    const end = Math.max(sliceStart, sliceEnd);
+    const left = ((start - waveViewStart) / waveWindow) * 100;
+    const width = ((end - start) / waveWindow) * 100;
+    return {
+      left: `${Math.max(0, left)}%`,
+      width: `${Math.max(0, Math.min(100 - Math.max(0, left), width))}%`,
+    };
+  }, [sampleDuration, sliceStart, sliceEnd, waveViewStart, waveWindow]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -783,7 +825,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                           </span>
                           <input
                             type="range"
-                            min={0}
+                            min={-60}
                             max={60}
                             step={1}
                             value={row.swing}
@@ -797,6 +839,9 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                             }}
                             className="w-20 accent-[var(--mpc-accent)]"
                           />
+                          <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                            {row.swing > 0 ? `+${row.swing}` : row.swing}
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -835,7 +880,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                       const start = Math.max(0, Math.min(sliceStart, sliceEnd));
                       const end = Math.min(sampleDuration, Math.max(sliceStart, sliceEnd));
                       const duration = Math.max(0.05, end - start);
-                      playBuffer(sampleBuffer, start, duration);
+                      playBuffer(sampleBuffer, start, duration, undefined, true);
                     }}
                     className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white"
                   >
@@ -863,10 +908,10 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                     </div>
                   </div>
 
-                  <div ref={waveformWrapRef} className="relative mt-3 overflow-x-auto">
+                  <div ref={waveformWrapRef} className="relative mt-3 overflow-hidden">
                     <canvas
                       ref={waveformRef}
-                      width={Math.round(1200 * waveZoom)}
+                      width={1200}
                       height={180}
                       className="h-40 rounded-lg cursor-crosshair"
                       onClick={handleWaveformClick}
