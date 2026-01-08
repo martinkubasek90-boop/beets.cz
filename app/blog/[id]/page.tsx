@@ -23,6 +23,12 @@ type BlogPost = {
 
 function normalizeEmbedUrl(url?: string | null) {
   if (!url) return '';
+  if (url.includes('<iframe')) {
+    const srcMatch = url.match(/src=["']([^"']+)["']/i);
+    if (srcMatch?.[1]) {
+      return srcMatch[1];
+    }
+  }
   try {
     const u = new URL(url);
     if (u.hostname.includes('open.spotify.com')) {
