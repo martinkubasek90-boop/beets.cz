@@ -2095,6 +2095,16 @@ export default function PublicProfileClient({
               {isExternalProject ? (
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
                   <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
+                  {(project.release_formats || [])
+                    .filter((format) => format !== 'digital')
+                    .map((format) => (
+                      <span
+                        key={format}
+                        className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                      >
+                        {RELEASE_FORMAT_LABELS[format] || format}
+                      </span>
+                    ))}
                   <a
                     href={project.project_url || undefined}
                     target="_blank"

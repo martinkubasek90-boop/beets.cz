@@ -1790,6 +1790,18 @@ export default function Home() {
                   <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        {(project.release_formats || [])
+                          .filter((format) => format !== 'digital')
+                          .map((format) => (
+                            <span
+                              key={format}
+                              className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                            >
+                              {RELEASE_FORMAT_LABELS[format] || format}
+                            </span>
+                          ))}
+                      </div>
                       {externalUrl && (
                         <a
                           href={normalizePurchaseUrl(externalUrl) || undefined}
