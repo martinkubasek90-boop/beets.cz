@@ -29,6 +29,7 @@ type SavedProject = {
   id: string;
   name: string;
   bpm: number;
+  sampleBpm?: number;
   createdAt: string;
   drumSteps: boolean[][];
   samplerSteps: boolean[][];
@@ -137,8 +138,12 @@ export default function BeatMakerPage() {
   const intervalRef = useRef<number | null>(null);
   const playheadRef = useRef(0);
   const slicePreviewRef = useRef<AudioBufferSourceNode | null>(null);
+  const samplerPadRefs = useRef<(AudioBufferSourceNode | null)[]>(
+    Array.from({ length: SAMPLE_ROWS }, () => null)
+  );
 
   const [bpm, setBpm] = useState(120);
+  const [sampleBpm, setSampleBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playhead, setPlayhead] = useState(0);
   const [drumSteps, setDrumSteps] = useState(() => createStepGrid(DRUM_ROWS));
@@ -212,7 +217,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
 
   const waveViewStart = useMemo(() => {
     if (!sampleDuration || !waveWindow) return 0;
-    const anchor = 0.2;
+    const anchor = 0;
     const rawStart = sliceStart - waveWindow * anchor;
     return Math.max(0, Math.min(sampleDuration - waveWindow, rawStart));
   }, [sampleDuration, waveWindow, sliceStart]);
@@ -288,7 +293,8 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     start?: number,
     duration?: number,
     when?: number,
-    stopPrevious?: boolean
+    stopPrevious?: boolean,
+    playbackRate = 1
   ) => {
     const ctx = ensureAudioContext();
     if (stopPrevious && slicePreviewRef.current) {
@@ -301,6 +307,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     }
     const source = ctx.createBufferSource();
     source.buffer = buffer;
+    source.playbackRate.value = playbackRate;
     source.connect(ctx.destination);
     const startAt = typeof when === 'number' ? ctx.currentTime + when : ctx.currentTime;
     if (typeof start === 'number' && typeof duration === 'number') {
@@ -316,6 +323,28 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
         }
       };
     }
+    return source;
+  };
+
+  const getSamplerRate = () => {
+    if (!sampleBpm || sampleBpm <= 0) return 1;
+    const ratio = bpm / sampleBpm;
+    return Math.max(0.5, Math.min(2, ratio));
+  };
+
+  const stopSamplerPad = (padIndex: number) => {
+    const source = samplerPadRefs.current[padIndex];
+    if (!source) return;
+    try {
+      source.stop();
+    } catch {
+      // ignore
+    }
+    samplerPadRefs.current[padIndex] = null;
+  };
+
+  const stopAllSamplerPads = () => {
+    samplerPadRefs.current.forEach((_, index) => stopSamplerPad(index));
   };
 
   const scheduleStep = (index: number, stepDuration: number) => {
@@ -325,6 +354,10 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     const slicesLocal = slicesRef.current;
     const assignments = padAssignmentsRef.current;
     const samplerBuffer = sampleBufferRef.current;
+
+    if (index === 0) {
+      stopAllSamplerPads();
+    }
 
     rows.forEach((row, rowIndex) => {
       if (drumGrid[rowIndex]?.[index] && row.buffer) {
@@ -338,13 +371,23 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     });
 
     if (samplerBuffer) {
+      const samplerRate = getSamplerRate();
       assignments.forEach((sliceId, rowIndex) => {
         if (!sliceId) return;
         if (!samplerGrid[rowIndex]?.[index]) return;
         const slice = slicesLocal.find((item) => item.id === sliceId);
         if (!slice) return;
         const duration = Math.max(0.01, slice.end - slice.start);
-        playBuffer(samplerBuffer, slice.start, duration);
+        stopSamplerPad(rowIndex);
+        const source = playBuffer(samplerBuffer, slice.start, duration, undefined, false, samplerRate);
+        samplerPadRefs.current[rowIndex] = source ?? null;
+        if (source) {
+          source.onended = () => {
+            if (samplerPadRefs.current[rowIndex] === source) {
+              samplerPadRefs.current[rowIndex] = null;
+            }
+          };
+        }
       });
     }
   };
@@ -372,6 +415,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       window.clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    stopAllSamplerPads();
     setIsPlaying(false);
     setPlayhead(0);
   };
@@ -434,6 +478,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     setSampleFileBlob(file);
     setSampleBuffer(buffer);
     setSampleDuration(buffer.duration);
+    setSampleBpm(bpm);
     setSliceStart(0);
     setSliceEnd(Math.min(1, buffer.duration));
     setSlices([]);
@@ -470,7 +515,17 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     const slice = slicesRef.current.find((item) => item.id === sliceId);
     if (!slice) return;
     const duration = Math.max(0.01, slice.end - slice.start);
-    playBuffer(buffer, slice.start, duration);
+    stopSamplerPad(padIndex);
+    const samplerRate = getSamplerRate();
+    const source = playBuffer(buffer, slice.start, duration, undefined, false, samplerRate);
+    samplerPadRefs.current[padIndex] = source ?? null;
+    if (source) {
+      source.onended = () => {
+        if (samplerPadRefs.current[padIndex] === source) {
+          samplerPadRefs.current[padIndex] = null;
+        }
+      };
+    }
   };
 
   const handleSave = async () => {
@@ -498,6 +553,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
       id,
       name: projectName.trim(),
       bpm,
+      sampleBpm,
       createdAt: new Date().toISOString(),
       drumSteps,
       samplerSteps,
@@ -519,6 +575,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     const project = savedProjects.find((item) => item.id === selectedProject);
     if (!project) return;
     setBpm(project.bpm);
+    setSampleBpm(project.sampleBpm ?? project.bpm ?? 120);
     const normalizedDrumSteps = Array.from({ length: DRUM_ROWS }, (_, rowIndex) => {
       const row = project.drumSteps?.[rowIndex] ?? [];
       return Array.from({ length: STEPS }, (_, colIndex) => row[colIndex] ?? false);
@@ -610,6 +667,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
     setPadAssignments(Array.from({ length: SAMPLE_ROWS }, () => null));
     setSliceStart(0);
     setSliceEnd(0);
+    setSampleBpm(bpm);
     setSaveStatus(null);
   };
 
@@ -881,6 +939,19 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                   {sampleFileName && (
                     <span className="text-xs text-white/50">{sampleFileName}</span>
                   )}
+                  {sampleBuffer && (
+                    <label className="ml-auto flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-white/50">
+                      Sample BPM
+                      <input
+                        type="number"
+                        min={60}
+                        max={200}
+                        value={sampleBpm}
+                        onChange={(event) => setSampleBpm(Number(event.target.value))}
+                        className="w-16 rounded-full border border-white/20 bg-black px-2 py-1 text-xs text-white"
+                      />
+                    </label>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -888,7 +959,7 @@ const [drumRows, setDrumRows] = useState<DrumRow[]>(
                       const start = Math.max(0, Math.min(sliceStart, sliceEnd));
                       const end = Math.min(sampleDuration, Math.max(sliceStart, sliceEnd));
                       const duration = Math.max(0.05, end - start);
-                      playBuffer(sampleBuffer, start, duration, undefined, true);
+                      playBuffer(sampleBuffer, start, duration, undefined, true, getSamplerRate());
                     }}
                     className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white"
                   >
