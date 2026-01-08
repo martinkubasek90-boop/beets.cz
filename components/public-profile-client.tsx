@@ -2068,7 +2068,7 @@ export default function PublicProfileClient({
                         const embedHtml = project.embed_html || projectEmbeds[project.id];
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
                         const embedClass = isBandcamp
-                          ? 'min-h-[120px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                          ? 'min-h-[120px] w-full max-w-[680px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
                           : 'min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
                         return (
                       <div
