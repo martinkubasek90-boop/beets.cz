@@ -2862,6 +2862,14 @@ function handleFieldChange(field: keyof Profile, value: string) {
     return '';
   };
 
+  const buildEmbedFromUrl = (url: string) => {
+    const provider = getEmbedProviderFromUrl(url);
+    if (provider === 'Spotify') return buildSpotifyEmbed(url);
+    if (provider === 'SoundCloud') return buildSoundcloudEmbed(url);
+    if (provider === 'Apple Music') return buildAppleEmbed(url);
+    return '';
+  };
+
   const handleFetchImportMetadata = async () => {
     const trimmed = importProjectUrl.trim();
     const manualEmbedRaw = importEmbedHtml.trim();
@@ -2897,12 +2905,31 @@ function handleFieldChange(field: keyof Profile, value: string) {
         throw new Error(payload?.error || 'Nepodařilo se načíst metadata.');
       }
       const meta = (await response.json()) as ImportMetadata;
-      setImportMetadata(meta);
+      const fallbackEmbed = meta.embed_html || buildEmbedFromUrl(trimmed);
+      setImportMetadata({ ...meta, embed_html: meta.embed_html || fallbackEmbed || null });
       setImportTitle(meta.title || '');
       setImportArtist(meta.artist || '');
-      setImportEmbedHtml((prev) => meta.embed_html || prev);
+      if (fallbackEmbed) {
+        setImportEmbedHtml(fallbackEmbed);
+        setImportSuccess('Embed připraven.');
+      }
     } catch (err: any) {
-      setImportError(err?.message || 'Nepodařilo se načíst metadata.');
+      const fallbackEmbed = buildEmbedFromUrl(trimmed);
+      if (fallbackEmbed) {
+        setImportMetadata({
+          title: importTitle.trim() || getEmbedDefaultTitle(trimmed),
+          artist: importArtist.trim(),
+          provider: getEmbedProviderFromUrl(trimmed) || null,
+          link: trimmed,
+          cover: null,
+          embed_html: fallbackEmbed,
+        });
+        setImportEmbedHtml(fallbackEmbed);
+        setImportSuccess('Embed připraven.');
+        setImportError(null);
+      } else {
+        setImportError(err?.message || 'Nepodařilo se načíst metadata.');
+      }
     } finally {
       setImportLoading(false);
     }
