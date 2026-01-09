@@ -1558,16 +1558,16 @@ export default function Home() {
             </div>
           )}
           {isLoadingProjects && !projectsError && (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:overflow-visible md:pb-0 md:grid-cols-2">
               {Array.from({ length: 2 }).map((_, idx) => (
                 <div
                   key={`project-skeleton-${idx}`}
-                  className="h-[520px] w-full animate-pulse rounded-2xl border border-white/10 bg-white/5"
+                  className="h-[520px] min-w-[85%] animate-pulse rounded-2xl border border-white/10 bg-white/5 md:min-w-0 md:w-full"
                 />
               ))}
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:overflow-visible md:pb-0 md:grid-cols-2">
             {projects.map((project) => {
               const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
               const isExternalProject =
@@ -1583,7 +1583,7 @@ export default function Home() {
               return (
                 <div
                   key={project.id}
-                  className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+                  className="relative min-w-[85%] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] md:min-w-0"
                 >
                 <div className="absolute right-4 top-4 flex items-center gap-2">
                   {userRole === 'curator' && (
@@ -1873,7 +1873,67 @@ export default function Home() {
               Zobrazit vše
             </Link>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <div className="md:hidden space-y-4">
+            {(() => {
+              const list = artists.length ? artists : dummyArtists;
+              const topThree = list.slice(0, 3);
+              const rest = list.slice(3);
+              const colors = [
+                'from-emerald-600 to-emerald-900',
+                'from-amber-400 to-orange-600',
+                'from-indigo-500 to-indigo-900',
+                'from-purple-500 to-purple-800',
+                'from-rose-500 to-rose-800',
+                'from-sky-500 to-sky-900',
+              ];
+              const renderCard = (artist: Artist, idx: number) => {
+                const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
+                const gradient = colors[idx % colors.length];
+                return (
+                  <Link
+                    href={`/u/${artist.id}`}
+                    key={`artist-mobile-${artist.id}-${idx}`}
+                    className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
+                  >
+                    <div
+                      className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
+                    >
+                      {artist.avatar_url ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                        </>
+                      ) : (
+                        <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
+                          {artist.initials}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1 text-center w-full">
+                      <p className="text-base font-semibold text-white">{artist.name}</p>
+                      <p className="text-[12px] text-[var(--mpc-muted)]">{stats}</p>
+                    </div>
+                  </Link>
+                );
+              };
+              return (
+                <>
+                  {topThree.map((artist, idx) => renderCard(artist, idx))}
+                  {rest.length > 0 && (
+                    <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      {rest.map((artist, idx) => (
+                        <div key={`artist-mobile-scroll-${artist.id}`} className="min-w-[80%] snap-start">
+                          {renderCard(artist, idx + 3)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+
+          <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, idx) => {
               const list = artists.length ? artists : dummyArtists;
               const artist = list[(artistIndex + idx) % list.length];
@@ -1894,14 +1954,14 @@ export default function Home() {
                   className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
                 >
                   <div
-                  className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
-                >
-                  {artist.avatar_url ? (
-                    <>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                    </>
-                  ) : (
+                    className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
+                  >
+                    {artist.avatar_url ? (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+                      </>
+                    ) : (
                       <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
                         {artist.initials}
                       </div>
@@ -1915,7 +1975,7 @@ export default function Home() {
               );
             })}
           </div>
-          <div className="mt-3 flex items-center justify-center gap-3">
+          <div className="mt-3 hidden items-center justify-center gap-3 md:flex">
             <button
               onClick={() => {
                 const list = artists.length ? artists : dummyArtists;
@@ -1952,7 +2012,47 @@ export default function Home() {
               <span>⚠</span> {blogError}
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
+            {(blogPosts.length ? blogPosts : []).map((post) => {
+              const displayTitle = lang === 'en' && post.title_en?.trim() ? post.title_en : post.title;
+              const displayExcerpt = lang === 'en' && post.excerpt_en?.trim() ? post.excerpt_en : post.excerpt;
+              return (
+              <article
+                key={post.id}
+                className="flex min-w-[85%] snap-start flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_16px_32px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
+              >
+                <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                  {post.cover_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={post.cover_url}
+                      alt={post.title}
+                      className="h-full w-full object-contain bg-black"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-700/40 to-emerald-900/60 text-[12px] uppercase tracking-[0.12em] text-white/70">
+                      Bez coveru
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)]">
+                  <span>{post.author}</span>
+                  <span>{post.date}</span>
+                </div>
+                <h3 className="text-lg font-semibold text-white">{displayTitle}</h3>
+                <p className="text-sm text-[var(--mpc-muted)]">{displayExcerpt}</p>
+                <div className="flex items-center justify-center">
+                  <Link
+                    href={`/blog/${post.id}`}
+                    className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
+                  >
+                    {t('blog.readMore', 'Celý článek')}
+                  </Link>
+                </div>
+              </article>
+            )})}
+          </div>
+          <div className="hidden gap-4 md:grid md:grid-cols-3">
             {(blogPosts.length ? Array.from({ length: Math.min(3, blogPosts.length) }, (_, i) => blogPosts[(blogIndex + i) % blogPosts.length]) : []).map((post) => {
               const displayTitle = lang === 'en' && post.title_en?.trim() ? post.title_en : post.title;
               const displayExcerpt = lang === 'en' && post.excerpt_en?.trim() ? post.excerpt_en : post.excerpt;
@@ -1994,7 +2094,7 @@ export default function Home() {
           </div>
 
           {blogPosts.length > 3 && (
-            <div className="mt-4 flex items-center justify-center gap-2 text-[12px] text-[var(--mpc-muted)]">
+            <div className="mt-4 hidden items-center justify-center gap-2 text-[12px] text-[var(--mpc-muted)] md:flex">
               <button
                 onClick={prevBlog}
                 className="rounded-full border border-white/15 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
@@ -2023,17 +2123,17 @@ export default function Home() {
             </div>
           )}
           {isLoadingBeats && !beatsError && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory max-w-6xl mx-auto w-full md:grid md:overflow-visible md:pb-0 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="h-80 w-full animate-pulse rounded-2xl bg-white/5 border border-white/10" />
+                <div key={idx} className="h-80 min-w-[80%] animate-pulse rounded-2xl bg-white/5 border border-white/10 md:min-w-0 md:w-full" />
               ))}
             </div>
           )}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
+          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory max-w-6xl mx-auto w-full [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:overflow-visible md:pb-0 sm:grid-cols-2 lg:grid-cols-3">
             {visibleBeats.map((beat) => (
               <div
                 key={beat.id}
-                className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto"
+                className="relative min-w-[80%] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto md:min-w-0"
               >
                 <div className="absolute right-4 top-4 flex items-center gap-2">
                   {userRole === 'curator' && (
