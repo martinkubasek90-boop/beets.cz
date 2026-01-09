@@ -2276,7 +2276,7 @@ export default function Home() {
             {visibleBeats.map((beat) => renderBeatCard(beat))}
           </div>
           {beatList.length > beatsPerPage && (
-            <div className="mt-3 flex items-center justify-center gap-3">
+            <div className="mt-3 hidden items-center justify-center gap-3 md:flex">
               <button
                 onClick={() => setBeatPage((prev) => (prev - 1 + beatTotalPages) % beatTotalPages)}
                 className="rounded-full border border-white/20 bg-white/5 px-3 py-2 text-white hover:border-[var(--mpc-accent)]"
