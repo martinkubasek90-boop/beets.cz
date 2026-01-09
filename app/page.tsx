@@ -915,6 +915,8 @@ export default function Home() {
   const heroMode = cms('home.hero.mode', 'banner').trim();
   const heroBackgroundUrl = cms('home.hero.background', '').trim();
   const heroSubtitle = cms('home.hero.subtitle', subtitleCleaned);
+  const [projectIndex, setProjectIndex] = useState(0);
+  const [beatIndex, setBeatIndex] = useState(0);
   const visibleBeats = beatList.length
     ? Array.from({ length: Math.min(beatsPerPage, beatList.length) }, (_, idx) => {
         const start = beatPage * beatsPerPage;
@@ -924,8 +926,16 @@ export default function Home() {
   const [blogIndex, setBlogIndex] = useState(0);
   const [artistIndex, setArtistIndex] = useState(0);
   const [artists, setArtists] = useState<Artist[]>(dummyArtists);
+  const artistList = artists.length ? artists : dummyArtists;
+  const projectCount = projects.length;
+  const blogCount = blogPosts.length;
+  const beatCount = beatList.length;
   const [homeExpandedProjects, setHomeExpandedProjects] = useState<Record<number | string, boolean>>({});
   const [embedResetNonce, setEmbedResetNonce] = useState(0);
+  const projectScrollRef = useRef<HTMLDivElement | null>(null);
+  const artistScrollRef = useRef<HTMLDivElement | null>(null);
+  const blogScrollRef = useRef<HTMLDivElement | null>(null);
+  const beatScrollRef = useRef<HTMLDivElement | null>(null);
   const {
     play: gpPlay,
     prefetch: gpPrefetch,
@@ -973,6 +983,470 @@ export default function Home() {
     const second = parts[1]?.[0] ?? parts[0]?.[1] ?? '';
     return (first + second).toUpperCase();
   };
+
+  const scrollToIndex = (ref: { current: HTMLDivElement | null }, index: number) => {
+    const node = ref.current;
+    if (!node) return;
+    const child = node.children[index] as HTMLElement | undefined;
+    if (child) {
+      child.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+    }
+  };
+
+  const artistPalette = [
+    'from-emerald-600 to-emerald-900',
+    'from-amber-400 to-orange-600',
+    'from-indigo-500 to-indigo-900',
+    'from-purple-500 to-purple-800',
+    'from-rose-500 to-rose-800',
+    'from-sky-500 to-sky-900',
+  ];
+
+  const renderArtistCard = (artist: Artist, idx: number, className = '') => {
+    const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
+    const gradient = artistPalette[idx % artistPalette.length];
+    return (
+      <Link
+        href={`/u/${artist.id}`}
+        key={`artist-${artist.id}-${idx}`}
+        className={`flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)] ${className}`}
+      >
+        <div
+          className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
+        >
+          {artist.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
+              {artist.initials}
+            </div>
+          )}
+        </div>
+        <div className="space-y-1 text-center w-full">
+          <p className="text-base font-semibold text-white">{artist.name}</p>
+          <p className="text-[12px] text-[var(--mpc-muted)]">{stats}</p>
+        </div>
+      </Link>
+    );
+  };
+
+  const renderBlogCard = (post: BlogPost, className = '') => {
+    const displayTitle = lang === 'en' && post.title_en?.trim() ? post.title_en : post.title;
+    const displayExcerpt = lang === 'en' && post.excerpt_en?.trim() ? post.excerpt_en : post.excerpt;
+    return (
+      <article
+        key={post.id}
+        className={`flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_16px_32px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] ${className}`}
+      >
+        <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
+          {post.cover_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={post.cover_url}
+              alt={post.title}
+              className="h-full w-full object-contain bg-black"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-700/40 to-emerald-900/60 text-[12px] uppercase tracking-[0.12em] text-white/70">
+              Bez coveru
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)]">
+          <span>{post.author}</span>
+          <span>{post.date}</span>
+        </div>
+        <h3 className="text-lg font-semibold text-white">{displayTitle}</h3>
+        <p className="text-sm text-[var(--mpc-muted)]">{displayExcerpt}</p>
+        <div className="flex items-center justify-center">
+          <Link
+            href={`/blog/${post.id}`}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
+          >
+            {t('blog.readMore', 'Celý článek')}
+          </Link>
+        </div>
+      </article>
+    );
+  };
+
+  const renderProjectCard = (project: Project, className = '') => {
+    const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
+    const isExternalProject =
+      !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
+    const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
+    const externalUrl = project.project_url || project.purchase_url;
+    const cleanedDescription =
+      project.description &&
+      !project.description.toLowerCase().trim().startsWith('zdroj:')
+        ? project.description
+        : null;
+
+    return (
+      <div
+        key={project.id}
+        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] ${className}`}
+      >
+        <div className="absolute right-4 top-4 flex items-center gap-2">
+          {userRole === 'curator' && (
+            <button
+              onClick={() => handleCuratorStar('project', `project-${project.id}`)}
+              className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+              title="Kurátorská hvězda"
+            >
+              ★
+            </button>
+          )}
+          <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
+        </div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
+            {project.user_id ? (
+              <Link href={`/u/${project.user_id}`} className="block h-full w-full">
+                {project.cover_url ? (
+                  <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+                ) : (
+                  <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                    NO COVER
+                  </div>
+                )}
+              </Link>
+            ) : project.cover_url ? (
+              <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+            ) : (
+              <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                NO COVER
+              </div>
+            )}
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+              {project.user_id && project.author_name ? (
+                <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
+                  Autor: {project.author_name}
+                </Link>
+              ) : project.author_name ? (
+                <>Autor: {project.author_name}</>
+              ) : (
+                'Autor projektu'
+              )}
+            </p>
+            <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
+              <span>{project.title}</span>
+            </div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Beat tape / EP</div>
+            {cleanedDescription ? (
+              <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">{cleanedDescription}</p>
+            ) : !isExternalProject ? (
+              <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">Instrumentální beat tape.</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+          {isExternalProject ? (
+            <div className="space-y-2">
+              <div className="flex justify-center">
+                <div className="relative w-full max-w-[720px]">
+                  {(() => {
+                    const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
+                    const isBandcamp = embedHtml.includes('bandcamp.com/EmbeddedPlayer');
+                    const embedClass = isBandcamp
+                      ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                      : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
+                    return (
+                      <div
+                        key={`embed-${project.id}-${embedResetNonce}`}
+                        className={embedClass}
+                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
+                      />
+                    );
+                  })()}
+                  {gpIsPlaying && (
+                    <button
+                      type="button"
+                      onClick={() => gpPause()}
+                      className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
+                    >
+                      Klikni pro vypnutí interního přehrávače
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto flex max-w-3xl items-center gap-3">
+              <button
+                onClick={() =>
+                  project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
+                }
+                onMouseEnter={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                onFocus={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                onTouchStart={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+              >
+                {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
+              </button>
+              <div className="flex-1">
+                <p className="text-center text-sm font-semibold text-white">
+                  {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
+                </p>
+                <div className="mt-2 space-y-1">
+                  <div className="h-3 overflow-hidden rounded-full bg-black/70">
+                    <div
+                      className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
+                      style={{
+                        width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                    <span>0 s</span>
+                    <span>{duration ? formatTime(duration) : '-- s'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!isExternalProject && project.tracks && project.tracks.length > 1 && (
+          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
+              <button
+                onClick={() => setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
+                className={`grid h-10 w-10 place-items-center rounded-full border text-white transition ${
+                  homeExpandedProjects[project.id]
+                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                    : 'border-white/20 bg-white/5'
+                }`}
+                aria-label="Tracklist"
+              >
+                <span
+                  className="text-base font-bold transition-transform"
+                  style={{ transform: homeExpandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  ▼
+                </span>
+              </button>
+            </div>
+            {homeExpandedProjects[project.id] && (
+              <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                {project.tracks.slice(1).map((t, i) => (
+                  <div
+                    key={t.id ?? `${project.id}-${i + 2}`}
+                    className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 text-[11px] text-[var(--mpc-muted)]">{i + 2}.</span>
+                        <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
+                          {project.cover_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">{t.title}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handlePlayProjectTrack(project, t, i + 1)}
+                        className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
+                      >
+                        {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
+                      </button>
+                    </div>
+                    <div className="flex items-center rounded bg-black/30 px-2 py-2">
+                      {renderTrackBars(project.id, t.id)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {isExternalProject ? (
+          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                {(project.release_formats || [])
+                  .filter((format) => format !== 'digital')
+                  .map((format) => {
+                    const label = RELEASE_FORMAT_LABELS[format] || format;
+                    const href = normalizePurchaseUrl(project.purchase_url);
+                    return href ? (
+                      <a
+                        key={format}
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      <span
+                        key={format}
+                        className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                      >
+                        {label}
+                      </span>
+                    );
+                  })}
+              </div>
+              {externalUrl && (
+                <a
+                  href={normalizePurchaseUrl(externalUrl) || undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:brightness-110"
+                >
+                  {externalPlatform || 'Otevřít'}
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                <span>Vydáno na</span>
+                {(project.release_formats || []).map((format) => (
+                  <span
+                    key={format}
+                    className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
+                  >
+                    {RELEASE_FORMAT_LABELS[format] || format}
+                  </span>
+                ))}
+              </div>
+              {project.purchase_url && (
+                <a
+                  href={normalizePurchaseUrl(project.purchase_url) || undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                >
+                  Koupit
+                </a>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderBeatCard = (beat: Beat, className = '') => (
+    <div
+      key={beat.id}
+      className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto ${className}`}
+    >
+      <div className="absolute right-4 top-4 flex items-center gap-2">
+        {userRole === 'curator' && (
+          <button
+            onClick={() => handleCuratorStar('beat', String(beat.id))}
+            className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
+            title="Kurátorská hvězda"
+          >
+            ★
+          </button>
+        )}
+        <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
+      </div>
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
+          {beat.user_id ? (
+            <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
+              {beat.cover_url ? (
+                <CoverImage src={beat.cover_url} alt={beat.title} imgClassName="object-cover" />
+              ) : (
+                <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                  NO COVER
+                </div>
+              )}
+            </Link>
+          ) : beat.cover_url ? (
+            <CoverImage src={beat.cover_url} alt={beat.title} imgClassName="object-cover" />
+          ) : (
+            <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+              NO COVER
+            </div>
+          )}
+        </div>
+
+        <div className="text-center space-y-1">
+          <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+            {beat.user_id ? (
+              <Link href={`/u/${beat.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
+                {beatAuthorNames[beat.user_id] || beat.artist}
+              </Link>
+            ) : (
+              beat.artist
+            )}
+          </p>
+          <div className="text-lg font-semibold text-white">{beat.title}</div>
+          <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+            {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
+          </div>
+        </div>
+
+        <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+          <div className="mx-auto flex max-w-3xl items-center gap-3">
+            <button
+              className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
+              onClick={() => {
+                if (gpCurrent?.id === beat.id) {
+                  gpToggle();
+                } else {
+                  handlePlay(beat.audio_url, beat);
+                }
+              }}
+              onMouseEnter={() => gpPrefetch(beat.audio_url || '')}
+              onFocus={() => gpPrefetch(beat.audio_url || '')}
+              onTouchStart={() => gpPrefetch(beat.audio_url || '')}
+              disabled={!beat.audio_url}
+            >
+              {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
+            </button>
+            <div className="flex-1">
+              <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
+              <div className="mt-2 space-y-1">
+                <div
+                  className="overflow-hidden rounded-full border border-white/10 bg-white/10 cursor-pointer h-3"
+                  onClick={(e) => {
+                    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                    seekInTrack(beat, e.clientX - rect.left, rect.width);
+                  }}
+                >
+                  <div
+                    className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
+                    style={{
+                      width:
+                        currentTrack?.id === beat.id && duration
+                          ? `${(currentTime / duration) * 100}%`
+                          : '0%',
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                  <span>{currentTrack?.id === beat.id ? formatTime(currentTime) : '0:00'}</span>
+                  <span>{currentTrack?.id === beat.id && duration ? formatTime(duration) : '--:--'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     setCurrentYear(new Date().getFullYear());
@@ -1558,306 +2032,51 @@ export default function Home() {
             </div>
           )}
           {isLoadingProjects && !projectsError && (
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory md:grid md:overflow-visible md:pb-0 md:grid-cols-2">
-              {Array.from({ length: 2 }).map((_, idx) => (
-                <div
-                  key={`project-skeleton-${idx}`}
-                  className="h-[520px] min-w-[85%] animate-pulse rounded-2xl border border-white/10 bg-white/5 md:min-w-0 md:w-full"
-                />
-              ))}
-            </div>
-          )}
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:overflow-visible md:pb-0 md:grid-cols-2">
-            {projects.map((project) => {
-              const hasPlayable = (project.tracks ?? []).some((track) => !!track.url);
-              const isExternalProject =
-                !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
-              const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
-              const externalUrl = project.project_url || project.purchase_url;
-              const cleanedDescription =
-                project.description &&
-                !project.description.toLowerCase().trim().startsWith('zdroj:')
-                  ? project.description
-                  : null;
-
-              return (
-                <div
-                  key={project.id}
-                  className="relative min-w-[85%] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] md:min-w-0"
-                >
-                <div className="absolute right-4 top-4 flex items-center gap-2">
-                  {userRole === 'curator' && (
-                    <button
-                      onClick={() => handleCuratorStar('project', `project-${project.id}`)}
-                      className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                      title="Kurátorská hvězda"
-                    >
-                      ★
-                    </button>
-                  )}
-                  <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
-                    {project.user_id ? (
-                      <Link href={`/u/${project.user_id}`} className="block h-full w-full">
-                        {project.cover_url ? (
-                          <CoverImage
-                            src={project.cover_url}
-                            alt={project.title}
-                            imgClassName="object-cover"
-                          />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                            NO COVER
-                          </div>
-                        )}
-                      </Link>
-                    ) : project.cover_url ? (
-                      <CoverImage
-                        src={project.cover_url}
-                        alt={project.title}
-                        imgClassName="object-cover"
-                      />
-                    ) : (
-                      <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                        NO COVER
-                      </div>
-                    )}
-                  </div>
-                    <div className="text-center space-y-1">
-                    <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                      {project.user_id && project.author_name ? (
-                        <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
-                          Autor: {project.author_name}
-                        </Link>
-                      ) : project.author_name ? (
-                        <>Autor: {project.author_name}</>
-                      ) : (
-                        'Autor projektu'
-                        )}
-                      </p>
-                    <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
-                      <span>{project.title}</span>
-                    </div>
-                  <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                    Beat tape / EP
-                  </div>
-                  {cleanedDescription ? (
-                    <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
-                      {cleanedDescription}
-                    </p>
-                  ) : !isExternalProject ? (
-                    <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">
-                      Instrumentální beat tape.
-                    </p>
-                  ) : null}
-                </div>
-                </div>
-
-                <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-              {isExternalProject ? (
-                <div className="space-y-2">
+            <>
+              <div className="md:hidden">
+                <div className="h-[520px] w-full animate-pulse rounded-2xl border border-white/10 bg-white/5" />
+              </div>
+              <div className="hidden md:grid gap-4 md:grid-cols-2">
+                {Array.from({ length: 2 }).map((_, idx) => (
                   <div
-                    className="flex justify-center"
-                  >
-                      <div className="relative w-full max-w-[720px]">
-                        {(() => {
-                          const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
-                          const isBandcamp = embedHtml.includes('bandcamp.com/EmbeddedPlayer');
-                          const embedClass = isBandcamp
-                            ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
-                            : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
-                          return (
-                            <div
-                              key={`embed-${project.id}-${embedResetNonce}`}
-                              className={embedClass}
-                              dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
-                            />
-                          );
-                        })()}
-                        {gpIsPlaying && (
-                          <button
-                            type="button"
-                            onClick={() => gpPause()}
-                            className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
-                          >
-                            Klikni pro vypnutí interního přehrávače
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                    <div className="mx-auto flex max-w-3xl items-center gap-3">
-                      <button
-                        onClick={() =>
-                          project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
-                        }
-                        onMouseEnter={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                        onFocus={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                        onTouchStart={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                        className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                      >
-                        {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
-                      </button>
-                      <div className="flex-1">
-                        <p className="text-center text-sm font-semibold text-white">
-                          {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
-                        </p>
-                        <div className="mt-2 space-y-1">
-                          <div className="h-3 overflow-hidden rounded-full bg-black/70">
-                            <div
-                              className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
-                              style={{ width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%` }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                            <span>0 s</span>
-                            <span>{duration ? formatTime(duration) : '-- s'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {!isExternalProject && project.tracks && project.tracks.length > 1 && (
-                  <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
-                      <button
-                        onClick={() =>
-                          setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))
-                        }
-                        className={`grid h-10 w-10 place-items-center rounded-full border text-white transition ${
-                          homeExpandedProjects[project.id]
-                            ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
-                            : 'border-white/20 bg-white/5'
-                        }`}
-                        aria-label="Tracklist"
-                      >
-                        <span
-                          className="text-base font-bold transition-transform"
-                          style={{ transform: homeExpandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                        >
-                          ▼
-                        </span>
-                      </button>
-                    </div>
-                    {homeExpandedProjects[project.id] && (
-                      <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
-                        {project.tracks.slice(1).map((t, i) => (
-                          <div
-                            key={t.id ?? `${project.id}-${i + 2}`}
-                            className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-3">
-                                <span className="w-6 text-[11px] text-[var(--mpc-muted)]">
-                                  {i + 2}.
-                                </span>
-                                <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
-                                  {project.cover_url ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-white">{t.title}</p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handlePlayProjectTrack(project, t, i + 1)}
-                                className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
-                              >
-                                {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
-                              </button>
-                            </div>
-                            <div className="flex items-center rounded bg-black/30 px-2 py-2">
-                              {renderTrackBars(project.id, t.id)}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {isExternalProject ? (
-                  <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      {(project.release_formats || [])
-                        .filter((format) => format !== 'digital')
-                        .map((format) => {
-                          const label = RELEASE_FORMAT_LABELS[format] || format;
-                          const href = normalizePurchaseUrl(project.purchase_url);
-                          return href ? (
-                            <a
-                              key={format}
-                              href={href}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                            >
-                              {label}
-                            </a>
-                          ) : (
-                            <span
-                              key={format}
-                              className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
-                            >
-                              {label}
-                            </span>
-                          );
-                        })}
-                      </div>
-                      {externalUrl && (
-                        <a
-                          href={normalizePurchaseUrl(externalUrl) || undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-black shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:brightness-110"
-                        >
-                          {externalPlatform || 'Otevřít'}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
-                  <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        <span>Vydáno na</span>
-                        {(project.release_formats || []).map((format) => (
-                          <span
-                            key={format}
-                            className="rounded-full border border-white/15 bg-black/50 px-2 py-1 text-[10px] text-white"
-                          >
-                            {RELEASE_FORMAT_LABELS[format] || format}
-                          </span>
-                        ))}
-                      </div>
-                      {project.purchase_url && (
-                        <a
-                          href={normalizePurchaseUrl(project.purchase_url) || undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                        >
-                          Koupit
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ) : null}
-                </div>
-              );
-            })}
+                    key={`project-skeleton-${idx}`}
+                    className="h-[520px] w-full animate-pulse rounded-2xl border border-white/10 bg-white/5"
+                  />
+                ))}
+              </div>
+            </>
+          )}
+          <div className="md:hidden">
+            <div ref={projectScrollRef} className="flex w-full overflow-hidden">
+              {projects.map((project) => renderProjectCard(project, 'min-w-full'))}
+            </div>
+            {projectCount > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    const next = (projectIndex - 1 + projectCount) % projectCount;
+                    setProjectIndex(next);
+                    scrollToIndex(projectScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    const next = (projectIndex + 1) % projectCount;
+                    setProjectIndex(next);
+                    scrollToIndex(projectScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="hidden md:grid gap-4 md:grid-cols-2">
+            {projects.map((project) => renderProjectCard(project))}
           </div>
         </section>
 
@@ -1873,106 +2092,40 @@ export default function Home() {
               Zobrazit vše
             </Link>
           </div>
-          <div className="md:hidden space-y-4">
-            {(() => {
-              const list = artists.length ? artists : dummyArtists;
-              const topThree = list.slice(0, 3);
-              const rest = list.slice(3);
-              const colors = [
-                'from-emerald-600 to-emerald-900',
-                'from-amber-400 to-orange-600',
-                'from-indigo-500 to-indigo-900',
-                'from-purple-500 to-purple-800',
-                'from-rose-500 to-rose-800',
-                'from-sky-500 to-sky-900',
-              ];
-              const renderCard = (artist: Artist, idx: number) => {
-                const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
-                const gradient = colors[idx % colors.length];
-                return (
-                  <Link
-                    href={`/u/${artist.id}`}
-                    key={`artist-mobile-${artist.id}-${idx}`}
-                    className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
-                  >
-                    <div
-                      className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
-                    >
-                      {artist.avatar_url ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                        </>
-                      ) : (
-                        <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
-                          {artist.initials}
-                        </div>
-                      )}
-                    </div>
-                    <div className="space-y-1 text-center w-full">
-                      <p className="text-base font-semibold text-white">{artist.name}</p>
-                      <p className="text-[12px] text-[var(--mpc-muted)]">{stats}</p>
-                    </div>
-                  </Link>
-                );
-              };
-              return (
-                <>
-                  {topThree.map((artist, idx) => renderCard(artist, idx))}
-                  {rest.length > 0 && (
-                    <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      {rest.map((artist, idx) => (
-                        <div key={`artist-mobile-scroll-${artist.id}`} className="min-w-[80%] snap-start">
-                          {renderCard(artist, idx + 3)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              );
-            })()}
+          <div className="md:hidden">
+            <div ref={artistScrollRef} className="flex w-full overflow-hidden">
+              {artistList.map((artist, idx) => renderArtistCard(artist, idx, 'min-w-full'))}
+            </div>
+            {artistList.length > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    const next = (artistIndex - 1 + artistList.length) % artistList.length;
+                    setArtistIndex(next);
+                    scrollToIndex(artistScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    const next = (artistIndex + 1) % artistList.length;
+                    setArtistIndex(next);
+                    scrollToIndex(artistScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="hidden md:grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             {Array.from({ length: 5 }).map((_, idx) => {
-              const list = artists.length ? artists : dummyArtists;
-              const artist = list[(artistIndex + idx) % list.length];
-              const stats = `${artist.beatsCount ?? 0} beatů · ${artist.projectsCount ?? 0} projektů`;
-              const colors = [
-                'from-emerald-600 to-emerald-900',
-                'from-amber-400 to-orange-600',
-                'from-indigo-500 to-indigo-900',
-                'from-purple-500 to-purple-800',
-                'from-rose-500 to-rose-800',
-                'from-sky-500 to-sky-900',
-              ];
-              const gradient = colors[idx % colors.length];
-              return (
-                <Link
-                  href={`/u/${artist.id}`}
-                  key={artist.id}
-                  className="flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_12px_28px_rgba(0,0,0,0.35)] hover:border-[var(--mpc-accent)]"
-                >
-                  <div
-                    className={`relative h-24 w-24 overflow-hidden rounded-full border border-white/15 bg-gradient-to-br ${gradient} shadow-[0_12px_26px_rgba(0,0,0,0.35)]`}
-                  >
-                    {artist.avatar_url ? (
-                      <>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={artist.avatar_url} alt={artist.name} className="h-full w-full object-cover" />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 grid place-items-center text-xl font-black text-white">
-                        {artist.initials}
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-1 text-center w-full">
-                    <p className="text-base font-semibold text-white">{artist.name}</p>
-                    <p className="text-[12px] text-[var(--mpc-muted)]">{stats}</p>
-                  </div>
-                </Link>
-              );
+              const artist = artistList[(artistIndex + idx) % artistList.length];
+              return renderArtistCard(artist, idx);
             })}
           </div>
           <div className="mt-3 hidden items-center justify-center gap-3 md:flex">
@@ -2012,85 +2165,41 @@ export default function Home() {
               <span>⚠</span> {blogError}
             </div>
           )}
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:hidden">
-            {(blogPosts.length ? blogPosts : []).map((post) => {
-              const displayTitle = lang === 'en' && post.title_en?.trim() ? post.title_en : post.title;
-              const displayExcerpt = lang === 'en' && post.excerpt_en?.trim() ? post.excerpt_en : post.excerpt;
-              return (
-              <article
-                key={post.id}
-                className="flex min-w-[85%] snap-start flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_16px_32px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
-              >
-                <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                  {post.cover_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.cover_url}
-                      alt={post.title}
-                      className="h-full w-full object-contain bg-black"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-700/40 to-emerald-900/60 text-[12px] uppercase tracking-[0.12em] text-white/70">
-                      Bez coveru
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)]">
-                  <span>{post.author}</span>
-                  <span>{post.date}</span>
-                </div>
-                <h3 className="text-lg font-semibold text-white">{displayTitle}</h3>
-                <p className="text-sm text-[var(--mpc-muted)]">{displayExcerpt}</p>
-                <div className="flex items-center justify-center">
-                  <Link
-                    href={`/blog/${post.id}`}
-                    className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
-                  >
-                    {t('blog.readMore', 'Celý článek')}
-                  </Link>
-                </div>
-              </article>
-            )})}
+          <div className="md:hidden">
+            <div ref={blogScrollRef} className="flex w-full overflow-hidden">
+              {(blogPosts.length ? blogPosts : []).map((post) =>
+                renderBlogCard(post, 'min-w-full')
+              )}
+            </div>
+            {blogCount > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    const next = (blogIndex - 1 + blogCount) % blogCount;
+                    setBlogIndex(next);
+                    scrollToIndex(blogScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    const next = (blogIndex + 1) % blogCount;
+                    setBlogIndex(next);
+                    scrollToIndex(blogScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
           <div className="hidden gap-4 md:grid md:grid-cols-3">
             {(blogPosts.length ? Array.from({ length: Math.min(3, blogPosts.length) }, (_, i) => blogPosts[(blogIndex + i) % blogPosts.length]) : []).map((post) => {
-              const displayTitle = lang === 'en' && post.title_en?.trim() ? post.title_en : post.title;
-              const displayExcerpt = lang === 'en' && post.excerpt_en?.trim() ? post.excerpt_en : post.excerpt;
-              return (
-              <article
-                key={post.id}
-                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_16px_32px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)]"
-              >
-                <div className="relative h-48 w-full overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                  {post.cover_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={post.cover_url}
-                      alt={post.title}
-                      className="h-full w-full object-contain bg-black"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-700/40 to-emerald-900/60 text-[12px] uppercase tracking-[0.12em] text-white/70">
-                      Bez coveru
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.1em] text-[var(--mpc-muted)]">
-                  <span>{post.author}</span>
-                  <span>{post.date}</span>
-                </div>
-                <h3 className="text-lg font-semibold text-white">{displayTitle}</h3>
-                <p className="text-sm text-[var(--mpc-muted)]">{displayExcerpt}</p>
-                <div className="flex items-center justify-center">
-                  <Link
-                    href={`/blog/${post.id}`}
-                    className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white hover:border-[var(--mpc-accent)]"
-                  >
-                    {t('blog.readMore', 'Celý článek')}
-                  </Link>
-                </div>
-              </article>
-            )})}
+              return renderBlogCard(post);
+            })}
           </div>
 
           {blogPosts.length > 3 && (
@@ -2123,126 +2232,48 @@ export default function Home() {
             </div>
           )}
           {isLoadingBeats && !beatsError && (
-            <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory max-w-6xl mx-auto w-full md:grid md:overflow-visible md:pb-0 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, idx) => (
-                <div key={idx} className="h-80 min-w-[80%] animate-pulse rounded-2xl bg-white/5 border border-white/10 md:min-w-0 md:w-full" />
-              ))}
-            </div>
-          )}
-          <div className="flex gap-4 overflow-x-auto pb-2 snap-x snap-mandatory max-w-6xl mx-auto w-full [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:grid md:overflow-visible md:pb-0 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleBeats.map((beat) => (
-              <div
-                key={beat.id}
-                className="relative min-w-[80%] snap-start overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-none backdrop-blur transition hover:border-[var(--mpc-accent)] sm:p-5 sm:shadow-[0_16px_40px_rgba(0,0,0,0.35)] max-w-md w-full mx-auto md:min-w-0"
-              >
-                <div className="absolute right-4 top-4 flex items-center gap-2">
-                  {userRole === 'curator' && (
-                    <button
-                      onClick={() => handleCuratorStar('beat', String(beat.id))}
-                      className="grid h-10 w-10 place-items-center rounded-full border border-yellow-400/60 bg-yellow-500/20 text-yellow-200 text-lg hover:bg-yellow-500/30"
-                      title="Kurátorská hvězda"
-                    >
-                      ★
-                    </button>
-                  )}
-                  <FireButton itemType="beat" itemId={String(beat.id)} className="scale-90" />
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <div className="h-32 w-32 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
-                    {beat.user_id ? (
-                      <Link href={`/u/${beat.user_id}`} className="block h-full w-full">
-                        {beat.cover_url ? (
-                          <CoverImage
-                            src={beat.cover_url}
-                            alt={beat.title}
-                            imgClassName="object-cover"
-                          />
-                        ) : (
-                          <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                            NO COVER
-                          </div>
-                        )}
-                      </Link>
-                    ) : beat.cover_url ? (
-                      <CoverImage
-                        src={beat.cover_url}
-                        alt={beat.title}
-                        imgClassName="object-cover"
-                      />
-                    ) : (
-                      <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                        NO COVER
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-center space-y-1">
-                    <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                      {beat.user_id ? (
-                        <Link href={`/u/${beat.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
-                          {beatAuthorNames[beat.user_id] || beat.artist}
-                        </Link>
-                      ) : (
-                        beat.artist
-                      )}
-                    </p>
-                    <div className="text-lg font-semibold text-white">{beat.title}</div>
-                  <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                    {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
-                  </div>
-                </div>
-
-                <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-                  <div className="mx-auto flex max-w-3xl items-center gap-3">
-                    <button
-                      className="grid h-12 w-12 min-h-[48px] min-w-[48px] place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] disabled:opacity-50"
-                      onClick={() => {
-                        if (gpCurrent?.id === beat.id) {
-                          gpToggle();
-                        } else {
-                          handlePlay(beat.audio_url, beat);
-                        }
-                      }}
-                      onMouseEnter={() => gpPrefetch(beat.audio_url || '')}
-                      onFocus={() => gpPrefetch(beat.audio_url || '')}
-                      onTouchStart={() => gpPrefetch(beat.audio_url || '')}
-                      disabled={!beat.audio_url}
-                    >
-                      {gpCurrent?.id === beat.id && gpIsPlaying ? '▮▮' : '►'}
-                    </button>
-                    <div className="flex-1">
-                      <p className="text-center text-sm font-semibold text-white">{beat.title}</p>
-                      <div className="mt-2 space-y-1">
-                        <div
-                            className="overflow-hidden rounded-full border border-white/10 bg-white/10 cursor-pointer h-3"
-                            onClick={(e) => {
-                              const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                              seekInTrack(beat, e.clientX - rect.left, rect.width);
-                            }}
-                          >
-                            <div
-                              className="h-full rounded-full bg-[var(--mpc-accent)] transition-all duration-150"
-                              style={{
-                                width:
-                                  currentTrack?.id === beat.id && duration
-                                    ? `${(currentTime / duration) * 100}%`
-                                    : '0%',
-                              }}
-                            />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                            <span>{currentTrack?.id === beat.id ? formatTime(currentTime) : '0:00'}</span>
-                            <span>
-                              {currentTrack?.id === beat.id && duration ? formatTime(duration) : '--:--'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <>
+              <div className="md:hidden">
+                <div className="h-80 w-full animate-pulse rounded-2xl bg-white/5 border border-white/10" />
               </div>
-            ))}
+              <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
+                {Array.from({ length: 3 }).map((_, idx) => (
+                  <div key={idx} className="h-80 w-full animate-pulse rounded-2xl bg-white/5 border border-white/10" />
+                ))}
+              </div>
+            </>
+          )}
+          <div className="md:hidden">
+            <div ref={beatScrollRef} className="flex w-full overflow-hidden">
+              {beatList.map((beat) => renderBeatCard(beat, 'min-w-full'))}
+            </div>
+            {beatCount > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => {
+                    const next = (beatIndex - 1 + beatCount) % beatCount;
+                    setBeatIndex(next);
+                    scrollToIndex(beatScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  ←
+                </button>
+                <button
+                  onClick={() => {
+                    const next = (beatIndex + 1) % beatCount;
+                    setBeatIndex(next);
+                    scrollToIndex(beatScrollRef, next);
+                  }}
+                  className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-white hover:border-[var(--mpc-accent)]"
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="hidden md:grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto w-full">
+            {visibleBeats.map((beat) => renderBeatCard(beat))}
           </div>
           {beatList.length > beatsPerPage && (
             <div className="mt-3 flex items-center justify-center gap-3">
