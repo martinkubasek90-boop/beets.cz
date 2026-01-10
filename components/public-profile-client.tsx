@@ -326,6 +326,7 @@ export default function PublicProfileClient({
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const [projectEmbeds, setProjectEmbeds] = useState<Record<string, string>>({});
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
   const [collabsError, setCollabsError] = useState<string | null>(null);
@@ -367,6 +368,19 @@ export default function PublicProfileClient({
   const [embedResetNonce, setEmbedResetNonce] = useState(0);
   const prevPlayingRef = useRef(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(max-width: 640px)');
+    const update = () => setIsMobileViewport(media.matches);
+    update();
+    if (media.addEventListener) {
+      media.addEventListener('change', update);
+      return () => media.removeEventListener('change', update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
 
   useEffect(() => {
     if (isPlaying && !prevPlayingRef.current) {
@@ -1820,6 +1834,7 @@ export default function PublicProfileClient({
                 const playableTracks = tracks.filter((track) => !!track.url);
                 const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
                 const isExternalProject = playableTracks.length === 0 && !!project.project_url;
+                const showCoverArt = !(isExternalProject && isMobileViewport);
                 const coverWrapperClass = isExternalProject
                   ? 'hidden sm:grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white'
                   : 'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
@@ -1837,7 +1852,7 @@ export default function PublicProfileClient({
                   <div
                     className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
                     style={
-                      project.cover_url
+                      project.cover_url && showCoverArt
                         ? {
                             backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${toSupabaseThumb(project.cover_url, 960) ?? project.cover_url})`,
                             backgroundSize: 'cover',
