@@ -1834,10 +1834,9 @@ export default function PublicProfileClient({
                 const playableTracks = tracks.filter((track) => !!track.url);
                 const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
                 const isExternalProject = playableTracks.length === 0 && !!project.project_url;
-                const showCoverArt = !(isExternalProject && isMobileViewport);
-                const coverWrapperClass = isExternalProject
-                  ? 'hidden sm:grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white'
-                  : 'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
+                const useCoverBackground = !(isExternalProject && isMobileViewport);
+                const coverWrapperClass =
+                  'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
                 return (
                   <div
                     key={project.id}
@@ -1852,7 +1851,7 @@ export default function PublicProfileClient({
                   <div
                     className="relative overflow-hidden rounded-xl border border-white/5 bg-black/40 p-6"
                     style={
-                      project.cover_url && showCoverArt
+                      project.cover_url && useCoverBackground
                         ? {
                             backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url(${toSupabaseThumb(project.cover_url, 960) ?? project.cover_url})`,
                             backgroundSize: 'cover',
