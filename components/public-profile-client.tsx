@@ -2115,7 +2115,10 @@ export default function PublicProfileClient({
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   )}
                   <div className={`${isExternalProject && isMobileViewport ? '' : 'mt-2'} flex justify-center`}>
-                    <div className="relative w-full sm:max-w-[720px]">
+                    <div
+                      className="relative w-full sm:max-w-[720px]"
+                      style={isMobileViewport ? { width: '125%', transform: 'translateX(-12.5%)' } : undefined}
+                    >
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id];
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
