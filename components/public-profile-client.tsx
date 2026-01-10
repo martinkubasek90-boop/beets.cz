@@ -1820,6 +1820,9 @@ export default function PublicProfileClient({
                 const playableTracks = tracks.filter((track) => !!track.url);
                 const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
                 const isExternalProject = playableTracks.length === 0 && !!project.project_url;
+                const coverWrapperClass = isExternalProject
+                  ? 'hidden sm:grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white'
+                  : 'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
                 return (
                   <div
                     key={project.id}
@@ -1862,7 +1865,7 @@ export default function PublicProfileClient({
                       />
                     </div>
                     <div className="flex flex-col items-center gap-3 text-center">
-                      <div className="grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white">
+                      <div className={coverWrapperClass}>
                         {project.cover_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={toSupabaseThumb(project.cover_url, 512) ?? project.cover_url} alt={project.title} className="h-full w-full object-cover" />
