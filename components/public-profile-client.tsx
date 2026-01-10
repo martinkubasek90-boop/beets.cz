@@ -159,6 +159,14 @@ const normalizeEmbedHtml = (html: string) => {
             url.pathname = `${url.pathname.replace(/\/$/, '')}/bgcol=111111`;
           }
         }
+        if (url.pathname.includes('artwork=')) {
+          url.pathname = url.pathname.replace(/artwork=([^/]+)/i, 'artwork=none');
+        } else {
+          url.pathname = url.pathname.replace(/\/(tracklist=)/i, '/artwork=none/$1');
+          if (!url.pathname.includes('artwork=')) {
+            url.pathname = `${url.pathname.replace(/\/$/, '')}/artwork=none`;
+          }
+        }
         if (url.pathname.includes('linkcol=')) {
           url.pathname = url.pathname.replace(/linkcol=([0-9a-fA-F]{6})/i, 'linkcol=e99708');
         } else {
