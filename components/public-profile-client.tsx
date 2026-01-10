@@ -188,10 +188,11 @@ const normalizeEmbedHtml = (html: string) => {
       .filter((part) => part && !part.startsWith('height') && !part.startsWith('width') && !part.startsWith('border'));
     const mergedStyle = [
       'border:0',
-      'width:100%',
+      `width:${widen}%`,
       `height:${iframeHeight}px`,
-      'max-width:720px',
-      'margin:0 auto',
+      `max-width:${widen}%`,
+      shift,
+      'margin-right:0',
       'border-radius:12px',
       'background:#111111',
       'display:block',
@@ -215,12 +216,12 @@ const normalizeEmbedHtml = (html: string) => {
 
 const normalizeEmbedHtmlForProfile = (
   html: string,
-  options: { hideBandcampArtwork: boolean; forceFullWidth: boolean }
+  options: { hideBandcampArtwork: boolean; widenPercent?: number }
 ) => {
   const normalized = normalizeEmbedHtml(html);
-  const base = options.forceFullWidth
-    ? normalized.replace(/max-width:\s*720px/gi, 'max-width:100%')
-    : normalized;
+  const widen = options.widenPercent && options.widenPercent > 100 ? options.widenPercent : 100;
+  const shift = widen > 100 ? `margin-left:${-((widen - 100) / 2)}%` : 'margin-left:0';
+  const base = normalized.replace(/max-width:\s*720px/gi, `max-width:${widen}%`);
   if (!options.hideBandcampArtwork) return base;
   return base.replace(/src=["']([^"']+)["']/i, (match, src) => {
     try {
@@ -2115,10 +2116,7 @@ export default function PublicProfileClient({
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                   )}
                   <div className={`${isExternalProject && isMobileViewport ? '' : 'mt-2'} flex justify-center`}>
-                    <div
-                      className="relative w-full sm:max-w-[720px]"
-                      style={isMobileViewport ? { width: '125%', transform: 'translateX(-12.5%)' } : undefined}
-                    >
+                    <div className="relative w-full sm:max-w-[720px]">
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id];
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
@@ -2133,7 +2131,7 @@ export default function PublicProfileClient({
                         dangerouslySetInnerHTML={{
                           __html: normalizeEmbedHtmlForProfile(embedHtml || '', {
                             hideBandcampArtwork,
-                            forceFullWidth: isMobileViewport,
+                            widenPercent: isMobileViewport ? 135 : 100,
                           }),
                         }}
                       />
