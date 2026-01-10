@@ -213,38 +213,6 @@ const normalizeEmbedHtml = (html: string) => {
   });
 };
 
-const normalizeEmbedHtmlForProfile = (
-  html: string,
-  options: { hideBandcampArtwork: boolean; widenPercent?: number }
-) => {
-  const normalized = normalizeEmbedHtml(html);
-  const widen = options.widenPercent && options.widenPercent > 100 ? options.widenPercent : 100;
-  const shift = widen > 100 ? `margin-left:${-((widen - 100) / 2)}%` : 'margin-left:0';
-  let base = normalized
-    .replace(/max-width:\s*720px/gi, `max-width:${widen}%`)
-    .replace(/width:\s*100%/gi, `width:${widen}%`)
-    .replace(/margin:\s*0\s+auto/gi, shift);
-  if (!options.hideBandcampArtwork) return base;
-  return base.replace(/src=["']([^"']+)["']/i, (match, src) => {
-    try {
-      const url = new URL(src);
-      if (url.hostname.includes('bandcamp.com') && url.pathname.includes('/EmbeddedPlayer/')) {
-        if (url.pathname.includes('artwork=')) {
-          url.pathname = url.pathname.replace(/artwork=([^/]+)/i, 'artwork=none');
-        } else {
-          url.pathname = url.pathname.replace(/\/(tracklist=)/i, '/artwork=none/$1');
-          if (!url.pathname.includes('artwork=')) {
-            url.pathname = `${url.pathname.replace(/\/$/, '')}/artwork=none`;
-          }
-        }
-        return `src="${url.toString()}"`;
-      }
-      return match;
-    } catch {
-      return match;
-    }
-  });
-};
 
 const isProjectTrack = (value: unknown): value is ProjectTrack =>
   !!value &&
@@ -2114,29 +2082,20 @@ export default function PublicProfileClient({
 
               {(project.embed_html || projectEmbeds[project.id]) && (
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-3">
-                  {!(isExternalProject && isMobileViewport) && (
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
-                  )}
-                  <div className={`${isExternalProject && isMobileViewport ? '' : 'mt-2'} flex justify-center`}>
-                    <div className="relative w-full sm:max-w-[720px]">
+                  <div className="flex justify-center">
+                    <div className="relative w-full max-w-[720px]">
                       {(() => {
-                        const embedHtml = project.embed_html || projectEmbeds[project.id];
+                        const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
-                        const hideBandcampArtwork = isBandcamp && isMobileViewport && isExternalProject;
                         const embedClass = isBandcamp
                           ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
                           : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
                         return (
-                      <div
-                        key={`embed-${project.id}-${embedResetNonce}`}
-                        className={embedClass}
-                        dangerouslySetInnerHTML={{
-                          __html: normalizeEmbedHtmlForProfile(embedHtml || '', {
-                            hideBandcampArtwork,
-                            widenPercent: isMobileViewport ? 135 : 100,
-                          }),
-                        }}
-                      />
+                          <div
+                            key={`embed-${project.id}-${embedResetNonce}`}
+                            className={embedClass}
+                            dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
+                          />
                         );
                       })()}
                       {isPlaying && (
