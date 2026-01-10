@@ -188,11 +188,10 @@ const normalizeEmbedHtml = (html: string) => {
       .filter((part) => part && !part.startsWith('height') && !part.startsWith('width') && !part.startsWith('border'));
     const mergedStyle = [
       'border:0',
-      `width:${widen}%`,
+      'width:100%',
       `height:${iframeHeight}px`,
-      `max-width:${widen}%`,
-      shift,
-      'margin-right:0',
+      'max-width:720px',
+      'margin:0 auto',
       'border-radius:12px',
       'background:#111111',
       'display:block',
@@ -221,7 +220,10 @@ const normalizeEmbedHtmlForProfile = (
   const normalized = normalizeEmbedHtml(html);
   const widen = options.widenPercent && options.widenPercent > 100 ? options.widenPercent : 100;
   const shift = widen > 100 ? `margin-left:${-((widen - 100) / 2)}%` : 'margin-left:0';
-  const base = normalized.replace(/max-width:\s*720px/gi, `max-width:${widen}%`);
+  let base = normalized
+    .replace(/max-width:\s*720px/gi, `max-width:${widen}%`)
+    .replace(/width:\s*100%/gi, `width:${widen}%`)
+    .replace(/margin:\s*0\s+auto/gi, shift);
   if (!options.hideBandcampArtwork) return base;
   return base.replace(/src=["']([^"']+)["']/i, (match, src) => {
     try {
