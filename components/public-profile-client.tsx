@@ -213,6 +213,30 @@ const normalizeEmbedHtml = (html: string) => {
   });
 };
 
+const normalizeEmbedHtmlForProfile = (html: string, hideBandcampArtwork: boolean) => {
+  const normalized = normalizeEmbedHtml(html);
+  if (!hideBandcampArtwork) return normalized;
+  return normalized.replace(/src=["']([^"']+)["']/i, (match, src) => {
+    try {
+      const url = new URL(src);
+      if (url.hostname.includes('bandcamp.com') && url.pathname.includes('/EmbeddedPlayer/')) {
+        if (url.pathname.includes('artwork=')) {
+          url.pathname = url.pathname.replace(/artwork=([^/]+)/i, 'artwork=none');
+        } else {
+          url.pathname = url.pathname.replace(/\/(tracklist=)/i, '/artwork=none/$1');
+          if (!url.pathname.includes('artwork=')) {
+            url.pathname = `${url.pathname.replace(/\/$/, '')}/artwork=none`;
+          }
+        }
+        return `src="${url.toString()}"`;
+      }
+      return match;
+    } catch {
+      return match;
+    }
+  });
+};
+
 const isProjectTrack = (value: unknown): value is ProjectTrack =>
   !!value &&
   typeof value === 'object' &&
@@ -1834,7 +1858,8 @@ export default function PublicProfileClient({
                 const playableTracks = tracks.filter((track) => !!track.url);
                 const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
                 const isExternalProject = playableTracks.length === 0 && !!project.project_url;
-                const useCoverBackground = !(isExternalProject && isMobileViewport);
+                const useDarkMobileExternal = isExternalProject && isMobileViewport;
+                const useCoverBackground = !useDarkMobileExternal;
                 const coverWrapperClass =
                   'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
                 return (
@@ -1857,9 +1882,11 @@ export default function PublicProfileClient({
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }
-                        : {
-                            background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
-                          }
+                        : useDarkMobileExternal
+                          ? { background: 'rgba(6, 8, 12, 0.95)' }
+                          : {
+                              background: 'linear-gradient(135deg, #000409 0%, #0a704e 55%, #fb8b00 100%)',
+                            }
                     }
                   >
                     <div className="absolute right-3 top-3 flex items-center gap-2">
@@ -2084,6 +2111,7 @@ export default function PublicProfileClient({
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id];
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
+                        const hideBandcampArtwork = isBandcamp && isMobileViewport && isExternalProject;
                         const embedClass = isBandcamp
                           ? 'min-h-[120px] w-full max-w-full sm:max-w-[680px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
                           : 'min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
@@ -2091,7 +2119,9 @@ export default function PublicProfileClient({
                       <div
                         key={`embed-${project.id}-${embedResetNonce}`}
                         className={embedClass}
-                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml || '') }}
+                        dangerouslySetInnerHTML={{
+                          __html: normalizeEmbedHtmlForProfile(embedHtml || '', hideBandcampArtwork),
+                        }}
                       />
                         );
                       })()}
