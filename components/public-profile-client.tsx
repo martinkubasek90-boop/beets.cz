@@ -213,10 +213,16 @@ const normalizeEmbedHtml = (html: string) => {
   });
 };
 
-const normalizeEmbedHtmlForProfile = (html: string, hideBandcampArtwork: boolean) => {
+const normalizeEmbedHtmlForProfile = (
+  html: string,
+  options: { hideBandcampArtwork: boolean; forceFullWidth: boolean }
+) => {
   const normalized = normalizeEmbedHtml(html);
-  if (!hideBandcampArtwork) return normalized;
-  return normalized.replace(/src=["']([^"']+)["']/i, (match, src) => {
+  const base = options.forceFullWidth
+    ? normalized.replace(/max-width:\s*720px/gi, 'max-width:100%')
+    : normalized;
+  if (!options.hideBandcampArtwork) return base;
+  return base.replace(/src=["']([^"']+)["']/i, (match, src) => {
     try {
       const url = new URL(src);
       if (url.hostname.includes('bandcamp.com') && url.pathname.includes('/EmbeddedPlayer/')) {
@@ -2122,7 +2128,10 @@ export default function PublicProfileClient({
                         key={`embed-${project.id}-${embedResetNonce}`}
                         className={embedClass}
                         dangerouslySetInnerHTML={{
-                          __html: normalizeEmbedHtmlForProfile(embedHtml || '', hideBandcampArtwork),
+                          __html: normalizeEmbedHtmlForProfile(embedHtml || '', {
+                            hideBandcampArtwork,
+                            forceFullWidth: isMobileViewport,
+                          }),
                         }}
                       />
                         );
