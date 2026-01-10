@@ -2104,17 +2104,19 @@ export default function PublicProfileClient({
                 )}
 
               {(project.embed_html || projectEmbeds[project.id]) && (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/35 p-3">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
-                  <div className="mt-2 flex justify-center">
-                    <div className="relative w-full max-w-full sm:max-w-[720px]">
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-3">
+                  {!(isExternalProject && isMobileViewport) && (
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
+                  )}
+                  <div className={`${isExternalProject && isMobileViewport ? '' : 'mt-2'} flex justify-center`}>
+                    <div className="relative w-full max-w-[720px]">
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id];
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
                         const hideBandcampArtwork = isBandcamp && isMobileViewport && isExternalProject;
                         const embedClass = isBandcamp
-                          ? 'min-h-[120px] w-full max-w-full sm:max-w-[680px] overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
-                          : 'min-h-[152px] w-full overflow-hidden rounded-xl border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
+                          ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                          : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
                         return (
                       <div
                         key={`embed-${project.id}-${embedResetNonce}`}
