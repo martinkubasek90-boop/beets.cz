@@ -198,8 +198,6 @@ const normalizeEmbedHtml = (html: string) => {
       'border:0',
       'width:100%',
       `height:${iframeHeight}px`,
-      'max-width:720px',
-      'margin:0 auto',
       'border-radius:12px',
       'background:#111111',
       'display:block',
@@ -2089,9 +2087,8 @@ export default function PublicProfileClient({
                 )}
 
               {(project.embed_html || projectEmbeds[project.id]) && (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-3">
-                  <div className="flex justify-center">
-                    <div className="relative w-full max-w-[720px]">
+                <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/40 p-0 sm:p-3">
+                  <div className="relative w-[calc(100%+24px)] -mx-3 sm:mx-auto sm:w-full sm:max-w-[720px]">
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
@@ -2115,7 +2112,6 @@ export default function PublicProfileClient({
                           Klikni pro vypnutí interního přehrávače
                         </button>
                       )}
-                    </div>
                   </div>
                 </div>
               )}
