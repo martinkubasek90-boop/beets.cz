@@ -2088,12 +2088,12 @@ export default function PublicProfileClient({
 
               {(project.embed_html || projectEmbeds[project.id]) && (
                 <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/40 p-0 sm:p-3">
-                  <div className="relative w-[calc(100%+24px)] -mx-3 sm:mx-auto sm:w-full sm:max-w-[720px]">
+                  <div className="relative w-[115%] -mx-[7.5%] sm:mx-auto sm:w-full sm:max-w-[720px]">
                       {(() => {
                         const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
                         const embedClass = isBandcamp
-                          ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                          ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0 sm:[&_iframe]:!w-[101%] sm:[&_iframe]:!-ml-[0.5%]'
                           : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
                         return (
                           <div

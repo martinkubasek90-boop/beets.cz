@@ -424,6 +424,8 @@ export default function ProfileClient() {
   const [importSaving, setImportSaving] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const autoEmbedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoEmbedUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (importTitle.trim()) return;
@@ -433,6 +435,81 @@ export default function ProfileClient() {
       setImportTitle(fallbackTitle);
     }
   }, [importEmbedHtml, importTitle]);
+
+  useEffect(() => {
+    if (!importProjectOpen) return;
+    const trimmed = importProjectUrl.trim();
+    if (!trimmed) {
+      lastAutoEmbedUrlRef.current = null;
+      return;
+    }
+    if (importEmbedHtml.trim()) return;
+    if (lastAutoEmbedUrlRef.current === trimmed) return;
+    if (autoEmbedTimerRef.current) {
+      clearTimeout(autoEmbedTimerRef.current);
+    }
+    autoEmbedTimerRef.current = setTimeout(async () => {
+      if (importEmbedHtml.trim()) return;
+      setImportLoading(true);
+      setImportError(null);
+      setImportSuccess(null);
+      try {
+        const response = await fetch(`/api/external-metadata?url=${encodeURIComponent(trimmed)}`);
+        if (response.ok) {
+          const meta = (await response.json()) as ImportMetadata;
+          const fallback = meta.embed_html || buildEmbedFromUrl(trimmed);
+          if (fallback) {
+            setImportEmbedHtml(fallback);
+            setImportMetadata({ ...meta, embed_html: fallback });
+            if (!importTitle.trim() && meta.title) setImportTitle(meta.title);
+            if (!importArtist.trim() && meta.artist) setImportArtist(meta.artist);
+            setImportSuccess('Embed připraven.');
+            lastAutoEmbedUrlRef.current = trimmed;
+            return;
+          }
+        }
+        const fallback = buildEmbedFromUrl(trimmed);
+        if (fallback) {
+          setImportEmbedHtml(fallback);
+          setImportMetadata((prev) =>
+            prev ?? {
+              title: importTitle.trim() || getEmbedDefaultTitle(trimmed),
+              artist: importArtist.trim(),
+              provider: getEmbedProviderFromUrl(trimmed) || null,
+              link: trimmed,
+              cover: null,
+              embed_html: fallback,
+            }
+          );
+          setImportSuccess('Embed připraven.');
+          lastAutoEmbedUrlRef.current = trimmed;
+        }
+      } catch {
+        const fallback = buildEmbedFromUrl(trimmed);
+        if (fallback) {
+          setImportEmbedHtml(fallback);
+          setImportMetadata((prev) =>
+            prev ?? {
+              title: importTitle.trim() || getEmbedDefaultTitle(trimmed),
+              artist: importArtist.trim(),
+              provider: getEmbedProviderFromUrl(trimmed) || null,
+              link: trimmed,
+              cover: null,
+              embed_html: fallback,
+            }
+          );
+          setImportSuccess('Embed připraven.');
+          lastAutoEmbedUrlRef.current = trimmed;
+        }
+      } finally {
+        setImportLoading(false);
+      }
+    }, 700);
+
+    return () => {
+      if (autoEmbedTimerRef.current) clearTimeout(autoEmbedTimerRef.current);
+    };
+  }, [importProjectOpen, importProjectUrl, importEmbedHtml, importTitle, importArtist]);
   const [myAccessRequests, setMyAccessRequests] = useState<ProjectAccessRequest[]>([]);
   const [myAccessRequestsError, setMyAccessRequestsError] = useState<string | null>(null);
   const [myAccessRequestsLoading, setMyAccessRequestsLoading] = useState(false);
