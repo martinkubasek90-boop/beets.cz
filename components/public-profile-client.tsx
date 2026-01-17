@@ -330,6 +330,7 @@ export default function PublicProfileClient({
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [projectGrantIds, setProjectGrantIds] = useState<string[]>([]);
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
   const [projectEmbeds, setProjectEmbeds] = useState<Record<string, string>>({});
   const [tabsOpen, setTabsOpen] = useState(false);
@@ -347,6 +348,7 @@ export default function PublicProfileClient({
   const [collabRequestState, setCollabRequestState] = useState<'idle' | 'sending' | 'success'>('idle');
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
+  const projectGrantSet = useMemo(() => new Set(projectGrantIds), [projectGrantIds]);
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -483,9 +485,31 @@ export default function PublicProfileClient({
       setProjectsError('Nepodařilo se načíst projekty: ' + message);
       return;
     }
+
+    if (currentUserId) {
+      const projectIds = ((data as Project[]) ?? []).map((project) => project.id).filter(Boolean);
+      if (projectIds.length > 0) {
+        const { data: grants, error: grantsError } = await supabase
+          .from('project_access_grants')
+          .select('project_id')
+          .eq('user_id', currentUserId)
+          .in('project_id', projectIds);
+        if (grantsError) {
+          console.warn('Chyba načítání grantů projektů:', grantsError);
+          setProjectGrantIds([]);
+        } else {
+          setProjectGrantIds(((grants as { project_id: string }[]) ?? []).map((row) => String(row.project_id)));
+        }
+      } else {
+        setProjectGrantIds([]);
+      }
+    } else {
+      setProjectGrantIds([]);
+    }
+
     setProjects((data as Project[]) ?? []);
     setProjectsError(null);
-  }, [profileId, supabase]);
+  }, [currentUserId, profileId, supabase]);
 
   const loadCollabs = useCallback(async () => {
     if (!currentUserId || currentUserId !== profileId) {
@@ -1097,6 +1121,11 @@ export default function PublicProfileClient({
     const map: Record<string, CurrentTrack[]> = {};
     projects.forEach((project) => {
       if (project.access_mode === 'private') return;
+      const hasAccess =
+        project.access_mode !== 'request' ||
+        currentUserId === profileId ||
+        projectGrantSet.has(String(project.id));
+      if (!hasAccess) return;
       const tracks: CurrentTrack[] = [];
       normalizeProjectTracks(project.tracks_json).forEach((track, idx) => {
         if (!track.url) return;
@@ -1126,7 +1155,7 @@ export default function PublicProfileClient({
       }
     });
     return map;
-  }, [projects]);
+  }, [currentUserId, profileId, projectGrantSet, projects]);
 
   const collabTracks = useMemo<CurrentTrack[]>(() => {
     return collabs
@@ -1843,6 +1872,10 @@ export default function PublicProfileClient({
                 const isExternalProject = playableTracks.length === 0 && !!project.project_url;
                 const useDarkMobileExternal = isExternalProject && isMobileViewport;
                 const useCoverBackground = !useDarkMobileExternal;
+                const hasProjectAccess =
+                  project.access_mode !== 'request' ||
+                  currentUserId === profileId ||
+                  projectGrantSet.has(String(project.id));
                 const coverWrapperClass =
                   'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
                 return (
@@ -1851,7 +1884,7 @@ export default function PublicProfileClient({
                     className="rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-4 text-sm text-[var(--mpc-light)]"
                   >
                   {/** přístupový režim projektu */}
-                  {project.access_mode && project.access_mode !== 'public' && (
+                  {project.access_mode && project.access_mode !== 'public' && !hasProjectAccess && (
                     <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-500/40 bg-yellow-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-yellow-200">
                       Zamčeno · {project.access_mode === 'request' ? 'Na žádost' : 'Soukromé'}
                     </div>
@@ -1907,7 +1940,7 @@ export default function PublicProfileClient({
                   </div>
                 </div>
 
-                {project.access_mode === 'request' && (
+                {project.access_mode === 'request' && !hasProjectAccess && (
                   <div className="mt-4 flex justify-center">
                     <Link
                       href={`/projects/${project.id}`}
@@ -1919,6 +1952,7 @@ export default function PublicProfileClient({
                 )}
 
                 {(() => {
+                  if (!hasProjectAccess) return null;
                   if (isExternalProject) return null;
                   const playableIdx = playableTracks.length ? tracks.findIndex((t) => t.url) : -1;
                   const primary =
@@ -1977,7 +2011,7 @@ export default function PublicProfileClient({
                     );
                   })()}
 
-                {!isExternalProject && (
+                {!isExternalProject && hasProjectAccess && (
                 <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
@@ -2004,7 +2038,7 @@ export default function PublicProfileClient({
                 {expandedProjects[project.id] && (
                   <div className="mt-4 rounded-lg border border-white/10 bg-black/40 p-2 text-sm text-[var(--mpc-light)]">
                     <p className="mb-2 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Tracklist</p>
-                    {project.access_mode && project.access_mode !== 'public' ? (
+                    {!hasProjectAccess ? (
                       <div className="space-y-2 rounded border border-[var(--mpc-dark)] bg-black/50 p-3 text-[13px] text-[var(--mpc-light)]">
                         <p>Projekt je uzamčený.</p>
                         <p className="text-[12px] text-[var(--mpc-muted)]">
@@ -2093,7 +2127,7 @@ export default function PublicProfileClient({
                         const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
                         const isBandcamp = typeof embedHtml === 'string' && embedHtml.includes('bandcamp.com/EmbeddedPlayer');
                         const embedClass = isBandcamp
-                          ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0 sm:[&_iframe]:!w-[101%] sm:[&_iframe]:!-ml-[0.5%]'
+                          ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-[125%] [&_iframe]:!-ml-[12.5%] [&_iframe]:!border-0 sm:[&_iframe]:!w-[104%] sm:[&_iframe]:!-ml-[2%]'
                           : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
                         return (
                           <div

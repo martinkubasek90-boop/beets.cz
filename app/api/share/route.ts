@@ -49,10 +49,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : '');
+
   return NextResponse.json({
     ok: true,
     token,
-    url: `${process.env.NEXT_PUBLIC_SITE_URL || ''}/api/share/${token}`,
+    url: `${baseUrl}/share/${token}`,
     expires_at,
     allow_download: Boolean(body.allow_download),
   });
