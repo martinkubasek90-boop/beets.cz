@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 });
 
   const supabase = await createClient();
-  const { data: row, error } = await supabase
+  const serviceKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE ||
+    process.env.SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const dbClient =
+    supabaseUrl && serviceKey
+      ? createSupabaseClient(supabaseUrl, serviceKey)
+      : supabase;
+  const { data: row, error } = await dbClient
     .from('share_links')
     .select('item_type,item_id,allow_download,expires_at')
     .eq('token', token)
@@ -23,7 +33,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
   let resourceUrl: string | null = null;
   if (row.item_type === 'beat') {
-    const { data } = await supabase.from('beats').select('audio_url,title,user_id,cover_url,profiles!inner(slug,display_name)').eq('id', row.item_id).maybeSingle();
+    const { data } = await dbClient
+      .from('beats')
+      .select('audio_url,title,user_id,cover_url,profiles!inner(slug,display_name)')
+      .eq('id', row.item_id)
+      .maybeSingle();
     if (data?.audio_url) resourceUrl = data.audio_url;
     return NextResponse.json({
       ok: true,
@@ -39,13 +53,28 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   }
 
   if (row.item_type === 'project') {
-    const { data } = await supabase
+    const { data } = await dbClient
       .from('projects')
-      .select('title,user_id,cover_url,tracks_json,profiles!inner(slug,display_name)')
+      .select('title,user_id,cover_url,tracks_json,project_url,profiles!inner(slug,display_name)')
       .eq('id', row.item_id)
       .maybeSingle();
-    const firstTrack = Array.isArray((data as any)?.tracks_json) ? (data as any).tracks_json[0] : null;
+    const rawTracks = (data as any)?.tracks_json;
+    let tracks: any[] = [];
+    if (Array.isArray(rawTracks)) {
+      tracks = rawTracks;
+    } else if (typeof rawTracks === 'string') {
+      try {
+        const parsed = JSON.parse(rawTracks);
+        tracks = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.tracks) ? parsed.tracks : [];
+      } catch {
+        tracks = [];
+      }
+    } else if (Array.isArray((rawTracks as any)?.tracks)) {
+      tracks = (rawTracks as any).tracks;
+    }
+    const firstTrack = tracks.find((track) => track?.url);
     if (firstTrack?.url) resourceUrl = firstTrack.url;
+    if (!resourceUrl && (data as any)?.project_url) resourceUrl = (data as any).project_url;
     return NextResponse.json({
       ok: true,
       item_type: row.item_type,
