@@ -24,7 +24,7 @@ export default function KonvertorPage() {
     const next = Array.from(incoming);
     const wavFiles = next.filter((file) => file.name.toLowerCase().endsWith(ACCEPTED_EXT));
     if (!wavFiles.length) {
-      setMessage('Vyber WAV soubory (16/24/32bit).');
+      setMessage('Vyber WAV soubory (16/24/32bit, 44.1/48 kHz).');
       return;
     }
     setFiles((prev) => [...prev, ...wavFiles]);
@@ -97,7 +97,7 @@ export default function KonvertorPage() {
               <p className="text-[11px] uppercase tracking-[0.45em] text-[var(--mpc-muted)]">Beets.cz</p>
               <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">WAV → MP3 konvertor</h1>
               <p className="text-sm text-[var(--mpc-muted)]">
-                Nahraj WAV soubory (16/24/32 bit). Po konverzi stáhneš ZIP se všemi MP3.
+                Nahraj WAV soubory (16/24/32 bit, 44.1/48 kHz). Po konverzi stáhneš ZIP se všemi MP3.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-xs text-[var(--mpc-muted)]">

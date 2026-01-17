@@ -38,9 +38,33 @@ async function resolveFfmpegPath() {
   throw new Error('Chybí ffmpeg binárka.');
 }
 
-async function convertToMp3(inputPath: string, outputPath: string) {
+function readWavSampleRate(buffer: Buffer) {
+  if (buffer.length < 32) return null;
+  const fmtLabel = Buffer.from('fmt ');
+  let offset = 12;
+  while (offset + 8 <= buffer.length) {
+    const chunkId = buffer.subarray(offset, offset + 4);
+    const chunkSize = buffer.readUInt32LE(offset + 4);
+    if (chunkId.equals(fmtLabel)) {
+      if (offset + 8 + 16 <= buffer.length) {
+        return buffer.readUInt32LE(offset + 12);
+      }
+      return null;
+    }
+    const advance = 8 + chunkSize + (chunkSize % 2);
+    offset += advance;
+  }
+  return null;
+}
+
+async function convertToMp3(inputPath: string, outputPath: string, sampleRate?: number | null) {
   const resolved = await resolveFfmpegPath();
-  await execFileAsync(resolved, ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k', outputPath]);
+  const args = ['-y', '-i', inputPath, '-codec:a', 'libmp3lame', '-b:a', '320k'];
+  if (sampleRate) {
+    args.push('-ar', String(sampleRate));
+  }
+  args.push(outputPath);
+  await execFileAsync(resolved, args);
 }
 
 async function zipFolderToBuffer(sourceDir: string) {
@@ -91,7 +115,12 @@ export async function POST(request: Request) {
       const outputPath = path.join(outputDir, outputName);
       const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(inputPath, buffer);
-      await convertToMp3(inputPath, outputPath);
+      const sampleRate = readWavSampleRate(buffer);
+      if (sampleRate && ![44100, 48000].includes(sampleRate)) {
+        errors.push(`${originalName}: podporujeme jen 44.1/48 kHz`);
+        continue;
+      }
+      await convertToMp3(inputPath, outputPath, sampleRate);
     }
 
     if (errors.length === files.length) {
