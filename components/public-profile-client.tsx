@@ -291,6 +291,14 @@ function buildRoomName(a: string, b: string) {
 
 const COMMUNITY_ROOM = 'beets-community-main';
 
+const slugifyName = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 export default function PublicProfileClient({
   profileId,
   initialProfile,
@@ -335,6 +343,7 @@ export default function PublicProfileClient({
   const [projectEmbeds, setProjectEmbeds] = useState<Record<string, string>>({});
   const [tabsOpen, setTabsOpen] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [copiedProjectId, setCopiedProjectId] = useState<string | null>(null);
 
   const [collabs, setCollabs] = useState<Collaboration[]>([]);
   const [collabsError, setCollabsError] = useState<string | null>(null);
@@ -349,6 +358,10 @@ export default function PublicProfileClient({
   const [collabRequestError, setCollabRequestError] = useState<string | null>(null);
   const projectQueueRef = useRef<{ projectId: string; queue: CurrentTrack[]; idx: number } | null>(null);
   const projectGrantSet = useMemo(() => new Set(projectGrantIds), [projectGrantIds]);
+  const profileSlug = useMemo(
+    () => slugifyName(profile?.display_name || profile?.slug || profileId),
+    [profile?.display_name, profile?.slug, profileId]
+  );
 
   const [messageBody, setMessageBody] = useState('');
   const [messageError, setMessageError] = useState<string | null>(null);
@@ -377,6 +390,23 @@ export default function PublicProfileClient({
   const [embedResetNonce, setEmbedResetNonce] = useState(0);
   const prevPlayingRef = useRef(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
+
+  const handleCopyProjectLink = useCallback(
+    async (project: Project) => {
+      if (!project.title) return;
+      const projectSlug = slugifyName(project.title);
+      if (!profileSlug || !projectSlug) return;
+      const url = `${window.location.origin}/projekty/${profileSlug}/${projectSlug}`;
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedProjectId(project.id);
+        setTimeout(() => setCopiedProjectId((prev) => (prev === project.id ? null : prev)), 2000);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    },
+    [profileSlug]
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -1876,6 +1906,11 @@ export default function PublicProfileClient({
                   project.access_mode !== 'request' ||
                   currentUserId === profileId ||
                   projectGrantSet.has(String(project.id));
+                const projectSlug = slugifyName(project.title || '');
+                const projectPublicUrl =
+                  profileSlug && projectSlug
+                    ? `/projekty/${profileSlug}/${projectSlug}`
+                    : `/projects/${project.id}`;
                 const coverWrapperClass =
                   'grid h-40 w-40 place-items-center overflow-hidden rounded-lg border border-white/10 bg-black/40 text-[11px] uppercase tracking-[0.1em] text-white';
                 return (
@@ -1920,6 +1955,14 @@ export default function PublicProfileClient({
                         itemId={`project-${project.id}`}
                         className="scale-100 [&>button]:!border-0 [&>button]:!bg-transparent [&>button]:!shadow-none [&>button]:hover:!brightness-100"
                       />
+                      {currentUserId === profileId && project.access_mode !== 'private' && (
+                        <button
+                          onClick={() => handleCopyProjectLink(project)}
+                          className="rounded-full border border-white/15 bg-black/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/70 hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                        >
+                          {copiedProjectId === project.id ? 'Zkopírováno' : 'Kopírovat odkaz'}
+                        </button>
+                      )}
                     </div>
                     <div className="flex flex-col items-center gap-3 text-center">
                       <div className={coverWrapperClass}>
@@ -1943,7 +1986,7 @@ export default function PublicProfileClient({
                 {project.access_mode === 'request' && !hasProjectAccess && (
                   <div className="mt-4 flex justify-center">
                     <Link
-                      href={`/projects/${project.id}`}
+                      href={projectPublicUrl}
                       className="inline-flex items-center rounded-full border border-[var(--mpc-accent)] bg-black/40 px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] shadow-[0_10px_25px_rgba(243,116,51,0.35)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
                     >
                       Požádat o přístup

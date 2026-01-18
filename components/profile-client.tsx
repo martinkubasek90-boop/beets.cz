@@ -188,6 +188,14 @@ const normalizePurchaseUrl = (value: string) => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
+const hashProjectPassword = async (value: string) => {
+  const encoded = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
+
 type CollabThread = {
   id: string;
   title: string;
@@ -653,6 +661,7 @@ const canImportExternal = currentRole !== 'mc';
   const [projectEditDescription, setProjectEditDescription] = useState('');
   const [projectEditReleaseFormats, setProjectEditReleaseFormats] = useState<string[]>([]);
   const [projectEditPurchaseUrl, setProjectEditPurchaseUrl] = useState('');
+  const [projectEditPassword, setProjectEditPassword] = useState('');
   const [projectEditTracks, setProjectEditTracks] = useState<
     Array<{ name: string; url?: string; path?: string | null; file?: File | null }>
   >([]);
@@ -4036,6 +4045,7 @@ const buildAppleEmbed = (url: string) => {
                                 setProjectEditDescription(project.description || '');
                                 setProjectEditReleaseFormats(project.release_formats || []);
                                 setProjectEditPurchaseUrl(project.purchase_url || '');
+                                setProjectEditPassword('');
                                 const tracks = Array.isArray(project.tracks_json)
                                   ? project.tracks_json.map((t: any) => {
                                       const path = t.path || null;
@@ -4191,6 +4201,24 @@ const buildAppleEmbed = (url: string) => {
                       onChange={(e) => setProjectEditPurchaseUrl(e.target.value)}
                     />
                   </div>
+
+                  {editingProject.access_mode === 'request' && (
+                    <div>
+                      <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                        Heslo pro projekt na žádost (volitelné)
+                      </label>
+                      <input
+                        type="password"
+                        className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        placeholder="Zadej nové heslo..."
+                        value={projectEditPassword}
+                        onChange={(e) => setProjectEditPassword(e.target.value)}
+                      />
+                      <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">
+                        Vyplň jen pokud chceš nastavit nebo změnit heslo pro sdílený odkaz.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-2">
@@ -4369,6 +4397,10 @@ const buildAppleEmbed = (url: string) => {
 
                         const firstUrl = finalTracks[0]?.url || editingProject.project_url || null;
                         const normalizedPurchaseUrl = normalizePurchaseUrl(projectEditPurchaseUrl);
+                        const passwordHash =
+                          editingProject.access_mode === 'request' && projectEditPassword.trim()
+                            ? await hashProjectPassword(projectEditPassword.trim())
+                            : null;
 
                         const { error: updateErr } = await supabase
                           .from('projects')
@@ -4380,6 +4412,7 @@ const buildAppleEmbed = (url: string) => {
                             cover_url: coverUrl,
                             release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
                             purchase_url: normalizedPurchaseUrl,
+                            ...(passwordHash ? { access_password_hash: passwordHash } : {}),
                           })
                           .eq('id', editingProject.id);
                         if (updateErr) throw updateErr;
