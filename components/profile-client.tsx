@@ -198,6 +198,9 @@ const normalizePurchaseUrl = (value: string) => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
+const getProjectPasswordKey = (projectId?: string | number | null) =>
+  projectId ? `project_password_${projectId}` : null;
+
 const hashProjectPassword = async (value: string) => {
   const encoded = new TextEncoder().encode(value);
   const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
@@ -4098,12 +4101,17 @@ const buildAppleEmbed = (url: string) => {
                           <div className="flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => {
+                                const passwordKey = getProjectPasswordKey(project.id);
+                                let storedPassword = '';
+                                if (passwordKey && typeof window !== 'undefined') {
+                                  storedPassword = window.localStorage.getItem(passwordKey) || '';
+                                }
                                 setEditingProject(project);
                                 setProjectEditTitle(project.title || '');
                                 setProjectEditDescription(project.description || '');
                                 setProjectEditReleaseFormats(project.release_formats || []);
                                 setProjectEditPurchaseUrl(project.purchase_url || '');
-                                setProjectEditPassword('');
+                                setProjectEditPassword(storedPassword);
                                 const tracks = Array.isArray(project.tracks_json)
                                   ? project.tracks_json.map((t: any) => {
                                       const path = t.path || null;
@@ -4266,14 +4274,14 @@ const buildAppleEmbed = (url: string) => {
                         Heslo pro projekt na žádost (volitelné)
                       </label>
                       <input
-                        type="password"
+                        type="text"
                         className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                         placeholder="Zadej nové heslo..."
                         value={projectEditPassword}
                         onChange={(e) => setProjectEditPassword(e.target.value)}
                       />
                       <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">
-                        Vyplň jen pokud chceš nastavit nebo změnit heslo pro sdílený odkaz.
+                        Heslo se ukládá lokálně v prohlížeči, aby zůstalo viditelné.
                       </p>
                     </div>
                   )}
@@ -4474,6 +4482,15 @@ const buildAppleEmbed = (url: string) => {
                           })
                           .eq('id', editingProject.id);
                         if (updateErr) throw updateErr;
+
+                        const passwordKey = getProjectPasswordKey(editingProject.id);
+                        if (passwordKey && typeof window !== 'undefined') {
+                          if (editingProject.access_mode === 'request' && projectEditPassword.trim()) {
+                            window.localStorage.setItem(passwordKey, projectEditPassword.trim());
+                          } else if (editingProject.access_mode !== 'request') {
+                            window.localStorage.removeItem(passwordKey);
+                          }
+                        }
 
                         setProjects((prev) =>
                           prev.map((p) =>

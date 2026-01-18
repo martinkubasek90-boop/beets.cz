@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
@@ -13,7 +14,16 @@ export async function POST(req: Request) {
     }
 
     const supabase = await createClient();
-    const { data: project, error } = await supabase
+    const serviceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE ||
+      process.env.SERVICE_ROLE_KEY;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const dbClient =
+      supabaseUrl && serviceKey
+        ? createSupabaseClient(supabaseUrl, serviceKey)
+        : supabase;
+    const { data: project, error } = await dbClient
       .from('projects')
       .select('id, access_mode, access_password_hash')
       .eq('id', projectId)

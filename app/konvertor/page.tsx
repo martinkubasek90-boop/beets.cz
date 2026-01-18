@@ -13,6 +13,7 @@ export default function KonvertorPage() {
   const [state, setState] = useState<UploadState>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [outputRate, setOutputRate] = useState<'auto' | '44100' | '48000'>('auto');
 
   const fileListLabel = useMemo(() => {
     if (!files.length) return 'Zatím žádné soubory';
@@ -56,6 +57,9 @@ export default function KonvertorPage() {
         const name = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
         formData.append('files', file, name);
       });
+      if (outputRate !== 'auto') {
+        formData.append('sampleRate', outputRate);
+      }
 
       const response = await fetch('/api/konvertor', {
         method: 'POST',
@@ -164,6 +168,19 @@ export default function KonvertorPage() {
                   <li>Spusť konverzi – vytvoří se MP3 balíček.</li>
                   <li>Stahuješ ZIP, WAVy se smažou.</li>
                 </ol>
+              </div>
+
+              <div className="mt-6 space-y-3 text-xs text-[var(--mpc-muted)]">
+                <label className="block uppercase tracking-[0.25em] text-[var(--mpc-accent)]">Vzorkovací frekvence</label>
+                <select
+                  value={outputRate}
+                  onChange={(event) => setOutputRate(event.target.value as typeof outputRate)}
+                  className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-3 text-xs uppercase tracking-[0.2em] text-white"
+                >
+                  <option value="auto">Auto (podle WAV)</option>
+                  <option value="44100">44.1 kHz</option>
+                  <option value="48000">48 kHz</option>
+                </select>
               </div>
 
               <div className="mt-6 space-y-3">
