@@ -6,7 +6,12 @@ import { createClient } from '@/lib/supabase/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
-    const projectId = typeof body?.projectId === 'string' ? body.projectId : '';
+    const projectId =
+      typeof body?.projectId === 'string'
+        ? body.projectId
+        : typeof body?.projectId === 'number'
+          ? String(body.projectId)
+          : '';
     const password = typeof body?.password === 'string' ? body.password : '';
 
     if (!projectId || !password) {
