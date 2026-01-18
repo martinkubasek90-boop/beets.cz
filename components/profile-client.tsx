@@ -89,6 +89,16 @@ const SEEKING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'GRAFIKA', '
 const OFFERING_OPTIONS = ['BEAT', 'RAP', 'SCRATCH', 'MIX', 'MASTER', 'STUDIO', 'GRAFIKA', 'VIDEO'];
 const SIGNAL_CACHE_KEY = 'beets-signals-cache';
 const SHOW_SHARE_FEATURE = false;
+const FALLBACK_SITE_URL = 'https://beets.cz';
+
+const slugifyName = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
 
 const extractIframeHtml = (value: string) => {
   const match = value.match(/<iframe[\s\S]*?<\/iframe>/i);
@@ -414,6 +424,7 @@ export default function ProfileClient() {
   const [dragProjectId, setDragProjectId] = useState<string | null>(null);
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null);
   const [projectsOrderSaved, setProjectsOrderSaved] = useState(false);
+  const [copiedProjectLinkId, setCopiedProjectLinkId] = useState<string | null>(null);
   const beatsListRef = useRef<HTMLDivElement | null>(null);
   const projectsListRef = useRef<HTMLDivElement | null>(null);
   const scrollListBy = (ref: React.RefObject<HTMLDivElement | null>, direction: 'up' | 'down') => {
@@ -422,6 +433,18 @@ export default function ProfileClient() {
     const offset = direction === 'up' ? -260 : 260;
     node.scrollBy({ top: offset, behavior: 'smooth' });
   };
+  const handleCopyProjectUrl = useCallback(async (url: string, projectId: string) => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedProjectLinkId(projectId);
+      window.setTimeout(() => {
+        setCopiedProjectLinkId((prev) => (prev === projectId ? null : prev));
+      }, 1600);
+    } catch (err) {
+      console.error('Nepodařilo se zkopírovat odkaz projektu:', err);
+    }
+  }, []);
   const [importProjectOpen, setImportProjectOpen] = useState(false);
   const [importProjectUrl, setImportProjectUrl] = useState('');
   const [importMetadata, setImportMetadata] = useState<ImportMetadata | null>(null);
@@ -613,6 +636,13 @@ const canImportExternal = currentRole !== 'mc';
     const percent = Math.round((done / total) * 100);
     return { missing, percent };
   }, [acapellas.length, beats.length, editRegion, profile.avatar_url, profile.bio, profile.region, profile.role, profile.seeking_signals, profile.offering_signals]);
+  const siteUrl = useMemo(() => {
+    const raw =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : '');
+    return (raw || FALLBACK_SITE_URL).replace(/\/$/, '');
+  }, []);
+  const profileSlug = useMemo(() => slugifyName(profile.display_name || ''), [profile.display_name]);
   const [newThreadTitle, setNewThreadTitle] = useState('');
   const [newThreadPartner, setNewThreadPartner] = useState('');
   const [creatingThread, setCreatingThread] = useState(false);
@@ -3988,6 +4018,17 @@ const buildAppleEmbed = (url: string) => {
                   className="max-h-[520px] space-y-3 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
                 >
                   {projects.map((project) => {
+                    const projectSlug = slugifyName(project.title || '');
+                    const hasLocalTracks =
+                      Array.isArray(project.tracks_json) && project.tracks_json.some((track) => Boolean(track?.url));
+                    const isExternalProject = Boolean(project.embed_html);
+                    const canShareUrl =
+                      !isExternalProject &&
+                      hasLocalTracks &&
+                      (project.access_mode === 'public' || project.access_mode === 'request');
+                    const projectUrl = canShareUrl
+                      ? `${siteUrl}/projekty/${profileSlug || 'profil'}/${projectSlug || 'projekt'}`
+                      : '';
                     const projectStyle = project.cover_url
                       ? {
                           backgroundImage:
@@ -4034,6 +4075,23 @@ const buildAppleEmbed = (url: string) => {
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {project.description || 'Bez popisu'}
                           </p>
+                          {canShareUrl && (
+                            <div className="mt-2 flex max-w-[360px] items-center gap-2">
+                              <input
+                                readOnly
+                                value={projectUrl}
+                                title={projectUrl}
+                                className="w-full truncate rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px] text-[var(--mpc-muted)]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => void handleCopyProjectUrl(projectUrl, project.id)}
+                                className="rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                {copiedProjectLinkId === project.id ? 'OK' : 'Kopírovat'}
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
                           <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
