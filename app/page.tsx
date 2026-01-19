@@ -1089,7 +1089,7 @@ export default function Home() {
     return (
       <div
         key={project.id}
-        className={`relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] ${className}`}
+        className={`relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] backdrop-blur transition hover:border-[var(--mpc-accent)] ${className}`}
       >
         <div className="absolute right-4 top-4 flex items-center gap-2">
           {userRole === 'curator' && (
@@ -1103,179 +1103,181 @@ export default function Home() {
           )}
           <FireButton itemType="project" itemId={`project-${project.id}`} className="scale-90" />
         </div>
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
-            {project.user_id ? (
-              <Link href={`/u/${project.user_id}`} className="block h-full w-full">
-                {project.cover_url ? (
-                  <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-40 w-40 overflow-hidden rounded-xl border border-white/15 bg-white/5 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
+              {project.user_id ? (
+                <Link href={`/u/${project.user_id}`} className="block h-full w-full">
+                  {project.cover_url ? (
+                    <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+                  ) : (
+                    <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                      NO COVER
+                    </div>
+                  )}
+                </Link>
+              ) : project.cover_url ? (
+                <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+              ) : (
+                <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                  NO COVER
+                </div>
+              )}
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
+                {project.user_id && project.author_name ? (
+                  <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
+                    Autor: {project.author_name}
+                  </Link>
+                ) : project.author_name ? (
+                  <>Autor: {project.author_name}</>
                 ) : (
-                  <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                    NO COVER
-                  </div>
+                  'Autor projektu'
                 )}
-              </Link>
-            ) : project.cover_url ? (
-              <CoverImage src={project.cover_url} alt={project.title} imgClassName="object-cover" />
+              </p>
+              <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
+                <span>{project.title}</span>
+              </div>
+              <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Beat tape / EP</div>
+              {cleanedDescription ? (
+                <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">{cleanedDescription}</p>
+              ) : !isExternalProject ? (
+                <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">Instrumentální beat tape.</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 w-full rounded-2xl border border-white/10 bg-black/40 p-3">
+            {isExternalProject ? (
+              <div className="space-y-2">
+                <div className="flex justify-center">
+                  <div className="relative w-full max-w-[720px]">
+                    {(() => {
+                      const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
+                      const isBandcamp = embedHtml.includes('bandcamp.com/EmbeddedPlayer');
+                      const embedClass = isBandcamp
+                        ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
+                        : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
+                      return (
+                        <div
+                          key={`embed-${project.id}-${embedResetNonce}`}
+                          className={embedClass}
+                          dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
+                        />
+                      );
+                    })()}
+                    {gpIsPlaying && (
+                      <button
+                        type="button"
+                        onClick={() => gpPause()}
+                        className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
+                      >
+                        Klikni pro vypnutí interního přehrávače
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div className="grid h-full w-full place-items-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-                NO COVER
+              <div className="mx-auto flex max-w-3xl items-center gap-3">
+                <button
+                  onClick={() =>
+                    project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
+                  }
+                  onMouseEnter={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                  onFocus={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                  onTouchStart={() => gpPrefetch(project.tracks?.[0]?.url || '')}
+                  className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                >
+                  {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
+                </button>
+                <div className="flex-1">
+                  <p className="text-center text-sm font-semibold text-white">
+                    {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    <div className="h-3 overflow-hidden rounded-full bg-black/70">
+                      <div
+                        className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
+                        style={{
+                          width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%`,
+                        }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
+                      <span>0 s</span>
+                      <span>{duration ? formatTime(duration) : '-- s'}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-          <div className="text-center space-y-1">
-            <p className="text-[12px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
-              {project.user_id && project.author_name ? (
-                <Link href={`/u/${project.user_id}`} className="text-white hover:text-[var(--mpc-accent)]">
-                  Autor: {project.author_name}
-                </Link>
-              ) : project.author_name ? (
-                <>Autor: {project.author_name}</>
-              ) : (
-                'Autor projektu'
-              )}
-            </p>
-            <div className="flex items-center justify-center gap-2 text-lg font-semibold text-white">
-              <span>{project.title}</span>
-            </div>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">Beat tape / EP</div>
-            {cleanedDescription ? (
-              <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">{cleanedDescription}</p>
-            ) : !isExternalProject ? (
-              <p className="text-sm text-[var(--mpc-muted)] max-w-2xl">Instrumentální beat tape.</p>
-            ) : null}
-          </div>
-        </div>
 
-        <div className="w-full rounded-2xl border border-white/10 bg-black/40 p-3">
-          {isExternalProject ? (
-            <div className="space-y-2">
-              <div className="flex justify-center">
-                <div className="relative w-full max-w-[720px]">
-                  {(() => {
-                    const embedHtml = project.embed_html || projectEmbeds[project.id] || '';
-                    const isBandcamp = embedHtml.includes('bandcamp.com/EmbeddedPlayer');
-                    const embedClass = isBandcamp
-                      ? 'min-h-[120px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[120px] [&_iframe]:!w-full [&_iframe]:!border-0'
-                      : 'min-h-[152px] w-full overflow-hidden rounded-lg border border-white/10 bg-black/80 [&_iframe]:!h-[152px] [&_iframe]:!w-full [&_iframe]:!border-0';
-                    return (
-                      <div
-                        key={`embed-${project.id}-${embedResetNonce}`}
-                        className={embedClass}
-                        dangerouslySetInnerHTML={{ __html: normalizeEmbedHtml(embedHtml) }}
-                      />
-                    );
-                  })()}
-                  {gpIsPlaying && (
-                    <button
-                      type="button"
-                      onClick={() => gpPause()}
-                      className="absolute inset-0 grid place-items-center rounded-lg bg-black/70 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur-sm"
-                    >
-                      Klikni pro vypnutí interního přehrávače
-                    </button>
-                  )}
-                </div>
+          {!isExternalProject && project.tracks && project.tracks.length > 1 && (
+            <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
+                <button
+                  onClick={() => setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
+                  className={`grid h-10 w-10 place-items-center rounded-full border text-white transition ${
+                    homeExpandedProjects[project.id]
+                      ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                      : 'border-white/20 bg-white/5'
+                  }`}
+                  aria-label="Tracklist"
+                >
+                  <span
+                    className="text-base font-bold transition-transform"
+                    style={{ transform: homeExpandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                  >
+                    ▼
+                  </span>
+                </button>
               </div>
-            </div>
-          ) : (
-            <div className="mx-auto flex max-w-3xl items-center gap-3">
-              <button
-                onClick={() =>
-                  project.tracks && project.tracks[0] ? handlePlayProjectTrack(project, project.tracks[0], 0) : null
-                }
-                onMouseEnter={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                onFocus={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                onTouchStart={() => gpPrefetch(project.tracks?.[0]?.url || '')}
-                className="grid h-12 w-12 place-items-center rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-lg text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-              >
-                {currentTrack?.id === project.tracks?.[0]?.id && isPlaying ? '▮▮' : '►'}
-              </button>
-              <div className="flex-1">
-                <p className="text-center text-sm font-semibold text-white">
-                  {project.tracks && project.tracks[0] ? project.tracks[0].title : 'Tracklist není k dispozici'}
-                </p>
-                <div className="mt-2 space-y-1">
-                  <div className="h-3 overflow-hidden rounded-full bg-black/70">
+              {homeExpandedProjects[project.id] && (
+                <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                  {project.tracks.slice(1).map((t, i) => (
                     <div
-                      className="h-full rounded-full bg-[var(--mpc-accent,#00e096)] transition-all duration-150"
-                      style={{
-                        width: `${project.tracks && project.tracks[0] ? projectTrackProgress(project.tracks[0].id) : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                    <span>0 s</span>
-                    <span>{duration ? formatTime(duration) : '-- s'}</span>
-                  </div>
+                      key={t.id ?? `${project.id}-${i + 2}`}
+                      className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 text-[11px] text-[var(--mpc-muted)]">{i + 2}.</span>
+                          <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
+                            {project.cover_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-white">{t.title}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handlePlayProjectTrack(project, t, i + 1)}
+                          className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
+                        >
+                          {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
+                        </button>
+                      </div>
+                      <div className="flex items-center rounded bg-black/30 px-2 py-2">
+                        {renderTrackBars(project.id, t.id)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>
 
-        {!isExternalProject && project.tracks && project.tracks.length > 1 && (
-          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/30 p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] uppercase tracking-[0.16em] text-[var(--mpc-muted)]">Tracklist</span>
-              <button
-                onClick={() => setHomeExpandedProjects((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
-                className={`grid h-10 w-10 place-items-center rounded-full border text-white transition ${
-                  homeExpandedProjects[project.id]
-                    ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
-                    : 'border-white/20 bg-white/5'
-                }`}
-                aria-label="Tracklist"
-              >
-                <span
-                  className="text-base font-bold transition-transform"
-                  style={{ transform: homeExpandedProjects[project.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                >
-                  ▼
-                </span>
-              </button>
-            </div>
-            {homeExpandedProjects[project.id] && (
-              <div className="mt-3 flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
-                {project.tracks.slice(1).map((t, i) => (
-                  <div
-                    key={t.id ?? `${project.id}-${i + 2}`}
-                    className="flex flex-col gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 text-[11px] text-[var(--mpc-muted)]">{i + 2}.</span>
-                        <div className="grid h-8 w-8 place-items-center overflow-hidden rounded border border-white/10 bg-white/5">
-                          {project.cover_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={project.cover_url} alt={t.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <span className="text-[10px] text-[var(--mpc-muted)]">TR</span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">{t.title}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handlePlayProjectTrack(project, t, i + 1)}
-                        className="rounded-full border border-[var(--mpc-accent)] bg-[var(--mpc-accent)] px-2 py-1 text-white shadow-[0_6px_14px_rgba(243,116,51,0.35)] hover:border-[var(--mpc-accent)]"
-                      >
-                        {currentTrack?.id === t.id && isPlaying ? '▮▮' : '►'}
-                      </button>
-                    </div>
-                    <div className="flex items-center rounded bg-black/30 px-2 py-2">
-                      {renderTrackBars(project.id, t.id)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {isExternalProject ? (
-          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+          <div className="mt-auto w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                 <span>Vydáno na</span>
@@ -1317,7 +1319,7 @@ export default function Home() {
             </div>
           </div>
         ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
-          <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+          <div className="mt-auto w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                 <span>Vydáno na</span>
