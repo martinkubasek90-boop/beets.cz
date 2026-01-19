@@ -1077,10 +1077,13 @@ export default function Home() {
       !hasPlayable && (!!project.project_url || !!project.embed_html || !!projectEmbeds[project.id]);
     const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
     const externalUrl = project.project_url || project.purchase_url;
+    const rawDescription = project.description?.trim() ?? '';
+    const isExternalMetaLine = /^autor:|^zdroj:/i.test(rawDescription);
     const cleanedDescription =
-      project.description &&
-      !project.description.toLowerCase().trim().startsWith('zdroj:')
-        ? project.description
+      rawDescription &&
+      (!isExternalProject || !isExternalMetaLine) &&
+      !rawDescription.toLowerCase().startsWith('zdroj:')
+        ? rawDescription
         : null;
 
     return (
@@ -1274,8 +1277,8 @@ export default function Home() {
         {isExternalProject ? (
           <div className="mt-3 w-full rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Vydáno na</span>
               <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                <span>Vydáno na</span>
                 {(project.release_formats || [])
                   .filter((format) => format !== 'digital')
                   .map((format) => {
