@@ -1097,8 +1097,8 @@ const canImportExternal = currentRole !== 'mc';
     return threads.sort((a, b) => b.lastTs - a.lastTs);
   }, [messages, userId, profilesById]);
 
-  const activeThreadId = expandedThread ?? directThreads[0]?.otherId ?? null;
-  const activeThread = directThreads.find((thread) => thread.otherId === activeThreadId) ?? null;
+  const activeDmThreadId = expandedThread ?? directThreads[0]?.otherId ?? null;
+  const activeDmThread = directThreads.find((thread) => thread.otherId === activeDmThreadId) ?? null;
 
 
   // Načti display_name pro všechny uživatele z přímých zpráv
@@ -5769,7 +5769,7 @@ const buildAppleEmbed = (url: string) => {
                   )}
                   <div className="space-y-1">
                     {directThreads.map((thread) => {
-                      const isActive = activeThreadId === thread.otherId;
+                      const isActive = activeDmThreadId === thread.otherId;
                       return (
                         <button
                           key={thread.otherId}
@@ -5802,22 +5802,22 @@ const buildAppleEmbed = (url: string) => {
                 </div>
 
                 <div className="flex min-h-[320px] flex-col rounded-lg border border-[var(--mpc-dark)] bg-black/30">
-                  {activeThread ? (
+                  {activeDmThread ? (
                     <>
                       <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-4 py-3">
                         <div>
-                          <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeThread.otherName}</p>
+                          <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeDmThread.otherName}</p>
                           <p className="text-[11px] text-[var(--mpc-muted)]">
-                            {activeThread.unread ? 'Nové zprávy' : 'Historie konverzace'}
+                            {activeDmThread.unread ? 'Nové zprávy' : 'Historie konverzace'}
                           </p>
                         </div>
                         <span className="text-[10px] text-[var(--mpc-muted)]">
-                          {formatRelativeTime(new Date(activeThread.lastTs).toISOString())}
+                          {formatRelativeTime(new Date(activeDmThread.lastTs).toISOString())}
                         </span>
                       </div>
 
                       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-                        {activeThread.messages.map((m) => {
+                        {activeDmThread.messages.map((m) => {
                           const isMe = m.user_id === userId;
                           const author =
                             m.user_id === userId
@@ -5847,16 +5847,16 @@ const buildAppleEmbed = (url: string) => {
                           className="w-full rounded-md border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
                           rows={3}
                           placeholder="Napiš odpověď…"
-                          value={threadReplies[activeThread.otherId] || ''}
+                          value={threadReplies[activeDmThread.otherId] || ''}
                           onChange={(e) =>
-                            setThreadReplies((prev) => ({ ...prev, [activeThread.otherId]: e.target.value }))
+                            setThreadReplies((prev) => ({ ...prev, [activeDmThread.otherId]: e.target.value }))
                           }
                         />
                         <div className="mt-2 flex items-center justify-end">
                           <button
                             type="button"
-                            onClick={() => void handleThreadReply(activeThread.otherId, activeThread.otherName)}
-                            disabled={sendingMessage || !(threadReplies[activeThread.otherId]?.trim())}
+                            onClick={() => void handleThreadReply(activeDmThread.otherId, activeDmThread.otherName)}
+                            disabled={sendingMessage || !(threadReplies[activeDmThread.otherId]?.trim())}
                             className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
                           >
                             {sendingMessage ? 'Odesílám…' : 'Odeslat'}
