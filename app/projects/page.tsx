@@ -586,6 +586,7 @@ export default function ProjectsPage() {
             const externalPlatform = getExternalPlatform(project.project_url || project.purchase_url);
             const isExternalProject = playableTracks.length === 0 && !!project.project_url;
             const isRequest = project.access_mode === "request";
+            const isLocked = isRequest && !project.hasAccess;
             const isCurrentPrimary = current?.id === `project-${project.id}-0`;
             const progressPct =
               isCurrentPrimary && duration ? `${Math.min((currentTime / duration) * 100, 100)}%` : "0%";
@@ -795,7 +796,7 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {(project.embed_html || projectEmbeds[project.id]) && (
+                {!isLocked && (project.embed_html || projectEmbeds[project.id]) && (
                   <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Přehrávač</p>
                     <div className="mt-2 flex justify-center">
@@ -828,7 +829,7 @@ export default function ProjectsPage() {
                   </div>
                 )}
 
-                {isExternalProject ? (
+                {!isLocked && isExternalProject ? (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                       Vydáno na
@@ -868,7 +869,7 @@ export default function ProjectsPage() {
                       {externalPlatform || "Otevřít"}
                     </a>
                   </div>
-                ) : (project.release_formats && project.release_formats.length > 0) || project.purchase_url ? (
+                ) : !isLocked && ((project.release_formats && project.release_formats.length > 0) || project.purchase_url) ? (
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/35 px-4 py-3">
                     <div className="flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                       <span>Vydáno na</span>
