@@ -1097,6 +1097,9 @@ const canImportExternal = currentRole !== 'mc';
     return threads.sort((a, b) => b.lastTs - a.lastTs);
   }, [messages, userId, profilesById]);
 
+  const activeThreadId = expandedThread ?? directThreads[0]?.otherId ?? null;
+  const activeThread = directThreads.find((thread) => thread.otherId === activeThreadId) ?? null;
+
 
   // Načti display_name pro všechny uživatele z přímých zpráv
   useEffect(() => {
@@ -5759,72 +5762,114 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               )}
 
-              <div className="space-y-3">
-                {directThreads.length === 0 && !messagesLoading && (
-                  <p className="text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
-                )}
-                {directThreads.map((thread) => {
-                  const isOpen = expandedThread === thread.otherId;
-                  return (
-                    <div
-                      key={thread.otherId}
-                      className={`rounded-lg border px-4 py-3 text-sm transition ${thread.unread ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]' : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)]'}`}
-                    >
-                      <button
-                        type="button"
-                        className="flex w-full items-center justify-between text-left"
-                        onClick={() => setExpandedThread(isOpen ? null : thread.otherId)}
-                      >
-                        <div>
-                          <p className="font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{thread.lastMessage}</p>
-                          {thread.unread && (
-                            <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                              Nové
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,260px)_1fr]">
+                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-2">
+                  {directThreads.length === 0 && !messagesLoading && (
+                    <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
+                  )}
+                  <div className="space-y-1">
+                    {directThreads.map((thread) => {
+                      const isActive = activeThreadId === thread.otherId;
+                      return (
+                        <button
+                          key={thread.otherId}
+                          type="button"
+                          onClick={() => setExpandedThread(thread.otherId)}
+                          className={`w-full rounded-md px-3 py-2 text-left transition ${
+                            isActive
+                              ? 'border border-[var(--mpc-accent)] bg-[var(--mpc-deck)]'
+                              : 'border border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
+                            <span className="text-[10px] text-[var(--mpc-muted)]">
+                              {formatRelativeTime(new Date(thread.lastTs).toISOString())}
                             </span>
-                          )}
-                        </div>
-                        <span className="text-[var(--mpc-muted)]">{formatRelativeTime(new Date(thread.lastTs).toISOString())}</span>
-                      </button>
-                      {isOpen && (
-                        <div className="mt-3 space-y-2 border-t border-[var(--mpc-dark)] pt-2">
-                          {thread.messages.map((m) => (
-                            <div key={m.id} className="rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
-                              <div className="flex items-center justify-between text-[11px] text-[var(--mpc-muted)]">
-                                <span>
-                                  {m.user_id === userId
-                                    ? 'Ty'
-                                    : profilesById[m.user_id || ''] || m.from_name || 'Neznámý'}
-                                </span>
-                                <span>{formatRelativeTime(m.created_at)}</span>
-                              </div>
-                              <p className="mt-1 whitespace-pre-line text-[var(--mpc-light)]">{m.body}</p>
-                            </div>
-                          ))}
-                          <div className="mt-2 space-y-2">
-                            <textarea
-                              className="w-full rounded-md border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
-                              rows={3}
-                              placeholder="Napiš odpověď…"
-                              value={threadReplies[thread.otherId] || ''}
-                              onChange={(e) => setThreadReplies((prev) => ({ ...prev, [thread.otherId]: e.target.value }))}
-                            />
-                            <div className="flex items-center justify-end">
-                              <button
-                                type="button"
-                                onClick={() => void handleThreadReply(thread.otherId, thread.otherName)}
-                                disabled={sendingMessage || !(threadReplies[thread.otherId]?.trim())}
-                                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
-                              >
-                                {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                              </button>
-                            </div>
                           </div>
+                          <div className="mt-1 flex items-center justify-between gap-2">
+                            <p className="truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
+                            {thread.unread && (
+                              <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                                Nové
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex min-h-[320px] flex-col rounded-lg border border-[var(--mpc-dark)] bg-black/30">
+                  {activeThread ? (
+                    <>
+                      <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-4 py-3">
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeThread.otherName}</p>
+                          <p className="text-[11px] text-[var(--mpc-muted)]">
+                            {activeThread.unread ? 'Nové zprávy' : 'Historie konverzace'}
+                          </p>
                         </div>
-                      )}
+                        <span className="text-[10px] text-[var(--mpc-muted)]">
+                          {formatRelativeTime(new Date(activeThread.lastTs).toISOString())}
+                        </span>
+                      </div>
+
+                      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+                        {activeThread.messages.map((m) => {
+                          const isMe = m.user_id === userId;
+                          const author =
+                            m.user_id === userId
+                              ? 'Ty'
+                              : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
+                          return (
+                            <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[85%] rounded-xl border px-3 py-2 text-[12px] ${
+                                  isMe
+                                    ? 'border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/15 text-[var(--mpc-light)]'
+                                    : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[var(--mpc-light)]'
+                                }`}
+                              >
+                                <div className="text-[10px] text-[var(--mpc-muted)]">
+                                  {author} · {formatRelativeTime(m.created_at)}
+                                </div>
+                                <p className="mt-1 whitespace-pre-line">{m.body}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="border-t border-[var(--mpc-dark)] px-4 py-3">
+                        <textarea
+                          className="w-full rounded-md border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
+                          rows={3}
+                          placeholder="Napiš odpověď…"
+                          value={threadReplies[activeThread.otherId] || ''}
+                          onChange={(e) =>
+                            setThreadReplies((prev) => ({ ...prev, [activeThread.otherId]: e.target.value }))
+                          }
+                        />
+                        <div className="mt-2 flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleThreadReply(activeThread.otherId, activeThread.otherName)}
+                            disabled={sendingMessage || !(threadReplies[activeThread.otherId]?.trim())}
+                            className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
+                          >
+                            {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
+                      Vyber konverzaci.
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
 
               <div className="mt-4">
