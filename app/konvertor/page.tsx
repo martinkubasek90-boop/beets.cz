@@ -3,12 +3,14 @@
 import type { ChangeEvent, DragEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { MainNav } from '@/components/main-nav';
+import { createClient } from '@/lib/supabase/client';
 
 type UploadState = 'idle' | 'uploading' | 'done' | 'error';
 
 const ACCEPTED_EXT = '.wav';
 
 export default function KonvertorPage() {
+  const supabase = useMemo(() => createClient(), []);
   const [files, setFiles] = useState<File[]>([]);
   const [state, setState] = useState<UploadState>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -49,21 +51,33 @@ export default function KonvertorPage() {
   const handleConvert = async () => {
     if (!files.length || state === 'uploading') return;
     setState('uploading');
-    setMessage('Konvertuju…');
+    setMessage('Nahrávám do úložiště…');
 
     try {
-      const formData = new FormData();
-      files.forEach((file) => {
-        const name = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
-        formData.append('files', file, name);
-      });
-      if (outputRate !== 'auto') {
-        formData.append('sampleRate', outputRate);
+      const jobId = crypto.randomUUID();
+      const inputPaths: string[] = [];
+      for (const file of files) {
+        const safeName = file.name.replace(/[^a-z0-9._-]+/gi, '_');
+        const uploadPath = `jobs/${jobId}/input/${Date.now()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage.from('konvertor').upload(uploadPath, file, {
+          contentType: file.type || 'audio/wav',
+          upsert: true,
+        });
+        if (uploadError) {
+          throw new Error('Nahrání do úložiště selhalo. Zkus to prosím znovu.');
+        }
+        inputPaths.push(uploadPath);
       }
 
+      setMessage('Konvertuju…');
       const response = await fetch('/api/konvertor', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId,
+          inputPaths,
+          sampleRate: outputRate,
+        }),
       });
 
       if (!response.ok) {
@@ -71,18 +85,35 @@ export default function KonvertorPage() {
         throw new Error(payload?.error || 'Konverze selhala.');
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const payload = (await response.json()) as {
+        downloadUrl?: string;
+        errors?: string[];
+      };
+      if (!payload?.downloadUrl) {
+        throw new Error('Chybí odkaz ke stažení.');
+      }
+
+      const url = payload.downloadUrl;
       const link = document.createElement('a');
       link.href = url;
       link.download = `beets-konvertor-${Date.now()}.zip`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
 
       setState('done');
-      setMessage('Hotovo. Balíček se stáhl.');
+      if (payload.errors?.length) {
+        setMessage(`Hotovo, ale některé soubory nešly převést. (${payload.errors.length})`);
+      } else {
+        setMessage('Hotovo. Balíček se stáhl.');
+      }
+      setTimeout(() => {
+        void fetch('/api/konvertor/cleanup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        });
+      }, 5000);
       setFiles([]);
     } catch (error: any) {
       console.error(error);
@@ -102,6 +133,9 @@ export default function KonvertorPage() {
               <h1 className="text-3xl font-semibold uppercase tracking-[0.18em]">WAV → MP3 konvertor</h1>
               <p className="text-sm text-[var(--mpc-muted)]">
                 Nahraj WAV soubory (16/24/32 bit, 44.1/48 kHz). Po konverzi stáhneš ZIP se všemi MP3.
+              </p>
+              <p className="text-xs text-[var(--mpc-muted)]">
+                Soubory se nahrají do dočasného úložiště a po konverzi se smažou.
               </p>
             </div>
             <div className="rounded-2xl border border-white/10 bg-black/40 px-5 py-4 text-xs text-[var(--mpc-muted)]">
