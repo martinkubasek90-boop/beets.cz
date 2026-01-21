@@ -2329,18 +2329,26 @@ export default function PublicProfileClient({
               <h2 className="text-lg font-semibold text-[var(--mpc-light)]">{t('publicProfile.collabs.title', 'Spolupráce')}</h2>
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{collabs.length} {t('profile.collabs.count', 'spoluprací')}</p>
             </div>
-            {isLoggedIn && currentUserId && currentUserId !== profileId && (
-              <button
-                onClick={() => {
-                  setShowCollabForm((prev) => !prev);
-                  setCollabRequestError(null);
-                  setCollabRequestState('idle');
-                }}
-                className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+            <div className="flex items-center gap-2">
+              <Link
+                href="/collabs"
+                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(243,116,51,0.35)]"
               >
-                {showCollabForm ? 'Zrušit' : 'Požádat o spolupráci'}
-              </button>
-            )}
+                Spolupráce
+              </Link>
+              {isLoggedIn && currentUserId && currentUserId !== profileId && (
+                <button
+                  onClick={() => {
+                    setShowCollabForm((prev) => !prev);
+                    setCollabRequestError(null);
+                    setCollabRequestState('idle');
+                  }}
+                  className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                >
+                  {showCollabForm ? 'Zrušit' : 'Požádat o spolupráci'}
+                </button>
+              )}
+            </div>
           </div>
           {showCollabForm && isLoggedIn && currentUserId && currentUserId !== profileId && (
             <div className="mb-4 rounded-xl border border-white/10 bg-black/50 p-4 text-sm text-[var(--mpc-light)]">
@@ -2399,9 +2407,10 @@ export default function PublicProfileClient({
           ) : (
             <div className="space-y-3">
               {collabs.map((col) => (
-                <div
+                <Link
                   key={col.id}
-                  className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)]"
+                  href={`/collabs?thread=${col.id}`}
+                  className="block rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3 text-sm text-[var(--mpc-light)] transition hover:border-[var(--mpc-accent)]"
                   style={
                     col.cover_url
                       ? {
@@ -2430,48 +2439,7 @@ export default function PublicProfileClient({
                       ))}
                     </div>
                   </div>
-                    <div className="mt-3 flex items-center gap-2 text-[11px]">
-                      <button
-                        onClick={() =>
-                          handlePlayTrack({
-                            id: `collab-${col.id}`,
-                            title: col.title,
-                            url: col.audio_url || '',
-                            source: 'collab',
-                            cover_url: col.cover_url,
-                            subtitle: col.partners.join(' • ') || profile?.display_name || null,
-                          })
-                        }
-                        onMouseEnter={() => prefetch(col.audio_url || '')}
-                        onFocus={() => prefetch(col.audio_url || '')}
-                        onTouchStart={() => prefetch(col.audio_url || '')}
-                        disabled={!col.audio_url}
-                        className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] hover:translate-y-[1px] disabled:opacity-40 disabled:hover:translate-y-0"
-                      >
-                        {currentTrack?.id === `collab-${col.id}` && isPlaying ? '▮▮ Pauza' : '► Přehrát'}
-                      </button>
-                    </div>
-                    {col.audio_url && (
-                      <div
-                        className="mt-3 h-[70px] cursor-pointer overflow-hidden rounded-md border border-[var(--mpc-dark)] bg-[var(--mpc-deck)]"
-                        onClick={(e) => handleTrackProgressClick(`collab-${col.id}`, e)}
-                      >
-                      <div
-                        className="h-full"
-                        style={{
-                          width:
-                            currentTrack?.id === `collab-${col.id}` && duration
-                              ? `${Math.min((currentTime / duration) * 100, 100)}%`
-                              : '0%',
-                          background:
-                            'repeating-linear-gradient(to right, rgba(0,86,63,0.95) 0, rgba(0,86,63,0.95) 6px, rgba(255,255,255,0.18) 6px, rgba(255,255,255,0.18) 12px)',
-                          boxShadow: currentTrack?.id === `collab-${col.id}` ? '0 4px 12px rgba(0,224,150,0.35)' : 'none',
-                          transition: 'width 0.1s linear',
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+                </Link>
               ))}
             </div>
           )}
