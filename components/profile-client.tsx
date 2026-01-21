@@ -726,6 +726,19 @@ const canImportExternal = currentRole !== 'mc';
   const [deletingAcapellaId, setDeletingAcapellaId] = useState<number | null>(null);
   const [updatingAcapellaAccessId, setUpdatingAcapellaAccessId] = useState<number | null>(null);
   const [tabsOpen, setTabsOpen] = useState(false);
+  type OverviewSectionKey = 'beats' | 'projects' | 'collabs' | 'messages' | 'access' | 'posts' | 'forum';
+  const [overviewExpanded, setOverviewExpanded] = useState<Record<OverviewSectionKey, boolean>>({
+    beats: false,
+    projects: false,
+    collabs: false,
+    messages: false,
+    access: false,
+    posts: false,
+    forum: false,
+  });
+  const toggleOverviewExpanded = (key: OverviewSectionKey) => {
+    setOverviewExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
   const [activeTab, setActiveTab] = useState<
     'all' | 'beats' | 'projects' | 'collabs' | 'acapellas' | 'messages' | 'forum' | 'posts'
   >('all');
@@ -3954,6 +3967,9 @@ const buildAppleEmbed = (url: string) => {
     );
   }
 
+  const forumSummaryItems = myForumThreads.length > 0 ? myForumThreads : myForumCategories;
+  const forumSummaryCount = myForumThreads.length > 0 ? myForumThreads.length : myForumCategories.length;
+
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
       {incomingCallOverlay}
@@ -4255,22 +4271,37 @@ const buildAppleEmbed = (url: string) => {
                       </div>
                     </div>
                     <div className="grid gap-5 md:grid-cols-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('beats')}
-                        className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                      >
+                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                         <div className="mb-4 flex items-center justify-between">
-                          <p className="text-base font-semibold text-[var(--mpc-light)]">Moje beaty</p>
-                          <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                            Zobrazit vše
-                          </span>
+                          <div>
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje beaty</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">{beats.length} beatů</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('beats')}
+                              className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                            >
+                              Zobrazit vše
+                            </button>
+                            {beats.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('beats')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.beats ? 'Sbalit seznam beatů' : 'Rozbalit seznam beatů'}
+                              >
+                                <span className={`transition ${overviewExpanded.beats ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {beats.length === 0 ? (
                           <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné beaty.</p>
                         ) : (
                           <div className="space-y-2">
-                            {beats.slice(0, 3).map((beat) => (
+                            {(overviewExpanded.beats ? beats : beats.slice(0, 3)).map((beat) => (
                               <div key={beat.id} className="flex items-center justify-between gap-3 text-[13px]">
                                 <p className="truncate text-[var(--mpc-light)]">{beat.title}</p>
                                 <span className="text-[11px] text-[var(--mpc-muted)]">
@@ -4280,23 +4311,38 @@ const buildAppleEmbed = (url: string) => {
                             ))}
                           </div>
                         )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setActiveTab('projects')}
-                        className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                      >
+                      </div>
+                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                         <div className="mb-4 flex items-center justify-between">
-                          <p className="text-base font-semibold text-[var(--mpc-light)]">Moje projekty</p>
-                          <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                            Zobrazit vše
-                          </span>
+                          <div>
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje projekty</p>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">{projects.length} projektů</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('projects')}
+                              className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                            >
+                              Zobrazit vše
+                            </button>
+                            {projects.length > 3 && (
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('projects')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.projects ? 'Sbalit seznam projektů' : 'Rozbalit seznam projektů'}
+                              >
+                                <span className={`transition ${overviewExpanded.projects ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {projects.length === 0 ? (
                           <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné projekty.</p>
                         ) : (
                           <div className="space-y-2">
-                            {projects.slice(0, 3).map((project) => (
+                            {(overviewExpanded.projects ? projects : projects.slice(0, 3)).map((project) => (
                               <div key={project.id} className="flex items-center justify-between gap-3 text-[13px]">
                                 <p className="truncate text-[var(--mpc-light)]">{project.title || 'Projekt'}</p>
                                 <span className="text-[11px] text-[var(--mpc-muted)]">
@@ -4310,110 +4356,190 @@ const buildAppleEmbed = (url: string) => {
                             ))}
                           </div>
                         )}
-                      </button>
+                      </div>
                     </div>
                     <div className="mt-6 grid gap-5 md:grid-cols-2">
                       {collabThreads.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('collabs')}
-                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                        >
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">Spolupráce</p>
-                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                              Detail
-                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">Spolupráce</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">{collabThreads.length} aktivních vláken</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('collabs')}
+                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              >
+                                Detail
+                              </button>
+                              {collabThreads.length > 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOverviewExpanded('collabs')}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  aria-label={overviewExpanded.collabs ? 'Sbalit seznam spoluprací' : 'Rozbalit seznam spoluprací'}
+                                >
+                                  <span className={`transition ${overviewExpanded.collabs ? 'rotate-180' : ''}`}>▾</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{collabThreads.length} aktivních vláken</p>
-                          {collabThreads[0] && (
-                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
-                              {buildCollabLabel(collabThreads[0].participants)}
-                            </p>
-                          )}
-                        </button>
+                          <div className="space-y-2">
+                            {(overviewExpanded.collabs ? collabThreads : collabThreads.slice(0, 3)).map((thread) => (
+                              <p key={thread.id} className="truncate text-sm text-[var(--mpc-light)]">
+                                {buildCollabLabel(thread.participants)}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {directThreads.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('messages')}
-                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                        >
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">Zprávy</p>
-                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                              Detail
-                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">Zprávy</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">{directThreads.length} konverzací</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('messages')}
+                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              >
+                                Detail
+                              </button>
+                              {directThreads.length > 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOverviewExpanded('messages')}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  aria-label={overviewExpanded.messages ? 'Sbalit seznam zpráv' : 'Rozbalit seznam zpráv'}
+                                >
+                                  <span className={`transition ${overviewExpanded.messages ? 'rotate-180' : ''}`}>▾</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{directThreads.length} konverzací</p>
-                          {directThreads[0] && (
-                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
-                              {directThreads[0].otherName}: {directThreads[0].lastMessage || '—'}
-                            </p>
-                          )}
-                        </button>
+                          <div className="space-y-2">
+                            {(overviewExpanded.messages ? directThreads : directThreads.slice(0, 3)).map((thread) => (
+                              <p key={thread.id} className="truncate text-sm text-[var(--mpc-light)]">
+                                {thread.otherName}: {thread.lastMessage || '—'}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {myAccessRequests.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('projects')}
-                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                        >
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
-                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                              Detail
-                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">{myAccessRequests.length} žádostí</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('projects')}
+                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              >
+                                Detail
+                              </button>
+                              {myAccessRequests.length > 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOverviewExpanded('access')}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  aria-label={overviewExpanded.access ? 'Sbalit seznam žádostí' : 'Rozbalit seznam žádostí'}
+                                >
+                                  <span className={`transition ${overviewExpanded.access ? 'rotate-180' : ''}`}>▾</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{myAccessRequests.length} žádostí</p>
-                          {myAccessRequests[0] && (
-                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
-                              {myAccessRequests[0].project_title || myAccessRequests[0].project_id}
-                            </p>
-                          )}
-                        </button>
+                          <div className="space-y-2">
+                            {(overviewExpanded.access ? myAccessRequests : myAccessRequests.slice(0, 3)).map((req) => (
+                              <p key={req.id} className="truncate text-sm text-[var(--mpc-light)]">
+                                {req.project_title || req.project_id}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {myPosts.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('posts')}
-                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                        >
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje články</p>
-                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                              Detail
-                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">Moje články</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">{myPosts.length} článků</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('posts')}
+                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              >
+                                Detail
+                              </button>
+                              {myPosts.length > 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOverviewExpanded('posts')}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  aria-label={overviewExpanded.posts ? 'Sbalit seznam článků' : 'Rozbalit seznam článků'}
+                                >
+                                  <span className={`transition ${overviewExpanded.posts ? 'rotate-180' : ''}`}>▾</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">{myPosts.length} článků</p>
-                          {myPosts[0] && (
-                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
-                              {myPosts[0].title}
-                            </p>
-                          )}
-                        </button>
+                          <div className="space-y-2">
+                            {(overviewExpanded.posts ? myPosts : myPosts.slice(0, 3)).map((post) => (
+                              <p key={post.id} className="truncate text-sm text-[var(--mpc-light)]">
+                                {post.title}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                       {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab('forum')}
-                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
-                        >
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje fórum</p>
-                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
-                              Detail
-                            </span>
+                            <div>
+                              <p className="text-base font-semibold text-[var(--mpc-light)]">Moje fórum</p>
+                              <p className="text-[12px] text-[var(--mpc-muted)]">
+                                {myForumThreads.length} vláken · {myForumCategories.length} kategorií
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('forum')}
+                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              >
+                                Detail
+                              </button>
+                              {forumSummaryCount > 3 && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleOverviewExpanded('forum')}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  aria-label={overviewExpanded.forum ? 'Sbalit seznam fóra' : 'Rozbalit seznam fóra'}
+                                >
+                                  <span className={`transition ${overviewExpanded.forum ? 'rotate-180' : ''}`}>▾</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">
-                            {myForumThreads.length} vláken · {myForumCategories.length} kategorií
-                          </p>
-                          {myForumThreads[0] && (
-                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
-                              {myForumThreads[0].title}
-                            </p>
-                          )}
-                        </button>
+                          <div className="space-y-2">
+                            {(overviewExpanded.forum ? forumSummaryItems : forumSummaryItems.slice(0, 3)).map((item) => (
+                              <p key={item.id} className="truncate text-sm text-[var(--mpc-light)]">
+                                {'title' in item ? item.title : item.name}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
