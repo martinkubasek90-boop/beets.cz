@@ -4233,7 +4233,7 @@ const buildAppleEmbed = (url: string) => {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
-        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
+        <div className="grid gap-6 lg:grid-cols-[3fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
             {activeTab === 'all' && (
@@ -4315,6 +4315,27 @@ const buildAppleEmbed = (url: string) => {
                   </div>
                 )}
               </>
+            )}
+            {activeTab === 'messages' && (
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
+                    {directThreads.some((t) => t.unread) && (
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    href="/messages"
+                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                  >
+                    Otevřít inbox
+                  </Link>
+                </div>
+                {messagesInbox}
+              </div>
             )}
             {isMcOnly && activeTab === 'acapellas' && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
@@ -6210,27 +6231,6 @@ const buildAppleEmbed = (url: string) => {
               </button>
             </div>
 
-            {activeTab === 'messages' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
-                    {directThreads.some((t) => t.unread) && (
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
-                      </p>
-                    )}
-                  </div>
-                  <Link
-                    href="/messages"
-                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                  >
-                    Otevřít inbox
-                  </Link>
-                </div>
-                {messagesInbox}
-              </div>
-            )}
 
             {activeTab === 'posts' && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
