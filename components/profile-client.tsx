@@ -4247,32 +4247,32 @@ const buildAppleEmbed = (url: string) => {
                   </div>
                 )}
                 {!isMcOnly && (
-                  <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                    <div className="mb-4 flex items-center justify-between">
+                  <div className="rounded-2xl border border-[var(--mpc-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%),var(--mpc-panel)] p-6 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+                    <div className="mb-6 flex items-center justify-between">
                       <div>
-                        <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Přehled</h2>
-                        <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Rychlý přístup</p>
+                        <h2 className="text-2xl font-semibold text-[var(--mpc-light)]">Přehled</h2>
+                        <p className="text-[11px] uppercase tracking-[0.32em] text-[var(--mpc-muted)]">Rychlý přístup</p>
                       </div>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                        <div className="mb-3 flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje beaty</p>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('beats')}
-                            className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                          >
+                    <div className="grid gap-5 md:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('beats')}
+                        className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                      >
+                        <div className="mb-4 flex items-center justify-between">
+                          <p className="text-base font-semibold text-[var(--mpc-light)]">Moje beaty</p>
+                          <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
                             Zobrazit vše
-                          </button>
+                          </span>
                         </div>
                         {beats.length === 0 ? (
                           <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné beaty.</p>
                         ) : (
                           <div className="space-y-2">
                             {beats.slice(0, 3).map((beat) => (
-                              <div key={beat.id} className="flex items-center justify-between gap-3">
-                                <p className="truncate text-sm text-[var(--mpc-light)]">{beat.title}</p>
+                              <div key={beat.id} className="flex items-center justify-between gap-3 text-[13px]">
+                                <p className="truncate text-[var(--mpc-light)]">{beat.title}</p>
                                 <span className="text-[11px] text-[var(--mpc-muted)]">
                                   {beat.bpm ? `${beat.bpm} BPM` : '—'}
                                 </span>
@@ -4280,25 +4280,25 @@ const buildAppleEmbed = (url: string) => {
                             ))}
                           </div>
                         )}
-                      </div>
-                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                        <div className="mb-3 flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje projekty</p>
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('projects')}
-                            className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                          >
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('projects')}
+                        className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                      >
+                        <div className="mb-4 flex items-center justify-between">
+                          <p className="text-base font-semibold text-[var(--mpc-light)]">Moje projekty</p>
+                          <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
                             Zobrazit vše
-                          </button>
+                          </span>
                         </div>
                         {projects.length === 0 ? (
                           <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné projekty.</p>
                         ) : (
                           <div className="space-y-2">
                             {projects.slice(0, 3).map((project) => (
-                              <div key={project.id} className="flex items-center justify-between gap-3">
-                                <p className="truncate text-sm text-[var(--mpc-light)]">{project.title || 'Projekt'}</p>
+                              <div key={project.id} className="flex items-center justify-between gap-3 text-[13px]">
+                                <p className="truncate text-[var(--mpc-light)]">{project.title || 'Projekt'}</p>
                                 <span className="text-[11px] text-[var(--mpc-muted)]">
                                   {project.access_mode === 'private'
                                     ? 'Soukromý'
@@ -4310,20 +4310,20 @@ const buildAppleEmbed = (url: string) => {
                             ))}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </div>
-                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div className="mt-6 grid gap-5 md:grid-cols-2">
                       {collabThreads.length > 0 && (
-                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Spolupráce</p>
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('collabs')}
-                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                            >
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('collabs')}
+                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Spolupráce</p>
+                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
                               Detail
-                            </button>
+                            </span>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">{collabThreads.length} aktivních vláken</p>
                           {collabThreads[0] && (
@@ -4331,19 +4331,19 @@ const buildAppleEmbed = (url: string) => {
                               {buildCollabLabel(collabThreads[0].participants)}
                             </p>
                           )}
-                        </div>
+                        </button>
                       )}
                       {directThreads.length > 0 && (
-                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Zprávy</p>
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('messages')}
-                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                            >
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('messages')}
+                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Zprávy</p>
+                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
                               Detail
-                            </button>
+                            </span>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">{directThreads.length} konverzací</p>
                           {directThreads[0] && (
@@ -4351,36 +4351,39 @@ const buildAppleEmbed = (url: string) => {
                               {directThreads[0].otherName}: {directThreads[0].lastMessage || '—'}
                             </p>
                           )}
-                        </div>
+                        </button>
                       )}
                       {myAccessRequests.length > 0 && (
-                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('projects')}
+                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
+                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
+                              Detail
+                            </span>
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">
-                            {myAccessRequests.length} žádostí
-                          </p>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">{myAccessRequests.length} žádostí</p>
                           {myAccessRequests[0] && (
                             <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
                               {myAccessRequests[0].project_title || myAccessRequests[0].project_id}
                             </p>
                           )}
-                        </div>
+                        </button>
                       )}
                       {myPosts.length > 0 && (
-                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje články</p>
-                            {canWriteArticles && (
-                              <button
-                                type="button"
-                                onClick={() => setActiveTab('posts')}
-                                className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                              >
-                                Detail
-                              </button>
-                            )}
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('posts')}
+                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje články</p>
+                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
+                              Detail
+                            </span>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">{myPosts.length} článků</p>
                           {myPosts[0] && (
@@ -4388,19 +4391,19 @@ const buildAppleEmbed = (url: string) => {
                               {myPosts[0].title}
                             </p>
                           )}
-                        </div>
+                        </button>
                       )}
                       {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
-                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje fórum</p>
-                            <button
-                              type="button"
-                              onClick={() => setActiveTab('forum')}
-                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
-                            >
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('forum')}
+                          className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50"
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-base font-semibold text-[var(--mpc-light)]">Moje fórum</p>
+                            <span className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition group-hover:bg-[var(--mpc-accent)] group-hover:text-black">
                               Detail
-                            </button>
+                            </span>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {myForumThreads.length} vláken · {myForumCategories.length} kategorií
@@ -4410,7 +4413,7 @@ const buildAppleEmbed = (url: string) => {
                               {myForumThreads[0].title}
                             </p>
                           )}
-                        </div>
+                        </button>
                       )}
                     </div>
                   </div>
