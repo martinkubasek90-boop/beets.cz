@@ -3225,6 +3225,233 @@ const buildAppleEmbed = (url: string) => {
     ? collabThreads.find((t) => t.id === selectedThreadId) ?? null
     : null;
   const activeCollabThreadLabel = activeCollabThread ? buildCollabLabel(activeCollabThread.participants) : '';
+  const messagesInbox = (
+    <>
+      {(messagesLoading || messagesError || messageSuccess) && (
+        <div className="mt-4 space-y-2">
+          {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
+          {messageSuccess && (
+            <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
+              {messageSuccess}
+            </div>
+          )}
+          {messagesError && (
+            <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+              {messagesError}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+        <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
+              {directThreads.some((t) => t.unread) && (
+                <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                  {directThreads.filter((t) => t.unread).length} nové
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex-1 space-y-2 overflow-y-auto p-2">
+            {directThreads.length === 0 && !messagesLoading && (
+              <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
+            )}
+            {directThreads.map((thread) => {
+              const isActive = activeDmThreadId === thread.otherId;
+              const initial = thread.otherName?.trim()?.charAt(0)?.toUpperCase() || '?';
+              return (
+                <button
+                  key={thread.otherId}
+                  type="button"
+                  onClick={() => setExpandedThread(thread.otherId)}
+                  className={`group flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition ${
+                    isActive
+                      ? 'border-[var(--mpc-accent)] bg-[linear-gradient(90deg,rgba(243,116,51,0.16),rgba(0,0,0,0.4))] shadow-[0_12px_30px_rgba(243,116,51,0.15)]'
+                      : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/40'
+                  }`}
+                >
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold ${
+                      isActive
+                        ? 'border-[var(--mpc-accent)]/70 bg-black/60 text-[var(--mpc-light)]'
+                        : 'border-[var(--mpc-dark)] bg-black/40 text-[var(--mpc-light)]'
+                    }`}
+                  >
+                    {initial}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
+                      <span className="text-[10px] text-[var(--mpc-muted)]">
+                        {formatRelativeTime(new Date(thread.lastTs).toISOString())}
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
+                  </div>
+                  {thread.unread && (
+                    <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                      Nové
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <div className="border-t border-[var(--mpc-dark)] p-3">
+            <button
+              type="button"
+              onClick={() => setOpenSections((prev) => ({ ...prev, messages: !prev.messages }))}
+              className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)]"
+            >
+              {openSections.messages ? 'Skrýt formulář' : 'Nová zpráva'}
+            </button>
+            {openSections.messages && (
+              <form
+                onSubmit={handleSendDirectMessage}
+                className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-black/50 p-3 shadow-[0_12px_26px_rgba(0,0,0,0.35)]"
+              >
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Komu
+                  </label>
+                  <input
+                    type="text"
+                    value={newMessage.to}
+                    onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value, toUserId: '' }))}
+                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                    placeholder="Začni psát jméno profilu…"
+                  />
+                  {userSuggestionsLoading && (
+                    <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
+                  )}
+                  {!userSuggestionsLoading && userSuggestions.length > 0 && (
+                    <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-2 text-[11px]">
+                      {userSuggestions.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() =>
+                            setNewMessage((prev) => ({
+                              ...prev,
+                              to: u.display_name || '',
+                              toUserId: u.id,
+                            }))
+                          }
+                          className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-white/5"
+                        >
+                          <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
+                          <span className="text-[var(--mpc-muted)]">{u.id.slice(0, 6)}…</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                    Zpráva
+                  </label>
+                  <textarea
+                    value={newMessage.body}
+                    onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
+                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                    rows={3}
+                    placeholder="Napiš zprávu…"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={sendingMessage || !newMessage.body.trim() || !newMessage.to.trim()}
+                  className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(243,116,51,0.4)] disabled:opacity-60"
+                >
+                  {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                </button>
+              </form>
+            )}
+          </div>
+        </aside>
+
+        <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+          {activeDmThread ? (
+            <>
+              <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeDmThread.otherName}</p>
+                  <p className="text-[11px] text-[var(--mpc-muted)]">
+                    {activeDmThread.unread ? 'Nové zprávy' : 'Historie konverzace'}
+                  </p>
+                </div>
+                <span className="text-[10px] text-[var(--mpc-muted)]">
+                  {formatRelativeTime(new Date(activeDmThread.lastTs).toISOString())}
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                {hiddenDmCount > 0 && (
+                  <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                    Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
+                  </div>
+                )}
+                <div className="space-y-3">
+                  {visibleDmMessages.map((m) => {
+                    const isMe = m.user_id === userId;
+                    const author =
+                      m.user_id === userId
+                        ? 'Ty'
+                        : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
+                    return (
+                      <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`max-w-[72%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
+                            isMe
+                              ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
+                              : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
+                          }`}
+                        >
+                          <div className="text-[10px] text-[var(--mpc-muted)]">
+                            {author} · {formatRelativeTime(m.created_at)}
+                          </div>
+                          <p className="mt-1 whitespace-pre-line">{m.body}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-5 py-4">
+                <textarea
+                  className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-sm text-[var(--mpc-light)] shadow-[0_10px_24px_rgba(0,0,0,0.35)] focus:border-[var(--mpc-accent)] focus:outline-none"
+                  rows={3}
+                  placeholder="Napiš odpověď…"
+                  value={threadReplies[activeDmThread.otherId] || ''}
+                  onChange={(e) =>
+                    setThreadReplies((prev) => ({ ...prev, [activeDmThread.otherId]: e.target.value }))
+                  }
+                />
+                <div className="mt-3 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void handleThreadReply(activeDmThread.otherId, activeDmThread.otherName)}
+                    disabled={sendingMessage || !(threadReplies[activeDmThread.otherId]?.trim())}
+                    className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)] disabled:opacity-60"
+                  >
+                    {sendingMessage ? 'Odesílám…' : 'Odeslat'}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
+              Vyber konverzaci vlevo.
+            </div>
+          )}
+        </section>
+      </div>
+    </>
+  );
   const incomingCallOverlay = incomingCall ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl border border-[var(--mpc-accent)]/60 bg-[var(--mpc-panel)] p-5 text-sm text-white shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
@@ -3721,229 +3948,7 @@ const buildAppleEmbed = (url: string) => {
             </div>
           </div>
 
-          {(messagesLoading || messagesError || messageSuccess) && (
-            <div className="mt-4 space-y-2">
-              {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
-              {messageSuccess && (
-                <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
-                  {messageSuccess}
-                </div>
-              )}
-              {messagesError && (
-                <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                  {messagesError}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-            <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
-              <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
-                  {directThreads.some((t) => t.unread) && (
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      {directThreads.filter((t) => t.unread).length} nové
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                {directThreads.length === 0 && !messagesLoading && (
-                  <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
-                )}
-                {directThreads.map((thread) => {
-                  const isActive = activeDmThreadId === thread.otherId;
-                  const initial = thread.otherName?.trim()?.charAt(0)?.toUpperCase() || '?';
-                  return (
-                    <button
-                      key={thread.otherId}
-                      type="button"
-                      onClick={() => setExpandedThread(thread.otherId)}
-                      className={`group flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition ${
-                        isActive
-                          ? 'border-[var(--mpc-accent)] bg-[linear-gradient(90deg,rgba(243,116,51,0.16),rgba(0,0,0,0.4))] shadow-[0_12px_30px_rgba(243,116,51,0.15)]'
-                          : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/40'
-                      }`}
-                    >
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold ${
-                          isActive
-                            ? 'border-[var(--mpc-accent)]/70 bg-black/60 text-[var(--mpc-light)]'
-                            : 'border-[var(--mpc-dark)] bg-black/40 text-[var(--mpc-light)]'
-                        }`}
-                      >
-                        {initial}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
-                          <span className="text-[10px] text-[var(--mpc-muted)]">
-                            {formatRelativeTime(new Date(thread.lastTs).toISOString())}
-                          </span>
-                        </div>
-                        <p className="mt-1 truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
-                      </div>
-                      {thread.unread && (
-                        <span className="rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                          Nové
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="border-t border-[var(--mpc-dark)] p-3">
-                <button
-                  type="button"
-                  onClick={() => setOpenSections((prev) => ({ ...prev, messages: !prev.messages }))}
-                  className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)]"
-                >
-                  {openSections.messages ? 'Skrýt formulář' : 'Nová zpráva'}
-                </button>
-                {openSections.messages && (
-                  <form
-                    onSubmit={handleSendDirectMessage}
-                    className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-black/50 p-3 shadow-[0_12px_26px_rgba(0,0,0,0.35)]"
-                  >
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        Komu
-                      </label>
-                      <input
-                        type="text"
-                        value={newMessage.to}
-                        onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value, toUserId: '' }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="Začni psát jméno profilu…"
-                      />
-                      {userSuggestionsLoading && (
-                        <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Hledám uživatele…</p>
-                      )}
-                      {!userSuggestionsLoading && userSuggestions.length > 0 && (
-                        <div className="mt-2 space-y-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-2 text-[11px]">
-                          {userSuggestions.map((u) => (
-                            <button
-                              key={u.id}
-                              type="button"
-                              onClick={() =>
-                                setNewMessage((prev) => ({
-                                  ...prev,
-                                  to: u.display_name || '',
-                                  toUserId: u.id,
-                                }))
-                              }
-                              className="flex w-full items-center justify-between rounded px-2 py-1 text-left hover:bg-white/5"
-                            >
-                              <span className="text-[var(--mpc-light)]">{u.display_name || 'Bez jména'}</span>
-                              <span className="text-[var(--mpc-muted)]">{u.id.slice(0, 6)}…</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        Zpráva
-                      </label>
-                      <textarea
-                        value={newMessage.body}
-                        onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        rows={3}
-                        placeholder="Napiš zprávu…"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={sendingMessage || !newMessage.body.trim() || !newMessage.to.trim()}
-                      className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(243,116,51,0.4)] disabled:opacity-60"
-                    >
-                      {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                    </button>
-                  </form>
-                )}
-              </div>
-            </aside>
-
-            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
-              {activeDmThread ? (
-                <>
-                  <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-5 py-4">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeDmThread.otherName}</p>
-                      <p className="text-[11px] text-[var(--mpc-muted)]">
-                        {activeDmThread.unread ? 'Nové zprávy' : 'Historie konverzace'}
-                      </p>
-                    </div>
-                    <span className="text-[10px] text-[var(--mpc-muted)]">
-                      {formatRelativeTime(new Date(activeDmThread.lastTs).toISOString())}
-                    </span>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto px-5 py-4">
-                    {hiddenDmCount > 0 && (
-                      <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                        Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
-                      </div>
-                    )}
-                    <div className="space-y-3">
-                      {visibleDmMessages.map((m) => {
-                        const isMe = m.user_id === userId;
-                        const author =
-                          m.user_id === userId
-                            ? 'Ty'
-                            : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
-                        return (
-                          <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            <div
-                              className={`max-w-[72%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
-                                isMe
-                                  ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
-                                  : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
-                              }`}
-                            >
-                              <div className="text-[10px] text-[var(--mpc-muted)]">
-                                {author} · {formatRelativeTime(m.created_at)}
-                              </div>
-                              <p className="mt-1 whitespace-pre-line">{m.body}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-5 py-4">
-                    <textarea
-                      className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-sm text-[var(--mpc-light)] shadow-[0_10px_24px_rgba(0,0,0,0.35)] focus:border-[var(--mpc-accent)] focus:outline-none"
-                      rows={3}
-                      placeholder="Napiš odpověď…"
-                      value={threadReplies[activeDmThread.otherId] || ''}
-                      onChange={(e) =>
-                        setThreadReplies((prev) => ({ ...prev, [activeDmThread.otherId]: e.target.value }))
-                      }
-                    />
-                    <div className="mt-3 flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => void handleThreadReply(activeDmThread.otherId, activeDmThread.otherName)}
-                        disabled={sendingMessage || !(threadReplies[activeDmThread.otherId]?.trim())}
-                        className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)] disabled:opacity-60"
-                      >
-                        {sendingMessage ? 'Odesílám…' : 'Odeslat'}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
-                  Vyber konverzaci vlevo.
-                </div>
-              )}
-            </section>
-          </div>
+          {messagesInbox}
         </section>
       </main>
     );
@@ -4228,7 +4233,7 @@ const buildAppleEmbed = (url: string) => {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
-        <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
+        <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
             {activeTab === 'all' && (
@@ -6206,7 +6211,7 @@ const buildAppleEmbed = (url: string) => {
             </div>
 
             {activeTab === 'messages' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4" id="messages">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
@@ -6223,50 +6228,7 @@ const buildAppleEmbed = (url: string) => {
                     Otevřít inbox
                   </Link>
                 </div>
-
-                {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
-                {messageSuccess && (
-                  <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
-                    {messageSuccess}
-                  </div>
-                )}
-                {messagesError && (
-                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                    {messagesError}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  {directThreads.length === 0 && !messagesLoading && (
-                    <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
-                  )}
-                  {directThreads.slice(0, 4).map((thread) => (
-                    <Link
-                      key={thread.otherId}
-                      href={`/messages?thread=${thread.otherId}`}
-                      className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-black/30 px-3 py-2 transition hover:border-[var(--mpc-accent)]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
-                        <p className="mt-1 truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] text-[var(--mpc-muted)]">
-                          {formatRelativeTime(new Date(thread.lastTs).toISOString())}
-                        </p>
-                        {thread.unread && (
-                          <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                            Nové
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-
-                <p className="text-[11px] text-[var(--mpc-muted)]">
-                  Celá historie a odpovědi jsou v samostatné stránce Zpráv.
-                </p>
+                {messagesInbox}
               </div>
             )}
 
