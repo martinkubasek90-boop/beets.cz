@@ -15,7 +15,11 @@ export const metadata: Metadata = {
   description:
     "Platforma pro beatmakery a spolupráce. Nahrávej beaty, akapely a domlouvej spolupráce přímo na jednom místě.",
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
 };
 
