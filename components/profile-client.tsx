@@ -3277,7 +3277,7 @@ const buildAppleEmbed = (url: string) => {
             </div>
           )}
 
-          <div className="mt-5 grid h-[calc(100vh-230px)] gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
             <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]">
               <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-4 py-3">
                 <div>
@@ -3398,7 +3398,7 @@ const buildAppleEmbed = (url: string) => {
               </div>
             </aside>
 
-            <section className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-black/30">
+            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-black/30">
               {activeDmThread ? (
                 <>
                   <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-5 py-4">
