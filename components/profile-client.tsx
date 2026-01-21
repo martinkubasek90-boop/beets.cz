@@ -726,6 +726,9 @@ const canImportExternal = currentRole !== 'mc';
   const [deletingAcapellaId, setDeletingAcapellaId] = useState<number | null>(null);
   const [updatingAcapellaAccessId, setUpdatingAcapellaAccessId] = useState<number | null>(null);
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'beats' | 'projects' | 'collabs' | 'acapellas' | 'messages' | 'forum' | 'posts'
+  >('all');
   const {
     play: gpPlay,
     toggle: gpToggle,
@@ -3732,6 +3735,7 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               )}
             </div>
+            )}
           )}
 
           <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
@@ -4054,37 +4058,65 @@ const buildAppleEmbed = (url: string) => {
               <span>Zpět</span>
             </Link>
             <div className="hidden flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] md:flex md:text-sm">
-              <a href="#feed" className="pb-3 text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold">
+              <button
+                type="button"
+                onClick={() => setActiveTab('all')}
+                className={`pb-3 ${activeTab === 'all' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+              >
                 {t('profile.tab.all', 'Vše')}
-              </a>
+              </button>
               {!isMcOnly && (
                 <>
-                  <a href="#beats-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('beats')}
+                    className={`pb-3 ${activeTab === 'beats' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+                  >
                     {t('profile.tab.beats', 'Beaty')}
-                  </a>
-                  <a href="#projects-feed" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('projects')}
+                    className={`pb-3 ${activeTab === 'projects' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+                  >
                     {t('profile.tab.projects', 'Projekty')}
-                  </a>
+                  </button>
                 </>
               )}
-              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              <button
+                type="button"
+                onClick={() => setActiveTab(isMcOnly ? 'acapellas' : 'collabs')}
+                className={`pb-3 ${activeTab === (isMcOnly ? 'acapellas' : 'collabs') ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+              >
                 {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
-              </a>
+              </button>
               {(isAdmin || !isMcOnly) && (
                 <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
                   {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
-              <Link href="/messages" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              <button
+                type="button"
+                onClick={() => setActiveTab('messages')}
+                className={`pb-3 ${activeTab === 'messages' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+              >
                 {t('profile.tab.messages', 'Zprávy')}
-              </Link>
-              <a href="#my-forum" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('forum')}
+                className={`pb-3 ${activeTab === 'forum' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+              >
                 Moje fórum
-              </a>
+              </button>
               {canWriteArticles && (
-                <a href="#my-posts" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('posts')}
+                  className={`pb-3 ${activeTab === 'posts' ? 'text-[var(--mpc-light)] border-b-2 border-[var(--mpc-accent)] font-semibold' : 'text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]'}`}
+                >
                   {t('profile.tab.posts', 'Moje články')}
-                </a>
+                </button>
               )}
               {isAdmin && (
                 <Link href="/admin" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
@@ -4103,42 +4135,91 @@ const buildAppleEmbed = (url: string) => {
           </div>
           {tabsOpen && (
             <div className="mt-3 grid gap-2 text-xs uppercase tracking-[0.14em] text-[var(--mpc-muted)] md:hidden">
-              <a href="#feed" className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-[var(--mpc-light)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('all');
+                  setTabsOpen(false);
+                }}
+                className={`rounded-lg border px-3 py-2 ${activeTab === 'all' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+              >
                 {t('profile.tab.all', 'Vše')}
-              </a>
+              </button>
               {!isMcOnly && (
                 <>
-                  <a href="#beats-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('beats');
+                      setTabsOpen(false);
+                    }}
+                    className={`rounded-lg border px-3 py-2 ${activeTab === 'beats' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+                  >
                     {t('profile.tab.beats', 'Beaty')}
-                  </a>
-                  <a href="#projects-feed" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('projects');
+                      setTabsOpen(false);
+                    }}
+                    className={`rounded-lg border px-3 py-2 ${activeTab === 'projects' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+                  >
                     {t('profile.tab.projects', 'Projekty')}
-                  </a>
+                  </button>
                 </>
               )}
-              <a href={isMcOnly ? '#acapellas' : '#collabs'} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab(isMcOnly ? 'acapellas' : 'collabs');
+                  setTabsOpen(false);
+                }}
+                className={`rounded-lg border px-3 py-2 ${activeTab === (isMcOnly ? 'acapellas' : 'collabs') ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+              >
                 {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
-              </a>
+              </button>
               {(isAdmin || !isMcOnly) && (
                 <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                   {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('messages');
+                  setTabsOpen(false);
+                }}
+                className={`rounded-lg border px-3 py-2 ${activeTab === 'messages' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+              >
+                {t('profile.tab.messages', 'Zprávy')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('forum');
+                  setTabsOpen(false);
+                }}
+                className={`rounded-lg border px-3 py-2 ${activeTab === 'forum' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+              >
+                Moje fórum
+              </button>
+              {canWriteArticles && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('posts');
+                    setTabsOpen(false);
+                  }}
+                  className={`rounded-lg border px-3 py-2 ${activeTab === 'posts' ? 'border-[var(--mpc-accent)] bg-black/40 text-[var(--mpc-light)]' : 'border-white/10 bg-black/30 hover:text-[var(--mpc-light)]'}`}
+                >
+                  {t('profile.tab.posts', 'Moje články')}
+                </button>
+              )}
               {isAdmin && (
                 <Link href="/admin" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                   Admin
                 </Link>
-              )}
-              <Link href="/messages" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                {t('profile.tab.messages', 'Zprávy')}
-              </Link>
-              <a href="#my-forum" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                Moje fórum
-              </a>
-              {canWriteArticles && (
-                <a href="#my-posts" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.posts', 'Moje články')}
-                </a>
               )}
               <NotificationBell />
             </div>
@@ -4151,15 +4232,87 @@ const buildAppleEmbed = (url: string) => {
         <div className="grid gap-6 lg:grid-cols-[1.6fr,1fr]">
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className="space-y-6 order-2 lg:order-1">
-            {profileCompleteness.missing.length > 0 && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
-                <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
-                <p className="text-[12px] text-amber-100/90">
-                  Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
-                </p>
-              </div>
+            {activeTab === 'all' && (
+              <>
+                {profileCompleteness.missing.length > 0 && (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-100">
+                    <p className="font-semibold">Doplň profil ({profileCompleteness.percent}% hotovo)</p>
+                    <p className="text-[12px] text-amber-100/90">
+                      Chybí: {profileCompleteness.missing.join(', ')}. Kompletní profil zvyšuje důvěru ve spolupracích.
+                    </p>
+                  </div>
+                )}
+                {!isMcOnly && (
+                  <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Přehled</h2>
+                        <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Rychlý přístup</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje beaty</p>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('beats')}
+                            className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                          >
+                            Zobrazit vše
+                          </button>
+                        </div>
+                        {beats.length === 0 ? (
+                          <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné beaty.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {beats.slice(0, 3).map((beat) => (
+                              <div key={beat.id} className="flex items-center justify-between gap-3">
+                                <p className="truncate text-sm text-[var(--mpc-light)]">{beat.title}</p>
+                                <span className="text-[11px] text-[var(--mpc-muted)]">
+                                  {beat.bpm ? `${beat.bpm} BPM` : '—'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje projekty</p>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('projects')}
+                            className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                          >
+                            Zobrazit vše
+                          </button>
+                        </div>
+                        {projects.length === 0 ? (
+                          <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádné projekty.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {projects.slice(0, 3).map((project) => (
+                              <div key={project.id} className="flex items-center justify-between gap-3">
+                                <p className="truncate text-sm text-[var(--mpc-light)]">{project.title || 'Projekt'}</p>
+                                <span className="text-[11px] text-[var(--mpc-muted)]">
+                                  {project.access_mode === 'private'
+                                    ? 'Soukromý'
+                                    : project.access_mode === 'request'
+                                      ? 'Na žádost'
+                                      : 'Veřejný'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-            {isMcOnly && (
+            {isMcOnly && activeTab === 'acapellas' && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -4413,7 +4566,7 @@ const buildAppleEmbed = (url: string) => {
                 )}
               </div>
             )}
-            {!isMcOnly && (
+            {!isMcOnly && activeTab === 'beats' && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
@@ -4676,7 +4829,7 @@ const buildAppleEmbed = (url: string) => {
 
             )}
 
-            {!isMcOnly && (
+            {!isMcOnly && activeTab === 'projects' && (
             <>
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
               <div className="mb-4 flex items-center justify-between">
@@ -5376,9 +5529,9 @@ const buildAppleEmbed = (url: string) => {
                 )}
               </div>
             )}
-            {collabsSection}
+            {activeTab === 'collabs' && collabsSection}
 
-            {profile.role !== 'mc' && (
+            {profile.role !== 'mc' && activeTab === 'forum' && (
               <div
                 className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3"
                 id="my-forum"
@@ -5536,8 +5689,8 @@ const buildAppleEmbed = (url: string) => {
               </div>
             )}
 
-            {canWriteArticles && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
+          {canWriteArticles && activeTab === 'posts' && (
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje články</h3>
@@ -6053,71 +6206,74 @@ const buildAppleEmbed = (url: string) => {
               </button>
             </div>
 
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4" id="messages">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
-                  {directThreads.some((t) => t.unread) && (
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                      {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href="/messages"
-                  className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
-                >
-                  Otevřít inbox
-                </Link>
-              </div>
-
-              {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
-              {messageSuccess && (
-                <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
-                  {messageSuccess}
-                </div>
-              )}
-              {messagesError && (
-                <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
-                  {messagesError}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                {directThreads.length === 0 && !messagesLoading && (
-                  <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
-                )}
-                {directThreads.slice(0, 4).map((thread) => (
-                  <Link
-                    key={thread.otherId}
-                    href={`/messages?thread=${thread.otherId}`}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-black/30 px-3 py-2 transition hover:border-[var(--mpc-accent)]"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
-                      <p className="mt-1 truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-[var(--mpc-muted)]">
-                        {formatRelativeTime(new Date(thread.lastTs).toISOString())}
+            {activeTab === 'messages' && (
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4" id="messages">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
+                    {directThreads.some((t) => t.unread) && (
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        {directThreads.filter((t) => t.unread).length} {t('profile.messages.new', 'nové')}
                       </p>
-                      {thread.unread && (
-                        <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
-                          Nové
-                        </span>
-                      )}
-                    </div>
+                    )}
+                  </div>
+                  <Link
+                    href="/messages"
+                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                  >
+                    Otevřít inbox
                   </Link>
-                ))}
+                </div>
+
+                {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
+                {messageSuccess && (
+                  <div className="rounded-md border border-green-700/50 bg-green-900/30 px-3 py-2 text-[11px] text-green-200">
+                    {messageSuccess}
+                  </div>
+                )}
+                {messagesError && (
+                  <div className="rounded-md border border-yellow-700/50 bg-yellow-900/25 px-3 py-2 text-xs text-yellow-100">
+                    {messagesError}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {directThreads.length === 0 && !messagesLoading && (
+                    <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
+                  )}
+                  {directThreads.slice(0, 4).map((thread) => (
+                    <Link
+                      key={thread.otherId}
+                      href={`/messages?thread=${thread.otherId}`}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-black/30 px-3 py-2 transition hover:border-[var(--mpc-accent)]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
+                        <p className="mt-1 truncate text-[11px] text-[var(--mpc-muted)]">{thread.lastMessage || '—'}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-[var(--mpc-muted)]">
+                          {formatRelativeTime(new Date(thread.lastTs).toISOString())}
+                        </p>
+                        {thread.unread && (
+                          <span className="mt-1 inline-block rounded-full bg-[var(--mpc-accent)]/20 px-2 py-[2px] text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)]">
+                            Nové
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                <p className="text-[11px] text-[var(--mpc-muted)]">
+                  Celá historie a odpovědi jsou v samostatné stránce Zpráv.
+                </p>
               </div>
+            )}
 
-              <p className="text-[11px] text-[var(--mpc-muted)]">
-                Celá historie a odpovědi jsou v samostatné stránce Zpráv.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
-              {blogFormOpen && (
+            {activeTab === 'posts' && (
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
+                {blogFormOpen && (
                 <form className="space-y-3" onSubmit={handleCreateBlogPost}>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
