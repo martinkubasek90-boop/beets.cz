@@ -5046,513 +5046,520 @@ const buildAppleEmbed = (url: string) => {
                     const isDragOver = dragOverProjectId === project.id && dragProjectId !== project.id;
                     const isDragging = dragProjectId === project.id;
                     return (
-                      <div
-                        key={project.id}
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('text/plain', project.id);
-                          setDragProjectId(project.id);
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragOverProjectId(project.id);
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          void handleProjectDrop(project.id);
-                        }}
-                        onDragEnd={() => {
-                          setDragProjectId(null);
-                          setDragOverProjectId(null);
-                        }}
-                        className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
-                          isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
-                        } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
-                        style={projectStyle}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
-                            <p className="font-semibold">{project.title}</p>
+                      <div key={project.id} className="space-y-3">
+                        <div
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = 'move';
+                            e.dataTransfer.setData('text/plain', project.id);
+                            setDragProjectId(project.id);
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setDragOverProjectId(project.id);
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            void handleProjectDrop(project.id);
+                          }}
+                          onDragEnd={() => {
+                            setDragProjectId(null);
+                            setDragOverProjectId(null);
+                          }}
+                          className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
+                            isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
+                          } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
+                          style={projectStyle}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
+                              <p className="font-semibold">{project.title}</p>
+                            </div>
+                            <p className="text-[12px] text-[var(--mpc-muted)]">
+                              {project.description || 'Bez popisu'}
+                            </p>
+                            {canShareUrl && (
+                              <div className="mt-2 flex max-w-[360px] items-center gap-2">
+                                <input
+                                  readOnly
+                                  value={projectUrl}
+                                  title={projectUrl}
+                                  className="w-full truncate rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px] text-[var(--mpc-muted)]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => void handleCopyProjectUrl(projectUrl, project.id)}
+                                  className="rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                >
+                                  {copiedProjectLinkId === project.id ? 'OK' : 'Kopírovat'}
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-[12px] text-[var(--mpc-muted)]">
-                            {project.description || 'Bez popisu'}
-                          </p>
-                          {canShareUrl && (
-                            <div className="mt-2 flex max-w-[360px] items-center gap-2">
-                              <input
-                                readOnly
-                                value={projectUrl}
-                                title={projectUrl}
-                                className="w-full truncate rounded border border-white/10 bg-black/40 px-2 py-1 text-[10px] text-[var(--mpc-muted)]"
-                              />
+                          <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
+                            <div className="flex flex-wrap items-center gap-2">
                               <button
-                                type="button"
-                                onClick={() => void handleCopyProjectUrl(projectUrl, project.id)}
-                                className="rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                onClick={() => {
+                                  const passwordKey = getProjectPasswordKey(project.id);
+                                  let storedPassword = '';
+                                  if (passwordKey && typeof window !== 'undefined') {
+                                    storedPassword = window.localStorage.getItem(passwordKey) || '';
+                                  }
+                                  setEditingProject(project);
+                                  setProjectEditTitle(project.title || '');
+                                  setProjectEditDescription(project.description || '');
+                                  setProjectEditReleaseFormats(project.release_formats || []);
+                                  setProjectEditPurchaseUrl(project.purchase_url || '');
+                                  setProjectEditPassword(storedPassword);
+                                  const tracks = Array.isArray(project.tracks_json)
+                                    ? project.tracks_json.map((t: any) => {
+                                        const path = t.path || null;
+                                        const urlFallback =
+                                          path && (!t.url || t.url.startsWith('http') === false)
+                                            ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
+                                            : '';
+                                        return {
+                                          name: t.name || '',
+                                          url: t.url || urlFallback,
+                                          path,
+                                        };
+                                      })
+                                    : [];
+                                  setProjectEditTracks(
+                                    tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
+                                  );
+                                }}
+                                className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
                               >
-                                {copiedProjectLinkId === project.id ? 'OK' : 'Kopírovat'}
+                                Upravit
+                              </button>
+                              {SHOW_SHARE_FEATURE && (
+                                <button
+                                  onClick={() => void createShareLink('project', String(project.id))}
+                                  className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                >
+                                  Sdílet
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDeleteProject(project.id)}
+                                className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
+                              >
+                                Smazat
                               </button>
                             </div>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              onClick={() => {
-                                const passwordKey = getProjectPasswordKey(project.id);
-                                let storedPassword = '';
-                                if (passwordKey && typeof window !== 'undefined') {
-                                  storedPassword = window.localStorage.getItem(passwordKey) || '';
+                            <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
+                              <label className="text-[var(--mpc-muted)]">Přístup</label>
+                              <select
+                                value={project.access_mode || 'public'}
+                                onChange={(e) =>
+                                  handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')
                                 }
-                                setEditingProject(project);
-                                setProjectEditTitle(project.title || '');
-                                setProjectEditDescription(project.description || '');
-                                setProjectEditReleaseFormats(project.release_formats || []);
-                                setProjectEditPurchaseUrl(project.purchase_url || '');
-                                setProjectEditPassword(storedPassword);
-                                const tracks = Array.isArray(project.tracks_json)
-                                  ? project.tracks_json.map((t: any) => {
-                                      const path = t.path || null;
-                                      const urlFallback =
-                                        path && (!t.url || t.url.startsWith('http') === false)
-                                          ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${path}`
-                                          : '';
-                                      return {
-                                        name: t.name || '',
-                                        url: t.url || urlFallback,
-                                        path,
-                                      };
-                                    })
-                                  : [];
-                                setProjectEditTracks(
-                                  tracks.length > 0 ? tracks : [{ name: '', url: '', path: null, file: null }]
-                                );
-                              }}
-                              className="rounded-full border border-[var(--mpc-accent)] px-4 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
-                            >
-                              Upravit
-                            </button>
-                            {SHOW_SHARE_FEATURE && (
-                              <button
-                                onClick={() => void createShareLink('project', String(project.id))}
-                                className="rounded-full border border-white/15 px-3 py-1 text-[11px] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
                               >
-                                Sdílet
-                              </button>
+                                <option value="public">Veřejný</option>
+                                <option value="request">Na žádost</option>
+                                <option value="private">Soukromý</option>
+                              </select>
+                            </div>
+                            {projectGrantsError && (
+                              <p className="text-[11px] text-red-300">{projectGrantsError}</p>
                             )}
-                            <button
-                              onClick={() => handleDeleteProject(project.id)}
-                              className="rounded-full border border-red-500/60 px-3 py-1 text-[11px] text-red-300 hover:bg-red-500/10"
-                            >
-                              Smazat
-                            </button>
+                            {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
+                              <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
+                                <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
+                                <div className="space-y-1">
+                                  {projectGrants[project.id].map((g) => (
+                                    <div key={g.id} className="flex items-center justify-between">
+                                      <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
+                                      <button
+                                        onClick={() => void handleRevokeGrant(project.id, g.id)}
+                                        className="text-[10px] text-red-300 hover:text-white"
+                                      >
+                                        Odebrat
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
-                            <label className="text-[var(--mpc-muted)]">Přístup</label>
-                            <select
-                              value={project.access_mode || 'public'}
-                              onChange={(e) => handleUpdateProjectAccess(project.id, e.target.value as 'public' | 'request' | 'private')}
-                              className="rounded border border-[var(--mpc-dark)] bg-black/70 px-2 py-1 text-[11px] text-[var(--mpc-light)]"
-                            >
-                              <option value="public">Veřejný</option>
-                              <option value="request">Na žádost</option>
-                              <option value="private">Soukromý</option>
-                            </select>
-                          </div>
-                          {projectGrantsError && (
-                            <p className="text-[11px] text-red-300">{projectGrantsError}</p>
-                          )}
-                          {projectGrants[project.id] && projectGrants[project.id].length > 0 && (
-                            <div className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-2 py-1 text-left text-[11px]">
-                              <p className="mb-1 text-[var(--mpc-muted)]">Aktivní přístupy:</p>
-                              <div className="space-y-1">
-                                {projectGrants[project.id].map((g) => (
-                                  <div key={g.id} className="flex items-center justify-between">
-                                    <span>{g.display_name || `${g.user_id.slice(0, 6)}…`}</span>
-                                    <button
-                                      onClick={() => void handleRevokeGrant(project.id, g.id)}
-                                      className="text-[10px] text-red-300 hover:text-white"
-                                    >
-                                      Odebrat
-                                    </button>
+                        </div>
+                        {editingProject?.id === project.id && (
+                          <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit projekt</h3>
+                                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                                  {editingProject.title}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => setEditingProject(null)}
+                                className="text-[11px] text-[var(--mpc-muted)] hover:text-white"
+                              >
+                                Zavřít
+                              </button>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div>
+                                <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Název</label>
+                                <input
+                                  className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  value={projectEditTitle}
+                                  onChange={(e) => setProjectEditTitle(e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Popis</label>
+                                <textarea
+                                  className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  rows={3}
+                                  value={projectEditDescription}
+                                  onChange={(e) => setProjectEditDescription(e.target.value)}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Vydáno na</label>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  {[
+                                    { id: 'vinyl', label: 'Vinyl' },
+                                    { id: 'cassette', label: 'Kazeta' },
+                                    { id: 'cd', label: 'CD' },
+                                    { id: 'digital', label: 'Digital' },
+                                  ].map((format) => {
+                                    const active = projectEditReleaseFormats.includes(format.id);
+                                    return (
+                                      <button
+                                        key={format.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setProjectEditReleaseFormats((prev) =>
+                                            prev.includes(format.id)
+                                              ? prev.filter((item) => item !== format.id)
+                                              : [...prev, format.id]
+                                          )
+                                        }
+                                        className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
+                                          active
+                                            ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
+                                            : 'border-white/15 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
+                                        }`}
+                                      >
+                                        {format.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">URL pro nákup</label>
+                                <input
+                                  className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                  placeholder="https://..."
+                                  value={projectEditPurchaseUrl}
+                                  onChange={(e) => setProjectEditPurchaseUrl(e.target.value)}
+                                />
+                              </div>
+
+                              {editingProject.access_mode === 'request' && (
+                                <div>
+                                  <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                                    Heslo pro projekt na žádost (volitelné)
+                                  </label>
+                                  <input
+                                    type="text"
+                                    className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                    placeholder="Zadej nové heslo..."
+                                    value={projectEditPassword}
+                                    onChange={(e) => setProjectEditPassword(e.target.value)}
+                                  />
+                                  <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">
+                                    Heslo se ukládá lokálně v prohlížeči, aby zůstalo viditelné.
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <div className="space-y-2">
+                                  <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                                    Cover URL (volitelné)
+                                  </label>
+                                  <input
+                                    className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                    placeholder="https://..."
+                                    value={projectEditCover.url || editingProject.cover_url || ''}
+                                    onChange={(e) =>
+                                      setProjectEditCover((prev) => ({ ...prev, url: e.target.value }))
+                                    }
+                                  />
+                                  {editingProject.cover_url && !projectEditCover.file && (
+                                    <p className="text-[11px] text-[var(--mpc-muted)] break-all">
+                                      Aktuální: {editingProject.cover_url}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                                    Nahrát nový cover
+                                  </label>
+                                  <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={(e) =>
+                                      setProjectEditCover((prev) => ({ ...prev, file: e.target.files?.[0] ?? null }))
+                                    }
+                                    className="w-full text-[12px] text-[var(--mpc-light)]"
+                                  />
+                                  <p className="text-[11px] text-[var(--mpc-muted)]">
+                                    Nahraj obrázek (JPG/PNG/WEBP) nebo použij URL vlevo.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-semibold text-[var(--mpc-light)]">Skladby</h4>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setProjectEditTracks((prev) =>
+                                      prev.length >= 30 ? prev : [...prev, { name: '', url: '', file: null }]
+                                    )
+                                  }
+                                  className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                                  disabled={projectEditTracks.length >= 30}
+                                >
+                                  Další skladba
+                                </button>
+                              </div>
+                              <div className="space-y-2">
+                                {projectEditTracks.map((tr, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-[11px] text-[var(--mpc-muted)]">Skladba #{idx + 1}</span>
+                                      {projectEditTracks.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            setProjectEditTracks((prev) => prev.filter((_, i) => i !== idx))
+                                          }
+                                          className="text-[11px] text-red-300 hover:text-red-200"
+                                        >
+                                          Odebrat
+                                        </button>
+                                      )}
+                                    </div>
+                                    <input
+                                      className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-[13px] text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                                      placeholder="Název skladby"
+                                      value={tr.name}
+                                      onChange={(e) =>
+                                        setProjectEditTracks((prev) =>
+                                          prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p))
+                                        )
+                                      }
+                                    />
+                                    <div className="mt-2 flex flex-col gap-2">
+                                      {tr.url && (
+                                        <div className="text-[11px] text-[var(--mpc-muted)] break-all">
+                                          Aktuální: <span className="text-[var(--mpc-light)]">{tr.url}</span>
+                                        </div>
+                                      )}
+                                      <input
+                                        type="file"
+                                        accept=".mp3,audio/mpeg"
+                                        onChange={(e) =>
+                                          setProjectEditTracks((prev) =>
+                                            prev.map((p, i) =>
+                                              i === idx ? { ...p, file: e.target.files?.[0] ?? null } : p
+                                            )
+                                          )
+                                        }
+                                        className="block w-full text-[12px] text-[var(--mpc-light)]"
+                                      />
+                                    </div>
                                   </div>
                                 ))}
                               </div>
                             </div>
-                          )}
-                        </div>
+
+                            <div className="flex flex-wrap gap-3">
+                              <button
+                                disabled={projectSaving}
+                                onClick={async () => {
+                                  if (!editingProject) return;
+                                  if (!projectEditTitle.trim()) {
+                                    setProjectsError('Zadej název projektu.');
+                                    return;
+                                  }
+                                  setProjectSaving(true);
+                                  setProjectsError(null);
+                                  try {
+                                    const uploads: Array<{ name: string; url: string }> = [];
+                                    const finalTracks: Array<{ name: string; url: string; path?: string | null }> = [];
+
+                                    // Cover upload (pokud je vybrán nový soubor)
+                                    let coverUrl = editingProject.cover_url || null;
+                                    if (projectEditCover.file) {
+                                      const safeCover = projectEditCover.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                                      const coverPath = `${userId}/projects/covers/${Date.now()}-${safeCover}`;
+                                      const coverToUpload = await resizeImageFile(projectEditCover.file, { maxSize: 420, quality: 0.75 });
+                                      const { error: coverErr } = await supabase.storage
+                                        .from('projects')
+                                        .upload(coverPath, coverToUpload, { upsert: true });
+                                      if (coverErr) throw coverErr;
+                                      const { data: pubCover } = supabase.storage.from('projects').getPublicUrl(coverPath);
+                                      coverUrl = pubCover.publicUrl;
+                                    } else if (projectEditCover.url && projectEditCover.url.trim()) {
+                                      coverUrl = projectEditCover.url.trim();
+                                    }
+
+                                    for (const tr of projectEditTracks) {
+                                      if (tr.file) {
+                                        const ext = tr.file.name.split('.').pop()?.toLowerCase();
+                                        if (ext && ext !== 'mp3') {
+                                          throw new Error('Audio musí být MP3.');
+                                        }
+                                        const safe = tr.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                                        const path = `${userId}/projects/audio/${Date.now()}-${safe}`;
+                                        const { error: uploadErr } = await supabase.storage
+                                          .from('projects')
+                                          .upload(path, tr.file, { upsert: true });
+                                        if (uploadErr) throw uploadErr;
+                                        const { data: signed } = await supabase.storage
+                                          .from('projects')
+                                          .createSignedUrl(path, 60 * 60 * 24 * 7);
+                                        const publicUrl = signed?.signedUrl;
+                                        uploads.push({ name: tr.name.trim() || tr.file.name, url: publicUrl || '' });
+                                        finalTracks.push({
+                                          name: tr.name.trim() || tr.file.name,
+                                          url: publicUrl || '',
+                                          path,
+                                        });
+                                      } else if (tr.path) {
+                                        // Zachovej původní nahrané soubory (mají uloženou path)
+                                        const { data: signed } = await supabase.storage
+                                          .from('projects')
+                                          .createSignedUrl(tr.path, 60 * 60 * 24 * 7);
+                                        const fallbackUrl =
+                                          tr.url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${tr.path}`;
+                                        finalTracks.push({
+                                          name: tr.name.trim() || tr.path.split('/').pop() || 'Track',
+                                          url: signed?.signedUrl || fallbackUrl,
+                                          path: tr.path,
+                                        });
+                                      } else if (tr.url) {
+                                        finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url, path: tr.path || null });
+                                      }
+                                    }
+
+                                    const firstUrl = finalTracks[0]?.url || editingProject.project_url || null;
+                                    const normalizedPurchaseUrl = normalizePurchaseUrl(projectEditPurchaseUrl);
+                                    const passwordHash =
+                                      editingProject.access_mode === 'request' && projectEditPassword.trim()
+                                        ? await hashProjectPassword(projectEditPassword.trim())
+                                        : null;
+
+                                    const { error: updateErr } = await supabase
+                                      .from('projects')
+                                      .update({
+                                        title: projectEditTitle.trim(),
+                                        description: projectEditDescription.trim() || null,
+                                        project_url: firstUrl,
+                                        tracks_json: finalTracks,
+                                        cover_url: coverUrl,
+                                        release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
+                                        purchase_url: normalizedPurchaseUrl,
+                                        ...(passwordHash ? { access_password_hash: passwordHash } : {}),
+                                      })
+                                      .eq('id', editingProject.id);
+                                    if (updateErr) throw updateErr;
+
+                                    const passwordKey = getProjectPasswordKey(editingProject.id);
+                                    if (passwordKey && typeof window !== 'undefined') {
+                                      if (editingProject.access_mode === 'request' && projectEditPassword.trim()) {
+                                        window.localStorage.setItem(passwordKey, projectEditPassword.trim());
+                                      } else if (editingProject.access_mode !== 'request') {
+                                        window.localStorage.removeItem(passwordKey);
+                                      }
+                                    }
+
+                                    setProjects((prev) =>
+                                      prev.map((p) =>
+                                        p.id === editingProject.id
+                                          ? {
+                                              ...p,
+                                              title: projectEditTitle.trim(),
+                                              description: projectEditDescription.trim() || null,
+                                              project_url: firstUrl,
+                                              tracks_json: finalTracks,
+                                              cover_url: coverUrl,
+                                              release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
+                                              purchase_url: normalizedPurchaseUrl,
+                                            }
+                                          : p
+                                      )
+                                    );
+                                    setEditingProject(null);
+                                  } catch (err) {
+                                    console.error('Chyba při úpravě projektu:', err);
+                                    setProjectsError('Nepodařilo se uložit projekt.');
+                                  } finally {
+                                    setProjectSaving(false);
+                                  }
+                                }}
+                                className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_20px_rgba(255,75,129,0.35)] disabled:opacity-60"
+                              >
+                                {projectSaving ? 'Ukládám…' : 'Uložit změny'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={projectSaving}
+                                onClick={async () => {
+                                  if (!editingProject || !confirm('Opravdu chcete projekt smazat?')) return;
+                                  setProjectSaving(true);
+                                  setProjectsError(null);
+                                  try {
+                                    const { error } = await supabase.from('projects').delete().eq('id', editingProject.id);
+                                    if (error) throw error;
+                                    setProjects((prev) => prev.filter((p) => p.id !== editingProject.id));
+                                    setEditingProject(null);
+                                  } catch (err) {
+                                    console.error('Chyba při mazání projektu:', err);
+                                    setProjectsError('Projekt se nepodařilo smazat.');
+                                  } finally {
+                                    setProjectSaving(false);
+                                  }
+                                }}
+                                className="rounded-full border border-red-400 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
+                              >
+                                Smazat projekt
+                              </button>
+                              <button
+                                onClick={() => setEditingProject(null)}
+                                className="rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              >
+                                Zrušit
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
-
-            {!isMcOnly && editingProject && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit projekt</h3>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">{editingProject.title}</p>
-                  </div>
-                  <button
-                    onClick={() => setEditingProject(null)}
-                    className="text-[11px] text-[var(--mpc-muted)] hover:text-white"
-                  >
-                    Zavřít
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Název</label>
-                    <input
-                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      value={projectEditTitle}
-                      onChange={(e) => setProjectEditTitle(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Popis</label>
-                    <textarea
-                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      rows={3}
-                      value={projectEditDescription}
-                      onChange={(e) => setProjectEditDescription(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Vydáno na</label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {[
-                        { id: 'vinyl', label: 'Vinyl' },
-                        { id: 'cassette', label: 'Kazeta' },
-                        { id: 'cd', label: 'CD' },
-                        { id: 'digital', label: 'Digital' },
-                      ].map((format) => {
-                        const active = projectEditReleaseFormats.includes(format.id);
-                        return (
-                          <button
-                            key={format.id}
-                            type="button"
-                            onClick={() =>
-                              setProjectEditReleaseFormats((prev) =>
-                                prev.includes(format.id)
-                                  ? prev.filter((item) => item !== format.id)
-                                  : [...prev, format.id]
-                              )
-                            }
-                            className={`rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
-                              active
-                                ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)] text-black'
-                                : 'border-white/15 bg-black/40 text-white hover:border-[var(--mpc-accent)]'
-                            }`}
-                          >
-                            {format.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">URL pro nákup</label>
-                    <input
-                      className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                      placeholder="https://..."
-                      value={projectEditPurchaseUrl}
-                      onChange={(e) => setProjectEditPurchaseUrl(e.target.value)}
-                    />
-                  </div>
-
-                  {editingProject.access_mode === 'request' && (
-                    <div>
-                      <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                        Heslo pro projekt na žádost (volitelné)
-                      </label>
-                      <input
-                        type="text"
-                        className="mt-1 w-full rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="Zadej nové heslo..."
-                        value={projectEditPassword}
-                        onChange={(e) => setProjectEditPassword(e.target.value)}
-                      />
-                      <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">
-                        Heslo se ukládá lokálně v prohlížeči, aby zůstalo viditelné.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                        Cover URL (volitelné)
-                      </label>
-                      <input
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                        placeholder="https://..."
-                        value={projectEditCover.url || editingProject.cover_url || ''}
-                        onChange={(e) =>
-                          setProjectEditCover((prev) => ({ ...prev, url: e.target.value }))
-                        }
-                      />
-                      {editingProject.cover_url && !projectEditCover.file && (
-                        <p className="text-[11px] text-[var(--mpc-muted)] break-all">
-                          Aktuální: {editingProject.cover_url}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
-                        Nahrát nový cover
-                      </label>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        onChange={(e) =>
-                          setProjectEditCover((prev) => ({ ...prev, file: e.target.files?.[0] ?? null }))
-                        }
-                        className="w-full text-[12px] text-[var(--mpc-light)]"
-                      />
-                      <p className="text-[11px] text-[var(--mpc-muted)]">
-                        Nahraj obrázek (JPG/PNG/WEBP) nebo použij URL vlevo.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-[var(--mpc-light)]">Skladby</h4>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setProjectEditTracks((prev) =>
-                          prev.length >= 30 ? prev : [...prev, { name: '', url: '', file: null }]
-                        )
-                      }
-                      className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                      disabled={projectEditTracks.length >= 30}
-                    >
-                      Další skladba
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {projectEditTracks.map((tr, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] text-[var(--mpc-muted)]">Skladba #{idx + 1}</span>
-                          {projectEditTracks.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setProjectEditTracks((prev) => prev.filter((_, i) => i !== idx))
-                              }
-                              className="text-[11px] text-red-300 hover:text-red-200"
-                            >
-                              Odebrat
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-[13px] text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                          placeholder="Název skladby"
-                          value={tr.name}
-                          onChange={(e) =>
-                            setProjectEditTracks((prev) =>
-                              prev.map((p, i) => (i === idx ? { ...p, name: e.target.value } : p))
-                            )
-                          }
-                        />
-                        <div className="mt-2 flex flex-col gap-2">
-                          {tr.url && (
-                            <div className="text-[11px] text-[var(--mpc-muted)] break-all">
-                              Aktuální: <span className="text-[var(--mpc-light)]">{tr.url}</span>
-                            </div>
-                          )}
-                          <input
-                            type="file"
-                            accept=".mp3,audio/mpeg"
-                            onChange={(e) =>
-                              setProjectEditTracks((prev) =>
-                                prev.map((p, i) => (i === idx ? { ...p, file: e.target.files?.[0] ?? null } : p))
-                              )
-                            }
-                            className="block w-full text-[12px] text-[var(--mpc-light)]"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    disabled={projectSaving}
-                    onClick={async () => {
-                      if (!editingProject) return;
-                      if (!projectEditTitle.trim()) {
-                        setProjectsError('Zadej název projektu.');
-                        return;
-                      }
-                      setProjectSaving(true);
-                      setProjectsError(null);
-                      try {
-                        const uploads: Array<{ name: string; url: string }> = [];
-                        const finalTracks: Array<{ name: string; url: string; path?: string | null }> = [];
-
-                        // Cover upload (pokud je vybrán nový soubor)
-                        let coverUrl = editingProject.cover_url || null;
-                        if (projectEditCover.file) {
-                          const safeCover = projectEditCover.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                          const coverPath = `${userId}/projects/covers/${Date.now()}-${safeCover}`;
-                          const coverToUpload = await resizeImageFile(projectEditCover.file, { maxSize: 420, quality: 0.75 });
-                          const { error: coverErr } = await supabase.storage
-                            .from('projects')
-                            .upload(coverPath, coverToUpload, { upsert: true });
-                          if (coverErr) throw coverErr;
-                          const { data: pubCover } = supabase.storage.from('projects').getPublicUrl(coverPath);
-                          coverUrl = pubCover.publicUrl;
-                        } else if (projectEditCover.url && projectEditCover.url.trim()) {
-                          coverUrl = projectEditCover.url.trim();
-                        }
-
-                        for (const tr of projectEditTracks) {
-                          if (tr.file) {
-                            const ext = tr.file.name.split('.').pop()?.toLowerCase();
-                            if (ext && ext !== 'mp3') {
-                              throw new Error('Audio musí být MP3.');
-                            }
-                            const safe = tr.file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                            const path = `${userId}/projects/audio/${Date.now()}-${safe}`;
-                            const { error: uploadErr } = await supabase.storage
-                              .from('projects')
-                              .upload(path, tr.file, { upsert: true });
-                            if (uploadErr) throw uploadErr;
-                            const { data: signed } = await supabase.storage
-                              .from('projects')
-                              .createSignedUrl(path, 60 * 60 * 24 * 7);
-                            const publicUrl = signed?.signedUrl;
-                            uploads.push({ name: tr.name.trim() || tr.file.name, url: publicUrl || '' });
-                            finalTracks.push({
-                              name: tr.name.trim() || tr.file.name,
-                              url: publicUrl || '',
-                              path,
-                            });
-                          } else if (tr.path) {
-                            // Zachovej původní nahrané soubory (mají uloženou path)
-                            const { data: signed } = await supabase.storage
-                              .from('projects')
-                              .createSignedUrl(tr.path, 60 * 60 * 24 * 7);
-                            const fallbackUrl = tr.url || `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${tr.path}`;
-                            finalTracks.push({
-                              name: tr.name.trim() || tr.path.split('/').pop() || 'Track',
-                              url: signed?.signedUrl || fallbackUrl,
-                              path: tr.path,
-                            });
-                          } else if (tr.url) {
-                            finalTracks.push({ name: tr.name.trim() || tr.url, url: tr.url, path: tr.path || null });
-                          }
-                        }
-
-                        const firstUrl = finalTracks[0]?.url || editingProject.project_url || null;
-                        const normalizedPurchaseUrl = normalizePurchaseUrl(projectEditPurchaseUrl);
-                        const passwordHash =
-                          editingProject.access_mode === 'request' && projectEditPassword.trim()
-                            ? await hashProjectPassword(projectEditPassword.trim())
-                            : null;
-
-                        const { error: updateErr } = await supabase
-                          .from('projects')
-                          .update({
-                            title: projectEditTitle.trim(),
-                            description: projectEditDescription.trim() || null,
-                            project_url: firstUrl,
-                            tracks_json: finalTracks,
-                            cover_url: coverUrl,
-                            release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
-                            purchase_url: normalizedPurchaseUrl,
-                            ...(passwordHash ? { access_password_hash: passwordHash } : {}),
-                          })
-                          .eq('id', editingProject.id);
-                        if (updateErr) throw updateErr;
-
-                        const passwordKey = getProjectPasswordKey(editingProject.id);
-                        if (passwordKey && typeof window !== 'undefined') {
-                          if (editingProject.access_mode === 'request' && projectEditPassword.trim()) {
-                            window.localStorage.setItem(passwordKey, projectEditPassword.trim());
-                          } else if (editingProject.access_mode !== 'request') {
-                            window.localStorage.removeItem(passwordKey);
-                          }
-                        }
-
-                        setProjects((prev) =>
-                          prev.map((p) =>
-                            p.id === editingProject.id
-                              ? {
-                                  ...p,
-                                  title: projectEditTitle.trim(),
-                                  description: projectEditDescription.trim() || null,
-                                  project_url: firstUrl,
-                                  tracks_json: finalTracks,
-                                  cover_url: coverUrl,
-                                  release_formats: projectEditReleaseFormats.length ? projectEditReleaseFormats : null,
-                                  purchase_url: normalizedPurchaseUrl,
-                                }
-                              : p
-                          )
-                        );
-                        setEditingProject(null);
-                      } catch (err) {
-                        console.error('Chyba při úpravě projektu:', err);
-                        setProjectsError('Nepodařilo se uložit projekt.');
-                      } finally {
-                        setProjectSaving(false);
-                      }
-                    }}
-                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_8px_20px_rgba(255,75,129,0.35)] disabled:opacity-60"
-                  >
-                    {projectSaving ? 'Ukládám…' : 'Uložit změny'}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={projectSaving}
-                    onClick={async () => {
-                      if (!editingProject || !confirm('Opravdu chcete projekt smazat?')) return;
-                      setProjectSaving(true);
-                      setProjectsError(null);
-                      try {
-                        const { error } = await supabase.from('projects').delete().eq('id', editingProject.id);
-                        if (error) throw error;
-                        setProjects((prev) => prev.filter((p) => p.id !== editingProject.id));
-                        setEditingProject(null);
-                      } catch (err) {
-                        console.error('Chyba při mazání projektu:', err);
-                        setProjectsError('Projekt se nepodařilo smazat.');
-                      } finally {
-                        setProjectSaving(false);
-                      }
-                    }}
-                    className="rounded-full border border-red-400 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-red-200 transition hover:bg-red-500/10 disabled:opacity-50"
-                  >
-                    Smazat projekt
-                  </button>
-                  <button
-                    onClick={() => setEditingProject(null)}
-                    className="rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                  >
-                    Zrušit
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
               <div className="flex items-center justify-between">
