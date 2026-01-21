@@ -3735,7 +3735,6 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               )}
             </div>
-            )}
           )}
 
           <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
@@ -6274,7 +6273,7 @@ const buildAppleEmbed = (url: string) => {
             {activeTab === 'posts' && (
               <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="blog-form-card">
                 {blogFormOpen && (
-                <form className="space-y-3" onSubmit={handleCreateBlogPost}>
+                  <form className="space-y-3" onSubmit={handleCreateBlogPost}>
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -6432,9 +6431,10 @@ const buildAppleEmbed = (url: string) => {
                   >
                     {blogSaving ? 'Ukládám…' : editingPostId ? 'Uložit změny' : 'Publikovat článek'}
                   </button>
-                </form>
-              )}
-            </div>
+                  </form>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
