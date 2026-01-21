@@ -413,6 +413,7 @@ export default function PublicProfileClient({
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<PublicProfile['role'] | null>(null);
   const [startingCall, setStartingCall] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [incomingCallerName, setIncomingCallerName] = useState<string | null>(null);
   const {
@@ -1515,14 +1516,14 @@ export default function PublicProfileClient({
 
   async function handleStartCall() {
     if (!isLoggedIn || !currentUserId) {
-      setMessageError('Musíš být přihlášen pro volání.');
+      setCallError('Musíš být přihlášen pro volání.');
       return;
     }
     if (profileId === currentUserId) {
-      setMessageError('Nemůžeš volat sám sobě.');
+      setCallError('Nemůžeš volat sám sobě.');
       return;
     }
-    setMessageError(null);
+    setCallError(null);
     setStartingCall(true);
     try {
       const roomName = buildRoomName(profileId, currentUserId);
@@ -1551,7 +1552,7 @@ export default function PublicProfileClient({
       });
     } catch (err) {
       console.error('Chyba při startu hovoru:', err);
-      setMessageError('Nepodařilo se otevřít hovor.');
+      setCallError('Nepodařilo se otevřít hovor.');
     } finally {
       setStartingCall(false);
     }
@@ -1739,30 +1740,33 @@ export default function PublicProfileClient({
             </div>
           )}
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          {isCommunityCallAllowed && (
-            <button
-              onClick={handleCommunityCall}
-              className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+        <div className="ml-auto flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            {isCommunityCallAllowed && (
+              <button
+                onClick={handleCommunityCall}
+                className="inline-flex h-10 items-center rounded-full border border-white/20 bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-white shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-white/10"
+              >
+                Komunitní call
+              </button>
+            )}
+            {currentUserId && currentUserId !== profileId && (
+              <button
+                onClick={handleStartCall}
+                disabled={startingCall}
+                className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+              >
+                {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
+              </button>
+            )}
+            <Link
+              href="/messages"
+              className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
             >
-              Komunitní call
-            </button>
-          )}
-          {currentUserId && currentUserId !== profileId && (
-            <button
-              onClick={handleStartCall}
-              disabled={startingCall}
-              className="inline-flex h-10 items-center rounded-full border border-[var(--mpc-accent)] bg-black/50 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--mpc-accent)] shadow-[0_10px_20px_rgba(0,0,0,0.35)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-            >
-              {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
-            </button>
-          )}
-          <Link
-            href="/messages"
-            className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
-          >
-            {t('publicProfile.sendMessage', 'Zprávy')}
-          </Link>
+              {t('publicProfile.sendMessage', 'Zprávy')}
+            </Link>
+          </div>
+          {callError && <p className="text-[11px] text-red-300">{callError}</p>}
         </div>
       </div>
       {incomingCall && (
