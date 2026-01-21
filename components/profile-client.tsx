@@ -4312,6 +4312,107 @@ const buildAppleEmbed = (url: string) => {
                         )}
                       </div>
                     </div>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      {collabThreads.length > 0 && (
+                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Spolupráce</p>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('collabs')}
+                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                            >
+                              Detail
+                            </button>
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">{collabThreads.length} aktivních vláken</p>
+                          {collabThreads[0] && (
+                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
+                              {buildCollabLabel(collabThreads[0].participants)}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {directThreads.length > 0 && (
+                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Zprávy</p>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('messages')}
+                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                            >
+                              Detail
+                            </button>
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">{directThreads.length} konverzací</p>
+                          {directThreads[0] && (
+                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
+                              {directThreads[0].otherName}: {directThreads[0].lastMessage || '—'}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {myAccessRequests.length > 0 && (
+                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">
+                            {myAccessRequests.length} žádostí
+                          </p>
+                          {myAccessRequests[0] && (
+                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
+                              {myAccessRequests[0].project_title || myAccessRequests[0].project_id}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {myPosts.length > 0 && (
+                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje články</p>
+                            {canWriteArticles && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('posts')}
+                                className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                              >
+                                Detail
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">{myPosts.length} článků</p>
+                          {myPosts[0] && (
+                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
+                              {myPosts[0].title}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
+                        <div className="rounded-lg border border-[var(--mpc-dark)] bg-black/40 p-4">
+                          <div className="mb-2 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-[var(--mpc-light)]">Moje fórum</p>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('forum')}
+                              className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+                            >
+                              Detail
+                            </button>
+                          </div>
+                          <p className="text-[12px] text-[var(--mpc-muted)]">
+                            {myForumThreads.length} vláken · {myForumCategories.length} kategorií
+                          </p>
+                          {myForumThreads[0] && (
+                            <p className="mt-2 truncate text-sm text-[var(--mpc-light)]">
+                              {myForumThreads[0].title}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </>
