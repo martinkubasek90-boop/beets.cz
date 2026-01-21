@@ -3969,6 +3969,7 @@ const buildAppleEmbed = (url: string) => {
 
   const forumSummaryItems = myForumThreads.length > 0 ? myForumThreads : myForumCategories;
   const forumSummaryCount = myForumThreads.length > 0 ? myForumThreads.length : myForumCategories.length;
+  const showRightColumn = !['collabs', 'messages', 'forum', 'posts'].includes(activeTab);
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
@@ -4249,9 +4250,9 @@ const buildAppleEmbed = (url: string) => {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
-        <div className="grid gap-6 lg:grid-cols-[3fr,1fr]">
+        <div className={showRightColumn ? 'grid gap-6 lg:grid-cols-[3fr,1fr]' : 'grid gap-6'}>
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
-          <div className="space-y-6 order-2 lg:order-1">
+          <div className={showRightColumn ? 'space-y-6 order-2 lg:order-1' : 'space-y-6'}>
             {activeTab === 'all' && (
               <>
                 {profileCompleteness.missing.length > 0 && (
@@ -6055,6 +6056,7 @@ const buildAppleEmbed = (url: string) => {
           </div>
 
           {/* Pravý sloupec: akce (na mobilu nahoře) */}
+          {showRightColumn && (
           <div className="space-y-4 order-1 lg:order-2" id="profile-settings">
             {(canUpload || canUploadAcapellas) && (
               <>
@@ -6635,6 +6637,7 @@ const buildAppleEmbed = (url: string) => {
               </div>
             )}
           </div>
+          )}
         </div>
       </section>
     </main>
