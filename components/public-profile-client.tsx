@@ -1718,7 +1718,7 @@ export default function PublicProfileClient({
 
       
       <section className="mx-auto max-w-6xl px-4 py-8 space-y-6">
-        <div className="mb-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] text-[var(--mpc-muted)] border-b border-[var(--mpc-dark)] pb-3 md:text-sm">
+        <div className="mb-4 flex flex-wrap items-center gap-4 rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-xs uppercase tracking-[0.15em] text-[var(--mpc-muted)] shadow-[0_18px_40px_rgba(0,0,0,0.4)] md:text-sm">
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -1735,30 +1735,49 @@ export default function PublicProfileClient({
           </button>
           {isMcOnly ? (
             <div className="hidden items-center gap-3 md:flex">
-              <a href="#acapellas-section" className="font-semibold text-white relative pb-2">
+              <a
+                href="#acapellas-section"
+                className="rounded-full border border-[var(--mpc-accent)]/60 bg-black/60 px-3 py-1 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(243,116,51,0.18)]"
+              >
                 {t('publicProfile.nav.all', 'Vše')}
-                <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
-              <a href="#acapellas-section" className="hover:text-[var(--mpc-light)]">
+              <a
+                href="#acapellas-section"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+              >
                 {t('publicProfile.nav.collabs', 'Akapely')}
               </a>
             </div>
           ) : (
             <div className="hidden items-center gap-3 md:flex">
-              <a href="#beats-section" className="font-semibold text-white relative pb-2">
+              <a
+                href="#beats-section"
+                className="rounded-full border border-[var(--mpc-accent)]/60 bg-black/60 px-3 py-1 text-[12px] font-semibold text-white shadow-[0_10px_24px_rgba(243,116,51,0.18)]"
+              >
                 {t('publicProfile.nav.all', 'Vše')}
-                <span className="absolute left-0 right-0 -bottom-1 h-[2px] bg-[var(--mpc-accent)]" />
               </a>
-              <a href="#beats-section" className="hover:text-[var(--mpc-light)]">
+              <a
+                href="#beats-section"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+              >
                 {t('publicProfile.nav.beats', 'Beaty')}
               </a>
-              <a href="#projects-section" className="hover:text-[var(--mpc-light)]">
+              <a
+                href="#projects-section"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+              >
                 {t('publicProfile.nav.projects', 'Projekty')}
               </a>
-              <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
+              <a
+                href="#collabs-section"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+              >
                 {t('publicProfile.nav.collabs', 'Spolupráce')}
               </a>
-              <Link href="/stream" className="hover:text-[var(--mpc-light)]">
+              <Link
+                href="/stream"
+                className="rounded-full border border-white/10 bg-black/40 px-3 py-1 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-light)]"
+              >
                 Stream
               </Link>
             </div>
