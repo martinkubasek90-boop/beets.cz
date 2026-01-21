@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, FormEvent, ChangeEvent, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
 import { resizeImageFile } from '../lib/image-utils';
 import { translate } from '../lib/i18n';
@@ -390,6 +390,7 @@ function buildCollabLabel(names?: string[]) {
 export default function ProfileClient({ view = 'full' }: ProfileClientProps) {
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang } = useLanguage('cs');
   const t = (key: string, fallback: string) => translate(lang as 'cs' | 'en', key, fallback);
 
@@ -1109,6 +1110,14 @@ const canImportExternal = currentRole !== 'mc';
     return activeDmThread.messages.slice(-40);
   }, [activeDmThread]);
   const hiddenDmCount = activeDmThread ? Math.max(0, activeDmThread.messages.length - visibleDmMessages.length) : 0;
+
+  useEffect(() => {
+    if (view !== 'messages') return;
+    const threadId = searchParams?.get('thread');
+    if (threadId) {
+      setExpandedThread(threadId);
+    }
+  }, [searchParams, view]);
 
 
   // Načti display_name pro všechny uživatele z přímých zpráv
@@ -6031,9 +6040,10 @@ const buildAppleEmbed = (url: string) => {
                   <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
                 )}
                 {directThreads.slice(0, 4).map((thread) => (
-                  <div
+                  <Link
                     key={thread.otherId}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-black/30 px-3 py-2"
+                    href={`/messages?thread=${thread.otherId}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-[var(--mpc-dark)] bg-black/30 px-3 py-2 transition hover:border-[var(--mpc-accent)]"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-[var(--mpc-light)]">{thread.otherName}</p>
@@ -6049,7 +6059,7 @@ const buildAppleEmbed = (url: string) => {
                         </span>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
 
