@@ -3243,9 +3243,10 @@ const buildAppleEmbed = (url: string) => {
 
   if (view === 'messages') {
     return (
-      <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+      <main className="relative min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(243,116,51,0.18),transparent_35%),radial-gradient(circle_at_85%_15%,rgba(16,185,129,0.16),transparent_40%)]" />
         {incomingCallOverlay}
-        <section className="mx-auto w-full max-w-7xl px-4 py-6">
+        <section className="relative z-10 mx-auto w-full max-w-7xl px-4 py-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-semibold text-[var(--mpc-light)]">Zprávy</h1>
@@ -3278,8 +3279,8 @@ const buildAppleEmbed = (url: string) => {
           )}
 
           <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-            <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]">
-              <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-4 py-3">
+            <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+              <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
                   {directThreads.some((t) => t.unread) && (
@@ -3289,7 +3290,7 @@ const buildAppleEmbed = (url: string) => {
                   )}
                 </div>
               </div>
-              <div className="flex-1 space-y-1 overflow-y-auto p-2">
+              <div className="flex-1 space-y-2 overflow-y-auto p-2">
                 {directThreads.length === 0 && !messagesLoading && (
                   <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
                 )}
@@ -3303,11 +3304,17 @@ const buildAppleEmbed = (url: string) => {
                       onClick={() => setExpandedThread(thread.otherId)}
                       className={`group flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition ${
                         isActive
-                          ? 'border-[var(--mpc-accent)] bg-[var(--mpc-deck)]'
-                          : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/30'
+                          ? 'border-[var(--mpc-accent)] bg-[linear-gradient(90deg,rgba(243,116,51,0.16),rgba(0,0,0,0.4))] shadow-[0_12px_30px_rgba(243,116,51,0.15)]'
+                          : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/40'
                       }`}
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--mpc-dark)] bg-black/40 text-sm font-semibold text-[var(--mpc-light)]">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold ${
+                          isActive
+                            ? 'border-[var(--mpc-accent)]/70 bg-black/60 text-[var(--mpc-light)]'
+                            : 'border-[var(--mpc-dark)] bg-black/40 text-[var(--mpc-light)]'
+                        }`}
+                      >
                         {initial}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -3332,12 +3339,15 @@ const buildAppleEmbed = (url: string) => {
                 <button
                   type="button"
                   onClick={() => setOpenSections((prev) => ({ ...prev, messages: !prev.messages }))}
-                  className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                  className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)]"
                 >
                   {openSections.messages ? 'Skrýt formulář' : 'Nová zpráva'}
                 </button>
                 {openSections.messages && (
-                  <form onSubmit={handleSendDirectMessage} className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-3">
+                  <form
+                    onSubmit={handleSendDirectMessage}
+                    className="mt-3 space-y-3 rounded-xl border border-[var(--mpc-dark)] bg-black/50 p-3 shadow-[0_12px_26px_rgba(0,0,0,0.35)]"
+                  >
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
                         Komu
@@ -3346,7 +3356,7 @@ const buildAppleEmbed = (url: string) => {
                         type="text"
                         value={newMessage.to}
                         onChange={(e) => setNewMessage((prev) => ({ ...prev, to: e.target.value, toUserId: '' }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                         placeholder="Začni psát jméno profilu…"
                       />
                       {userSuggestionsLoading && (
@@ -3381,7 +3391,7 @@ const buildAppleEmbed = (url: string) => {
                       <textarea
                         value={newMessage.body}
                         onChange={(e) => setNewMessage((prev) => ({ ...prev, body: e.target.value }))}
-                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
                         rows={3}
                         placeholder="Napiš zprávu…"
                       />
@@ -3389,7 +3399,7 @@ const buildAppleEmbed = (url: string) => {
                     <button
                       type="submit"
                       disabled={sendingMessage || !newMessage.body.trim() || !newMessage.to.trim()}
-                      className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white disabled:opacity-60"
+                      className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white shadow-[0_8px_20px_rgba(243,116,51,0.4)] disabled:opacity-60"
                     >
                       {sendingMessage ? 'Odesílám…' : 'Odeslat'}
                     </button>
@@ -3398,10 +3408,10 @@ const buildAppleEmbed = (url: string) => {
               </div>
             </aside>
 
-            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-black/30">
+            <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
               {activeDmThread ? (
                 <>
-                  <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] px-5 py-4">
+                  <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-5 py-4">
                     <div>
                       <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeDmThread.otherName}</p>
                       <p className="text-[11px] text-[var(--mpc-muted)]">
@@ -3415,7 +3425,7 @@ const buildAppleEmbed = (url: string) => {
 
                   <div className="flex-1 overflow-y-auto px-5 py-4">
                     {hiddenDmCount > 0 && (
-                      <div className="mb-3 rounded-full border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                      <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
                         Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                       </div>
                     )}
@@ -3429,10 +3439,10 @@ const buildAppleEmbed = (url: string) => {
                         return (
                           <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                             <div
-                              className={`max-w-[72%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed ${
+                              className={`max-w-[72%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
                                 isMe
-                                  ? 'border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/15 text-[var(--mpc-light)]'
-                                  : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-[var(--mpc-light)]'
+                                  ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
+                                  : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
                               }`}
                             >
                               <div className="text-[10px] text-[var(--mpc-muted)]">
@@ -3446,9 +3456,9 @@ const buildAppleEmbed = (url: string) => {
                     </div>
                   </div>
 
-                  <div className="border-t border-[var(--mpc-dark)] px-5 py-4">
+                  <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-5 py-4">
                     <textarea
-                      className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-black/60 px-4 py-3 text-sm text-[var(--mpc-light)] focus:border-[var(--mpc-accent)] focus:outline-none"
+                      className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-sm text-[var(--mpc-light)] shadow-[0_10px_24px_rgba(0,0,0,0.35)] focus:border-[var(--mpc-accent)] focus:outline-none"
                       rows={3}
                       placeholder="Napiš odpověď…"
                       value={threadReplies[activeDmThread.otherId] || ''}
@@ -3461,7 +3471,7 @@ const buildAppleEmbed = (url: string) => {
                         type="button"
                         onClick={() => void handleThreadReply(activeDmThread.otherId, activeDmThread.otherName)}
                         disabled={sendingMessage || !(threadReplies[activeDmThread.otherId]?.trim())}
-                        className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white disabled:opacity-60"
+                        className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)] disabled:opacity-60"
                       >
                         {sendingMessage ? 'Odesílám…' : 'Odeslat'}
                       </button>
