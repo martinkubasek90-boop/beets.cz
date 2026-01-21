@@ -215,6 +215,9 @@ type CollabThread = {
   status: 'pending' | 'active' | 'rejected' | string;
   updated_at: string | null;
   participants: string[];
+  partner_id?: string | null;
+  partner_name?: string | null;
+  partner_avatar?: string | null;
   creator_id?: string | null;
   deadline?: string | null;
   last_activity?: string | null;
@@ -558,6 +561,7 @@ export default function ProfileClient({ view = 'full' }: ProfileClientProps) {
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [threadReplies, setThreadReplies] = useState<Record<string, string>>({});
   const [profilesById, setProfilesById] = useState<Record<string, string>>({});
+  const [profileAvatarsById, setProfileAvatarsById] = useState<Record<string, string>>({});
   const [messagesError, setMessagesError] = useState<string | null>(null);
   const [messagesLoading, setMessagesLoading] = useState<boolean>(true);
   const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
@@ -1153,13 +1157,19 @@ const canImportExternal = currentRole !== 'mc';
         if (m.to_user_id) ids.add(m.to_user_id);
       });
       if (!ids.size) return;
-      const { data, error } = await supabase.from('profiles').select('id, display_name').in('id', Array.from(ids));
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', Array.from(ids));
       if (error || !data) return;
       const map: Record<string, string> = {};
+      const avatarMap: Record<string, string> = {};
       data.forEach((p: any) => {
         if (p.id && p.display_name) map[p.id as string] = p.display_name as string;
+        if (p.id && p.avatar_url) avatarMap[p.id as string] = p.avatar_url as string;
       });
       setProfilesById((prev) => ({ ...prev, ...map }));
+      setProfileAvatarsById((prev) => ({ ...prev, ...avatarMap }));
     };
     void loadProfileNames();
   }, [messages, supabase]);
@@ -1567,17 +1577,20 @@ function handleFieldChange(field: keyof Profile, value: string) {
             )
           );
           let nameMap: Record<string, string> = {};
+          let avatarMap: Record<string, string | null> = {};
           if (partnerIds.length) {
             const { data: profiles, error: profileErr } = await supabase
               .from('profiles')
-              .select('id,display_name')
+              .select('id,display_name,avatar_url')
               .in('id', partnerIds);
             if (profileErr) throw profileErr;
             if (profiles) {
               nameMap = Object.fromEntries((profiles as any[]).map((p) => [p.id, p.display_name || '']));
+              avatarMap = Object.fromEntries((profiles as any[]).map((p) => [p.id, p.avatar_url || null]));
             }
           }
           const threadNames = new Map<string, string[]>();
+          const threadPartners = new Map<string, Array<{ id: string; name: string; avatar?: string | null }>>();
           (participants ?? []).forEach((p: any) => {
             if (!p.thread_id || !p.user_id) return;
             const partnerName = nameMap[p.user_id] || null;
@@ -1589,14 +1602,25 @@ function handleFieldChange(field: keyof Profile, value: string) {
             if (!list.includes(partnerName)) {
               list.push(partnerName);
             }
+            if (!threadPartners.has(p.thread_id)) {
+              threadPartners.set(p.thread_id, []);
+            }
+            const partnersList = threadPartners.get(p.thread_id)!;
+            if (!partnersList.some((item) => item.id === p.user_id)) {
+              partnersList.push({ id: p.user_id, name: partnerName, avatar: avatarMap[p.user_id] || null });
+            }
           });
           const currentUserName = profile.display_name || 'Ty';
           const finalThreads = merged.map((thread) => {
             const partners = (threadNames.get(thread.id) ?? []).filter(Boolean);
             const participants = [currentUserName, ...partners.filter((name) => name !== currentUserName)];
+            const partnerInfo = (threadPartners.get(thread.id) ?? [])[0] || null;
             return {
               ...thread,
               participants,
+              partner_id: partnerInfo?.id ?? null,
+              partner_name: partnerInfo?.name ?? null,
+              partner_avatar: partnerInfo?.avatar ?? null,
             };
           });
           setCollabThreads(finalThreads);
@@ -1606,6 +1630,9 @@ function handleFieldChange(field: keyof Profile, value: string) {
             merged.map((thread) => ({
               ...thread,
               participants: [currentUserName],
+              partner_id: null,
+              partner_name: null,
+              partner_avatar: null,
             }))
           );
         }
@@ -3275,6 +3302,7 @@ const buildAppleEmbed = (url: string) => {
             {directThreads.map((thread) => {
               const isActive = activeDmThreadId === thread.otherId;
               const initial = thread.otherName?.trim()?.charAt(0)?.toUpperCase() || '?';
+              const avatarUrl = profileAvatarsById[thread.otherId] || '';
               return (
                 <button
                   key={thread.otherId}
@@ -3287,13 +3315,18 @@ const buildAppleEmbed = (url: string) => {
                   }`}
                 >
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold ${
+                    className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border text-sm font-semibold ${
                       isActive
                         ? 'border-[var(--mpc-accent)]/70 bg-black/60 text-[var(--mpc-light)]'
                         : 'border-[var(--mpc-dark)] bg-black/40 text-[var(--mpc-light)]'
                     }`}
                   >
-                    {initial}
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt={thread.otherName} className="h-full w-full object-cover" />
+                    ) : (
+                      initial
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
@@ -3574,7 +3607,9 @@ const buildAppleEmbed = (url: string) => {
             ) : (
               collabThreads.map((thread) => {
                 const isActive = thread.id === selectedThreadId;
-                const displayTitle = buildCollabLabel(thread.participants);
+                const displayTitle = thread.partner_name || thread.title || 'Spolupráce';
+                const avatarUrl = thread.partner_avatar || '';
+                const initial = displayTitle.trim().charAt(0).toUpperCase() || '?';
                 const card = (
                   <div
                     className={`w-full rounded-xl border px-3 py-3 text-left transition ${
@@ -3583,38 +3618,48 @@ const buildAppleEmbed = (url: string) => {
                         : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/40'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-[var(--mpc-light)]">{displayTitle}</p>
-                        <p className="text-[11px] text-[var(--mpc-muted)]">
-                          {formatRelativeTime(thread.updated_at)}
-                        </p>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-[var(--mpc-dark)] bg-black/40 text-sm font-semibold text-[var(--mpc-light)]">
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt={displayTitle} className="h-full w-full object-cover" />
+                        ) : (
+                          initial
+                        )}
                       </div>
-                      <span
-                        className={`rounded-full border px-2 py-[2px] text-[10px] uppercase tracking-[0.12em] ${
-                          thread.status === 'active'
-                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                            : thread.status === 'pending'
-                              ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                              : thread.status === 'paused'
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="truncate font-semibold text-[var(--mpc-light)]">{displayTitle}</p>
+                          <span className="text-[10px] text-[var(--mpc-muted)]">
+                            {formatRelativeTime(thread.updated_at)}
+                          </span>
+                        </div>
+                        <span
+                          className={`mt-2 inline-flex rounded-full border px-2 py-[2px] text-[10px] uppercase tracking-[0.12em] ${
+                            thread.status === 'active'
+                              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                              : thread.status === 'pending'
                                 ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                : thread.status === 'paused'
+                                  ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                  : thread.status === 'done'
+                                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                    : 'border-red-500/40 bg-red-500/10 text-red-100'
+                          }`}
+                        >
+                          {thread.status === 'active'
+                            ? 'Aktivní'
+                            : thread.status === 'pending'
+                              ? 'Čeká'
+                              : thread.status === 'paused'
+                                ? 'Pozastavená'
                                 : thread.status === 'done'
-                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                  : 'border-red-500/40 bg-red-500/10 text-red-100'
-                        }`}
-                      >
-                        {thread.status === 'active'
-                          ? 'Aktivní'
-                          : thread.status === 'pending'
-                            ? 'Čeká'
-                            : thread.status === 'paused'
-                              ? 'Pozastavená'
-                              : thread.status === 'done'
-                                ? 'Dokončená'
-                                : thread.status === 'cancelled'
-                                  ? 'Ukončená'
-                                  : 'Odmítnuto'}
-                      </span>
+                                  ? 'Dokončená'
+                                  : thread.status === 'cancelled'
+                                    ? 'Ukončená'
+                                    : 'Odmítnuto'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -3727,7 +3772,7 @@ const buildAppleEmbed = (url: string) => {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
                     {(activeCollabThread.milestones || []).map((m) => (
                       <div key={m.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
                         <div className="flex items-center gap-2">
@@ -3877,7 +3922,7 @@ const buildAppleEmbed = (url: string) => {
                   ) : collabFiles.length === 0 ? (
                     <p className="text-[12px] text-[var(--mpc-muted)]">Žádné soubory zatím nejsou.</p>
                   ) : (
-                    <div className="space-y-2">
+                    <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
                       {collabFiles.map((file) => (
                         <div key={file.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-sm">
                           <div>
