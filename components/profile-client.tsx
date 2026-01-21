@@ -3283,8 +3283,8 @@ const buildAppleEmbed = (url: string) => {
         </div>
       )}
 
-      <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-        <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+      <div className="mt-5 grid min-h-0 h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+        <aside className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
           <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
@@ -3682,7 +3682,7 @@ const buildAppleEmbed = (url: string) => {
           </div>
         </aside>
 
-        <div className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-sm text-[var(--mpc-light)] shadow-[0_22px_50px_rgba(0,0,0,0.45)]">
+        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-sm text-[var(--mpc-light)] shadow-[0_22px_50px_rgba(0,0,0,0.45)]">
           {!activeCollabThread ? (
             <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
               Vyber vlákno vlevo.
@@ -3749,7 +3749,7 @@ const buildAppleEmbed = (url: string) => {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 pr-1">
+              <div className="flex-1 min-h-0 space-y-3 overflow-y-auto px-4 py-4 pr-1">
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
