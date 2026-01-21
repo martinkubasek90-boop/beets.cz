@@ -4424,7 +4424,7 @@ const buildAppleEmbed = (url: string) => {
                           </div>
                           <div className="space-y-2">
                             {(overviewExpanded.messages ? directThreads : directThreads.slice(0, 3)).map((thread) => (
-                              <p key={thread.id} className="truncate text-sm text-[var(--mpc-light)]">
+                              <p key={thread.otherId} className="truncate text-sm text-[var(--mpc-light)]">
                                 {thread.otherName}: {thread.lastMessage || '—'}
                               </p>
                             ))}
