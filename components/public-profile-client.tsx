@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, FormEvent, MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../lib/supabase/client';
@@ -86,6 +86,14 @@ type Project = {
   release_formats?: string[] | null;
   purchase_url?: string | null;
   tracks_json?: ProjectTrack[] | Record<string, ProjectTrack> | string;
+};
+
+type UnreadMessage = {
+  id: number;
+  user_id: string;
+  from_name?: string | null;
+  body: string;
+  created_at: string;
 };
 
 const RELEASE_FORMAT_LABELS: Record<string, string> = {
@@ -290,6 +298,8 @@ function buildRoomName(a: string, b: string) {
 }
 
 const COMMUNITY_ROOM = 'beets-community-main';
+const CHATBOT_ALLOWED_URLS = ['*'];
+const CHATBOT_EXCLUDED_URLS: string[] = [];
 
 const slugifyName = (value: string) =>
   value
@@ -298,6 +308,40 @@ const slugifyName = (value: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
+const formatMessageTime = (value?: string | null) => {
+  if (!value) return '';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toLocaleString('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const wildcardToRegex = (pattern: string) => new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+
+const shouldShowChatbot = (path: string) => {
+  for (const pattern of CHATBOT_EXCLUDED_URLS) {
+    if (wildcardToRegex(pattern).test(path)) {
+      return false;
+    }
+  }
+
+  if (CHATBOT_ALLOWED_URLS[0] === '*') {
+    return true;
+  }
+
+  for (const pattern of CHATBOT_ALLOWED_URLS) {
+    if (wildcardToRegex(pattern).test(path)) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 export default function PublicProfileClient({
   profileId,
@@ -363,10 +407,8 @@ export default function PublicProfileClient({
     [profile?.display_name, profile?.slug, profileId]
   );
 
-  const [messageBody, setMessageBody] = useState('');
-  const [messageError, setMessageError] = useState<string | null>(null);
-  const [messageSuccess, setMessageSuccess] = useState<string | null>(null);
-  const [sendingMessage, setSendingMessage] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
+  const [unreadMessagesLoading, setUnreadMessagesLoading] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<PublicProfile['role'] | null>(null);
@@ -419,6 +461,25 @@ export default function PublicProfileClient({
     }
     media.addListener(update);
     return () => media.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    if (!shouldShowChatbot(window.location.pathname)) return undefined;
+    if (document.querySelector('iframe[data-base44-chatbot="true"]')) return undefined;
+
+    const iframe = document.createElement('iframe');
+    iframe.src = 'https://preview-sandbox--58f6bafee4e7669cc8fc5203512b65ac.base44.app/ChatEmbed';
+    iframe.style.cssText =
+      'position:fixed;bottom:0;right:0;width:420px;height:600px;border:none;z-index:9999;pointer-events:none;';
+    iframe.style.setProperty('pointer-events', 'auto', 'important');
+    iframe.setAttribute('allowtransparency', 'true');
+    iframe.setAttribute('data-base44-chatbot', 'true');
+    document.body.appendChild(iframe);
+
+    return () => {
+      iframe.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -889,6 +950,43 @@ export default function PublicProfileClient({
     };
   }, [projects, projectEmbeds]);
 
+  useEffect(() => {
+    if (!currentUserId) {
+      setUnreadMessages([]);
+      return;
+    }
+    let active = true;
+    const loadUnreadMessages = async () => {
+      setUnreadMessagesLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('id, user_id, from_name, body, created_at')
+          .eq('to_user_id', currentUserId)
+          .eq('unread', true)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        if (error) throw error;
+        if (active) {
+          setUnreadMessages((data as UnreadMessage[]) ?? []);
+        }
+      } catch (err) {
+        console.error('Chyba načítání nových zpráv:', err);
+        if (active) {
+          setUnreadMessages([]);
+        }
+      } finally {
+        if (active) {
+          setUnreadMessagesLoading(false);
+        }
+      }
+    };
+    void loadUnreadMessages();
+    return () => {
+      active = false;
+    };
+  }, [currentUserId, supabase]);
+
   const handleRequestCollab = async () => {
     if (!isLoggedIn) {
       setCollabRequestError('Musíš být přihlášen.');
@@ -987,49 +1085,6 @@ export default function PublicProfileClient({
       setCollabRequestState('idle');
     }
   };
-
-  async function handleSendMessage(e: FormEvent) {
-    e.preventDefault();
-    setMessageError(null);
-    setMessageSuccess(null);
-    if (!messageBody.trim()) {
-      setMessageError('Zpráva je prázdná.');
-      return;
-    }
-    try {
-      setSendingMessage(true);
-      const { data: userData, error: userErr } = await supabase.auth.getUser();
-      if (userErr || !userData.user) {
-        setMessageError('Musíš být přihlášen.');
-        return;
-      }
-      const payload = {
-        user_id: userData.user.id,
-        to_user_id: profileId,
-        from_name: userData.user.email ?? 'Uživatel',
-        to_name: profile?.display_name ?? 'Uživatel',
-        body: messageBody.trim(),
-      };
-      const { error } = await supabase.from('messages').insert(payload);
-      if (error) throw error;
-      setMessageBody('');
-      setMessageSuccess('Zpráva odeslána.');
-      if (profileId) {
-        void sendNotificationSafe(supabase, {
-          user_id: profileId,
-          type: 'direct_message',
-          title: payload.from_name || 'Nová zpráva',
-          body: payload.body,
-          item_type: 'message',
-        });
-      }
-    } catch (err) {
-      console.error('Chyba při odeslání zprávy:', err);
-      setMessageError('Nepodařilo se odeslat zprávu.');
-    } finally {
-      setSendingMessage(false);
-    }
-  }
 
   const beatTracks = useMemo<CurrentTrack[]>(() => {
     return beats
@@ -1702,12 +1757,12 @@ export default function PublicProfileClient({
               {startingCall ? 'Vytvářím hovor…' : 'Zahájit hovor'}
             </button>
           )}
-          <a
-            href="#message-form"
+          <Link
+            href="/messages"
             className="inline-flex h-10 items-center rounded-full bg-[var(--mpc-accent)] px-5 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_10px_30px_rgba(255,75,129,0.35)] hover:translate-y-[1px]"
           >
-            {t('publicProfile.sendMessage', 'Poslat zprávu')}
-          </a>
+            {t('publicProfile.sendMessage', 'Zprávy')}
+          </Link>
         </div>
       </div>
       {incomingCall && (
@@ -2420,12 +2475,12 @@ export default function PublicProfileClient({
         </>
         )}
 
-        {/* Poslat zprávu */}
+        {/* Zprávy */}
         <div id="message-form" className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[var(--mpc-light)]">{t('publicProfile.message.title', 'Poslat zprávu')}</h2>
-              <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{t('publicProfile.message.subtitle', 'Přímo autorovi profilu')}</p>
+              <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Zprávy</h2>
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Jen nové zprávy</p>
             </div>
             {!isLoggedIn && (
               <Link href="/auth/login" className="text-[11px] uppercase tracking-[0.15em] text-[var(--mpc-accent)]">
@@ -2433,34 +2488,40 @@ export default function PublicProfileClient({
               </Link>
             )}
           </div>
-          <form onSubmit={handleSendMessage} className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                {t('publicProfile.message.label', 'Zpráva')}
-              </label>
-              <textarea
-                value={messageBody}
-                onChange={(e) => setMessageBody(e.target.value)}
-                className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
-                rows={3}
-                placeholder="Napiš detail spolupráce, tempo, mood, deadline…"
-              />
-            </div>
-            {messageSuccess && (
-              <p className="text-sm text-green-300">{messageSuccess}</p>
-            )}
-            {messageError && <p className="text-sm text-red-300">{messageError}</p>}
-            <button
-              type="submit"
-              disabled={sendingMessage}
-              className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white disabled:opacity-60"
-              >
-                {sendingMessage ? t('publicProfile.message.sending', 'Odesílám…') : t('publicProfile.message.send', 'Odeslat zprávu')}
-              </button>
-            </form>
-            {!isLoggedIn && (
-              <p className="mt-2 text-[11px] text-[var(--mpc-muted)]">{t('publicProfile.message.loginNote', 'Pro odeslání zprávy se přihlas.')}</p>
-            )}
+
+          {!isLoggedIn ? (
+            <p className="text-[11px] text-[var(--mpc-muted)]">Pro zobrazení zpráv se přihlas.</p>
+          ) : (
+            <>
+              {unreadMessagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
+              {!unreadMessagesLoading && unreadMessages.length === 0 && (
+                <p className="text-[12px] text-[var(--mpc-muted)]">Žádné nové zprávy.</p>
+              )}
+              <div className="space-y-2">
+                {unreadMessages.map((msg) => (
+                  <Link
+                    key={msg.id}
+                    href="/messages"
+                    className="block rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 hover:border-[var(--mpc-accent)]"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-[var(--mpc-light)]">{msg.from_name || 'Neznámý'}</p>
+                      <span className="text-[10px] text-[var(--mpc-muted)]">{formatMessageTime(msg.created_at)}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-[var(--mpc-muted)]">{msg.body || '—'}</p>
+                  </Link>
+                ))}
+              </div>
+              <div className="mt-3">
+                <Link
+                  href="/messages"
+                  className="inline-flex items-center rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                >
+                  Otevřít inbox
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
