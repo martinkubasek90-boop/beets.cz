@@ -4094,11 +4094,6 @@ const buildAppleEmbed = (url: string) => {
               >
                 {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
               </button>
-              {(isAdmin || !isMcOnly) && (
-                <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.stream', 'Stream')}
-                </Link>
-              )}
               <button
                 type="button"
                 onClick={() => setActiveTab('messages')}
@@ -4125,6 +4120,11 @@ const buildAppleEmbed = (url: string) => {
               {isAdmin && (
                 <Link href="/admin" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
                   Admin
+                </Link>
+              )}
+              {(isAdmin || !isMcOnly) && (
+                <Link href="/stream" className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
               <NotificationBell />
@@ -4183,11 +4183,6 @@ const buildAppleEmbed = (url: string) => {
               >
                 {isMcOnly ? t('profile.tab.acapellas', 'Akapely') : t('profile.tab.collabs', 'Spolupráce')}
               </button>
-              {(isAdmin || !isMcOnly) && (
-                <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
-                  {t('profile.tab.stream', 'Stream')}
-                </Link>
-              )}
               <button
                 type="button"
                 onClick={() => {
@@ -4223,6 +4218,11 @@ const buildAppleEmbed = (url: string) => {
               {isAdmin && (
                 <Link href="/admin" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                   Admin
+                </Link>
+              )}
+              {(isAdmin || !isMcOnly) && (
+                <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
               <NotificationBell />
