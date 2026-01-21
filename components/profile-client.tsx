@@ -3556,83 +3556,95 @@ const buildAppleEmbed = (url: string) => {
         </form>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[320px,1fr]">
-        <div className="space-y-2">
-          {collabThreadsLoading ? (
-            <p className="text-[12px] text-[var(--mpc-muted)]">Načítám spolupráce…</p>
-          ) : collabThreads.length === 0 ? (
-            <p className="text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna. Založ novou spolupráci.</p>
-          ) : (
-            collabThreads.map((thread) => {
-              const isActive = thread.id === selectedThreadId;
-              const displayTitle = buildCollabLabel(thread.participants);
-              const card = (
-                <div
-                  className={`w-full rounded-lg border px-4 py-3 text-left transition ${
-                    isActive
-                      ? 'border-[var(--mpc-accent)] bg-[var(--mpc-accent)]/15'
-                      : 'border-[var(--mpc-dark)] bg-[var(--mpc-panel)] hover:border-[var(--mpc-accent)]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-[var(--mpc-light)]">{displayTitle}</p>
-                      <p className="text-[11px] text-[var(--mpc-muted)]">
-                        {formatRelativeTime(thread.updated_at)}
-                      </p>
-                    </div>
-                    <span
-                      className={`rounded-full border px-2 py-[2px] text-[11px] uppercase tracking-[0.12em] ${
-                        thread.status === 'active'
-                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                          : thread.status === 'pending'
-                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
-                            : thread.status === 'paused'
+      <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+        <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--mpc-light)]">Vlákna</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                {collabThreads.length} {t('profile.collabs.count', 'spoluprací')}
+              </p>
+            </div>
+          </div>
+          <div className="flex-1 space-y-2 overflow-y-auto p-2">
+            {collabThreadsLoading ? (
+              <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Načítám spolupráce…</p>
+            ) : collabThreads.length === 0 ? (
+              <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Zatím žádná vlákna. Založ novou spolupráci.</p>
+            ) : (
+              collabThreads.map((thread) => {
+                const isActive = thread.id === selectedThreadId;
+                const displayTitle = buildCollabLabel(thread.participants);
+                const card = (
+                  <div
+                    className={`w-full rounded-xl border px-3 py-3 text-left transition ${
+                      isActive
+                        ? 'border-[var(--mpc-accent)] bg-[linear-gradient(90deg,rgba(243,116,51,0.16),rgba(0,0,0,0.4))] shadow-[0_12px_30px_rgba(243,116,51,0.15)]'
+                        : 'border-transparent hover:border-[var(--mpc-dark)] hover:bg-black/40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-[var(--mpc-light)]">{displayTitle}</p>
+                        <p className="text-[11px] text-[var(--mpc-muted)]">
+                          {formatRelativeTime(thread.updated_at)}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full border px-2 py-[2px] text-[10px] uppercase tracking-[0.12em] ${
+                          thread.status === 'active'
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                            : thread.status === 'pending'
                               ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                              : thread.status === 'paused'
+                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-100'
+                                : thread.status === 'done'
+                                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+                                  : 'border-red-500/40 bg-red-500/10 text-red-100'
+                        }`}
+                      >
+                        {thread.status === 'active'
+                          ? 'Aktivní'
+                          : thread.status === 'pending'
+                            ? 'Čeká'
+                            : thread.status === 'paused'
+                              ? 'Pozastavená'
                               : thread.status === 'done'
-                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
-                                : 'border-red-500/40 bg-red-500/10 text-red-100'
-                      }`}
-                    >
-                      {thread.status === 'active'
-                        ? 'Aktivní'
-                        : thread.status === 'pending'
-                          ? 'Čeká na potvrzení'
-                          : thread.status === 'paused'
-                            ? 'Pozastavená'
-                            : thread.status === 'done'
-                              ? 'Dokončená'
-                              : thread.status === 'cancelled'
-                                ? 'Ukončená'
-                                : 'Odmítnuto'}
-                    </span>
+                                ? 'Dokončená'
+                                : thread.status === 'cancelled'
+                                  ? 'Ukončená'
+                                  : 'Odmítnuto'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-
-              if (view === 'collabs') {
-                return (
-                  <Link key={thread.id} href={`/collabs?thread=${thread.id}`} className="block">
-                    {card}
-                  </Link>
                 );
-              }
 
-              return (
-                <button type="button" key={thread.id} onClick={() => setSelectedThreadId(thread.id)}>
-                  {card}
-                </button>
-              );
-            })
-          )}
-        </div>
+                if (view === 'collabs') {
+                  return (
+                    <Link key={thread.id} href={`/collabs?thread=${thread.id}`} className="block">
+                      {card}
+                    </Link>
+                  );
+                }
 
-        <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 text-sm text-[var(--mpc-light)]">
+                return (
+                  <button type="button" key={thread.id} onClick={() => setSelectedThreadId(thread.id)}>
+                    {card}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </aside>
+
+        <div className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-sm text-[var(--mpc-light)] shadow-[0_22px_50px_rgba(0,0,0,0.45)]">
           {!activeCollabThread ? (
-            <p className="text-[12px] text-[var(--mpc-muted)]">Vyber vlákno vlevo.</p>
+            <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
+              Vyber vlákno vlevo.
+            </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-start justify-between gap-3">
+            <div className="flex h-full flex-col">
+              <div className="flex items-start justify-between gap-3 border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
                 <div>
                   <p className="text-base font-semibold">{activeCollabThreadLabel}</p>
                   <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -3655,7 +3667,7 @@ const buildAppleEmbed = (url: string) => {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--mpc-muted)]">
+              <div className="flex flex-wrap items-center gap-3 px-4 pt-3 text-[11px] text-[var(--mpc-muted)]">
                 <span>Poslední aktivita: {formatRelativeTime(getLastActivity(activeCollabThread))}</span>
                 {activeCollabThread.deadline && (
                   <span>Deadline: {new Date(activeCollabThread.deadline).toLocaleDateString('cs-CZ')}</span>
@@ -3663,7 +3675,7 @@ const buildAppleEmbed = (url: string) => {
               </div>
 
               {activeCollabThread.status === 'pending' && activeCollabThread.creator_id !== userId && (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
                   <span className="text-[11px] text-[var(--mpc-muted)]">Čeká na potvrzení</span>
                   <button
                     onClick={() => void updateCollabStatus(activeCollabThread.id, 'active')}
@@ -3682,7 +3694,7 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 px-4 pt-3">
                 <button
                   onClick={() => void handleStartCollabCall()}
                   disabled={startingCollabCall}
@@ -3692,115 +3704,121 @@ const buildAppleEmbed = (url: string) => {
                 </button>
               </div>
 
-              <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
-                    Aktivity
-                    {Array.isArray(activeCollabThread.milestones) && activeCollabThread.milestones.length > 0 && (
-                      <span className="text-[11px] text-[var(--mpc-muted)]">
-                        {activeCollabThread.milestones.filter((m) => m.done).length}/{activeCollabThread.milestones.length} splněno
-                      </span>
-                    )}
+              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4 pr-1">
+                <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
+                      Aktivity
+                      {Array.isArray(activeCollabThread.milestones) && activeCollabThread.milestones.length > 0 && (
+                        <span className="text-[11px] text-[var(--mpc-muted)]">
+                          {activeCollabThread.milestones.filter((m) => m.done).length}/{activeCollabThread.milestones.length} splněno
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <label className="text-[var(--mpc-muted)]">Deadline:</label>
+                      <input
+                        type="date"
+                        value={activeCollabThread.deadline ? activeCollabThread.deadline.slice(0, 10) : ''}
+                        onChange={(e) =>
+                          void saveMilestones(activeCollabThread.id, activeCollabThread.milestones || [], e.target.value || null)
+                        }
+                        className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-1 text-[11px] text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px]">
-                    <label className="text-[var(--mpc-muted)]">Deadline:</label>
+                  <div className="space-y-2">
+                    {(activeCollabThread.milestones || []).map((m) => (
+                      <div key={m.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!!m.done}
+                            onChange={() => void toggleMilestone(activeCollabThread.id, m.id)}
+                            className="h-4 w-4"
+                          />
+                          <div>
+                            <p className="text-[var(--mpc-light)]">{m.title}</p>
+                            {m.due && (
+                              <p className="text-[11px] text-[var(--mpc-muted)]">Do: {new Date(m.due).toLocaleDateString('cs-CZ')}</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => void removeMilestone(activeCollabThread.id, m.id)}
+                          className="text-[11px] text-red-300 hover:text-white"
+                        >
+                          Odebrat
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Nová aktivita..."
+                      value={newMilestoneTitle}
+                      onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                      className="flex-1 min-w-[180px] rounded border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                    />
                     <input
                       type="date"
-                      value={activeCollabThread.deadline ? activeCollabThread.deadline.slice(0, 10) : ''}
-                      onChange={(e) => void saveMilestones(activeCollabThread.id, activeCollabThread.milestones || [], e.target.value || null)}
-                      className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-1 text-[11px] text-white focus:border-[var(--mpc-accent)] focus:outline-none"
+                      value={newMilestoneDue}
+                      onChange={(e) => setNewMilestoneDue(e.target.value)}
+                      className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
                     />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {(activeCollabThread.milestones || []).map((m) => (
-                    <div key={m.id} className="flex items-center justify-between rounded border border-[var(--mpc-dark)] bg-black/40 px-3 py-2 text-[12px]">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={!!m.done}
-                          onChange={() => void toggleMilestone(activeCollabThread.id, m.id)}
-                          className="h-4 w-4"
-                        />
-                        <div>
-                          <p className="text-[var(--mpc-light)]">{m.title}</p>
-                          {m.due && <p className="text-[11px] text-[var(--mpc-muted)]">Do: {new Date(m.due).toLocaleDateString('cs-CZ')}</p>}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => void removeMilestone(activeCollabThread.id, m.id)}
-                        className="text-[11px] text-red-300 hover:text-white"
-                      >
-                        Odebrat
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Nová aktivita..."
-                    value={newMilestoneTitle}
-                    onChange={(e) => setNewMilestoneTitle(e.target.value)}
-                    className="flex-1 min-w-[180px] rounded border border-[var(--mpc-dark)] bg-black/60 px-3 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                  />
-                  <input
-                    type="date"
-                    value={newMilestoneDue}
-                    onChange={(e) => setNewMilestoneDue(e.target.value)}
-                    className="rounded border border-[var(--mpc-dark)] bg-black/60 px-2 py-2 text-sm text-white focus:border-[var(--mpc-accent)] focus:outline-none"
-                  />
-                  <button
-                    onClick={() => void handleAddMilestone()}
-                    disabled={savingMilestone || !newMilestoneTitle.trim()}
-                    className="rounded-full border border-[var(--mpc-accent)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
-                  >
-                    {savingMilestone ? 'Ukládám…' : 'Přidat'}
-                  </button>
-                </div>
-                {inactivityDays(activeCollabThread) !== null && inactivityDays(activeCollabThread)! >= 7 && activeCollabThread.status === 'active' && (
-                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
-                    <span>Partner nereagoval {inactivityDays(activeCollabThread)} dní.</span>
                     <button
-                      onClick={async () => {
-                        try {
-                          const { data: participants } = await supabase
-                            .from('collab_participants')
-                            .select('user_id')
-                            .eq('thread_id', activeCollabThread.id);
-                          const targets =
-                            (participants ?? [])
-                              .map((p: any) => p.user_id as string)
-                              .filter((uid) => uid && uid !== userId) || [];
-                          await Promise.all(
-                            targets.map((uid) =>
-                              sendNotificationSafe(supabase, {
-                                user_id: uid,
-                                type: 'collab_message',
-                                title: 'Připomenutí spolupráce',
-                                body: 'Reaguj prosím na spolupráci',
-                                item_type: 'collab_thread',
-                                item_id: activeCollabThread.id,
-                                senderId: userId,
-                                data: { from: profile.display_name || email || 'Uživatel' },
-                              })
-                            )
-                          );
-                          setPlayerMessage('Připomenutí odesláno.');
-                        } catch (err) {
-                          console.error('Ping selhal:', err);
-                          setPlayerMessage('Nepodařilo se odeslat připomenutí.');
-                        }
-                      }}
-                      className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                      onClick={() => void handleAddMilestone()}
+                      disabled={savingMilestone || !newMilestoneTitle.trim()}
+                      className="rounded-full border border-[var(--mpc-accent)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
                     >
-                      Připomenout
+                      {savingMilestone ? 'Ukládám…' : 'Přidat'}
                     </button>
                   </div>
-                )}
-              </div>
+                  {inactivityDays(activeCollabThread) !== null &&
+                    inactivityDays(activeCollabThread)! >= 7 &&
+                    activeCollabThread.status === 'active' && (
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
+                        <span>Partner nereagoval {inactivityDays(activeCollabThread)} dní.</span>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const { data: participants } = await supabase
+                                .from('collab_participants')
+                                .select('user_id')
+                                .eq('thread_id', activeCollabThread.id);
+                              const targets =
+                                (participants ?? [])
+                                  .map((p: any) => p.user_id as string)
+                                  .filter((uid) => uid && uid !== userId) || [];
+                              await Promise.all(
+                                targets.map((uid) =>
+                                  sendNotificationSafe(supabase, {
+                                    user_id: uid,
+                                    type: 'collab_message',
+                                    title: 'Připomenutí spolupráce',
+                                    body: 'Reaguj prosím na spolupráci',
+                                    item_type: 'collab_thread',
+                                    item_id: activeCollabThread.id,
+                                    senderId: userId,
+                                    data: { from: profile.display_name || email || 'Uživatel' },
+                                  })
+                                )
+                              );
+                              setPlayerMessage('Připomenutí odesláno.');
+                            } catch (err) {
+                              console.error('Ping selhal:', err);
+                              setPlayerMessage('Nepodařilo se odeslat připomenutí.');
+                            }
+                          }}
+                          className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black"
+                        >
+                          Připomenout
+                        </button>
+                      </div>
+                    )}
+                </div>
 
-              <div className="space-y-3">
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3">
                   <div className="mb-2 text-sm font-semibold">Zprávy</div>
                   {collabMessagesLoading ? (
