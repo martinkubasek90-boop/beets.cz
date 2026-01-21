@@ -321,6 +321,27 @@ const formatMessageTime = (value?: string | null) => {
   });
 };
 
+const formatShortDate = (value?: string | null) => {
+  if (!value) return '';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return '';
+  return dt.toLocaleDateString('cs-CZ', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+};
+
+const formatCollabStatus = (value?: string | null) => {
+  if (!value) return '';
+  const normalized = value.toLowerCase();
+  if (normalized === 'active' || normalized === 'aktivni') return 'Aktivní';
+  if (normalized === 'pending' || normalized === 'cekajici') return 'Čeká';
+  if (normalized === 'done' || normalized === 'dokoncen') return 'Dokončené';
+  if (normalized === 'cancelled' || normalized === 'zrusen') return 'Zrušené';
+  return value;
+};
+
 const wildcardToRegex = (pattern: string) => new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
 
 const shouldShowChatbot = (path: string) => {
@@ -1737,6 +1758,9 @@ export default function PublicProfileClient({
               <a href="#collabs-section" className="hover:text-[var(--mpc-light)]">
                 {t('publicProfile.nav.collabs', 'Spolupráce')}
               </a>
+              <Link href="/stream" className="hover:text-[var(--mpc-light)]">
+                Stream
+              </Link>
             </div>
           )}
         </div>
@@ -1812,6 +1836,9 @@ export default function PublicProfileClient({
                 <a href="#collabs-section" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
                   {t('publicProfile.nav.collabs', 'Spolupráce')}
                 </a>
+                <Link href="/stream" className="rounded-lg border border-white/10 bg-black/30 px-3 py-2 hover:text-[var(--mpc-light)]">
+                  Stream
+                </Link>
               </>
             )}
           </div>
@@ -2406,7 +2433,10 @@ export default function PublicProfileClient({
             <p className="text-sm text-[var(--mpc-muted)]">Žádné spolupráce k zobrazení.</p>
           ) : (
             <div className="space-y-3">
-              {collabs.map((col) => (
+              {collabs.map((col) => {
+                const statusLabel = formatCollabStatus(col.status) || 'Aktivní';
+                const updatedLabel = formatShortDate(col.updated_at);
+                return (
                 <Link
                   key={col.id}
                   href={`/collabs?thread=${col.id}`}
@@ -2421,14 +2451,29 @@ export default function PublicProfileClient({
                       : undefined
                   }
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-base font-semibold text-[var(--mpc-light)]">{col.title}</p>
-                      <p className="text-[12px] text-[var(--mpc-muted)]">
-                        {col.bpm ? `${col.bpm} BPM` : '—'} · {col.mood || '—'}
-                      </p>
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_220px] md:items-center">
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 max-w-[70%]">
+                          <p className="truncate text-base font-semibold text-[var(--mpc-light)]">{col.title}</p>
+                          <p className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
+                            <span>{col.bpm ? `${col.bpm} BPM` : '—'}</span>
+                            <span className="text-[8px]">•</span>
+                            <span>{col.mood || '—'}</span>
+                            {updatedLabel && (
+                              <>
+                                <span className="text-[8px]">•</span>
+                                <span>{updatedLabel}</span>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                        <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-200">
+                          {statusLabel}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)]">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)] md:justify-end">
                       {col.partners.map((p, idx) => (
                         <span
                           key={p + idx}
@@ -2440,7 +2485,8 @@ export default function PublicProfileClient({
                     </div>
                   </div>
                 </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
