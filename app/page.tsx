@@ -670,7 +670,10 @@ export default function Home() {
   };
 
   const enrichProjectEmbeds = async (items: Project[]) => {
-    const ids = items.map((p) => p.id).filter(Boolean);
+    const ids = items
+      .filter((p) => !p.embed_html && !p.project_url && !p.purchase_url)
+      .map((p) => p.id)
+      .filter(Boolean);
     if (!ids.length) return items;
     try {
       const { data } = await supabase
@@ -715,7 +718,6 @@ export default function Home() {
             tracks: mapProjectTracks(p),
             author_name: (p as any).author_name || null,
           }));
-          mapped = await enrichProjectEmbeds(mapped as Project[]);
           setProjects(mapped as Project[]);
           writeHomeCache(HOME_PROJECTS_CACHE_KEY, mapped as Project[]);
           setProjectsError(null);
@@ -763,9 +765,9 @@ export default function Home() {
             author_name: p.author_name || fromProfile,
           } as Project;
         });
-        const enriched = await enrichProjectEmbeds(withNames.slice(0, 2));
-        setProjects(enriched);
-        writeHomeCache(HOME_PROJECTS_CACHE_KEY, enriched);
+        const trimmed = withNames.slice(0, 2);
+        setProjects(trimmed);
+        writeHomeCache(HOME_PROJECTS_CACHE_KEY, trimmed);
         setProjectsError(null);
       } else {
         setProjects(dummyProjects.slice(0, 2));
