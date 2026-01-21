@@ -4349,16 +4349,6 @@ const buildAppleEmbed = (url: string) => {
                             >
                               Zobrazit vše
                             </button>
-                            {beats.length > 3 && (
-                              <button
-                                type="button"
-                                onClick={() => toggleOverviewExpanded('beats')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                aria-label={overviewExpanded.beats ? 'Sbalit seznam beatů' : 'Rozbalit seznam beatů'}
-                              >
-                                <span className={`transition ${overviewExpanded.beats ? 'rotate-180' : ''}`}>▾</span>
-                              </button>
-                            )}
                           </div>
                         </div>
                         {beats.length === 0 ? (
@@ -4373,6 +4363,18 @@ const buildAppleEmbed = (url: string) => {
                                 </span>
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {beats.length > 3 && (
+                          <div className="mt-3 flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleOverviewExpanded('beats')}
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              aria-label={overviewExpanded.beats ? 'Sbalit seznam beatů' : 'Rozbalit seznam beatů'}
+                            >
+                              <span className={`transition ${overviewExpanded.beats ? 'rotate-180' : ''}`}>▾</span>
+                            </button>
                           </div>
                         )}
                       </div>
@@ -4390,16 +4392,6 @@ const buildAppleEmbed = (url: string) => {
                             >
                               Zobrazit vše
                             </button>
-                            {projects.length > 3 && (
-                              <button
-                                type="button"
-                                onClick={() => toggleOverviewExpanded('projects')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                aria-label={overviewExpanded.projects ? 'Sbalit seznam projektů' : 'Rozbalit seznam projektů'}
-                              >
-                                <span className={`transition ${overviewExpanded.projects ? 'rotate-180' : ''}`}>▾</span>
-                              </button>
-                            )}
                           </div>
                         </div>
                         {projects.length === 0 ? (
@@ -4420,6 +4412,18 @@ const buildAppleEmbed = (url: string) => {
                             ))}
                           </div>
                         )}
+                        {projects.length > 3 && (
+                          <div className="mt-3 flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => toggleOverviewExpanded('projects')}
+                              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              aria-label={overviewExpanded.projects ? 'Sbalit seznam projektů' : 'Rozbalit seznam projektů'}
+                            >
+                              <span className={`transition ${overviewExpanded.projects ? 'rotate-180' : ''}`}>▾</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -4438,16 +4442,6 @@ const buildAppleEmbed = (url: string) => {
                               >
                                 Detail
                               </button>
-                              {collabThreads.length > 3 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOverviewExpanded('collabs')}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                  aria-label={overviewExpanded.collabs ? 'Sbalit seznam spoluprací' : 'Rozbalit seznam spoluprací'}
-                                >
-                                  <span className={`transition ${overviewExpanded.collabs ? 'rotate-180' : ''}`}>▾</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -4457,6 +4451,18 @@ const buildAppleEmbed = (url: string) => {
                               </p>
                             ))}
                           </div>
+                          {collabThreads.length > 3 && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('collabs')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.collabs ? 'Sbalit seznam spoluprací' : 'Rozbalit seznam spoluprací'}
+                              >
+                                <span className={`transition ${overviewExpanded.collabs ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                       {directThreads.length > 0 && (
@@ -4474,16 +4480,6 @@ const buildAppleEmbed = (url: string) => {
                               >
                                 Detail
                               </button>
-                              {directThreads.length > 3 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOverviewExpanded('messages')}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                  aria-label={overviewExpanded.messages ? 'Sbalit seznam zpráv' : 'Rozbalit seznam zpráv'}
-                                >
-                                  <span className={`transition ${overviewExpanded.messages ? 'rotate-180' : ''}`}>▾</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -4493,6 +4489,18 @@ const buildAppleEmbed = (url: string) => {
                               </p>
                             ))}
                           </div>
+                          {directThreads.length > 3 && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('messages')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.messages ? 'Sbalit seznam zpráv' : 'Rozbalit seznam zpráv'}
+                              >
+                                <span className={`transition ${overviewExpanded.messages ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                       {myAccessRequests.length > 0 && (
@@ -4510,16 +4518,6 @@ const buildAppleEmbed = (url: string) => {
                               >
                                 Detail
                               </button>
-                              {myAccessRequests.length > 3 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOverviewExpanded('access')}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                  aria-label={overviewExpanded.access ? 'Sbalit seznam žádostí' : 'Rozbalit seznam žádostí'}
-                                >
-                                  <span className={`transition ${overviewExpanded.access ? 'rotate-180' : ''}`}>▾</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -4529,6 +4527,18 @@ const buildAppleEmbed = (url: string) => {
                               </p>
                             ))}
                           </div>
+                          {myAccessRequests.length > 3 && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('access')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.access ? 'Sbalit seznam žádostí' : 'Rozbalit seznam žádostí'}
+                              >
+                                <span className={`transition ${overviewExpanded.access ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                       {myPosts.length > 0 && (
@@ -4546,16 +4556,6 @@ const buildAppleEmbed = (url: string) => {
                               >
                                 Detail
                               </button>
-                              {myPosts.length > 3 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOverviewExpanded('posts')}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                  aria-label={overviewExpanded.posts ? 'Sbalit seznam článků' : 'Rozbalit seznam článků'}
-                                >
-                                  <span className={`transition ${overviewExpanded.posts ? 'rotate-180' : ''}`}>▾</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -4565,6 +4565,18 @@ const buildAppleEmbed = (url: string) => {
                               </p>
                             ))}
                           </div>
+                          {myPosts.length > 3 && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('posts')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.posts ? 'Sbalit seznam článků' : 'Rozbalit seznam článků'}
+                              >
+                                <span className={`transition ${overviewExpanded.posts ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                       {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
@@ -4584,16 +4596,6 @@ const buildAppleEmbed = (url: string) => {
                               >
                                 Detail
                               </button>
-                              {forumSummaryCount > 3 && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleOverviewExpanded('forum')}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
-                                  aria-label={overviewExpanded.forum ? 'Sbalit seznam fóra' : 'Rozbalit seznam fóra'}
-                                >
-                                  <span className={`transition ${overviewExpanded.forum ? 'rotate-180' : ''}`}>▾</span>
-                                </button>
-                              )}
                             </div>
                           </div>
                           <div className="space-y-2">
@@ -4603,6 +4605,18 @@ const buildAppleEmbed = (url: string) => {
                               </p>
                             ))}
                           </div>
+                          {forumSummaryCount > 3 && (
+                            <div className="mt-3 flex justify-center">
+                              <button
+                                type="button"
+                                onClick={() => toggleOverviewExpanded('forum')}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                aria-label={overviewExpanded.forum ? 'Sbalit seznam fóra' : 'Rozbalit seznam fóra'}
+                              >
+                                <span className={`transition ${overviewExpanded.forum ? 'rotate-180' : ''}`}>▾</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

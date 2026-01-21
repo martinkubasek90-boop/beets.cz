@@ -123,61 +123,81 @@ export default function PreviewGeneratorPage() {
     }
     if (!canvasRef.current) return;
     setError(null);
+    if (typeof MediaRecorder === 'undefined' || !canvasRef.current.captureStream) {
+      setError('Prohlížeč nepodporuje export videa (MediaRecorder). Zkus Chrome/Edge.');
+      return;
+    }
 
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl);
       setVideoUrl(null);
     }
 
-    const audioEl = new Audio(audioUrl);
-    audioEl.crossOrigin = 'anonymous';
-    audioRef.current = audioEl;
+    try {
+      const audioEl = new Audio(audioUrl);
+      audioEl.crossOrigin = 'anonymous';
+      audioEl.preload = 'auto';
+      audioRef.current = audioEl;
 
-    const coverImg = new Image();
-    coverImg.crossOrigin = 'anonymous';
-    coverImg.src = coverUrl || '';
-    coverImgRef.current = coverImg;
+      const coverImg = new Image();
+      coverImg.crossOrigin = 'anonymous';
+      coverImg.src = coverUrl || '';
+      coverImgRef.current = coverImg;
 
-    const stream = canvasRef.current.captureStream(30);
-    const audioStream = await setupAudioGraph();
+      await new Promise<void>((resolve) => {
+        if (!coverUrl) return resolve();
+        coverImg.onload = () => resolve();
+        coverImg.onerror = () => resolve();
+      });
+      await new Promise<void>((resolve) => {
+        audioEl.onloadedmetadata = () => resolve();
+      });
 
-    if (audioStream) {
-      audioStream.getAudioTracks().forEach((track) => stream.addTrack(track));
-    }
+      const stream = canvasRef.current.captureStream(30);
+      const audioStream = await setupAudioGraph();
 
-    let mimeType = 'video/webm;codecs=vp9,opus';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = 'video/webm;codecs=vp8,opus';
-    }
+      if (audioStream) {
+        audioStream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      }
 
-    const recorder = new MediaRecorder(stream, { mimeType });
-    recorderRef.current = recorder;
-    chunksRef.current = [];
+      let mimeType = 'video/webm;codecs=vp9,opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8,opus';
+      }
 
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) chunksRef.current.push(event.data);
-    };
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recorderRef.current = recorder;
+      chunksRef.current = [];
 
-    recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      const url = URL.createObjectURL(blob);
-      setVideoUrl(url);
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setVideoUrl(url);
+        setRecording(false);
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      };
+
+      setRecording(true);
+      if (audioCtxRef.current?.state === 'suspended') {
+        await audioCtxRef.current.resume();
+      }
+
+      audioEl.onended = () => {
+        recorder.stop();
+      };
+
+      recorder.start();
+      drawFrame();
+      await audioEl.play();
+    } catch (err) {
+      console.error('Preview generator error:', err);
+      setError('Nepodařilo se spustit export. Zkus jiný prohlížeč nebo soubor.');
       setRecording(false);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-
-    setRecording(true);
-    if (audioCtxRef.current?.state === 'suspended') {
-      await audioCtxRef.current.resume();
     }
-
-    audioEl.onended = () => {
-      recorder.stop();
-    };
-
-    recorder.start();
-    drawFrame();
-    await audioEl.play();
   };
 
   const stopRecording = () => {
