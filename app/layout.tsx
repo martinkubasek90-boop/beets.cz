@@ -58,6 +58,52 @@ export default function RootLayout({
             })(window, document, "clarity", "script", "uqkkyhys14");
           `}
         </Script>
+        <Script id="base44-chatbot" strategy="afterInteractive">
+          {`
+            (function() {
+              var allowedUrls = ["*"];
+              var excludedUrls = [];
+
+              function toRegex(pattern) {
+                var escaped = pattern.replace(/[.+^${}()|[\\]\\\\]/g, '\\\\$&');
+                var regex = escaped.replace(/\\*/g, '.*');
+                return new RegExp('^' + regex + '$');
+              }
+
+              function shouldShowChatbot() {
+                var currentUrl = window.location.href;
+                for (var i = 0; i < excludedUrls.length; i++) {
+                  if (toRegex(excludedUrls[i]).test(currentUrl)) {
+                    return false;
+                  }
+                }
+
+                if (allowedUrls[0] === '*') {
+                  return true;
+                }
+
+                for (var j = 0; j < allowedUrls.length; j++) {
+                  if (toRegex(allowedUrls[j]).test(currentUrl)) {
+                    return true;
+                  }
+                }
+
+                return false;
+              }
+
+              if (!shouldShowChatbot()) return;
+              if (document.querySelector('iframe[data-base44-chatbot="true"]')) return;
+
+              var iframe = document.createElement('iframe');
+              iframe.src = 'https://preview-sandbox--43d0717956472343265e7d39baa88ab3.base44.app/ChatEmbed';
+              iframe.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;height:600px;border:none;z-index:9999;pointer-events:none;';
+              iframe.style.setProperty('pointer-events', 'auto', 'important');
+              iframe.setAttribute('allowtransparency', 'true');
+              iframe.setAttribute('data-base44-chatbot', 'true');
+              document.body.appendChild(iframe);
+            })();
+          `}
+        </Script>
       </head>
       <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider

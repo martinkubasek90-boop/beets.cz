@@ -485,24 +485,7 @@ export default function PublicProfileClient({
     return () => media.removeListener(update);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    if (!shouldShowChatbot(window.location.pathname)) return undefined;
-    if (document.querySelector('iframe[data-base44-chatbot="true"]')) return undefined;
-
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://preview-sandbox--58f6bafee4e7669cc8fc5203512b65ac.base44.app/ChatEmbed';
-    iframe.style.cssText =
-      'position:fixed;bottom:0;right:0;width:420px;height:600px;border:none;z-index:9999;pointer-events:none;';
-    iframe.style.setProperty('pointer-events', 'auto', 'important');
-    iframe.setAttribute('allowtransparency', 'true');
-    iframe.setAttribute('data-base44-chatbot', 'true');
-    document.body.appendChild(iframe);
-
-    return () => {
-      iframe.remove();
-    };
-  }, []);
+  // Chatbot se vkládá globálně v app/layout.tsx.
 
   useEffect(() => {
     if (isPlaying && !prevPlayingRef.current) {
