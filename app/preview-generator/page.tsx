@@ -16,6 +16,7 @@ export default function PreviewGeneratorPage() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const rafRef = useRef<number | null>(null);
+  const stopTimerRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const coverImgRef = useRef<HTMLImageElement | null>(null);
@@ -174,6 +175,10 @@ export default function PreviewGeneratorPage() {
       };
 
       recorder.onstop = () => {
+        if (stopTimerRef.current) {
+          window.clearTimeout(stopTimerRef.current);
+          stopTimerRef.current = null;
+        }
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         setVideoUrl(url);
@@ -193,6 +198,15 @@ export default function PreviewGeneratorPage() {
       recorder.start();
       drawFrame();
       await audioEl.play();
+
+      const durationMs =
+        Number.isFinite(audioEl.duration) && audioEl.duration > 0 ? audioEl.duration * 1000 : 0;
+      const maxDuration = durationMs ? Math.min(durationMs, 15000) : 15000;
+      stopTimerRef.current = window.setTimeout(() => {
+        if (recorderRef.current?.state === 'recording') {
+          recorderRef.current.stop();
+        }
+      }, maxDuration);
     } catch (err) {
       console.error('Preview generator error:', err);
       setError('Nepodařilo se spustit export. Zkus jiný prohlížeč nebo soubor.');
@@ -201,6 +215,10 @@ export default function PreviewGeneratorPage() {
   };
 
   const stopRecording = () => {
+    if (stopTimerRef.current) {
+      window.clearTimeout(stopTimerRef.current);
+      stopTimerRef.current = null;
+    }
     recorderRef.current?.stop();
     setRecording(false);
   };
