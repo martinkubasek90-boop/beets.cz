@@ -4058,7 +4058,7 @@ const buildAppleEmbed = (url: string) => {
   const showRightColumn = !['collabs', 'messages', 'forum', 'posts', 'beats', 'projects'].includes(activeTab);
 
   return (
-    <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
+    <main className="min-h-screen overflow-x-hidden bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
       {incomingCallOverlay}
       {/* Hero / cover */}
       <section
@@ -4401,7 +4401,7 @@ const buildAppleEmbed = (url: string) => {
 
       {/* Obsah */}
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
-        <div className={showRightColumn ? 'grid gap-6 lg:grid-cols-[3fr,1fr]' : 'grid gap-6'}>
+        <div className={showRightColumn ? 'grid min-w-0 gap-6 lg:grid-cols-[3fr,1fr]' : 'grid min-w-0 gap-6'}>
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
           <div className={showRightColumn ? 'space-y-6 order-1' : 'space-y-6'}>
             {activeTab === 'all' && (
