@@ -192,6 +192,28 @@ const normalizeProjectTracks = (raw?: ProjectItem['tracks_json']) => {
     .filter((t) => Boolean(t.url));
 };
 
+const TOOL_GROUPS = [
+  {
+    label: 'Audio',
+    items: [
+      { href: '/beat-maker', label: 'Beat Maker' },
+      { href: '/konvertor', label: 'Konvertor MP3' },
+      { href: '/mpc-3000/konvertor', label: 'MPC 3000 Konvertor' },
+      { href: '/mix-checklist', label: 'AI Mix Checklist' },
+      { href: '/reference-match', label: 'Reference Match' },
+      { href: '/drum-analyzer', label: 'Drum Analyzer' },
+      { href: '/mix-master', label: 'Mix + Master' },
+    ],
+  },
+  {
+    label: 'Grafika',
+    items: [
+      { href: '/cover-generator', label: 'AI Cover Generator' },
+      { href: '/preview-generator', label: 'IG/TikTok Preview' },
+    ],
+  },
+];
+
 const normalizePurchaseUrl = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -730,6 +752,7 @@ const canImportExternal = currentRole !== 'mc';
   const [deletingAcapellaId, setDeletingAcapellaId] = useState<number | null>(null);
   const [updatingAcapellaAccessId, setUpdatingAcapellaAccessId] = useState<number | null>(null);
   const [tabsOpen, setTabsOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   type OverviewSectionKey = 'beats' | 'projects' | 'collabs' | 'messages' | 'access' | 'posts' | 'forum';
   const [overviewExpanded, setOverviewExpanded] = useState<Record<OverviewSectionKey, boolean>>({
     beats: false,
@@ -4032,7 +4055,7 @@ const buildAppleEmbed = (url: string) => {
 
   const forumSummaryItems = myForumThreads.length > 0 ? myForumThreads : myForumCategories;
   const forumSummaryCount = myForumThreads.length > 0 ? myForumThreads.length : myForumCategories.length;
-  const showRightColumn = !['collabs', 'messages', 'forum', 'posts'].includes(activeTab);
+  const showRightColumn = !['collabs', 'messages', 'forum', 'posts', 'beats', 'projects'].includes(activeTab);
 
   return (
     <main className="min-h-screen bg-[var(--mpc-deck)] text-[var(--mpc-light)]">
@@ -4207,6 +4230,38 @@ const buildAppleEmbed = (url: string) => {
                   {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setToolsOpen((prev) => !prev)}
+                  className="pb-3 text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]"
+                >
+                  Nástroje
+                </button>
+                {toolsOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-64 rounded-xl border border-white/10 bg-black/95 p-3 text-left shadow-[0_18px_40px_rgba(0,0,0,0.5)] backdrop-blur">
+                    {TOOL_GROUPS.map((group) => (
+                      <div key={group.label} className="px-2 py-2">
+                        <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--mpc-muted)]">
+                          {group.label}
+                        </p>
+                        <div className="mt-2 space-y-1">
+                          {group.items.map((tool) => (
+                            <Link
+                              key={tool.href}
+                              href={tool.href}
+                              onClick={() => setToolsOpen(false)}
+                              className="block py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]"
+                            >
+                              {tool.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <NotificationBell />
             </div>
             <button
@@ -4305,6 +4360,29 @@ const buildAppleEmbed = (url: string) => {
                   {t('profile.tab.stream', 'Stream')}
                 </Link>
               )}
+              <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--mpc-muted)]">Nástroje</p>
+                <div className="mt-2 space-y-2">
+                  {TOOL_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                        {group.label}
+                      </p>
+                      <div className="mt-1 flex flex-col gap-1">
+                        {group.items.map((tool) => (
+                          <Link
+                            key={tool.href}
+                            href={tool.href}
+                            className="py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]"
+                          >
+                            {tool.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <NotificationBell />
             </div>
           )}
@@ -4911,35 +4989,50 @@ const buildAppleEmbed = (url: string) => {
                     Přetáhni pro změnu pořadí
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
-                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
-                  <span className="text-[var(--mpc-dark)]">•</span>
-                  <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
-                  {beats.length > 3 && (
-                    <>
-                      <span className="text-[var(--mpc-dark)]">•</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => scrollListBy(beatsListRef, 'up')}
-                          className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                          aria-label="Posunout beaty nahoru"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => scrollListBy(beatsListRef, 'down')}
-                          className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                          aria-label="Posunout beaty dolů"
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </>
+                <div className="flex flex-col gap-3 sm:items-end">
+                  {canUpload && (
+                    <button
+                      onClick={() => toggleSection('beatUpload')}
+                      className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.4)] sm:w-auto"
+                    >
+                      {openSections.beatUpload ? 'Schovat formulář' : 'Nahrát beat'}
+                    </button>
                   )}
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
+                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
+                    <span className="text-[var(--mpc-dark)]">•</span>
+                    <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
+                    {beats.length > 3 && (
+                      <>
+                        <span className="text-[var(--mpc-dark)]">•</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => scrollListBy(beatsListRef, 'up')}
+                            className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                            aria-label="Posunout beaty nahoru"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => scrollListBy(beatsListRef, 'down')}
+                            className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                            aria-label="Posunout beaty dolů"
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
+              {canUpload && openSections.beatUpload && (
+                <div className="mb-4 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                  <BeatUploadForm />
+                </div>
+              )}
                 {SHOW_SHARE_FEATURE && shareMessage && (
                   <div className="mb-2 rounded-md border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[12px] text-[var(--mpc-light)]">
                     {shareMessage}
@@ -5175,27 +5268,174 @@ const buildAppleEmbed = (url: string) => {
                     Přetáhni pro změnu pořadí
                   </p>
                 </div>
-                {projects.length > 3 && (
-                  <div className="flex items-center gap-1 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
+                <div className="flex flex-col gap-3 sm:items-end">
+                  {canUpload && (
                     <button
-                      type="button"
-                      onClick={() => scrollListBy(projectsListRef, 'up')}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                      aria-label="Posunout projekty nahoru"
+                      onClick={() => toggleSection('projectUpload')}
+                      className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white sm:w-auto"
                     >
-                      ↑
+                      {openSections.projectUpload ? 'Schovat formulář' : 'Nahrát projekt'}
+                    </button>
+                  )}
+                  {canImportExternal && (
+                    <button
+                      onClick={() => {
+                        setImportProjectOpen((prev) => !prev);
+                        setImportError(null);
+                        setImportSuccess(null);
+                      }}
+                      className="w-full rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-white hover:border-[var(--mpc-accent)] sm:w-auto"
+                    >
+                      {importProjectOpen ? 'Schovat import' : 'Import projektu'}
+                    </button>
+                  )}
+                  {projects.length > 3 && (
+                    <div className="flex items-center gap-1 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
+                      <button
+                        type="button"
+                        onClick={() => scrollListBy(projectsListRef, 'up')}
+                        className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                        aria-label="Posunout projekty nahoru"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => scrollListBy(projectsListRef, 'down')}
+                        className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
+                        aria-label="Posunout projekty dolů"
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {canUpload && openSections.projectUpload && (
+                <div className="mb-4 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                  <ProjectUploadForm />
+                </div>
+              )}
+              {canImportExternal && importProjectOpen && (
+                <div className="mb-4 space-y-3 rounded-xl border border-white/10 bg-black/30 p-4">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                      Odkaz na projekt
+                    </label>
+                    <input
+                      value={importProjectUrl}
+                      onChange={(e) => setImportProjectUrl(e.target.value)}
+                      placeholder="https://open.spotify.com/..., https://soundcloud.com/..., https://bandcamp.com/..., https://music.apple.com/..."
+                      className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                      Embed iframe (volitelné)
+                    </label>
+                    <textarea
+                      value={importEmbedHtml}
+                      onChange={(e) => setImportEmbedHtml(e.target.value)}
+                      placeholder="<iframe ...></iframe>"
+                      rows={3}
+                      className="w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                    />
+                    <p className="text-[10px] text-[var(--mpc-muted)]">
+                      Stačí vložit URL a embed — systém automaticky pozná Spotify/SoundCloud/Bandcamp/Apple Music.
+                    </p>
+                    <p className="text-[10px] text-[var(--mpc-muted)]">
+                      Pokud nevíš, jak získat embed z těchto platforem,{" "}
+                      <Link href="/faq#import-externi-projekty" className="text-[var(--mpc-accent)] hover:underline">
+                        zde je návod
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={handleFetchImportMetadata}
+                      disabled={importLoading}
+                      className="rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-black disabled:opacity-60"
+                    >
+                      {importLoading ? 'Načítám…' : 'Načíst'}
                     </button>
                     <button
-                      type="button"
-                      onClick={() => scrollListBy(projectsListRef, 'down')}
-                      className="grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-black/30 text-white/70 transition hover:border-white/30 hover:text-white"
-                      aria-label="Posunout projekty dolů"
+                      onClick={resetImportState}
+                      className="rounded-full border border-white/20 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-white/40"
                     >
-                      ↓
+                      Vyčistit
                     </button>
                   </div>
-                )}
-              </div>
+                  {importError && (
+                    <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-[12px] text-red-200">
+                      {importError}
+                    </div>
+                  )}
+                  {importSuccess && (
+                    <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[12px] text-emerald-200">
+                      {importSuccess}
+                    </div>
+                  )}
+                  {importMetadata && (
+                    <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-black/40 p-3">
+                      <div className="h-14 w-14 overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                        {importMetadata.cover ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={importMetadata.cover} alt={importMetadata.title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="grid h-full w-full place-items-center text-[10px] text-white/40">NO COVER</div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-white">{importMetadata.title}</p>
+                        <p className="text-[11px] text-[var(--mpc-muted)]">
+                          {importMetadata.artist || 'Neznámý autor'}
+                          {importMetadata.provider ? ` · ${importMetadata.provider}` : ''}
+                        </p>
+                      </div>
+                      <a
+                        href={importMetadata.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-white/20 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70 hover:border-[var(--mpc-accent)]"
+                      >
+                        Otevřít
+                      </a>
+                    </div>
+                  )}
+                  {importMetadata && (
+                    <div className="grid gap-3">
+                      <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                          Název projektu
+                        </label>
+                        <input
+                          value={importTitle}
+                          onChange={(e) => setImportTitle(e.target.value)}
+                          className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
+                          Autor
+                        </label>
+                        <input
+                          value={importArtist}
+                          onChange={(e) => setImportArtist(e.target.value)}
+                          className="mt-1 w-full rounded border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)] outline-none focus:border-[var(--mpc-accent)]"
+                        />
+                      </div>
+                      <button
+                        onClick={handleImportProject}
+                        disabled={importSaving}
+                        className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.35)] disabled:opacity-60"
+                      >
+                        {importSaving ? 'Importuji…' : 'Importovat projekt'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               {projectsError && (
                 <div className="mb-2 rounded-md border border-yellow-700/50 bg-yellow-900/20 px-3 py-2 text-xs text-yellow-200">
                   {projectsError}
