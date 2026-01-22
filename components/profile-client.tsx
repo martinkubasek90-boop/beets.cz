@@ -4393,7 +4393,7 @@ const buildAppleEmbed = (url: string) => {
       <section className="mx-auto max-w-6xl px-4 py-8" id="feed">
         <div className={showRightColumn ? 'grid gap-6 lg:grid-cols-[3fr,1fr]' : 'grid gap-6'}>
           {/* Levý sloupec: releasy (na mobilu za akcemi) */}
-          <div className={showRightColumn ? 'space-y-6 order-2 lg:order-1' : 'space-y-6'}>
+          <div className={showRightColumn ? 'space-y-6 order-1' : 'space-y-6'}>
             {activeTab === 'all' && (
               <>
                 {profileCompleteness.missing.length > 0 && (
@@ -6374,7 +6374,7 @@ const buildAppleEmbed = (url: string) => {
 
           {/* Pravý sloupec: akce (na mobilu nahoře) */}
           {showRightColumn && (
-          <div className="space-y-4 order-1 lg:order-2" id="profile-settings">
+          <div className="space-y-4 order-2 lg:order-2" id="profile-settings">
             {(canUpload || canUploadAcapellas) && (
               <>
                 {canUploadAcapellas && (
