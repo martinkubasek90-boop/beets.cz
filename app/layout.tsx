@@ -65,7 +65,7 @@ export default function RootLayout({
               var excludedUrls = [];
 
               function toRegex(pattern) {
-                var escaped = pattern.replace(/[.+^${}()|[\\]\\\\]/g, '\\\\$&');
+                var escaped = pattern.replace(/[.*+?^$()|[\\]\\\\]/g, '\\\\$&');
                 var regex = escaped.replace(/\\*/g, '.*');
                 return new RegExp('^' + regex + '$');
               }
