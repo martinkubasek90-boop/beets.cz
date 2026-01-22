@@ -61,6 +61,9 @@ export default function RootLayout({
         <Script id="base44-chatbot" strategy="afterInteractive">
           {`
             (function() {
+              var enabled = false;
+              if (!enabled) return;
+
               var allowedUrls = ["*"];
               var excludedUrls = [];
 
