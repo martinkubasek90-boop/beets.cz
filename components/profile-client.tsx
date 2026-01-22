@@ -6395,24 +6395,9 @@ const buildAppleEmbed = (url: string) => {
           <div className="space-y-4 order-2 lg:order-2" id="profile-settings">
             {(canUpload || canUploadAcapellas) && (
               <>
-                {canUploadAcapellas && (
-                  <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
-                    <button
-                      onClick={() => toggleSection('acapellaUpload')}
-                      className="w-full rounded-full bg-gradient-to-r from-[#1b8bff] to-[#4dc0ff] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(27,139,255,0.35)] transition hover:brightness-105"
-                    >
-                      {openSections.acapellaUpload ? 'Schovat formulář' : 'Nahrát akapely'}
-                    </button>
-                    {openSections.acapellaUpload && (
-                      <div className="mt-4">
-                        <AcapellaUploadForm />
-                      </div>
-                    )}
-                  </div>
-                )}
                 {canUpload && (
                   <>
-                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                    <div className="order-1 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] lg:order-none">
                       <button
                         onClick={() => toggleSection('beatUpload')}
                         className="w-full rounded-full bg-gradient-to-r from-[#ff7a1a] to-[#ff9d3c] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(255,122,26,0.35)] transition hover:brightness-105"
@@ -6426,7 +6411,7 @@ const buildAppleEmbed = (url: string) => {
                       )}
                     </div>
 
-                    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+                    <div className="order-2 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] lg:order-none">
                       <button
                         onClick={() => toggleSection('projectUpload')}
                         className="w-full rounded-full border border-[var(--mpc-accent)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
@@ -6582,10 +6567,25 @@ const buildAppleEmbed = (url: string) => {
                     </div>
                   </>
                 )}
+                {canUploadAcapellas && (
+                  <div className="order-3 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] lg:order-none">
+                    <button
+                      onClick={() => toggleSection('acapellaUpload')}
+                      className="w-full rounded-full bg-gradient-to-r from-[#1b8bff] to-[#4dc0ff] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-white shadow-[0_12px_30px_rgba(27,139,255,0.35)] transition hover:brightness-105"
+                    >
+                      {openSections.acapellaUpload ? 'Schovat formulář' : 'Nahrát akapely'}
+                    </button>
+                    {openSections.acapellaUpload && (
+                      <div className="mt-4">
+                        <AcapellaUploadForm />
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
 
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+            <div className="order-4 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] lg:order-none">
               <button
                 onClick={() => toggleSection('profile')}
                 className="w-full rounded-full border border-[var(--mpc-dark)] px-4 py-2 text-[12px] font-bold uppercase tracking-[0.2em] text-[var(--mpc-light)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
@@ -6818,7 +6818,7 @@ const buildAppleEmbed = (url: string) => {
               )}
             </div>
 
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+            <div className="order-5 rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] lg:order-none">
               <button
                 type="button"
                 onClick={handleSignOut}
