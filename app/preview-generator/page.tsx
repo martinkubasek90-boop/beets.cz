@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MainNav } from '@/components/main-nav';
+import { createClient } from '@/lib/supabase/client';
 
 type Aspect = 'square' | 'vertical';
 
@@ -10,7 +11,43 @@ const ASPECTS: Record<Aspect, { label: string; width: number; height: number }> 
   vertical: { label: '9:16 (TikTok/Stories)', width: 1080, height: 1920 },
 };
 
+type BeatLibraryItem = {
+  id: string;
+  title: string | null;
+  artist: string | null;
+  audio_url: string | null;
+  cover_url: string | null;
+};
+
+type ProjectTrack = {
+  name?: string | null;
+  url?: string | null;
+  path?: string | null;
+};
+
+type ProjectLibraryItem = {
+  id: string;
+  title: string | null;
+  cover_url: string | null;
+  tracks_json?: ProjectTrack[] | null;
+};
+
+const resolveProjectCoverUrl = (cover: string | null) => {
+  if (!cover) return null;
+  if (cover.startsWith('http')) return cover;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${cover}`;
+};
+
+const resolveProjectTrackUrl = (track: ProjectTrack) => {
+  if (track.url && track.url.startsWith('http')) return track.url;
+  if (track.path) {
+    return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/projects/${track.path}`;
+  }
+  return '';
+};
+
 export default function PreviewGeneratorPage() {
+  const supabase = useMemo(() => createClient(), []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -19,6 +56,8 @@ export default function PreviewGeneratorPage() {
   const stopTimerRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const destinationRef = useRef<MediaStreamAudioDestinationNode | null>(null);
   const coverImgRef = useRef<HTMLImageElement | null>(null);
 
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -27,24 +66,136 @@ export default function PreviewGeneratorPage() {
   const [artist, setArtist] = useState('');
   const [aspect, setAspect] = useState<Aspect>('vertical');
   const [recording, setRecording] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState('');
+  const [beatOptions, setBeatOptions] = useState<BeatLibraryItem[]>([]);
+  const [projectOptions, setProjectOptions] = useState<ProjectLibraryItem[]>([]);
+  const [selectedBeatId, setSelectedBeatId] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [importedAudioUrl, setImportedAudioUrl] = useState<string | null>(null);
+  const [importedCoverUrl, setImportedCoverUrl] = useState<string | null>(null);
+  const [importedLabel, setImportedLabel] = useState<string | null>(null);
 
-  const coverUrl = useMemo(() => (coverFile ? URL.createObjectURL(coverFile) : null), [coverFile]);
-  const audioUrl = useMemo(() => (audioFile ? URL.createObjectURL(audioFile) : null), [audioFile]);
+  const coverUrl = useMemo(() => {
+    if (coverFile) return URL.createObjectURL(coverFile);
+    return importedCoverUrl;
+  }, [coverFile, importedCoverUrl]);
+  const audioUrl = useMemo(() => {
+    if (audioFile) return URL.createObjectURL(audioFile);
+    return importedAudioUrl;
+  }, [audioFile, importedAudioUrl]);
 
   useEffect(() => {
     return () => {
-      if (coverUrl) URL.revokeObjectURL(coverUrl);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      if (coverUrl && coverUrl.startsWith('blob:')) URL.revokeObjectURL(coverUrl);
+      if (audioUrl && audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+      if (videoUrl && videoUrl.startsWith('blob:')) URL.revokeObjectURL(videoUrl);
     };
   }, [coverUrl, audioUrl, videoUrl]);
+
+  useEffect(() => {
+    const loadLibrary = async () => {
+      setLibraryLoading(true);
+      setLibraryError(null);
+      try {
+        const {
+          data: { user },
+          error: userErr,
+        } = await supabase.auth.getUser();
+        if (userErr || !user) {
+          setLibraryLoading(false);
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profile?.display_name) {
+          setProfileName(profile.display_name);
+        }
+
+        const { data: beats, error: beatsErr } = await supabase
+          .from('beats')
+          .select('id, title, artist, audio_url, cover_url')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (beatsErr) throw beatsErr;
+        setBeatOptions((beats as BeatLibraryItem[]) ?? []);
+
+        const { data: projects, error: projectsErr } = await supabase
+          .from('projects')
+          .select('id, title, cover_url, tracks_json')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (projectsErr) throw projectsErr;
+        setProjectOptions((projects as ProjectLibraryItem[]) ?? []);
+      } catch (err) {
+        console.error('Preview generator library load error:', err);
+        setLibraryError('Nepodařilo se načíst beaty/projekty z profilu.');
+      } finally {
+        setLibraryLoading(false);
+      }
+    };
+
+    void loadLibrary();
+  }, [supabase]);
+
+  const applyBeatImport = (beat: BeatLibraryItem) => {
+    if (!beat.audio_url) {
+      setLibraryError('Vybraný beat nemá audio.');
+      return;
+    }
+    setLibraryError(null);
+    setImportedAudioUrl(beat.audio_url);
+    setImportedCoverUrl(beat.cover_url || null);
+    setImportedLabel(`Beat: ${beat.title || 'Bez názvu'}`);
+    setTitle(beat.title || '');
+    setArtist(beat.artist || profileName || '');
+    setAudioFile(null);
+    setCoverFile(null);
+  };
+
+  const applyProjectImport = (project: ProjectLibraryItem) => {
+    const tracks = Array.isArray(project.tracks_json) ? project.tracks_json : [];
+    const firstTrack = tracks.find((track) => resolveProjectTrackUrl(track));
+    const audio = firstTrack ? resolveProjectTrackUrl(firstTrack) : '';
+    if (!audio) {
+      setLibraryError('Vybraný projekt nemá audio stopu.');
+      return;
+    }
+    setLibraryError(null);
+    setImportedAudioUrl(audio);
+    setImportedCoverUrl(resolveProjectCoverUrl(project.cover_url));
+    setImportedLabel(`Projekt: ${project.title || 'Bez názvu'}`);
+    setTitle(project.title || '');
+    setArtist(profileName || '');
+    setAudioFile(null);
+    setCoverFile(null);
+  };
+
+  const clearImport = () => {
+    setSelectedBeatId('');
+    setSelectedProjectId('');
+    setImportedAudioUrl(null);
+    setImportedCoverUrl(null);
+    setImportedLabel(null);
+  };
 
   const setupAudioGraph = async () => {
     if (!audioRef.current) return null;
     if (!audioCtxRef.current) {
       audioCtxRef.current = new AudioContext();
+    }
+
+    if (sourceRef.current && destinationRef.current) {
+      return destinationRef.current.stream;
     }
 
     const audioCtx = audioCtxRef.current;
@@ -57,6 +208,8 @@ export default function PreviewGeneratorPage() {
     analyser.connect(audioCtx.destination);
     source.connect(destination);
 
+    sourceRef.current = source;
+    destinationRef.current = destination;
     analyserRef.current = analyser;
     return destination.stream;
   };
@@ -118,14 +271,18 @@ export default function PreviewGeneratorPage() {
   };
 
   const startRecording = async () => {
-    if (!audioFile || !audioUrl) {
+    if (!audioUrl) {
       setError('Nahraj audio soubor.');
       return;
     }
     if (!canvasRef.current) return;
     setError(null);
+    setStatus('Připravuji export…');
+    setPreparing(true);
     if (typeof MediaRecorder === 'undefined' || !canvasRef.current.captureStream) {
       setError('Prohlížeč nepodporuje export videa (MediaRecorder). Zkus Chrome/Edge.');
+      setPreparing(false);
+      setStatus(null);
       return;
     }
 
@@ -135,12 +292,15 @@ export default function PreviewGeneratorPage() {
     }
 
     try {
-      const audioEl = new Audio(audioUrl);
+      const audioEl = audioRef.current ?? new Audio();
       audioEl.crossOrigin = 'anonymous';
       audioEl.preload = 'auto';
+      audioEl.src = audioUrl;
+      audioEl.load();
+      audioEl.currentTime = 0;
       audioRef.current = audioEl;
 
-      const coverImg = new Image();
+      const coverImg = coverImgRef.current ?? new Image();
       coverImg.crossOrigin = 'anonymous';
       coverImg.src = coverUrl || '';
       coverImgRef.current = coverImg;
@@ -150,8 +310,25 @@ export default function PreviewGeneratorPage() {
         coverImg.onload = () => resolve();
         coverImg.onerror = () => resolve();
       });
-      await new Promise<void>((resolve) => {
-        audioEl.onloadedmetadata = () => resolve();
+      await new Promise<void>((resolve, reject) => {
+        if (audioEl.readyState >= 1) return resolve();
+        const timer = window.setTimeout(() => {
+          cleanup();
+          reject(new Error('Audio metadata timeout'));
+        }, 10000);
+        const cleanup = () => {
+          window.clearTimeout(timer);
+          audioEl.onloadedmetadata = null;
+          audioEl.onerror = null;
+        };
+        audioEl.onloadedmetadata = () => {
+          cleanup();
+          resolve();
+        };
+        audioEl.onerror = () => {
+          cleanup();
+          reject(new Error('Audio load error'));
+        };
       });
 
       const stream = canvasRef.current.captureStream(30);
@@ -183,10 +360,14 @@ export default function PreviewGeneratorPage() {
         const url = URL.createObjectURL(blob);
         setVideoUrl(url);
         setRecording(false);
+        setPreparing(false);
+        setStatus(null);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
       };
 
       setRecording(true);
+      setPreparing(false);
+      setStatus('Nahrávám…');
       if (audioCtxRef.current?.state === 'suspended') {
         await audioCtxRef.current.resume();
       }
@@ -211,6 +392,8 @@ export default function PreviewGeneratorPage() {
       console.error('Preview generator error:', err);
       setError('Nepodařilo se spustit export. Zkus jiný prohlížeč nebo soubor.');
       setRecording(false);
+      setPreparing(false);
+      setStatus(null);
     }
   };
 
@@ -221,6 +404,8 @@ export default function PreviewGeneratorPage() {
     }
     recorderRef.current?.stop();
     setRecording(false);
+    setPreparing(false);
+    setStatus(null);
   };
 
   const { width, height } = ASPECTS[aspect];
@@ -251,7 +436,13 @@ export default function PreviewGeneratorPage() {
                 <input
                   type="file"
                   accept="audio/*"
-                  onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)}
+                  onChange={(event) => {
+                    setAudioFile(event.target.files?.[0] ?? null);
+                    setImportedAudioUrl(null);
+                    setImportedLabel(null);
+                    setSelectedBeatId('');
+                    setSelectedProjectId('');
+                  }}
                   className="text-sm text-[var(--mpc-muted)]"
                 />
 
@@ -259,7 +450,13 @@ export default function PreviewGeneratorPage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(event) => setCoverFile(event.target.files?.[0] ?? null)}
+                  onChange={(event) => {
+                    setCoverFile(event.target.files?.[0] ?? null);
+                    setImportedCoverUrl(null);
+                    setImportedLabel(null);
+                    setSelectedBeatId('');
+                    setSelectedProjectId('');
+                  }}
                   className="text-sm text-[var(--mpc-muted)]"
                 />
 
@@ -278,6 +475,86 @@ export default function PreviewGeneratorPage() {
                   placeholder="Autor"
                   className="rounded-full border border-white/10 bg-black/30 px-4 py-2 text-sm text-white"
                 />
+
+                <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Import z profilu</p>
+                  {libraryLoading && <p className="mt-2 text-xs text-[var(--mpc-muted)]">Načítám knihovnu…</p>}
+                  {libraryError && <p className="mt-2 text-xs text-red-400">{libraryError}</p>}
+                  {!libraryLoading && (
+                    <div className="mt-3 grid gap-3">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Beaty</label>
+                        <select
+                          value={selectedBeatId}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setSelectedBeatId(value);
+                            setSelectedProjectId('');
+                            const beat = beatOptions.find((item) => item.id === value);
+                            if (beat) {
+                              applyBeatImport(beat);
+                            }
+                          }}
+                          className="mt-2 w-full rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
+                        >
+                          <option value="">Vybrat beat…</option>
+                          {beatOptions.map((beat) => (
+                            <option key={beat.id} value={beat.id}>
+                              {beat.title || 'Bez názvu'}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">Projekty</label>
+                        <select
+                          value={selectedProjectId}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            setSelectedProjectId(value);
+                            setSelectedBeatId('');
+                            const project = projectOptions.find((item) => item.id === value);
+                            if (project) {
+                              applyProjectImport(project);
+                            }
+                          }}
+                          className="mt-2 w-full rounded-full border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
+                        >
+                          <option value="">Vybrat projekt…</option>
+                          {projectOptions.map((project) => {
+                            const tracks = Array.isArray(project.tracks_json) ? project.tracks_json : [];
+                            const hasAudio = tracks.some((track) => Boolean(resolveProjectTrackUrl(track)));
+                            return (
+                              <option key={project.id} value={project.id} disabled={!hasAudio}>
+                                {project.title || 'Bez názvu'}
+                                {hasAudio ? '' : ' (bez audio)'}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                      {importedLabel && (
+                        <div className="rounded-full border border-[var(--mpc-accent)]/40 bg-[var(--mpc-accent)]/10 px-3 py-2 text-[11px] text-[var(--mpc-accent)]">
+                          {importedLabel}
+                        </div>
+                      )}
+                      {beatOptions.length === 0 && projectOptions.length === 0 && (
+                        <p className="text-xs text-[var(--mpc-muted)]">
+                          Zatím nemáš žádné beaty nebo projekty k importu.
+                        </p>
+                      )}
+                      {(selectedBeatId || selectedProjectId || importedAudioUrl || importedCoverUrl) && (
+                        <button
+                          type="button"
+                          onClick={clearImport}
+                          className="rounded-full border border-white/15 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                        >
+                          Vyčistit import
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(ASPECTS).map(([key, value]) => (
@@ -299,10 +576,10 @@ export default function PreviewGeneratorPage() {
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={startRecording}
-                    disabled={recording || !audioFile}
+                    disabled={recording || preparing || !audioUrl}
                     className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black disabled:opacity-60"
                   >
-                    {recording ? 'Nahrávám…' : 'Spustit export'}
+                    {preparing ? 'Připravuji…' : recording ? 'Nahrávám…' : 'Spustit export'}
                   </button>
                   {recording && (
                     <button
@@ -313,6 +590,7 @@ export default function PreviewGeneratorPage() {
                     </button>
                   )}
                 </div>
+                {status && <p className="text-sm text-[var(--mpc-muted)]">{status}</p>}
                 {error && <p className="text-sm text-red-400">{error}</p>}
               </div>
 
@@ -339,6 +617,7 @@ export default function PreviewGeneratorPage() {
             </div>
           </div>
         </div>
+        <audio ref={audioRef} className="hidden" preload="auto" />
       </section>
     </main>
   );
