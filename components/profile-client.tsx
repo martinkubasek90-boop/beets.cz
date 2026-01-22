@@ -5108,8 +5108,16 @@ const buildAppleEmbed = (url: string) => {
                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
+                            <div className="h-10 w-10 overflow-hidden rounded-lg border border-white/10 bg-black/40">
+                              {beat.cover_url ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={beat.cover_url} alt={beat.title || 'Beat cover'} className="h-full w-full object-cover" />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[10px] text-white/30">NO COVER</div>
+                              )}
+                            </div>
                             <p className="text-base font-semibold text-[var(--mpc-light)] truncate">{beat.title}</p>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
