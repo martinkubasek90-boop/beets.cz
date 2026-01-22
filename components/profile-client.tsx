@@ -4415,15 +4415,15 @@ const buildAppleEmbed = (url: string) => {
                   </div>
                 )}
                 {!isMcOnly && (
-                  <div className="rounded-2xl border border-[var(--mpc-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%),var(--mpc-panel)] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.45)] sm:p-6">
+                  <div className="max-w-full rounded-2xl border border-[var(--mpc-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%),var(--mpc-panel)] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.45)] sm:p-6">
                     <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h2 className="text-2xl font-semibold text-[var(--mpc-light)]">Přehled</h2>
                         <p className="text-[11px] uppercase tracking-[0.32em] text-[var(--mpc-muted)]">Rychlý přístup</p>
                       </div>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                    <div className="grid min-w-0 gap-4 md:grid-cols-2">
+                      <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-base font-semibold text-[var(--mpc-light)]">Moje beaty</p>
@@ -4466,7 +4466,7 @@ const buildAppleEmbed = (url: string) => {
                           </div>
                         )}
                       </div>
-                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                      <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-base font-semibold text-[var(--mpc-light)]">Moje projekty</p>
@@ -4514,9 +4514,9 @@ const buildAppleEmbed = (url: string) => {
                         )}
                       </div>
                     </div>
-                    <div className="mt-6 grid gap-5 md:grid-cols-2">
+                    <div className="mt-6 grid min-w-0 gap-5 md:grid-cols-2">
                       {collabThreads.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Spolupráce</p>
@@ -4554,7 +4554,7 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {directThreads.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Zprávy</p>
@@ -4592,7 +4592,7 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {myAccessRequests.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
@@ -4630,7 +4630,7 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {myPosts.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Moje články</p>
@@ -4668,7 +4668,7 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="group max-w-full rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
                           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Moje fórum</p>
