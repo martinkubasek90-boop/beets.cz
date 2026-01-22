@@ -37,9 +37,8 @@
 body {
   @apply antialiased;
   margin: 0;
-  background: radial-gradient(140% 140% at 20% 20%, rgba(0, 86, 63, 0.18), transparent 40%),
-    radial-gradient(120% 120% at 80% 10%, rgba(91, 157, 255, 0.12), transparent 35%),
-    linear-gradient(145deg, #0a0f17 0%, #0c1c23 50%, #0b221d 100%);
+  background: radial-gradient(120% 120% at 80% 10%, rgba(91, 157, 255, 0.12), transparent 35%),
+    linear-gradient(160deg, #090c12 0%, #06080d 55%, #050505 100%);
   color: var(--mpc-light);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
     'Segoe UI', sans-serif;
