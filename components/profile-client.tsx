@@ -3283,8 +3283,8 @@ const buildAppleEmbed = (url: string) => {
         </div>
       )}
 
-      <div className="mt-5 grid min-h-0 h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-        <aside className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+      <div className="mt-5 flex flex-col gap-4 md:grid md:min-h-0 md:h-[640px] md:max-h-[75vh] md:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+        <aside className="flex flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
@@ -3295,7 +3295,7 @@ const buildAppleEmbed = (url: string) => {
               )}
             </div>
           </div>
-          <div className="flex-1 space-y-2 overflow-y-auto p-2">
+          <div className="max-h-[50vh] flex-1 space-y-2 overflow-y-auto p-2 md:max-h-none">
             {directThreads.length === 0 && !messagesLoading && (
               <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Žádné konverzace.</p>
             )}
@@ -3419,10 +3419,10 @@ const buildAppleEmbed = (url: string) => {
           </div>
         </aside>
 
-        <section className="flex h-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+        <section className="flex flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           {activeDmThread ? (
             <>
-              <div className="flex items-center justify-between border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-5 py-4">
+              <div className="flex flex-col gap-2 border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
                 <div>
                   <p className="text-sm font-semibold text-[var(--mpc-light)]">{activeDmThread.otherName}</p>
                   <p className="text-[11px] text-[var(--mpc-muted)]">
@@ -3434,7 +3434,7 @@ const buildAppleEmbed = (url: string) => {
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5">
                 {hiddenDmCount > 0 && (
                   <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
@@ -3450,7 +3450,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[72%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] ${
+                          className={`max-w-[85%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
@@ -3467,7 +3467,7 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               </div>
 
-              <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-5 py-4">
+              <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-4 py-3 sm:px-5 sm:py-4">
                 <textarea
                   className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-sm text-[var(--mpc-light)] shadow-[0_10px_24px_rgba(0,0,0,0.35)] focus:border-[var(--mpc-accent)] focus:outline-none"
                   rows={3}
@@ -3522,8 +3522,8 @@ const buildAppleEmbed = (url: string) => {
     </div>
   ) : null;
   const collabsSection = (
-    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="collabs">
-      <div className="mb-4 flex items-center justify-between">
+    <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5" id="collabs">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
             {t('profile.collabs.title', 'Spolupráce')}
@@ -3537,7 +3537,7 @@ const buildAppleEmbed = (url: string) => {
         </div>
         <button
           onClick={() => setShowNewThreadForm((prev) => !prev)}
-          className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+          className="w-full rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white sm:w-auto"
         >
           {showNewThreadForm ? 'Zavřít' : 'Nová spolupráce'}
         </button>
@@ -3589,8 +3589,8 @@ const buildAppleEmbed = (url: string) => {
         </form>
       )}
 
-      <div className="mt-5 grid h-[640px] max-h-[75vh] gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-        <aside className="flex h-full flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)]">
+      <div className="mt-5 flex flex-col gap-4 md:grid md:min-h-0 md:h-[640px] md:max-h-[75vh] md:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+        <aside className="flex flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--mpc-light)]">Vlákna</p>
@@ -3599,7 +3599,7 @@ const buildAppleEmbed = (url: string) => {
               </p>
             </div>
           </div>
-          <div className="flex-1 space-y-2 overflow-y-auto p-2">
+          <div className="max-h-[50vh] flex-1 space-y-2 overflow-y-auto p-2 md:max-h-none">
             {collabThreadsLoading ? (
               <p className="px-2 py-3 text-[12px] text-[var(--mpc-muted)]">Načítám spolupráce…</p>
             ) : collabThreads.length === 0 ? (
@@ -3682,14 +3682,14 @@ const buildAppleEmbed = (url: string) => {
           </div>
         </aside>
 
-        <div className="flex h-full min-h-0 flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-sm text-[var(--mpc-light)] shadow-[0_22px_50px_rgba(0,0,0,0.45)]">
+        <div className="flex flex-col rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] text-sm text-[var(--mpc-light)] shadow-[0_22px_50px_rgba(0,0,0,0.45)] md:h-full md:min-h-0">
           {!activeCollabThread ? (
             <div className="flex flex-1 items-center justify-center text-[12px] text-[var(--mpc-muted)]">
               Vyber vlákno vlevo.
             </div>
           ) : (
             <div className="flex h-full flex-col">
-              <div className="flex items-start justify-between gap-3 border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
+              <div className="flex flex-col gap-2 border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-base font-semibold">{activeCollabThreadLabel}</p>
                   <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)]">
@@ -3712,7 +3712,7 @@ const buildAppleEmbed = (url: string) => {
                 </p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3 px-4 pt-3 text-[11px] text-[var(--mpc-muted)]">
+              <div className="flex flex-wrap items-center gap-2 px-4 pt-3 text-[11px] text-[var(--mpc-muted)]">
                 <span>Poslední aktivita: {formatRelativeTime(getLastActivity(activeCollabThread))}</span>
                 {activeCollabThread.deadline && (
                   <span>Deadline: {new Date(activeCollabThread.deadline).toLocaleDateString('cs-CZ')}</span>
@@ -3749,7 +3749,7 @@ const buildAppleEmbed = (url: string) => {
                 </button>
               </div>
 
-              <div className="flex-1 min-h-0 space-y-3 overflow-y-auto px-4 py-4 pr-1">
+              <div className="flex-1 min-h-0 space-y-3 overflow-y-auto px-3 py-4 pr-1 max-h-[60vh] md:px-4 md:max-h-none">
                 <div className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-3 space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-[12px] text-[var(--mpc-light)] font-semibold">
@@ -4134,13 +4134,13 @@ const buildAppleEmbed = (url: string) => {
       <section className="mt-3 border-b border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/60 py-3 backdrop-blur">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex flex-wrap items-center gap-3 md:gap-4">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black"
-            >
-              <span className="text-[14px]">←</span>
-              <span>Zpět</span>
-            </Link>
+          <Link
+            href="/"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-black/60 bg-black/80 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:bg-black sm:w-auto sm:justify-start"
+          >
+            <span className="text-[14px]">←</span>
+            <span>Zpět</span>
+          </Link>
             <div className="hidden flex-wrap items-center gap-4 text-xs uppercase tracking-[0.15em] md:flex md:text-sm">
               <button
                 type="button"
@@ -4211,7 +4211,7 @@ const buildAppleEmbed = (url: string) => {
             </div>
             <button
               onClick={() => setTabsOpen((p) => !p)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_6px_16px_rgba(0,0,0,0.35)] backdrop-blur hover:border-[var(--mpc-accent)] md:hidden sm:ml-auto sm:w-auto sm:justify-start"
             >
               Menu
               <span className="text-[13px]">{tabsOpen ? '▲' : '▼'}</span>
@@ -4327,16 +4327,16 @@ const buildAppleEmbed = (url: string) => {
                   </div>
                 )}
                 {!isMcOnly && (
-                  <div className="rounded-2xl border border-[var(--mpc-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%),var(--mpc-panel)] p-6 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
-                    <div className="mb-6 flex items-center justify-between">
+                  <div className="rounded-2xl border border-[var(--mpc-dark)] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.06),transparent_55%),var(--mpc-panel)] p-4 shadow-[0_16px_40px_rgba(0,0,0,0.45)] sm:p-6">
+                    <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h2 className="text-2xl font-semibold text-[var(--mpc-light)]">Přehled</h2>
                         <p className="text-[11px] uppercase tracking-[0.32em] text-[var(--mpc-muted)]">Rychlý přístup</p>
                       </div>
                     </div>
-                    <div className="grid gap-5 md:grid-cols-2">
-                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                        <div className="mb-4 flex items-center justify-between">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-base font-semibold text-[var(--mpc-light)]">Moje beaty</p>
                             <p className="text-[12px] text-[var(--mpc-muted)]">{beats.length} beatů</p>
@@ -4345,7 +4345,7 @@ const buildAppleEmbed = (url: string) => {
                             <button
                               type="button"
                               onClick={() => setActiveTab('beats')}
-                              className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                             >
                               Zobrazit vše
                             </button>
@@ -4370,7 +4370,7 @@ const buildAppleEmbed = (url: string) => {
                             <button
                               type="button"
                               onClick={() => toggleOverviewExpanded('beats')}
-                              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                               aria-label={overviewExpanded.beats ? 'Sbalit seznam beatů' : 'Rozbalit seznam beatů'}
                             >
                               <span className={`transition ${overviewExpanded.beats ? 'rotate-180' : ''}`}>▾</span>
@@ -4378,8 +4378,8 @@ const buildAppleEmbed = (url: string) => {
                           </div>
                         )}
                       </div>
-                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                        <div className="mb-4 flex items-center justify-between">
+                      <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-base font-semibold text-[var(--mpc-light)]">Moje projekty</p>
                             <p className="text-[12px] text-[var(--mpc-muted)]">{projects.length} projektů</p>
@@ -4388,7 +4388,7 @@ const buildAppleEmbed = (url: string) => {
                             <button
                               type="button"
                               onClick={() => setActiveTab('projects')}
-                              className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                              className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                             >
                               Zobrazit vše
                             </button>
@@ -4417,7 +4417,7 @@ const buildAppleEmbed = (url: string) => {
                             <button
                               type="button"
                               onClick={() => toggleOverviewExpanded('projects')}
-                              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                               aria-label={overviewExpanded.projects ? 'Sbalit seznam projektů' : 'Rozbalit seznam projektů'}
                             >
                               <span className={`transition ${overviewExpanded.projects ? 'rotate-180' : ''}`}>▾</span>
@@ -4428,8 +4428,8 @@ const buildAppleEmbed = (url: string) => {
                     </div>
                     <div className="mt-6 grid gap-5 md:grid-cols-2">
                       {collabThreads.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                          <div className="mb-3 flex items-center justify-between">
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Spolupráce</p>
                               <p className="text-[12px] text-[var(--mpc-muted)]">{collabThreads.length} aktivních vláken</p>
@@ -4438,7 +4438,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => setActiveTab('collabs')}
-                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                                className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                               >
                                 Detail
                               </button>
@@ -4456,7 +4456,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => toggleOverviewExpanded('collabs')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                                 aria-label={overviewExpanded.collabs ? 'Sbalit seznam spoluprací' : 'Rozbalit seznam spoluprací'}
                               >
                                 <span className={`transition ${overviewExpanded.collabs ? 'rotate-180' : ''}`}>▾</span>
@@ -4466,8 +4466,8 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {directThreads.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                          <div className="mb-3 flex items-center justify-between">
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Zprávy</p>
                               <p className="text-[12px] text-[var(--mpc-muted)]">{directThreads.length} konverzací</p>
@@ -4476,7 +4476,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => setActiveTab('messages')}
-                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                                className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                               >
                                 Detail
                               </button>
@@ -4494,7 +4494,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => toggleOverviewExpanded('messages')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                                 aria-label={overviewExpanded.messages ? 'Sbalit seznam zpráv' : 'Rozbalit seznam zpráv'}
                               >
                                 <span className={`transition ${overviewExpanded.messages ? 'rotate-180' : ''}`}>▾</span>
@@ -4504,8 +4504,8 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {myAccessRequests.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                          <div className="mb-3 flex items-center justify-between">
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Žádosti o přístup</p>
                               <p className="text-[12px] text-[var(--mpc-muted)]">{myAccessRequests.length} žádostí</p>
@@ -4514,7 +4514,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => setActiveTab('projects')}
-                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                                className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                               >
                                 Detail
                               </button>
@@ -4532,7 +4532,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => toggleOverviewExpanded('access')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                                 aria-label={overviewExpanded.access ? 'Sbalit seznam žádostí' : 'Rozbalit seznam žádostí'}
                               >
                                 <span className={`transition ${overviewExpanded.access ? 'rotate-180' : ''}`}>▾</span>
@@ -4542,8 +4542,8 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {myPosts.length > 0 && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                          <div className="mb-3 flex items-center justify-between">
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Moje články</p>
                               <p className="text-[12px] text-[var(--mpc-muted)]">{myPosts.length} článků</p>
@@ -4552,7 +4552,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => setActiveTab('posts')}
-                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                                className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                               >
                                 Detail
                               </button>
@@ -4570,7 +4570,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => toggleOverviewExpanded('posts')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                                 aria-label={overviewExpanded.posts ? 'Sbalit seznam článků' : 'Rozbalit seznam článků'}
                               >
                                 <span className={`transition ${overviewExpanded.posts ? 'rotate-180' : ''}`}>▾</span>
@@ -4580,8 +4580,8 @@ const buildAppleEmbed = (url: string) => {
                         </div>
                       )}
                       {(myForumThreads.length > 0 || myForumCategories.length > 0) && (
-                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50">
-                          <div className="mb-3 flex items-center justify-between">
+                        <div className="group rounded-xl border border-[var(--mpc-dark)] bg-black/40 p-4 text-left transition hover:border-[var(--mpc-accent)] hover:bg-black/50 sm:p-5">
+                          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                               <p className="text-base font-semibold text-[var(--mpc-light)]">Moje fórum</p>
                               <p className="text-[12px] text-[var(--mpc-muted)]">
@@ -4592,7 +4592,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => setActiveTab('forum')}
-                                className="rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black"
+                                className="w-full rounded-full border border-[var(--mpc-accent)]/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--mpc-accent)] transition hover:bg-[var(--mpc-accent)] hover:text-black sm:w-auto"
                               >
                                 Detail
                               </button>
@@ -4610,7 +4610,7 @@ const buildAppleEmbed = (url: string) => {
                               <button
                                 type="button"
                                 onClick={() => toggleOverviewExpanded('forum')}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/15 text-[12px] text-[var(--mpc-muted)] transition hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:h-8 sm:w-8"
                                 aria-label={overviewExpanded.forum ? 'Sbalit seznam fóra' : 'Rozbalit seznam fóra'}
                               >
                                 <span className={`transition ${overviewExpanded.forum ? 'rotate-180' : ''}`}>▾</span>
@@ -4625,7 +4625,7 @@ const buildAppleEmbed = (url: string) => {
               </>
             )}
             {activeTab === 'messages' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
@@ -4637,7 +4637,7 @@ const buildAppleEmbed = (url: string) => {
                   </div>
                   <Link
                     href="/messages"
-                    className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)]"
+                    className="w-full rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_8px_18px_rgba(243,116,51,0.35)] sm:w-auto"
                   >
                     Otevřít inbox
                   </Link>
@@ -4646,8 +4646,8 @@ const buildAppleEmbed = (url: string) => {
               </div>
             )}
             {isMcOnly && activeTab === 'acapellas' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="acapellas">
-                <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5" id="acapellas">
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-[var(--mpc-light)]">Moje akapely</h2>
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--mpc-muted)]">{acapellas.length} {t('profile.items', 'položek')}</p>
@@ -4900,8 +4900,8 @@ const buildAppleEmbed = (url: string) => {
               </div>
             )}
             {!isMcOnly && activeTab === 'beats' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="beats-feed">
-                <div className="mb-4 flex items-center justify-between">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5" id="beats-feed">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                   <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
                     {t('profile.beats.title', 'Moje beaty')}
@@ -4911,7 +4911,7 @@ const buildAppleEmbed = (url: string) => {
                     Přetáhni pro změnu pořadí
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-[12px] text-[var(--mpc-muted)]">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
                   <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle data</span>
                   <span className="text-[var(--mpc-dark)]">•</span>
                   <span className="hover:text-[var(--mpc-light)] cursor-pointer">Podle BPM</span>
@@ -5003,17 +5003,17 @@ const buildAppleEmbed = (url: string) => {
                           : undefined
                       }
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
-                            <p className="text-base font-semibold text-[var(--mpc-light)]">{beat.title}</p>
+                            <p className="text-base font-semibold text-[var(--mpc-light)] truncate">{beat.title}</p>
                           </div>
                           <p className="text-[12px] text-[var(--mpc-muted)]">
                             {beat.bpm ? `${beat.bpm} BPM` : '—'} · {beat.mood || '—'}
                           </p>
                         </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         <button
                           onClick={() => handlePlayBeat(beat)}
                           disabled={!beat.audio_url}
@@ -5105,7 +5105,7 @@ const buildAppleEmbed = (url: string) => {
                               <p className="mt-1 text-[11px] text-[var(--mpc-muted)]">Nahraje se do bucketu beats.</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-3">
                             <button
                               onClick={handleSaveBeat}
                               className="rounded-full bg-[var(--mpc-accent)] px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.15em] text-white"
@@ -5164,8 +5164,8 @@ const buildAppleEmbed = (url: string) => {
 
             {!isMcOnly && activeTab === 'projects' && (
             <>
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)]" id="projects-feed">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5" id="projects-feed">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-[var(--mpc-light)]">
                     {t('profile.projects.title', 'Moje projekty')}
@@ -5176,7 +5176,7 @@ const buildAppleEmbed = (url: string) => {
                   </p>
                 </div>
                 {projects.length > 3 && (
-                  <div className="flex items-center gap-1 text-[12px] text-[var(--mpc-muted)]">
+                  <div className="flex items-center gap-1 text-[11px] text-[var(--mpc-muted)] sm:text-[12px]">
                     <button
                       type="button"
                       onClick={() => scrollListBy(projectsListRef, 'up')}
@@ -5270,21 +5270,21 @@ const buildAppleEmbed = (url: string) => {
                             setDragProjectId(null);
                             setDragOverProjectId(null);
                           }}
-                          className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition ${
+                          className={`flex flex-col gap-3 rounded-lg border px-4 py-3 text-sm text-[var(--mpc-light)] transition sm:flex-row sm:items-center sm:justify-between ${
                             isDragOver ? 'border-[var(--mpc-accent)]/80' : 'border-[var(--mpc-dark)]'
                           } ${isDragging ? 'opacity-70' : ''} bg-[var(--mpc-panel)]`}
                           style={projectStyle}
                         >
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-[12px] text-[var(--mpc-muted)] cursor-grab">⋮⋮</span>
-                              <p className="font-semibold">{project.title}</p>
+                              <p className="font-semibold truncate">{project.title}</p>
                             </div>
                             <p className="text-[12px] text-[var(--mpc-muted)]">
                               {project.description || 'Bez popisu'}
                             </p>
                             {canShareUrl && (
-                              <div className="mt-2 flex max-w-[360px] items-center gap-2">
+                              <div className="mt-2 flex max-w-full flex-wrap items-center gap-2 sm:max-w-[360px]">
                                 <input
                                   readOnly
                                   value={projectUrl}
@@ -5294,14 +5294,14 @@ const buildAppleEmbed = (url: string) => {
                                 <button
                                   type="button"
                                   onClick={() => void handleCopyProjectUrl(projectUrl, project.id)}
-                                  className="rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                                  className="w-full rounded-full border border-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)] sm:w-auto"
                                 >
                                   {copiedProjectLinkId === project.id ? 'OK' : 'Kopírovat'}
                                 </button>
                               </div>
                             )}
                           </div>
-                          <div className="flex flex-col items-end gap-2 text-[11px] text-[var(--mpc-muted)]">
+                          <div className="flex w-full flex-col items-start gap-2 text-[11px] text-[var(--mpc-muted)] sm:w-auto sm:items-end">
                             <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">Projekt</span>
                             <div className="flex flex-wrap items-center gap-2">
                               <button
@@ -5354,7 +5354,7 @@ const buildAppleEmbed = (url: string) => {
                                 Smazat
                               </button>
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-[var(--mpc-light)]">
+                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-[var(--mpc-light)]">
                               <label className="text-[var(--mpc-muted)]">Přístup</label>
                               <select
                                 value={project.access_mode || 'public'}
@@ -5392,8 +5392,8 @@ const buildAppleEmbed = (url: string) => {
                           </div>
                         </div>
                         {editingProject?.id === project.id && (
-                          <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4">
-                            <div className="flex items-center justify-between">
+                          <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-4 sm:p-5">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
                                 <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit projekt</h3>
                                 <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
@@ -5765,8 +5765,8 @@ const buildAppleEmbed = (url: string) => {
               )}
             </div>
 
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3 sm:p-5">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Žádosti o přístup k projektům</h3>
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -5786,7 +5786,7 @@ const buildAppleEmbed = (url: string) => {
                 <div className="space-y-2">
                   {projectRequests.map((req) => (
                     <div key={req.id} className="flex flex-col gap-2 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="font-semibold">{req.requester_name || 'Neznámý uživatel'}</p>
                           <p className="text-[11px] text-[var(--mpc-muted)]">
@@ -5820,8 +5820,8 @@ const buildAppleEmbed = (url: string) => {
             </>
             )}
             {isMcOnly && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3 sm:p-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje žádosti o přístup</h3>
                   </div>
@@ -5838,7 +5838,7 @@ const buildAppleEmbed = (url: string) => {
                   <div className="space-y-2">
                     {myAccessRequests.map((req) => (
                       <div key={req.id} className="flex flex-col gap-1 rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-deck)] px-3 py-2 text-sm text-[var(--mpc-light)]">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <p className="font-semibold">{req.project_title || req.project_id}</p>
                             <div className="mt-1 flex items-center gap-2">
@@ -5873,10 +5873,10 @@ const buildAppleEmbed = (url: string) => {
 
             {profile.role !== 'mc' && activeTab === 'forum' && (
               <div
-                className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3"
+                className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3 sm:p-5"
                 id="my-forum"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje fórum</h3>
                     <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -5901,13 +5901,13 @@ const buildAppleEmbed = (url: string) => {
                         {myForumCategories.map((cat) => (
                           <div
                             key={cat.id}
-                            className="flex items-start justify-between rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)]"
+                            className="flex flex-col gap-3 rounded border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-3 py-2 text-sm text-[var(--mpc-light)] sm:flex-row sm:items-start sm:justify-between"
                           >
                             <div>
                               <p className="font-semibold">{cat.name}</p>
                               <p className="text-[11px] text-[var(--mpc-muted)]">{cat.description || 'Bez popisu'}</p>
                             </div>
-                            <div className="flex flex-col gap-1 text-[11px]">
+                            <div className="flex w-full flex-col items-start gap-1 text-[11px] sm:w-auto sm:items-end">
                               <button
                                 onClick={async () => {
                                   const name = prompt('Upravit název kategorie', cat.name) ?? cat.name;
@@ -6030,8 +6030,8 @@ const buildAppleEmbed = (url: string) => {
             )}
 
           {canWriteArticles && activeTab === 'posts' && (
-            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-5 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3" id="my-posts">
-              <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] space-y-3 sm:p-5" id="my-posts">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Moje články</h3>
                   <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
@@ -6051,14 +6051,14 @@ const buildAppleEmbed = (url: string) => {
                 ) : (
                   myPosts.map((post) => (
                     <div key={post.id} className="rounded-lg border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="space-y-1">
                           <p className="text-base font-semibold text-[var(--mpc-light)]">{post.title}</p>
                           <p className="text-[12px] text-[var(--mpc-muted)]">{post.excerpt}</p>
                           <p className="text-[11px] text-[var(--mpc-muted)]">{post.date}</p>
                         </div>
-                        <div className="flex flex-col gap-2 text-[11px]">
-                          <div className="flex gap-2">
+                        <div className="flex w-full flex-col gap-2 text-[11px] sm:w-auto sm:items-end">
+                          <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => void handleTogglePostPublished(post.id, true)}
                               className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
@@ -6336,14 +6336,14 @@ const buildAppleEmbed = (url: string) => {
               </button>
               {openSections.profile && (
                 <div
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-10"
+                  className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 sm:items-center sm:py-10"
                   onClick={() => toggleSection('profile')}
                 >
                   <div
-                    className="w-full max-w-3xl rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+                    className="w-full max-w-3xl rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.6)] sm:p-6"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <div className="mb-4 flex items-center justify-between">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit profil</h3>
                         <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
@@ -6358,7 +6358,7 @@ const buildAppleEmbed = (url: string) => {
                         Zavřít
                       </button>
                     </div>
-                    <form onSubmit={handleProfileSubmit} className="space-y-4">
+                    <form onSubmit={handleProfileSubmit} className="max-h-[75vh] space-y-4 overflow-y-auto pr-1 sm:max-h-none">
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
                         Jméno / producent
