@@ -4361,27 +4361,37 @@ const buildAppleEmbed = (url: string) => {
                 </Link>
               )}
               <div className="mt-2 rounded-lg border border-white/10 bg-black/20 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.24em] text-[var(--mpc-muted)]">Nástroje</p>
-                <div className="mt-2 space-y-2">
-                  {TOOL_GROUPS.map((group) => (
-                    <div key={group.label}>
-                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
-                        {group.label}
-                      </p>
-                      <div className="mt-1 flex flex-col gap-1">
-                        {group.items.map((tool) => (
-                          <Link
-                            key={tool.href}
-                            href={tool.href}
-                            className="py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]"
-                          >
-                            {tool.label}
-                          </Link>
-                        ))}
+                <button
+                  type="button"
+                  onClick={() => setToolsOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between text-[10px] uppercase tracking-[0.24em] text-[var(--mpc-muted)]"
+                >
+                  Nástroje
+                  <span className="text-[12px]">{toolsOpen ? '▲' : '▼'}</span>
+                </button>
+                {toolsOpen && (
+                  <div className="mt-2 space-y-2">
+                    {TOOL_GROUPS.map((group) => (
+                      <div key={group.label}>
+                        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--mpc-muted)]">
+                          {group.label}
+                        </p>
+                        <div className="mt-1 flex flex-col gap-1">
+                          {group.items.map((tool) => (
+                            <Link
+                              key={tool.href}
+                              href={tool.href}
+                              onClick={() => setToolsOpen(false)}
+                              className="py-1 text-[11px] uppercase tracking-[0.12em] text-[var(--mpc-muted)] hover:text-[var(--mpc-light)]"
+                            >
+                              {tool.label}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <NotificationBell />
             </div>
