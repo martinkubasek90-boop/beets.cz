@@ -6335,8 +6335,30 @@ const buildAppleEmbed = (url: string) => {
                 {openSections.profile ? 'Schovat' : 'Upravit profil'}
               </button>
               {openSections.profile && (
-                <div className="mt-4 space-y-4">
-                  <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-10"
+                  onClick={() => toggleSection('profile')}
+                >
+                  <div
+                    className="w-full max-w-3xl rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[var(--mpc-light)]">Upravit profil</h3>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
+                          Nastavení profilu
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('profile')}
+                        className="rounded-full border border-[var(--mpc-dark)] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-[var(--mpc-muted)] hover:border-[var(--mpc-accent)] hover:text-[var(--mpc-accent)]"
+                      >
+                        Zavřít
+                      </button>
+                    </div>
+                    <form onSubmit={handleProfileSubmit} className="space-y-4">
                     <div>
                       <label className="block text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--mpc-muted)]">
                         Jméno / producent
@@ -6532,7 +6554,8 @@ const buildAppleEmbed = (url: string) => {
                     >
                       {saving ? 'Ukládám…' : 'Uložit profil'}
                     </button>
-                  </form>
+                    </form>
+                  </div>
                 </div>
               )}
             </div>
