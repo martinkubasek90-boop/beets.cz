@@ -3492,7 +3492,7 @@ const buildAppleEmbed = (url: string) => {
 
               <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-4 py-3 sm:px-5 sm:py-4">
                 <textarea
-                  className="w-full rounded-2xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)]/80 px-4 py-3 text-sm text-[var(--mpc-light)] shadow-[0_10px_24px_rgba(0,0,0,0.35)] focus:border-[var(--mpc-accent)] focus:outline-none"
+                  className="w-full appearance-none rounded-2xl border border-white/40 bg-[#3a3a3a] px-4 py-3 text-sm text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)] placeholder:text-white/60 focus:border-white/70 focus:outline-none"
                   rows={3}
                   placeholder="Napiš odpověď…"
                   value={threadReplies[activeDmThread.otherId] || ''}
