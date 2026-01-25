@@ -5788,18 +5788,6 @@ const buildAppleEmbed = (url: string) => {
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
                                 <h4 className="text-sm font-semibold text-[var(--mpc-light)]">Skladby</h4>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setProjectEditTracks((prev) =>
-                                      prev.length >= 30 ? prev : [...prev, { name: '', url: '', file: null }]
-                                    )
-                                  }
-                                  className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
-                                  disabled={projectEditTracks.length >= 30}
-                                >
-                                  Další skladba
-                                </button>
                               </div>
                               <div className="space-y-2">
                                 {projectEditTracks.map((tr, idx) => (
@@ -5852,6 +5840,20 @@ const buildAppleEmbed = (url: string) => {
                                     </div>
                                   </div>
                                 ))}
+                              </div>
+                              <div className="flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setProjectEditTracks((prev) =>
+                                      prev.length >= 30 ? prev : [...prev, { name: '', url: '', file: null }]
+                                    )
+                                  }
+                                  className="rounded-full border border-[var(--mpc-accent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--mpc-accent)] hover:bg-[var(--mpc-accent)] hover:text-white"
+                                  disabled={projectEditTracks.length >= 30}
+                                >
+                                  Další skladba
+                                </button>
                               </div>
                             </div>
 

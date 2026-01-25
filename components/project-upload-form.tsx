@@ -313,7 +313,7 @@ export default function ProjectUploadForm({ onCreated }: ProjectUploadFormProps)
             className="rounded-full border border-[var(--mpc-accent,#f37433)] bg-[var(--mpc-accent,#f37433)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-white shadow-[0_8px_20px_rgba(243,116,51,0.35)] disabled:opacity-60"
             disabled={tracks.length >= MAX_TRACKS}
           >
-            Další
+            Další skladba
           </button>
         </div>
         {tracks.length >= MAX_TRACKS && (
