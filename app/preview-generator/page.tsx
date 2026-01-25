@@ -199,19 +199,24 @@ export default function PreviewGeneratorPage() {
     }
 
     const audioCtx = audioCtxRef.current;
-    const source = audioCtx.createMediaElementSource(audioRef.current);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 1024;
-    const destination = audioCtx.createMediaStreamDestination();
+    try {
+      const source = audioCtx.createMediaElementSource(audioRef.current);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 1024;
+      const destination = audioCtx.createMediaStreamDestination();
 
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-    source.connect(destination);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      source.connect(destination);
 
-    sourceRef.current = source;
-    destinationRef.current = destination;
-    analyserRef.current = analyser;
-    return destination.stream;
+      sourceRef.current = source;
+      destinationRef.current = destination;
+      analyserRef.current = analyser;
+      return destination.stream;
+    } catch (err) {
+      console.warn('Preview generator audio graph failed:', err);
+      return null;
+    }
   };
 
   const drawFrame = () => {
@@ -332,18 +337,28 @@ export default function PreviewGeneratorPage() {
       });
 
       const stream = canvasRef.current.captureStream(30);
-      const audioStream = await setupAudioGraph();
+      let audioStream: MediaStream | null = await setupAudioGraph();
+
+      if (!audioStream) {
+        const capture = (audioEl as HTMLAudioElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream });
+        audioStream = capture.captureStream?.() ?? capture.mozCaptureStream?.() ?? null;
+      }
 
       if (audioStream) {
         audioStream.getAudioTracks().forEach((track) => stream.addTrack(track));
+      } else {
+        throw new Error('Audio stream unavailable');
       }
 
-      let mimeType = 'video/webm;codecs=vp9,opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8,opus';
-      }
-
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const mimeTypes = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4',
+      ];
+      const mimeType = mimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) || '';
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       recorderRef.current = recorder;
       chunksRef.current = [];
 
@@ -378,7 +393,11 @@ export default function PreviewGeneratorPage() {
 
       recorder.start();
       drawFrame();
-      await audioEl.play();
+      try {
+        await audioEl.play();
+      } catch (err) {
+        throw new Error('Audio playback blocked');
+      }
 
       const durationMs =
         Number.isFinite(audioEl.duration) && audioEl.duration > 0 ? audioEl.duration * 1000 : 0;
@@ -390,7 +409,13 @@ export default function PreviewGeneratorPage() {
       }, maxDuration);
     } catch (err) {
       console.error('Preview generator error:', err);
-      setError('Nepodařilo se spustit export. Zkus jiný prohlížeč nebo soubor.');
+      const message =
+        err instanceof Error && err.message === 'Audio stream unavailable'
+          ? 'Nepodařilo se připojit audio stopu. Zkus prosím stáhnout MP3 a nahrát ji ručně.'
+          : err instanceof Error && err.message === 'Audio playback blocked'
+            ? 'Prohlížeč zablokoval přehrávání audia. Zkus znovu kliknout nebo použít Chrome.'
+            : 'Nepodařilo se spustit export. Zkus jiný prohlížeč nebo soubor.';
+      setError(message);
       setRecording(false);
       setPreparing(false);
       setStatus(null);
