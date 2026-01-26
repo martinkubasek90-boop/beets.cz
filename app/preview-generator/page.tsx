@@ -601,8 +601,7 @@ export default function PreviewGeneratorPage() {
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={startRecording}
-                    disabled={recording || preparing || !audioUrl}
-                    className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black disabled:opacity-60"
+                    className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-black"
                   >
                     {preparing ? 'Připravuji…' : recording ? 'Nahrávám…' : 'Spustit export'}
                   </button>
