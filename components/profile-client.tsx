@@ -3457,13 +3457,13 @@ const buildAppleEmbed = (url: string) => {
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-4 md:px-5">
+              <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden px-4 py-4 md:px-5">
                 {hiddenDmCount > 0 && (
                   <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                   </div>
                 )}
-                <div className="space-y-3">
+                <div className="space-y-3 min-w-0">
                   {visibleDmMessages.map((m) => {
                     const isMe = m.user_id === userId;
                     const author =
@@ -3471,9 +3471,9 @@ const buildAppleEmbed = (url: string) => {
                         ? 'Ty'
                         : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
                     return (
-                      <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div key={m.id} className={`flex min-w-0 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`w-full max-w-[92%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-auto sm:max-w-[72%] ${
+                          className={`w-full max-w-[92%] min-w-0 rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-auto sm:max-w-[72%] ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
@@ -3482,7 +3482,7 @@ const buildAppleEmbed = (url: string) => {
                           <div className="text-[10px] text-[var(--mpc-muted)]">
                             {author} · {formatRelativeTime(m.created_at)}
                           </div>
-                          <p className="mt-1 whitespace-pre-line break-all">{m.body}</p>
+                          <p className="mt-1 whitespace-pre-line break-all min-w-0">{m.body}</p>
                         </div>
                       </div>
                     );
