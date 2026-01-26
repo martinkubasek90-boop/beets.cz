@@ -3473,7 +3473,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`max-w-[85%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`w-full max-w-[92%] rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:w-auto sm:max-w-[72%] ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
