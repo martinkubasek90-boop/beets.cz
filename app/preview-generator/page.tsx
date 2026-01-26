@@ -515,7 +515,7 @@ export default function PreviewGeneratorPage() {
                             const value = event.target.value;
                             setSelectedBeatId(value);
                             setSelectedProjectId('');
-                            const beat = beatOptions.find((item) => item.id === value);
+                            const beat = beatOptions.find((item) => String(item.id) === value);
                             if (beat) {
                               applyBeatImport(beat);
                             }
@@ -524,7 +524,7 @@ export default function PreviewGeneratorPage() {
                         >
                           <option value="">Vybrat beat…</option>
                           {beatOptions.map((beat) => (
-                            <option key={beat.id} value={beat.id}>
+                            <option key={beat.id} value={String(beat.id)}>
                               {beat.title || 'Bez názvu'}
                             </option>
                           ))}
@@ -538,7 +538,7 @@ export default function PreviewGeneratorPage() {
                             const value = event.target.value;
                             setSelectedProjectId(value);
                             setSelectedBeatId('');
-                            const project = projectOptions.find((item) => item.id === value);
+                            const project = projectOptions.find((item) => String(item.id) === value);
                             if (project) {
                               applyProjectImport(project);
                             }
@@ -550,7 +550,7 @@ export default function PreviewGeneratorPage() {
                             const tracks = Array.isArray(project.tracks_json) ? project.tracks_json : [];
                             const hasAudio = tracks.some((track) => Boolean(resolveProjectTrackUrl(track)));
                             return (
-                              <option key={project.id} value={project.id} disabled={!hasAudio}>
+                              <option key={project.id} value={String(project.id)} disabled={!hasAudio}>
                                 {project.title || 'Bez názvu'}
                                 {hasAudio ? '' : ' (bez audio)'}
                               </option>
