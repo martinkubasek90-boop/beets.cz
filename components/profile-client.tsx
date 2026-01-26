@@ -3482,7 +3482,7 @@ const buildAppleEmbed = (url: string) => {
                           <div className="text-[10px] text-[var(--mpc-muted)]">
                             {author} · {formatRelativeTime(m.created_at)}
                           </div>
-                          <p className="mt-1 whitespace-pre-line">{m.body}</p>
+                          <p className="mt-1 whitespace-pre-line break-all">{m.body}</p>
                         </div>
                       </div>
                     );
