@@ -3463,7 +3463,7 @@ const buildAppleEmbed = (url: string) => {
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                   </div>
                 )}
-                <div className="max-h-[60vh] w-full min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-2 pr-1">
+                <div className="max-h-[60vh] w-full min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-3">
                   {visibleDmMessages.map((m) => {
                     const isMe = m.user_id === userId;
                     const author =
@@ -3473,7 +3473,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className={`flex min-w-0 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`w-auto max-w-full min-w-0 overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`w-auto max-w-[80%] min-w-0 overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
@@ -3482,7 +3482,7 @@ const buildAppleEmbed = (url: string) => {
                           <div className="text-[10px] text-[var(--mpc-muted)]">
                             {author} · {formatRelativeTime(m.created_at)}
                           </div>
-                          <p className="mt-1 whitespace-pre-line break-all min-w-0">{m.body}</p>
+                          <p className="mt-1 min-w-0 whitespace-pre-line break-words">{m.body}</p>
                         </div>
                       </div>
                     );
