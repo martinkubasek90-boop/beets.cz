@@ -3490,7 +3490,7 @@ const buildAppleEmbed = (url: string) => {
                 </div>
               </div>
 
-              <div className="border-t border-[var(--mpc-dark)] bg-black/40 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="min-w-0 overflow-x-hidden border-t border-[var(--mpc-dark)] bg-black/40 px-4 py-3 sm:px-5 sm:py-4">
                 <textarea
                   className="w-full appearance-none rounded-2xl border border-white/40 bg-[#3a3a3a] px-4 py-3 text-sm text-white shadow-[0_10px_24px_rgba(0,0,0,0.35)] placeholder:text-white/60 focus:border-white/70 focus:outline-none"
                   rows={3}
@@ -3500,12 +3500,12 @@ const buildAppleEmbed = (url: string) => {
                     setThreadReplies((prev) => ({ ...prev, [activeDmThread.otherId]: e.target.value }))
                   }
                 />
-                <div className="mt-3 flex items-center justify-end">
+                <div className="mt-3 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                   <button
                     type="button"
                     onClick={() => void handleThreadReply(activeDmThread.otherId, activeDmThread.otherName)}
                     disabled={sendingMessage || !(threadReplies[activeDmThread.otherId]?.trim())}
-                    className="rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)] disabled:opacity-60"
+                    className="w-full rounded-full bg-[var(--mpc-accent)] px-5 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(243,116,51,0.45)] disabled:opacity-60 sm:w-auto"
                   >
                     {sendingMessage ? 'Odesílám…' : 'Odeslat'}
                   </button>
