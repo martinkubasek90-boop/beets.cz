@@ -3463,7 +3463,7 @@ const buildAppleEmbed = (url: string) => {
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                   </div>
                 )}
-                <div className="max-h-[60vh] w-full min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-3">
+                <div className="mx-auto max-h-[60vh] w-full max-w-[380px] min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-3 md:mx-0 md:max-w-none">
                   {visibleDmMessages.map((m) => {
                     const isMe = m.user_id === userId;
                     const author =
@@ -3473,7 +3473,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className="w-full min-w-0">
                         <div
-                          className={`min-w-0 max-w-[80%] overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`min-w-0 max-w-full overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
                             isMe ? 'ml-auto' : 'mr-auto'
                           } ${
                             isMe
