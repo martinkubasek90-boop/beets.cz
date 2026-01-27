@@ -3289,7 +3289,7 @@ const buildAppleEmbed = (url: string) => {
     : null;
   const activeCollabThreadLabel = activeCollabThread ? buildCollabLabel(activeCollabThread.participants) : '';
   const messagesInbox = (
-    <div className="w-full max-w-screen min-w-0 overflow-x-hidden">
+    <div className="w-full max-w-[100svw] min-w-0 overflow-x-hidden box-border">
       {(messagesLoading || messagesError || messageSuccess) && (
         <div className="mt-4 space-y-2">
           {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
@@ -3463,7 +3463,7 @@ const buildAppleEmbed = (url: string) => {
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                   </div>
                 )}
-                <div className="mx-auto max-h-[60vh] w-full max-w-[380px] min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-3 md:mx-0 md:max-w-none">
+                <div className="max-h-[60vh] w-full max-w-full min-w-0 space-y-3 overflow-y-auto overflow-x-hidden px-3 box-border">
                   {visibleDmMessages.map((m) => {
                     const isMe = m.user_id === userId;
                     const author =
@@ -3473,7 +3473,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className="w-full min-w-0">
                         <div
-                          className={`min-w-0 max-w-full overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`min-w-0 max-w-[80%] overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
                             isMe ? 'ml-auto' : 'mr-auto'
                           } ${
                             isMe
@@ -4715,7 +4715,7 @@ const buildAppleEmbed = (url: string) => {
               </>
             )}
             {activeTab === 'messages' && (
-              <div className="rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5">
+              <div className="w-full max-w-full box-border overflow-x-hidden rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
