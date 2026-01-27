@@ -3289,7 +3289,7 @@ const buildAppleEmbed = (url: string) => {
     : null;
   const activeCollabThreadLabel = activeCollabThread ? buildCollabLabel(activeCollabThread.participants) : '';
   const messagesInbox = (
-    <>
+    <div className="w-full max-w-screen min-w-0 overflow-x-hidden">
       {(messagesLoading || messagesError || messageSuccess) && (
         <div className="mt-4 space-y-2">
           {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
@@ -3307,7 +3307,7 @@ const buildAppleEmbed = (url: string) => {
       )}
 
       <div className="mt-5 flex w-full max-w-full min-w-0 flex-col gap-4 overflow-x-hidden md:grid md:min-h-0 md:h-[640px] md:max-h-[75vh] md:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
-        <aside className="flex flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
+        <aside className="flex w-full min-w-0 flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-[var(--mpc-light)]">Kontakty</p>
@@ -3519,7 +3519,7 @@ const buildAppleEmbed = (url: string) => {
           )}
         </section>
       </div>
-    </>
+    </div>
   );
   const incomingCallOverlay = incomingCall ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
