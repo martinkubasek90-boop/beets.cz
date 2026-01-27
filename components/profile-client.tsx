@@ -3471,9 +3471,11 @@ const buildAppleEmbed = (url: string) => {
                         ? 'Ty'
                         : profilesById[m.user_id || ''] || m.from_name || 'Neznámý';
                     return (
-                      <div key={m.id} className={`flex min-w-0 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                      <div key={m.id} className="w-full min-w-0">
                         <div
-                          className={`w-auto max-w-[80%] min-w-0 overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`min-w-0 max-w-[80%] overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                            isMe ? 'ml-auto' : 'mr-auto'
+                          } ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
