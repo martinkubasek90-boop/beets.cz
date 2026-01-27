@@ -3306,7 +3306,7 @@ const buildAppleEmbed = (url: string) => {
         </div>
       )}
 
-      <div className="mt-5 flex max-w-full flex-col gap-4 overflow-x-hidden md:grid md:min-h-0 md:h-[640px] md:max-h-[75vh] md:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
+      <div className="mt-5 flex w-full max-w-full min-w-0 flex-col gap-4 overflow-x-hidden md:grid md:min-h-0 md:h-[640px] md:max-h-[75vh] md:grid-cols-[320px_minmax(0,1fr)] lg:h-[680px]">
         <aside className="flex flex-col rounded-2xl border border-[var(--mpc-dark)] bg-gradient-to-b from-[var(--mpc-panel)] via-black/40 to-black/70 shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           <div className="flex items-center justify-between rounded-t-2xl border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.15),rgba(0,0,0,0))] px-4 py-3">
             <div>
@@ -3442,7 +3442,7 @@ const buildAppleEmbed = (url: string) => {
           </div>
         </aside>
 
-        <section className="flex max-w-full flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
+        <section className="flex w-full max-w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--mpc-dark)] bg-[linear-gradient(180deg,rgba(6,10,14,0.9),rgba(0,0,0,0.85))] shadow-[0_22px_50px_rgba(0,0,0,0.55)] md:h-full md:min-h-0">
           {activeDmThread ? (
             <>
               <div className="flex flex-col gap-2 border-b border-[var(--mpc-dark)] bg-[linear-gradient(90deg,rgba(243,116,51,0.12),rgba(0,0,0,0))] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4">
@@ -3463,7 +3463,7 @@ const buildAppleEmbed = (url: string) => {
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
                   </div>
                 )}
-                <div className="max-h-[60vh] min-w-0 space-y-3 overflow-y-auto pr-1">
+                <div className="max-h-[60vh] w-full min-w-0 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
                   {visibleDmMessages.map((m) => {
                     const isMe = m.user_id === userId;
                     const author =
@@ -3473,7 +3473,7 @@ const buildAppleEmbed = (url: string) => {
                     return (
                       <div key={m.id} className={`flex min-w-0 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <div
-                          className={`w-auto max-w-full min-w-0 overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
+                          className={`w-auto max-w-[90vw] min-w-0 overflow-hidden rounded-2xl border px-4 py-2 text-[12px] leading-relaxed shadow-[0_10px_24px_rgba(0,0,0,0.35)] sm:max-w-[72%] ${
                             isMe
                               ? 'border-[var(--mpc-accent)]/60 bg-[linear-gradient(135deg,rgba(243,116,51,0.26),rgba(243,116,51,0.08))] text-[var(--mpc-light)]'
                               : 'border-white/10 bg-[linear-gradient(135deg,rgba(17,24,32,0.95),rgba(0,0,0,0.75))] text-[var(--mpc-light)]'
