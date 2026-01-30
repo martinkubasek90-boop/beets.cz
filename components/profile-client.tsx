@@ -3289,7 +3289,7 @@ const buildAppleEmbed = (url: string) => {
     : null;
   const activeCollabThreadLabel = activeCollabThread ? buildCollabLabel(activeCollabThread.participants) : '';
   const messagesInbox = (
-    <div className="w-full max-w-[100svw] min-w-0 overflow-x-hidden box-border md:max-w-none">
+    <div className="w-full max-w-full min-w-0 overflow-x-hidden box-border">
       {(messagesLoading || messagesError || messageSuccess) && (
         <div className="mt-4 space-y-2">
           {messagesLoading && <p className="text-[11px] text-[var(--mpc-muted)]">Načítám…</p>}
@@ -3457,7 +3457,7 @@ const buildAppleEmbed = (url: string) => {
                 </span>
               </div>
 
-              <div className="mx-auto flex-1 w-full max-w-[80%] min-w-0 overflow-x-hidden px-0 py-4 md:mx-0 md:max-w-none md:px-5">
+              <div className="mx-auto flex-1 w-full max-w-full min-w-0 overflow-x-hidden px-0 py-4 md:mx-0 md:max-w-none md:px-5">
                 {hiddenDmCount > 0 && (
                   <div className="mb-3 rounded-full border border-[var(--mpc-accent)]/30 bg-black/50 px-3 py-1 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--mpc-muted)]">
                     Zobrazeno posledních 40 zpráv · Skryto {hiddenDmCount}
@@ -4715,7 +4715,7 @@ const buildAppleEmbed = (url: string) => {
               </>
             )}
             {activeTab === 'messages' && (
-              <div className="w-full max-w-full box-border overflow-x-hidden rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:p-5">
+              <div className="mx-auto w-[calc(100vw-24px)] max-w-[calc(100vw-24px)] box-border overflow-x-hidden rounded-xl border border-[var(--mpc-dark)] bg-[var(--mpc-panel)] p-4 shadow-[0_12px_30px_rgba(0,0,0,0.35)] sm:mx-0 sm:w-full sm:max-w-full sm:p-5">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--mpc-light)]">{t('profile.messages.title', 'Zprávy')}</h3>
