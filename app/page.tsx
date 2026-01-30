@@ -814,7 +814,8 @@ export default function Home() {
       await Promise.all(
         targets.map(async (project) => {
           try {
-            const url = project.project_url || project.purchase_url || '';
+            const rawUrl = project.project_url || project.purchase_url || '';
+            const url = normalizePurchaseUrl(rawUrl) || rawUrl;
             const cachedHtml = cache[url];
             if (cachedHtml && active) {
               setProjectEmbeds((prev) => ({ ...prev, [project.id]: cachedHtml }));
