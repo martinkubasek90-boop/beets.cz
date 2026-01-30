@@ -47,6 +47,21 @@ const extractBandcampArtist = (description?: string | null) => {
   return match?.[1]?.trim() || null;
 };
 
+const extractBandcampEmbedSrc = (html: string) => {
+  const direct = html.match(/https?:\/\/bandcamp\.com\/EmbeddedPlayer\/[^"'\\s]+/i);
+  if (direct?.[0]) return direct[0];
+  const jsonMatch = html.match(/"embedUrl"\s*:\s*"([^"]*EmbeddedPlayer[^"]*)"/i);
+  if (jsonMatch?.[1]) return jsonMatch[1].replace(/\\u0026/g, '&');
+  const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']*EmbeddedPlayer[^"']*)["']/i);
+  if (iframeMatch?.[1]) return iframeMatch[1];
+  return null;
+};
+
+const buildEmbedHtml = (src: string) => {
+  if (!src) return null;
+  return `<iframe style="border:0;width:100%;height:120px;border-radius:12px" src="${src}" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+};
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const target = searchParams.get('url')?.trim();
@@ -92,13 +107,19 @@ export async function GET(request: Request) {
             const cover = extractMeta(html, 'og:image');
             const description = extractMeta(html, 'og:description');
             const artist = extractBandcampArtist(description);
+            const embedSrc =
+              extractMeta(html, 'og:video') ||
+              extractMeta(html, 'og:video:secure_url') ||
+              extractMeta(html, 'twitter:player') ||
+              extractMeta(html, 'og:video:url') ||
+              extractBandcampEmbedSrc(html);
             return NextResponse.json({
               title,
               artist,
               cover,
               link: target,
               provider: provider.name,
-              embed_html: null,
+              embed_html: embedSrc ? buildEmbedHtml(embedSrc) : null,
             });
           }
         } catch (err) {
