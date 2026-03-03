@@ -10,6 +10,14 @@ type Profiles = Record<string, { spread: number; fcrPrice: number; degradation?:
 
 type UtilizationType = 'stable' | 'combined' | 'arbitrage';
 
+type AdvancedSettings = {
+  spread: number;
+  fcrPrice: number;
+  degradation: number;
+  omCosts: number;
+  discountRate: number;
+};
+
 type InputPanelProps = {
   capacity: number;
   setCapacity: (value: number) => void;
@@ -21,20 +29,8 @@ type InputPanelProps = {
   setElectricityPrice: (value: number) => void;
   investmentMode: 'conservative' | 'realistic' | 'dynamic';
   setInvestmentMode: React.Dispatch<React.SetStateAction<'conservative' | 'realistic' | 'dynamic'>>;
-  advancedSettings: {
-    spread: number;
-    fcrPrice: number;
-    degradation: number;
-    omCosts: number;
-    discountRate: number;
-  };
-  setAdvancedSettings: (value: {
-    spread?: number;
-    fcrPrice?: number;
-    degradation?: number;
-    omCosts?: number;
-    discountRate?: number;
-  } | ((prev: InputPanelProps['advancedSettings']) => InputPanelProps['advancedSettings'])) => void;
+  advancedSettings: AdvancedSettings;
+  setAdvancedSettings: React.Dispatch<React.SetStateAction<AdvancedSettings>>;
   profiles: Profiles;
 };
 
