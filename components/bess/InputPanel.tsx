@@ -188,7 +188,7 @@ export default function InputPanel({
                 key={mode.id}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
-                  setInvestmentMode(mode.id);
+                  setInvestmentMode(mode.id as 'conservative' | 'realistic' | 'dynamic');
                   setAdvancedSettings((prev) => ({
                     ...prev,
                     fcrPrice: modeParams[mode.id as keyof typeof modeParams].fcrPrice,
