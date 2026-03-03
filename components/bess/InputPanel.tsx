@@ -19,8 +19,8 @@ type InputPanelProps = {
   setAnnualConsumption: (value: number) => void;
   electricityPrice: number;
   setElectricityPrice: (value: number) => void;
-  investmentMode: string;
-  setInvestmentMode: (value: string) => void;
+  investmentMode: 'conservative' | 'realistic' | 'dynamic';
+  setInvestmentMode: React.Dispatch<React.SetStateAction<'conservative' | 'realistic' | 'dynamic'>>;
   advancedSettings: {
     spread: number;
     fcrPrice: number;
