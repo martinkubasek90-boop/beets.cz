@@ -1,4 +1,11 @@
-"""BESS investment model (CZ 2026) with CAPEX, OPEX, FCR, and arbitrage."""
+"""BESS investment model (CZ 2026) with CAPEX, OPEX, FCR, and arbitrage.
+
+Quick start:
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt
+  python scripts/bess_investment_model.py
+"""
 
 from __future__ import annotations
 
