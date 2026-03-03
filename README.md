@@ -33,6 +33,22 @@
 - Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
   - Environment variables automatically assigned to Vercel project
 
+## BESS Investment Model (Python)
+
+The repository includes a standalone Python investment model for a commercial BESS project in CZ (2026 assumptions).
+
+Run locally:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python scripts/bess_investment_model.py
+```
+
+Edit inputs at the top of the script:
+- `scripts/bess_investment_model.py`
+
 ## Demo
 
 You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
