@@ -8,11 +8,13 @@ import { cn } from '@/lib/utils';
 
 type Profiles = Record<string, { spread: number; fcrPrice: number; degradation?: number }>;
 
+type UtilizationType = 'stable' | 'combined' | 'arbitrage';
+
 type InputPanelProps = {
   capacity: number;
   setCapacity: (value: number) => void;
-  utilizationType: string;
-  setUtilizationType: (value: string) => void;
+  utilizationType: UtilizationType;
+  setUtilizationType: React.Dispatch<React.SetStateAction<UtilizationType>>;
   annualConsumption: number;
   setAnnualConsumption: (value: number) => void;
   electricityPrice: number;
