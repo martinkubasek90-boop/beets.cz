@@ -6,9 +6,17 @@ import { TrendingUp } from 'lucide-react';
 
 type SensitivityChartProps = {
   data: { delta: string; payback: number }[];
+  title?: string;
+  subtitle?: string;
+  tooltipLabel?: string;
 };
 
-export default function SensitivityChart({ data }: SensitivityChartProps) {
+export default function SensitivityChart({
+  data,
+  title = 'Citlivost návratnosti na vývoj trhu',
+  subtitle = 'Vliv změny spreadu arbitráže',
+  tooltipLabel = 'Změna spreadu',
+}: SensitivityChartProps) {
   const getBarColor = (p: number) => (p <= 7 ? '#10b981' : p <= 10 ? '#3b82f6' : p <= 12 ? '#f59e0b' : '#ef4444');
   const isStable = data.every((d) => d.payback <= 12);
 
@@ -16,7 +24,9 @@ export default function SensitivityChart({ data }: SensitivityChartProps) {
     if (active && payload?.length)
       return (
         <div className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 shadow-xl">
-          <p className="text-xs text-slate-400">Změna spreadu: {label}</p>
+          <p className="text-xs text-slate-400">
+            {tooltipLabel}: {label}
+          </p>
           <p className="text-sm font-semibold text-white">Návratnost: {payload[0].value.toFixed(1)} let</p>
         </div>
       );
@@ -30,8 +40,8 @@ export default function SensitivityChart({ data }: SensitivityChartProps) {
           <TrendingUp className="w-4 h-4 text-blue-400" />
         </div>
         <div>
-          <h3 className="text-sm font-semibold text-white">Citlivost návratnosti na vývoj trhu</h3>
-          <p className="text-xs text-slate-400">Vliv změny spreadu arbitráže</p>
+          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          <p className="text-xs text-slate-400">{subtitle}</p>
         </div>
       </div>
       <div className="h-48">

@@ -31,6 +31,7 @@ const calculateProject = (inputs: {
   fcrPrice: number;
   degradation: number;
   omCosts: number;
+  capexMultiplier?: number;
 }) => {
   const {
     capacity,
@@ -45,11 +46,17 @@ const calculateProject = (inputs: {
     fcrPrice,
     degradation,
     omCosts,
+    capexMultiplier = 1,
   } = inputs;
   const profile = profiles[utilizationType];
   const deg = degradation / 100;
   const omRate = omCosts / 100;
-  const rawCapex = Math.round((capacity * 21000 * 1.13) / 1000) * 1000;
+  const capacityMWh = capacity / 1000;
+  const powerMW = capacityMWh;
+  const batteryModules = capacityMWh * 6_000_000;
+  const pcs = powerMW * 2_000_000;
+  const fixedCosts = 4_000_000 + 1_500_000 + 1_500_000 + 2_000_000 + 1_000_000;
+  const rawCapex = Math.round((batteryModules + pcs + fixedCosts) * capexMultiplier / 1000) * 1000;
   const effectiveCapex = rawCapex * (1 - subsidyPct / 100);
   const power = capacity;
   const fcrRevenue = power * profile.fcrShare * 12 * fcrPrice * 0.85;
@@ -113,7 +120,7 @@ export default function BessCalculator() {
     spread: profiles.combined.spread,
     fcrPrice: profiles.combined.fcrPrice,
     degradation: profiles.combined.degradation,
-    omCosts: 1.8,
+    omCosts: 2.5,
     discountRate: 8,
   });
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
@@ -174,6 +181,39 @@ export default function BessCalculator() {
         omCosts: advancedSettings.omCosts,
       });
       const label = delta === 0 ? '0' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`.replace('.', ',');
+      return { delta: label, payback: scenario.simplePayback };
+    });
+  }, [
+    capacity,
+    utilizationType,
+    annualConsumption,
+    electricityPrice,
+    financing,
+    loanInterestRate,
+    loanTermYears,
+    subsidyPct,
+    advancedSettings,
+  ]);
+
+  const capexSensitivityData = useMemo(() => {
+    const deltas = [-0.2, -0.1, 0, 0.1, 0.2];
+    return deltas.map((delta) => {
+      const scenario = calculateProject({
+        capacity,
+        utilizationType,
+        annualConsumption,
+        electricityPrice,
+        financing,
+        loanInterestRate,
+        loanTermYears,
+        subsidyPct,
+        spread: advancedSettings.spread,
+        fcrPrice: advancedSettings.fcrPrice,
+        degradation: advancedSettings.degradation,
+        omCosts: advancedSettings.omCosts,
+        capexMultiplier: 1 + delta,
+      });
+      const label = `${delta > 0 ? '+' : ''}${Math.round(delta * 100)}%`;
       return { delta: label, payback: scenario.simplePayback };
     });
   }, [
@@ -262,6 +302,12 @@ export default function BessCalculator() {
               onDownloadPdf={() => setModalType('pdf')}
             />
             <SensitivityChart data={sensitivityData} />
+            <SensitivityChart
+              data={capexSensitivityData}
+              title="Citlivost návratnosti na CAPEX"
+              subtitle="Vliv změny investičních nákladů ±20 %"
+              tooltipLabel="Změna CAPEX"
+            />
           </div>
         </div>
 

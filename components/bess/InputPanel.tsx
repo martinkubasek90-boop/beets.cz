@@ -119,7 +119,7 @@ export default function InputPanel({
                     spread: profile.spread,
                     fcrPrice: profile.fcrPrice,
                     degradation: profile.degradation || 2,
-                    omCosts: 1.8,
+                    omCosts: 2.5,
                   }));
                 }}
                 className={cn(
@@ -233,7 +233,7 @@ export default function InputPanel({
                   { key: 'spread', label: 'Spread arbitráže', suffix: ' Kč/kWh', min: 0.8, max: 2, step: 0.1, display: (v: number) => v.toFixed(1) },
                   { key: 'fcrPrice', label: 'Cena FCR', suffix: ' Kč/kW/měs', min: 1500, max: 3000, step: 50, display: (v: number) => v.toLocaleString('cs-CZ') },
                   { key: 'degradation', label: 'Roční degradace', suffix: '%', min: 1, max: 3, step: 0.5, display: (v: number) => v },
-                  { key: 'omCosts', label: 'O&M náklady', suffix: '% CAPEX', min: 1, max: 3, step: 0.1, display: (v: number) => v },
+                  { key: 'omCosts', label: 'O&M náklady', suffix: '% CAPEX', min: 2, max: 3, step: 0.1, display: (v: number) => v },
                   { key: 'discountRate', label: 'Diskontní sazba', suffix: '%', min: 6, max: 12, step: 0.5, display: (v: number) => v },
                 ].map(({ key, label, suffix, min, max, step, display }) => (
                   <div key={key} className="space-y-2">

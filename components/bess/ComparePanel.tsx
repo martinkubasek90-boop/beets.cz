@@ -30,7 +30,11 @@ type ScenarioResult = {
   rawCapex: number;
 };
 
-function calcScenario(inputs: ScenarioInputs, profiles: Record<string, { fcrShare: number }>): ScenarioResult {
+function calcScenario(
+  inputs: ScenarioInputs,
+  profiles: Record<string, { fcrShare: number }>,
+  capexMultiplier = 1,
+): ScenarioResult {
   const {
     capacity,
     utilizationType,
@@ -48,7 +52,12 @@ function calcScenario(inputs: ScenarioInputs, profiles: Record<string, { fcrShar
   const profile = profiles[utilizationType];
   const deg = degradation / 100;
   const omRate = omCosts / 100;
-  const rawCapex = Math.round((capacity * 21000 * 1.13) / 1000) * 1000;
+  const capacityMWh = capacity / 1000;
+  const powerMW = capacityMWh;
+  const batteryModules = capacityMWh * 6_000_000;
+  const pcs = powerMW * 2_000_000;
+  const fixedCosts = 4_000_000 + 1_500_000 + 1_500_000 + 2_000_000 + 1_000_000;
+  const rawCapex = Math.round((batteryModules + pcs + fixedCosts) * capexMultiplier / 1000) * 1000;
   const effectiveCapex = rawCapex * (1 - subsidyPct / 100);
   const power = capacity;
   const fcrRevenue = power * profile.fcrShare * 12 * fcrPrice * 0.85;
@@ -135,7 +144,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
     spread: 1.2,
     fcrPrice: 1900,
     degradation: 2,
-    omCosts: 1.8,
+    omCosts: 2.5,
   });
 
   const resultB = useMemo(() => calcScenario(scenarioB, profiles), [scenarioB]);
