@@ -211,7 +211,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
                 <div key={key} className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">{label}</span>
-                    <span className={key === 'subsidyPct' && scenarioB[key as keyof ScenarioInputs] > 0 ? 'text-emerald-400' : 'text-slate-200'}>
+                    <span className={key === 'subsidyPct' && (scenarioB.subsidyPct as number) > 0 ? 'text-emerald-400' : 'text-slate-200'}>
                       {fmt(scenarioB[key as keyof ScenarioInputs] as number)}
                       {suffix}
                     </span>
