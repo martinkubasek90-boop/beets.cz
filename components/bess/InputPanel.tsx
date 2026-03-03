@@ -112,7 +112,7 @@ export default function InputPanel({
                 key={type.id}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  setUtilizationType(type.id);
+                  setUtilizationType(type.id as UtilizationType);
                   const profile = profiles[type.id];
                   setAdvancedSettings((prev) => ({
                     ...prev,
