@@ -134,7 +134,8 @@ export default function BessCalculator() {
       omCosts: advancedSettings.omCosts,
     });
 
-    const riskLevel = base.simplePayback <= 7 ? 'low' : base.simplePayback <= 10 ? 'medium' : 'high';
+    const riskLevel: 'low' | 'medium' | 'high' =
+      base.simplePayback <= 7 ? 'low' : base.simplePayback <= 10 ? 'medium' : 'high';
     let confidenceScore = 90 - base.simplePayback * 4;
     if (utilizationType === 'stable') confidenceScore += 6;
     if (subsidyPct > 0) confidenceScore += 4;
