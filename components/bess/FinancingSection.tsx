@@ -32,7 +32,7 @@ export default function FinancingSection({
   return (
     <div className="space-y-4">
       <label className="text-sm font-medium text-slate-300">Financování</label>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[
           { id: 'own', label: 'Vlastní kapitál', icon: Building2, sub: '100 % equity' },
           { id: 'bank', label: '50% bankovní úvěr', icon: Landmark, sub: 'páka na IRR' },
@@ -104,7 +104,7 @@ export default function FinancingSection({
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
                 {[
                   { label: 'Vlastní kapitál', value: '50 %' },
                   { label: 'Úvěr', value: '50 %' },

@@ -88,9 +88,9 @@ export default function InputPanel({
       </div>
 
       <div className="space-y-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
           <label className="text-sm font-medium text-slate-300">Kapacita úložiště</label>
-          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm">
+          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {capacity.toLocaleString('cs-CZ')} kWh
           </span>
         </div>
@@ -150,9 +150,9 @@ export default function InputPanel({
       </div>
 
       <div className="space-y-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
           <label className="text-sm font-medium text-slate-300">Roční spotřeba objektu</label>
-          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm">
+          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {annualConsumption.toLocaleString('cs-CZ')} MWh
           </span>
         </div>
@@ -164,9 +164,9 @@ export default function InputPanel({
       </div>
 
       <div className="space-y-3">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
           <label className="text-sm font-medium text-slate-300">Průměrná cena elektřiny</label>
-          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm">
+          <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {electricityPrice.toFixed(1)} Kč/kWh
           </span>
         </div>
@@ -179,7 +179,7 @@ export default function InputPanel({
 
       <div className="space-y-3">
         <label className="text-sm font-medium text-slate-300">Investiční režim</label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {investmentModes.map((mode) => {
             const Icon = mode.icon;
             const isSelected = investmentMode === mode.id;

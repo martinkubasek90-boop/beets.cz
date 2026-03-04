@@ -239,7 +239,7 @@ export default function BessCalculator() {
     <div className="relative">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(59,130,246,0.2),_transparent_55%)]" />
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+      <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-16">
         <div className="flex flex-col gap-4 max-w-3xl">
           <motion.span
             initial={{ opacity: 0, y: -6 }}
@@ -251,7 +251,7 @@ export default function BessCalculator() {
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-white"
+            className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight"
           >
             Ekonomický model pro bateriové úložiště energie
           </motion.h1>

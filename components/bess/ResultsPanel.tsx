@@ -57,19 +57,19 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
           C&amp;I projekty v ČR se typicky pohybují mezi 5–9 lety návratnosti
         </span>
       </div>
-      <div className="px-5 pb-5">
+      <div className="px-4 sm:px-5 pb-5">
         <div
           className={cn(
-            'p-6 rounded-xl border-2',
+            'p-4 sm:p-6 rounded-xl border-2',
             status.color === 'emerald' && 'bg-emerald-500/5 border-emerald-500/30',
             status.color === 'blue' && 'bg-blue-500/5 border-blue-500/30',
             status.color === 'amber' && 'bg-amber-500/5 border-amber-500/30',
             status.color === 'red' && 'bg-red-500/5 border-red-500/30',
           )}
         >
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-start sm:items-center gap-2 mb-4">
             {React.createElement(status.icon, { className: cn('w-5 h-5', statusTextClass) })}
-            <span className={cn('text-sm font-medium', statusTextClass)}>{status.label}</span>
+            <span className={cn('text-xs sm:text-sm font-medium leading-snug', statusTextClass)}>{status.label}</span>
           </div>
           <div className="text-center">
             <p className="text-slate-400 text-sm mb-2">Prostá návratnost</p>
@@ -77,16 +77,16 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
               key={simplePayback}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="text-5xl sm:text-6xl font-bold text-white tracking-tight"
+              className="text-4xl sm:text-6xl font-bold text-white tracking-tight"
             >
               {simplePayback.toFixed(1)}
-              <span className="text-2xl sm:text-3xl font-normal text-slate-400 ml-2">let</span>
+              <span className="text-xl sm:text-3xl font-normal text-slate-400 ml-2">let</span>
             </motion.div>
           </div>
         </div>
       </div>
 
-      <div className="px-5 pb-5 grid grid-cols-2 gap-3">
+      <div className="px-4 sm:px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
           <div className="flex items-center gap-2 mb-2">
             <Wallet className="w-4 h-4 text-emerald-400" />
@@ -136,7 +136,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
         </div>
       </div>
 
-      <div className="px-5 pb-5">
+      <div className="px-4 sm:px-5 pb-5">
         <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-slate-400">Investiční robustnost</span>
@@ -167,7 +167,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
         </div>
       </div>
 
-      <div className="px-5 pb-5">
+      <div className="px-4 sm:px-5 pb-5">
         <div className="flex flex-wrap gap-2">
           {['Model zahrnuje degradaci baterie', 'Zohledňuje provozní náklady', '12letý investiční horizont'].map((text, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs text-slate-400">
@@ -178,7 +178,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
         </div>
       </div>
 
-      <div className="p-5 bg-slate-800/30 border-t border-slate-700/30 space-y-3">
+      <div className="p-4 sm:p-5 bg-slate-800/30 border-t border-slate-700/30 space-y-3">
         <button
           onClick={onDownloadPdf}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700/50 transition-colors text-sm"
@@ -189,7 +189,8 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
           onClick={onRequestAnalysis}
           className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
         >
-          Získat profesionální investiční posouzení zdarma<ArrowRight className="w-4 h-4 ml-2" />
+          <span className="text-sm sm:text-base">Získat profesionální investiční posouzení zdarma</span>
+          <ArrowRight className="w-4 h-4 ml-2 shrink-0" />
         </Button>
         <p className="text-center text-xs text-slate-500">Nezávazná konzultace • Model na míru • Reálná data z ČR</p>
       </div>

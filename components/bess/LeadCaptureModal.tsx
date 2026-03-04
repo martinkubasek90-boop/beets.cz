@@ -43,24 +43,24 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
+        className="bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {!isSubmitted ? (
           <>
-            <div className="p-5 border-b border-slate-800 flex items-start justify-between">
-              <div className="flex items-center gap-3">
+            <div className="p-4 sm:p-5 border-b border-slate-800 flex items-start justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPdf ? 'bg-blue-500/20' : 'bg-emerald-500/20'}`}>
                   {isPdf ? <FileText className="w-5 h-5 text-blue-400" /> : <MessageSquare className="w-5 h-5 text-emerald-400" />}
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-semibold text-white">{isPdf ? 'Stáhnout investiční shrnutí' : 'Požádat o investiční posouzení'}</h3>
                   <p className="text-sm text-slate-400">{isPdf ? 'Pošleme vám PDF na email' : 'Ozveme se vám do 24 hodin'}</p>
                 </div>
@@ -70,9 +70,9 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
               </button>
             </div>
 
-            <div className="p-5 bg-slate-800/30 border-b border-slate-800">
+            <div className="p-4 sm:p-5 bg-slate-800/30 border-b border-slate-800">
               <p className="text-xs text-slate-400 mb-3">Shrnutí vašeho projektu</p>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
                 <div>
                   <span className="text-slate-400">Kapacita:</span>
                   <span className="text-white ml-2">{inputs.capacity.toLocaleString('cs-CZ')} kWh</span>
@@ -92,7 +92,7 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="text-slate-300">

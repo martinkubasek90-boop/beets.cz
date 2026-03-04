@@ -172,7 +172,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
     <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between p-5 hover:bg-slate-800/30 transition-colors"
+        className="w-full flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 hover:bg-slate-800/30 transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -188,7 +188,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
 
       {open && (
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="border-t border-slate-800/50">
-          <div className="p-5 grid lg:grid-cols-2 gap-6">
+          <div className="p-4 sm:p-5 grid lg:grid-cols-2 gap-4 sm:gap-6">
             <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center text-[10px] font-bold text-white">A</div>
@@ -236,7 +236,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
               ))}
               <div className="space-y-1">
                 <span className="text-xs text-slate-400">Typ využití</span>
-                <div className="grid grid-cols-3 gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1">
                   {Object.entries(utilizationLabels).map(([id, label]) => (
                     <button
                       key={id}
@@ -255,7 +255,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
               </div>
               <div className="space-y-1">
                 <span className="text-xs text-slate-400">Financování</span>
-                <div className="grid grid-cols-2 gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                   {[
                     { id: 'own', label: 'Vlastní' },
                     { id: 'bank', label: '50% úvěr' },
@@ -278,23 +278,25 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
             </div>
           </div>
 
-          <div className="px-5 pb-5">
-            <div className="bg-slate-800/20 rounded-xl border border-slate-700/30 overflow-hidden">
-              <div className="grid grid-cols-3 text-xs font-semibold text-slate-400 bg-slate-800/50 px-4 py-2.5">
-                <span>Metrika</span>
-                <span className="text-center text-emerald-400">Scénář A</span>
-                <span className="text-center text-purple-400">Scénář B</span>
-              </div>
-              {metrics.map((m, i) => (
-                <div
-                  key={i}
-                  className={cn('grid grid-cols-3 px-4 py-2.5 border-t border-slate-800/50', i % 2 === 0 && 'bg-slate-800/10')}
-                >
-                  <span className="text-slate-400 text-xs">{m.label}</span>
-                  <span className={cn('text-center font-medium text-xs', m.colorA || 'text-slate-200')}>{m.a}</span>
-                  <span className={cn('text-center font-medium text-xs', m.colorB || 'text-slate-200')}>{m.b}</span>
+          <div className="px-4 sm:px-5 pb-5">
+            <div className="bg-slate-800/20 rounded-xl border border-slate-700/30 overflow-x-auto">
+              <div className="min-w-[560px]">
+                <div className="grid grid-cols-3 text-xs font-semibold text-slate-400 bg-slate-800/50 px-4 py-2.5">
+                  <span>Metrika</span>
+                  <span className="text-center text-emerald-400">Scénář A</span>
+                  <span className="text-center text-purple-400">Scénář B</span>
                 </div>
-              ))}
+                {metrics.map((m, i) => (
+                  <div
+                    key={i}
+                    className={cn('grid grid-cols-3 px-4 py-2.5 border-t border-slate-800/50', i % 2 === 0 && 'bg-slate-800/10')}
+                  >
+                    <span className="text-slate-400 text-xs">{m.label}</span>
+                    <span className={cn('text-center font-medium text-xs', m.colorA || 'text-slate-200')}>{m.a}</span>
+                    <span className={cn('text-center font-medium text-xs', m.colorB || 'text-slate-200')}>{m.b}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </motion.div>

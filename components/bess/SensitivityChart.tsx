@@ -71,7 +71,7 @@ export default function SensitivityChart({
           Projekt zůstává investičně smysluplný i při méně příznivém vývoji trhu.
         </div>
       )}
-      <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+      <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
         {[
           ['bg-emerald-500', '< 7 let'],
           ['bg-blue-500', '7-10 let'],
