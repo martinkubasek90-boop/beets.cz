@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 import { retrieveKnowledge, type KnowledgeCitation } from '@/lib/bess-knowledge';
 
 export const runtime = 'nodejs';
@@ -254,39 +255,39 @@ function buildKnowledgeSummary(citations: KnowledgeCitation[]) {
     .join('\n\n');
 }
 
-async function callTrialLlm(prompt: string) {
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient() {
   const apiKey = process.env.LLM_API_KEY;
   if (!apiKey) return null;
+  if (openaiClient) return openaiClient;
 
-  const endpoint = process.env.LLM_API_URL || 'https://api.openai.com/v1/chat/completions';
-  const model = process.env.LLM_MODEL || 'gpt-4o-mini';
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 350,
-      messages: [
-        {
-          role: 'system',
-          content:
-            'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
-        },
-        { role: 'user', content: prompt },
-      ],
-    }),
+  openaiClient = new OpenAI({
+    apiKey,
+    ...(process.env.LLM_API_URL ? { baseURL: process.env.LLM_API_URL } : {}),
   });
 
-  if (!response.ok) return null;
-  const payload = (await response.json().catch(() => ({}))) as {
-    choices?: Array<{ message?: { content?: string } }>;
-  };
-  const text = payload.choices?.[0]?.message?.content?.trim();
+  return openaiClient;
+}
+
+async function callTrialLlm(prompt: string) {
+  const client = getOpenAIClient();
+  if (!client) return null;
+
+  const model = process.env.LLM_MODEL || 'gpt-4o-mini';
+  const response = await client.responses.create({
+    model,
+    input: [
+      {
+        role: 'system',
+        content:
+          'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
+      },
+      { role: 'user', content: prompt },
+    ],
+  });
+
+  const text = response.output_text?.trim();
   return text || null;
 }
 
