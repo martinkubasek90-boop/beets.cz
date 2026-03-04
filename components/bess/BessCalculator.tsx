@@ -236,7 +236,7 @@ export default function BessCalculator() {
   };
 
   return (
-    <div className="relative">
+    <div className="relative overflow-x-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(59,130,246,0.2),_transparent_55%)]" />
       <div className="relative max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-16">
