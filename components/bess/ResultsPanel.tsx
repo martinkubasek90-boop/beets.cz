@@ -189,8 +189,8 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
           onClick={onRequestAnalysis}
           className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
         >
-          <span className="text-sm sm:hidden">Získat investiční posouzení zdarma</span>
-          <span className="hidden sm:inline text-base">Získat profesionální posouzení zdarma</span>
+          <span className="text-sm sm:hidden">Získat nezávazné posouzení zdarma</span>
+          <span className="hidden sm:inline text-base">Získat nezávazné investiční posouzení zdarma</span>
           <ArrowRight className="w-4 h-4 ml-2 shrink-0" />
         </Button>
         <p className="text-center text-xs text-slate-500">Nezávazná konzultace • Model na míru • Reálná data z ČR</p>
