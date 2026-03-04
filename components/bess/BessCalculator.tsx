@@ -9,6 +9,7 @@ import FinancingSection from '@/components/bess/FinancingSection';
 import ComparePanel from '@/components/bess/ComparePanel';
 import SocialProof from '@/components/bess/SocialProof';
 import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
+import BessAssistant from '@/components/bess/BessAssistant';
 
 const profiles = {
   stable: { fcrShare: 0.8, spread: 1.0, fcrPrice: 1900, degradation: 2 },
@@ -17,6 +18,25 @@ const profiles = {
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+type UtilizationType = keyof typeof profiles;
+type InvestmentMode = 'conservative' | 'realistic' | 'dynamic';
+type FinancingType = 'own' | 'bank';
+
+type AssistantPatch = Partial<{
+  capacity: number;
+  utilizationType: UtilizationType;
+  annualConsumption: number;
+  electricityPrice: number;
+  investmentMode: InvestmentMode;
+  financing: FinancingType;
+  subsidyPct: number;
+  loanInterestRate: number;
+  loanTermYears: number;
+  spread: number;
+  fcrPrice: number;
+  degradation: number;
+  omCosts: number;
+}>;
 
 const calculateProject = (inputs: {
   capacity: number;
@@ -108,11 +128,11 @@ const calculateProject = (inputs: {
 
 export default function BessCalculator() {
   const [capacity, setCapacity] = useState(500);
-  const [utilizationType, setUtilizationType] = useState<keyof typeof profiles>('combined');
+  const [utilizationType, setUtilizationType] = useState<UtilizationType>('combined');
   const [annualConsumption, setAnnualConsumption] = useState(3000);
   const [electricityPrice, setElectricityPrice] = useState(4.5);
-  const [investmentMode, setInvestmentMode] = useState<'conservative' | 'realistic' | 'dynamic'>('realistic');
-  const [financing, setFinancing] = useState<'own' | 'bank'>('own');
+  const [investmentMode, setInvestmentMode] = useState<InvestmentMode>('realistic');
+  const [financing, setFinancing] = useState<FinancingType>('own');
   const [subsidyPct, setSubsidyPct] = useState(0);
   const [loanInterestRate, setLoanInterestRate] = useState(6);
   const [loanTermYears, setLoanTermYears] = useState(8);
@@ -124,6 +144,32 @@ export default function BessCalculator() {
     discountRate: 8,
   });
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
+
+  const applyAssistantPatch = (patch: AssistantPatch) => {
+    if (patch.capacity !== undefined) setCapacity(clamp(Math.round(patch.capacity / 100) * 100, 200, 5000));
+    if (patch.utilizationType) setUtilizationType(patch.utilizationType);
+    if (patch.annualConsumption !== undefined) setAnnualConsumption(clamp(Math.round(patch.annualConsumption / 100) * 100, 100, 20000));
+    if (patch.electricityPrice !== undefined) setElectricityPrice(clamp(patch.electricityPrice, 3, 8));
+    if (patch.investmentMode) setInvestmentMode(patch.investmentMode);
+    if (patch.financing) setFinancing(patch.financing);
+    if (patch.subsidyPct !== undefined) setSubsidyPct(clamp(Math.round(patch.subsidyPct / 5) * 5, 0, 50));
+    if (patch.loanInterestRate !== undefined) setLoanInterestRate(clamp(patch.loanInterestRate, 3, 10));
+    if (patch.loanTermYears !== undefined) setLoanTermYears(clamp(Math.round(patch.loanTermYears), 5, 12));
+    if (
+      patch.spread !== undefined ||
+      patch.fcrPrice !== undefined ||
+      patch.degradation !== undefined ||
+      patch.omCosts !== undefined
+    ) {
+      setAdvancedSettings((prev) => ({
+        ...prev,
+        ...(patch.spread !== undefined ? { spread: clamp(patch.spread, 0.8, 2) } : {}),
+        ...(patch.fcrPrice !== undefined ? { fcrPrice: clamp(Math.round(patch.fcrPrice / 50) * 50, 1500, 3000) } : {}),
+        ...(patch.degradation !== undefined ? { degradation: clamp(patch.degradation, 1, 3) } : {}),
+        ...(patch.omCosts !== undefined ? { omCosts: clamp(patch.omCosts, 2, 3) } : {}),
+      }));
+    }
+  };
 
   const calculations = useMemo(() => {
     const base = calculateProject({
@@ -322,6 +368,25 @@ export default function BessCalculator() {
           onClose={() => setModalType(null)}
         />
       )}
+
+      <BessAssistant
+        context={{
+          capacity,
+          utilizationType,
+          annualConsumption,
+          electricityPrice,
+          investmentMode,
+          financing,
+          subsidyPct,
+          loanInterestRate,
+          loanTermYears,
+          spread: advancedSettings.spread,
+          fcrPrice: advancedSettings.fcrPrice,
+          degradation: advancedSettings.degradation,
+          omCosts: advancedSettings.omCosts,
+        }}
+        applyPatch={applyAssistantPatch}
+      />
     </div>
   );
 }
