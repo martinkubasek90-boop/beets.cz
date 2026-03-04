@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bot, Send, Sparkles, X } from 'lucide-react';
+import { Bot, Link2, Plus, Send, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +29,12 @@ type ChatMessage = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  citations?: Array<{
+    sourceLabel: string;
+    sourceUrl?: string | null;
+    snippet: string;
+    score: number;
+  }>;
 };
 
 type BessAssistantProps = {
@@ -54,6 +60,12 @@ type ChatApiResponse = {
   reply: string;
   suggestions: string[];
   patch?: AssistantPatch;
+  citations?: Array<{
+    sourceLabel: string;
+    sourceUrl?: string | null;
+    snippet: string;
+    score: number;
+  }>;
 };
 
 const quickActions = [
@@ -67,6 +79,7 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [ingesting, setIngesting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>(quickActions);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -117,7 +130,12 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
 
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', text: payload.reply },
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: payload.reply,
+          citations: payload.citations,
+        },
       ]);
       setSuggestions(payload.suggestions?.length ? payload.suggestions : quickActions);
     } catch {
@@ -134,6 +152,46 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
     if (loading) return 'Právě připravuji doporučení...';
     return 'Asistent pomůže vyplnit kalkulačku a nastaví parametry.';
   }, [loading]);
+
+  const ingestKnowledge = async (type: 'url' | 'text') => {
+    const value =
+      type === 'url'
+        ? window.prompt('Zadejte URL, kterou chcete přidat do znalostní báze:')
+        : window.prompt('Vložte text interní znalosti:');
+    if (!value?.trim() || ingesting) return;
+
+    setIngesting(true);
+    try {
+      const body =
+        type === 'url'
+          ? { namespace: 'bess', items: [{ type: 'url', url: value.trim(), label: value.trim() }] }
+          : { namespace: 'bess', items: [{ type: 'text', text: value.trim(), label: 'Interní text' }] };
+
+      const response = await fetch('/api/bess-kb/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Ingest se nepodařil.');
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: type === 'url' ? 'URL je uložené do znalostní báze.' : 'Text je uložený do znalostní báze.',
+        },
+      ]);
+    } catch (error: any) {
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'assistant', text: error?.message || 'Ingest se nepodařil.' },
+      ]);
+    } finally {
+      setIngesting(false);
+    }
+  };
 
   return (
     <>
@@ -161,9 +219,29 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
                   <p className="text-xs text-slate-400">{subtitle}</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => ingestKnowledge('url')}
+                  className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+                  title="Přidat URL do znalostní báze"
+                  disabled={ingesting}
+                >
+                  <Link2 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => ingestKnowledge('text')}
+                  className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
+                  title="Přidat text do znalostní báze"
+                  disabled={ingesting}
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="p-4 space-y-3 max-h-[50vh] overflow-y-auto">
@@ -178,6 +256,26 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
                   )}
                 >
                   {msg.text}
+                  {msg.citations?.length ? (
+                    <div className="mt-2 space-y-1">
+                      {msg.citations.map((citation, index) => (
+                        <div key={`${msg.id}-${index}`} className="text-xs text-slate-300/90 border-t border-slate-700/70 pt-1.5">
+                          <div className="font-medium">{citation.sourceLabel}</div>
+                          <div className="text-slate-400">{citation.snippet}</div>
+                          {citation.sourceUrl ? (
+                            <a
+                              href={citation.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-300 hover:text-blue-200"
+                            >
+                              Zdroj
+                            </a>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

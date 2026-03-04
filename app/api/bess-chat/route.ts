@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { retrieveKnowledge, type KnowledgeCitation } from '@/lib/bess-knowledge';
 
 export const runtime = 'nodejs';
 
@@ -47,6 +48,7 @@ type ChatResponse = {
   reply: string;
   suggestions: string[];
   patch?: AssistantPatch;
+  citations?: KnowledgeCitation[];
 };
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -226,5 +228,14 @@ export async function POST(request: Request) {
   }
 
   const response = buildResponse(message, payload.context ?? {});
+  const citations = await retrieveKnowledge('bess', message, 3);
+
+  if (citations.length) {
+    response.reply = `${response.reply}\n\nPodklady ze znalostní báze:\n${citations
+      .map((item, index) => `${index + 1}. ${item.sourceLabel}`)
+      .join('\n')}`;
+    response.citations = citations;
+  }
+
   return NextResponse.json(response);
 }

@@ -49,6 +49,37 @@ python scripts/bess_investment_model.py
 Edit inputs at the top of the script:
 - `scripts/bess_investment_model.py`
 
+## BESS Chatbot Knowledge Base (RAG MVP)
+
+The BESS calculator chatbot supports a lightweight knowledge base with URL/text ingestion and source citations.
+
+Setup:
+
+1. Create DB tables in Supabase SQL editor:
+   - `supabase/bess_knowledge.sql`
+2. Ensure env vars are set:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+3. Optional admin token for ingestion endpoint:
+   - `BESS_KB_ADMIN_TOKEN`
+
+API endpoints:
+- `POST /api/bess-kb/ingest`
+  - Body example:
+    ```json
+    {
+      "namespace": "bess",
+      "items": [
+        { "type": "url", "url": "https://example.com/bess-guide", "label": "BESS Guide" },
+        { "type": "text", "label": "Internal notes", "text": "..." }
+      ]
+    }
+    ```
+  - If `BESS_KB_ADMIN_TOKEN` is set, pass header:
+    - `Authorization: Bearer <token>`
+- `POST /api/bess-chat`
+  - Returns assistant reply + optional `citations` from KB.
+
 ## Demo
 
 You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
