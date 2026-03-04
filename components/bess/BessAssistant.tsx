@@ -124,6 +124,8 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
         return;
       }
 
+      const replyText = payload.reply;
+
       if (payload.patch) {
         applyPatch(payload.patch);
       }
@@ -133,7 +135,7 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          text: payload.reply,
+          text: replyText,
           citations: payload.citations,
         },
       ]);
