@@ -80,6 +80,26 @@ API endpoints:
 - `POST /api/bess-chat`
   - Returns assistant reply + optional `citations` from KB.
 
+LLM modes for chatbot:
+- `LLM_MODE=off` (default): rule-based + RAG citations only.
+- `LLM_MODE=trial`: uses remote LLM API (trial key).
+  - Required:
+    - `LLM_API_KEY`
+  - Optional:
+    - `LLM_API_URL` (default `https://api.openai.com/v1/chat/completions`)
+    - `LLM_MODEL` (default `gpt-4o-mini`)
+- `LLM_MODE=local`: uses local Ollama.
+  - Optional:
+    - `OLLAMA_URL` (default `http://127.0.0.1:11434/api/chat`)
+    - `OLLAMA_MODEL` (default `llama3.1:8b`)
+
+Example env:
+```env
+LLM_MODE=trial
+LLM_API_KEY=...
+LLM_MODEL=gpt-4o-mini
+```
+
 ## Demo
 
 You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).

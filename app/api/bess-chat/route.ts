@@ -51,7 +51,10 @@ type ChatResponse = {
   citations?: KnowledgeCitation[];
 };
 
+type LlmMode = 'off' | 'trial' | 'local';
+
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+const llmMode = ((process.env.LLM_MODE || 'off').toLowerCase() as LlmMode);
 
 const extractPercent = (text: string) => {
   const match = text.match(/(\d{1,2})\s*%/);
@@ -219,6 +222,138 @@ function buildResponse(message: string, context: ChatContext): ChatResponse {
   };
 }
 
+function buildContextSummary(context: ChatContext) {
+  const rows = [
+    ['Kapacita (kWh)', context.capacity],
+    ['Typ využití', context.utilizationType],
+    ['Roční spotřeba (MWh)', context.annualConsumption],
+    ['Cena elektřiny (Kč/kWh)', context.electricityPrice],
+    ['Investiční režim', context.investmentMode],
+    ['Financování', context.financing],
+    ['Dotace (%)', context.subsidyPct],
+    ['Úrok (%)', context.loanInterestRate],
+    ['Splatnost (roky)', context.loanTermYears],
+    ['Spread', context.spread],
+    ['FCR cena', context.fcrPrice],
+    ['Degradace (%)', context.degradation],
+    ['O&M (%)', context.omCosts],
+  ]
+    .filter(([, value]) => value !== undefined && value !== null)
+    .map(([label, value]) => `${label}: ${value}`);
+
+  return rows.length ? rows.join('\n') : 'Bez kontextu.';
+}
+
+function buildKnowledgeSummary(citations: KnowledgeCitation[]) {
+  if (!citations.length) return 'Žádné znalostní podklady.';
+  return citations
+    .map(
+      (citation, index) =>
+        `${index + 1}) ${citation.sourceLabel}${citation.sourceUrl ? ` (${citation.sourceUrl})` : ''}\n${citation.snippet}`
+    )
+    .join('\n\n');
+}
+
+async function callTrialLlm(prompt: string) {
+  const apiKey = process.env.LLM_API_KEY;
+  if (!apiKey) return null;
+
+  const endpoint = process.env.LLM_API_URL || 'https://api.openai.com/v1/chat/completions';
+  const model = process.env.LLM_MODEL || 'gpt-4o-mini';
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      max_tokens: 350,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
+        },
+        { role: 'user', content: prompt },
+      ],
+    }),
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json().catch(() => ({}))) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = payload.choices?.[0]?.message?.content?.trim();
+  return text || null;
+}
+
+async function callLocalLlm(prompt: string) {
+  const endpoint = process.env.OLLAMA_URL || 'http://127.0.0.1:11434/api/chat';
+  const model = process.env.OLLAMA_MODEL || 'llama3.1:8b';
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      stream: false,
+      options: { temperature: 0.2 },
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, věcně a s doporučením dalšího kroku.',
+        },
+        { role: 'user', content: prompt },
+      ],
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) return null;
+  const payload = (await response.json().catch(() => ({}))) as {
+    message?: { content?: string };
+  };
+  const text = payload.message?.content?.trim();
+  return text || null;
+}
+
+async function maybeGenerateLlmReply(params: {
+  message: string;
+  context: ChatContext;
+  baseReply: string;
+  citations: KnowledgeCitation[];
+}) {
+  if (llmMode === 'off') return null;
+
+  const prompt = [
+    'Uživatelův dotaz:',
+    params.message,
+    '',
+    'Aktuální nastavení kalkulačky:',
+    buildContextSummary(params.context),
+    '',
+    'Pravidlová odpověď aplikace:',
+    params.baseReply,
+    '',
+    'Podklady ze znalostní báze:',
+    buildKnowledgeSummary(params.citations),
+    '',
+    'Úkol: napiš finální odpověď (2-4 věty), praktickou a bez marketingové omáčky.',
+  ].join('\n');
+
+  try {
+    if (llmMode === 'trial') return await callTrialLlm(prompt);
+    if (llmMode === 'local') return await callLocalLlm(prompt);
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: Request) {
   const payload = (await request.json().catch(() => ({}))) as ChatRequest;
   const message = payload.message?.trim();
@@ -229,6 +364,16 @@ export async function POST(request: Request) {
 
   const response = buildResponse(message, payload.context ?? {});
   const citations = await retrieveKnowledge('bess', message, 3);
+  const llmReply = await maybeGenerateLlmReply({
+    message,
+    context: payload.context ?? {},
+    baseReply: response.reply,
+    citations,
+  });
+
+  if (llmReply) {
+    response.reply = llmReply;
+  }
 
   if (citations.length) {
     response.reply = `${response.reply}\n\nPodklady ze znalostní báze:\n${citations
