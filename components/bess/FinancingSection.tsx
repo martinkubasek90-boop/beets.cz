@@ -3,8 +3,9 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Slider } from '@/components/ui/slider';
-import { Building2, Landmark, Gift, ChevronDown } from 'lucide-react';
+import { Building2, Landmark, Gift, ChevronDown, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type FinancingSectionProps = {
   financing: 'own' | 'bank';
@@ -31,7 +32,19 @@ export default function FinancingSection({
 
   return (
     <div className="space-y-4 w-full min-w-0">
-      <label className="text-sm font-medium text-slate-300">Financování</label>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-flex items-center gap-1.5 cursor-help">
+              <label className="text-sm font-medium text-slate-300">Financování</label>
+              <Info className="w-3.5 h-3.5 text-slate-500" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p>Změna financování ovlivňuje hlavně cashflow equity investora a výsledné IRR.</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[
           { id: 'own', label: 'Vlastní kapitál', icon: Building2, sub: '100 % equity' },
@@ -125,6 +138,16 @@ export default function FinancingSection({
         <div className="flex items-center gap-2">
           <Gift className="w-4 h-4 text-emerald-400" />
           <span className="text-sm font-medium text-slate-300">Dotační podpora (OPT / MPO)</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="w-3.5 h-3.5 text-slate-500 cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>Dotace snižuje investiční náklady a má přímý dopad na dobu návratnosti.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-xs">

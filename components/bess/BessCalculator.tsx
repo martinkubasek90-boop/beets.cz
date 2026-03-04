@@ -145,6 +145,20 @@ export default function BessCalculator() {
   });
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
 
+  const handleCapacityChange = (value: number) =>
+    setCapacity(clamp(Math.round(value / 100) * 100, 200, 5000));
+  const handleUtilizationTypeChange = (value: UtilizationType) => setUtilizationType(value);
+  const handleAnnualConsumptionChange = (value: number) =>
+    setAnnualConsumption(clamp(Math.round(value / 100) * 100, 100, 20000));
+  const handleElectricityPriceChange = (value: number) =>
+    setElectricityPrice(clamp(Number(value.toFixed(1)), 3, 8));
+  const handleInvestmentModeChange = (value: InvestmentMode) => setInvestmentMode(value);
+  const handleFinancingChange = (value: FinancingType) => setFinancing(value);
+  const handleSubsidyChange = (value: number) => setSubsidyPct(clamp(Math.round(value / 5) * 5, 0, 50));
+  const handleLoanInterestRateChange = (value: number) =>
+    setLoanInterestRate(clamp(Number(value.toFixed(1)), 3, 10));
+  const handleLoanTermYearsChange = (value: number) => setLoanTermYears(clamp(Math.round(value), 5, 12));
+
   const applyAssistantPatch = (patch: AssistantPatch) => {
     if (patch.capacity !== undefined) setCapacity(clamp(Math.round(patch.capacity / 100) * 100, 200, 5000));
     if (patch.utilizationType) setUtilizationType(patch.utilizationType);
@@ -281,6 +295,22 @@ export default function BessCalculator() {
     subsidyPct,
   };
 
+  const validationHints = useMemo(() => {
+    const hints: string[] = [];
+    const maxArbitrageByConsumption = annualConsumption * 1000 * 0.35;
+    const maxArbitrageByCycles = capacity * 300;
+    if (maxArbitrageByConsumption < maxArbitrageByCycles * 0.55) {
+      hints.push('Nízká spotřeba vůči kapacitě může snižovat reálně využitelnou arbitráž.');
+    }
+    if (financing === 'bank' && loanInterestRate >= 8) {
+      hints.push('Vyšší úrok významně zatěžuje roční cashflow projektu.');
+    }
+    if (utilizationType === 'arbitrage' && advancedSettings.spread < 1.1) {
+      hints.push('U čisté arbitráže je nízký spread citlivý na volatilitu trhu.');
+    }
+    return hints;
+  }, [annualConsumption, capacity, financing, loanInterestRate, utilizationType, advancedSettings.spread]);
+
   return (
     <div className="relative overflow-x-hidden w-full min-w-0 max-w-full">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_60%)]" />
@@ -308,18 +338,18 @@ export default function BessCalculator() {
         </div>
 
         <div className="mt-8 grid lg:grid-cols-[1.1fr_0.9fr] gap-6 w-full min-w-0">
-          <div className="space-y-6 min-w-0">
+          <div className="space-y-6 min-w-0 rounded-3xl border border-blue-500/15 bg-blue-500/[0.03] p-3 sm:p-4">
             <InputPanel
               capacity={capacity}
-              setCapacity={setCapacity}
+              setCapacity={handleCapacityChange}
               utilizationType={utilizationType}
-              setUtilizationType={setUtilizationType}
+              setUtilizationType={handleUtilizationTypeChange}
               annualConsumption={annualConsumption}
-              setAnnualConsumption={setAnnualConsumption}
+              setAnnualConsumption={handleAnnualConsumptionChange}
               electricityPrice={electricityPrice}
-              setElectricityPrice={setElectricityPrice}
+              setElectricityPrice={handleElectricityPriceChange}
               investmentMode={investmentMode}
-              setInvestmentMode={setInvestmentMode}
+              setInvestmentMode={handleInvestmentModeChange}
               advancedSettings={advancedSettings}
               setAdvancedSettings={setAdvancedSettings}
               profiles={profiles}
@@ -328,20 +358,33 @@ export default function BessCalculator() {
             <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6">
               <FinancingSection
                 financing={financing}
-                setFinancing={setFinancing}
+                setFinancing={handleFinancingChange}
                 subsidyPct={subsidyPct}
-                setSubsidyPct={setSubsidyPct}
+                setSubsidyPct={handleSubsidyChange}
                 loanInterestRate={loanInterestRate}
-                setLoanInterestRate={setLoanInterestRate}
+                setLoanInterestRate={handleLoanInterestRateChange}
                 loanTermYears={loanTermYears}
-                setLoanTermYears={setLoanTermYears}
+                setLoanTermYears={handleLoanTermYearsChange}
               />
             </div>
+
+            {validationHints.length > 0 ? (
+              <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300 mb-2">Kontrola vstupů</p>
+                <div className="space-y-1.5">
+                  {validationHints.map((hint) => (
+                    <p key={hint} className="text-xs text-amber-100/90">
+                      • {hint}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <ComparePanel scenarioA={scenarioA} />
           </div>
 
-          <div className="space-y-6 min-w-0">
+          <div className="space-y-6 min-w-0 rounded-3xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3 sm:p-4">
             <ResultsPanel
               calculations={calculations}
               onRequestAnalysis={() => setModalType('analysis')}

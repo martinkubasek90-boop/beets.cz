@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Slider } from '@/components/ui/slider';
-import { ChevronDown, Zap, TrendingUp, Activity, Shield, Rocket, Gauge } from 'lucide-react';
+import { ChevronDown, Zap, TrendingUp, Activity, Shield, Rocket, Gauge, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type Profiles = Record<string, { spread: number; fcrPrice: number; degradation?: number }>;
 
@@ -22,17 +23,35 @@ type InputPanelProps = {
   capacity: number;
   setCapacity: (value: number) => void;
   utilizationType: UtilizationType;
-  setUtilizationType: React.Dispatch<React.SetStateAction<UtilizationType>>;
+  setUtilizationType: (value: UtilizationType) => void;
   annualConsumption: number;
   setAnnualConsumption: (value: number) => void;
   electricityPrice: number;
   setElectricityPrice: (value: number) => void;
   investmentMode: 'conservative' | 'realistic' | 'dynamic';
-  setInvestmentMode: React.Dispatch<React.SetStateAction<'conservative' | 'realistic' | 'dynamic'>>;
+  setInvestmentMode: (value: 'conservative' | 'realistic' | 'dynamic') => void;
   advancedSettings: AdvancedSettings;
   setAdvancedSettings: React.Dispatch<React.SetStateAction<AdvancedSettings>>;
   profiles: Profiles;
 };
+
+function FieldLabel({ text, hint }: { text: string; hint: string }) {
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex items-center gap-1.5 cursor-help">
+            <label className="text-sm font-medium text-slate-300">{text}</label>
+            <Info className="w-3.5 h-3.5 text-slate-500" />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p>{hint}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 export default function InputPanel({
   capacity,
@@ -89,7 +108,7 @@ export default function InputPanel({
 
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <label className="text-sm font-medium text-slate-300">Kapacita úložiště</label>
+          <FieldLabel text="Kapacita úložiště" hint="Velikost baterie v kWh. Vyšší kapacita zvyšuje potenciální výnos i CAPEX." />
           <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {capacity.toLocaleString('cs-CZ')} kWh
           </span>
@@ -102,7 +121,7 @@ export default function InputPanel({
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-slate-300">Typ využití</label>
+        <FieldLabel text="Typ využití" hint="Volí poměr mezi stabilním FCR výnosem a tržní arbitráží." />
         <div className="grid grid-cols-1 gap-2">
           {utilizationTypes.map((type) => {
             const Icon = type.icon;
@@ -151,7 +170,7 @@ export default function InputPanel({
 
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <label className="text-sm font-medium text-slate-300">Roční spotřeba objektu</label>
+          <FieldLabel text="Roční spotřeba objektu" hint="Používá se pro odhad využitelné energie v arbitráži a vlastní spotřebě." />
           <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {annualConsumption.toLocaleString('cs-CZ')} MWh
           </span>
@@ -165,7 +184,7 @@ export default function InputPanel({
 
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-          <label className="text-sm font-medium text-slate-300">Průměrná cena elektřiny</label>
+          <FieldLabel text="Průměrná cena elektřiny" hint="Cena ovlivňuje úsporu z vlastní spotřeby energie z baterie." />
           <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
             {electricityPrice.toFixed(1)} Kč/kWh
           </span>
@@ -178,7 +197,7 @@ export default function InputPanel({
       </div>
 
       <div className="space-y-3">
-        <label className="text-sm font-medium text-slate-300">Investiční režim</label>
+        <FieldLabel text="Investiční režim" hint="Rychlé přednastavení pro konzervativní, realistický nebo dynamický scénář." />
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {investmentModes.map((mode) => {
             const Icon = mode.icon;
