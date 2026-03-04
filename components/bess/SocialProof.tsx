@@ -22,9 +22,9 @@ export default function SocialProof() {
           return (
             <div
               key={index}
-              className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-5 hover:border-slate-700/50 transition-colors"
+              className="bg-slate-900/50 border border-slate-800/50 rounded-xl p-5 hover:border-slate-700/50 transition-colors text-center sm:text-left"
             >
-              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center mb-3">
+              <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center mb-3 mx-auto sm:mx-0">
                 <Icon className="w-5 h-5 text-blue-400" />
               </div>
               <h4 className="font-medium text-white mb-1">{segment.title}</h4>
