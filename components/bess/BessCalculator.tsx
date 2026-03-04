@@ -240,11 +240,11 @@ export default function BessCalculator() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.25),_transparent_60%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(59,130,246,0.2),_transparent_55%)]" />
       <div className="relative w-full min-w-0 max-w-6xl mx-auto pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 py-6 sm:py-16">
-        <div className="flex flex-col gap-4 max-w-3xl">
+        <div className="flex flex-col gap-4 max-w-3xl text-center sm:text-left items-center sm:items-start">
           <motion.span
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.3em] text-emerald-300/80"
+            className="inline-flex items-center justify-center sm:justify-start gap-2 text-xs uppercase tracking-[0.3em] text-emerald-300/80"
           >
             BESS Kalkulačka
           </motion.span>
@@ -255,7 +255,7 @@ export default function BessCalculator() {
           >
             Ekonomický model pro bateriové úložiště energie
           </motion.h1>
-          <p className="text-base sm:text-lg text-slate-300">
+          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto sm:mx-0">
             Nastavte parametry projektu a během pár vteřin získáte modelované cash-flow, návratnost
             a investiční robustnost pro C&amp;I projekty v ČR.
           </p>

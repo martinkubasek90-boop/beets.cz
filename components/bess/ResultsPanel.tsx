@@ -52,7 +52,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
 
   return (
     <div className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 overflow-hidden">
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-3 text-center sm:text-left">
         <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700/50 text-xs text-slate-400">
           C&amp;I projekty v ČR se typicky pohybují mezi 5–9 lety návratnosti
         </span>
@@ -67,7 +67,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
             status.color === 'red' && 'bg-red-500/5 border-red-500/30',
           )}
         >
-          <div className="flex items-start sm:items-center gap-2 mb-4">
+          <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
             {React.createElement(status.icon, { className: cn('w-5 h-5', statusTextClass) })}
             <span className={cn('text-xs sm:text-sm font-medium leading-snug', statusTextClass)}>{status.label}</span>
           </div>
@@ -168,7 +168,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
       </div>
 
       <div className="px-4 sm:px-5 pb-5">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
           {['Model zahrnuje degradaci baterie', 'Zohledňuje provozní náklady', '12letý investiční horizont'].map((text, i) => (
             <div key={i} className="flex items-center gap-1.5 text-xs text-slate-400">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
