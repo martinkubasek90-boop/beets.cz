@@ -169,7 +169,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
   ];
 
   return (
-    <div className="bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
+    <div className="w-full min-w-0 bg-slate-900/50 border border-slate-800/50 rounded-2xl overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-start sm:items-center justify-between gap-3 p-4 sm:p-5 hover:bg-slate-800/30 transition-colors"

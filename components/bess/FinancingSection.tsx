@@ -30,7 +30,7 @@ export default function FinancingSection({
   const [showLoanDetails, setShowLoanDetails] = React.useState(false);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full min-w-0">
       <label className="text-sm font-medium text-slate-300">Financování</label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[

@@ -51,7 +51,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
           : 'text-red-400';
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 overflow-hidden">
+    <div className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 overflow-hidden">
       <div className="px-5 pt-5 pb-3">
         <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700/50 text-xs text-slate-400">
           C&amp;I projekty v ČR se typicky pohybují mezi 5–9 lety návratnosti
