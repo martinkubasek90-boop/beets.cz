@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { defaultBessAdminConfig, type BessAdminConfig } from '@/lib/bess-admin-config';
 
 type IngestDiscoveryPayload = {
@@ -197,6 +198,14 @@ export default function KalkulackaAdminPage() {
         <div>
           <h1 className="text-2xl font-semibold">Kalkulačka admin</h1>
           <p className="text-sm text-slate-400 mt-1">Editace chatbotu, default parametrů kalkulačky a Memodo ingest.</p>
+          <div className="mt-3">
+            <Link
+              href="/kalkulacka"
+              className="inline-flex items-center rounded-lg bg-blue-600 hover:bg-blue-500 px-4 py-2 text-sm font-semibold text-white"
+            >
+              Otevřít kalkulačku
+            </Link>
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-4">
