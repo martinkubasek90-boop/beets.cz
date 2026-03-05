@@ -117,6 +117,15 @@ Admin page for calculator/chatbot:
 - Optional token for KB ingest actions:
   - `BESS_KB_ADMIN_TOKEN`
 
+HubSpot lead integration:
+- Endpoint: `POST /api/hubspot/lead`
+- Triggered from BESS lead modal submit (`pdf` and `analysis` requests)
+- Required env:
+  - `HUBSPOT_PRIVATE_APP_TOKEN`
+- Optional env for automatic Deal creation:
+  - `HUBSPOT_PIPELINE`
+  - `HUBSPOT_DEAL_STAGE`
+
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.
 - `LLM_MODE=trial`: uses remote LLM API (trial key).

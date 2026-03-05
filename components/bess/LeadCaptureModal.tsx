@@ -25,14 +25,38 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
   const [formData, setFormData] = useState({ email: '', name: '', company: '', phone: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const isPdf = type === 'pdf';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch('/api/hubspot/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          ...formData,
+          calculations,
+          inputs,
+          sourceUrl: window.location.href,
+        }),
+      });
+
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || 'Odeslání do CRM selhalo.');
+      }
+
+      setIsSubmitted(true);
+    } catch (error: any) {
+      setSubmitError(error?.message || 'Odeslání selhalo, zkuste to prosím znovu.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatCurrency = (v: number) =>
@@ -177,6 +201,7 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
                   'Odeslat žádost'
                 )}
               </Button>
+              {submitError ? <p className="text-xs text-red-400 text-center">{submitError}</p> : null}
               <p className="text-xs text-center text-slate-500">
                 Odesláním souhlasíte se zpracováním osobních údajů pro účely komunikace.
               </p>
