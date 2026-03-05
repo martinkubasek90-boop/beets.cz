@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
+const embedOrigins = (process.env.KALKULACKA_EMBED_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const frameAncestorsValue = ["'self'", ...embedOrigins].join(" ");
+
 const nextConfig: NextConfig = {
   cacheComponents: false,
   async headers() {
@@ -7,16 +14,14 @@ const nextConfig: NextConfig = {
       {
         source: '/kalkulacka',
         headers: [
-          // Allow embedding kalkulacka on external sites (TYPO3, partner weby).
-          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
-          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          // Frame policy for external embeds (controlled by env allowlist).
+          { key: 'Content-Security-Policy', value: `frame-ancestors ${frameAncestorsValue}` },
         ],
       },
       {
         source: '/kalkulacka/:path*',
         headers: [
-          { key: 'Content-Security-Policy', value: 'frame-ancestors *' },
-          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Content-Security-Policy', value: `frame-ancestors ${frameAncestorsValue}` },
         ],
       },
     ];
