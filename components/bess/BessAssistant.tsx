@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Bot, Link2, Plus, Send, Sparkles, X } from 'lucide-react';
+import { Bot, Link2, Send, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -155,36 +155,86 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
     return 'Asistent pomůže vyplnit kalkulačku a nastaví parametry.';
   }, [loading]);
 
-  const ingestKnowledge = async (type: 'url' | 'text') => {
-    const value =
+  const ingestKnowledge = async (type: 'url' | 'sitemap') => {
+    const value = window.prompt(
       type === 'url'
-        ? window.prompt('Zadejte URL, kterou chcete přidat do znalostní báze:')
-        : window.prompt('Vložte text interní znalosti:');
+        ? 'Zadejte URL stránky, kterou chcete přidat do znalostní báze:'
+        : 'Zadejte URL sitemapy (např. https://www.memodo.cz/sitemap.xml):',
+    );
     if (!value?.trim() || ingesting) return;
 
     setIngesting(true);
     try {
-      const body =
-        type === 'url'
-          ? { namespace: 'bess', items: [{ type: 'url', url: value.trim(), label: value.trim() }] }
-          : { namespace: 'bess', items: [{ type: 'text', text: value.trim(), label: 'Interní text' }] };
+      if (type === 'sitemap') {
+        const discoveryResponse = await fetch('/api/bess-kb/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            namespace: 'bess',
+            sitemapUrl: value.trim(),
+            discoverOnly: true,
+            maxUrls: 2500,
+          }),
+        });
+        const discoveryPayload = (await discoveryResponse.json().catch(() => ({}))) as {
+          error?: string;
+          urls?: string[];
+          totalUrls?: number;
+        };
+        if (!discoveryResponse.ok || !discoveryPayload.urls?.length) {
+          throw new Error(discoveryPayload.error || 'Sitemap nevrátila žádné URL.');
+        }
 
-      const response = await fetch('/api/bess-kb/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
-      if (!response.ok) throw new Error(payload.error || 'Ingest se nepodařil.');
+        const allUrls = discoveryPayload.urls;
+        const batchSize = 40;
+        let totalProcessed = 0;
+        for (let index = 0; index < allUrls.length; index += batchSize) {
+          const batch = allUrls.slice(index, index + batchSize);
+          const response = await fetch('/api/bess-kb/ingest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              namespace: 'bess',
+              items: batch.map((url) => ({ type: 'url', url, label: url })),
+            }),
+          });
+          const payload = (await response.json().catch(() => ({}))) as {
+            error?: string;
+            processed?: number;
+          };
+          if (!response.ok) throw new Error(payload.error || 'Import sitemapy se nepodařil.');
+          totalProcessed += payload.processed ?? batch.length;
+        }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: type === 'url' ? 'URL je uložené do znalostní báze.' : 'Text je uložený do znalostní báze.',
-        },
-      ]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: `Sitemap import dokončen. Zpracováno ${totalProcessed} URL z ${discoveryPayload.totalUrls ?? totalProcessed}.`,
+          },
+        ]);
+      } else {
+        const response = await fetch('/api/bess-kb/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            namespace: 'bess',
+            items: [{ type: 'url', url: value.trim(), label: value.trim() }],
+          }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) throw new Error(payload.error || 'Ingest se nepodařil.');
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            text: 'URL je uložené do znalostní báze.',
+          },
+        ]);
+      }
     } catch (error: any) {
       setMessages((prev) => [
         ...prev,
@@ -233,12 +283,12 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
                 </button>
                 <button
                   type="button"
-                  onClick={() => ingestKnowledge('text')}
+                  onClick={() => ingestKnowledge('sitemap')}
                   className="p-2 rounded-lg hover:bg-slate-800 text-slate-400"
-                  title="Přidat text do znalostní báze"
+                  title="Načíst URL ze sitemapy"
                   disabled={ingesting}
                 >
-                  <Plus className="w-4 h-4" />
+                  <Sparkles className="w-4 h-4" />
                 </button>
                 <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-slate-800 text-slate-400">
                   <X className="w-4 h-4" />

@@ -56,6 +56,7 @@ type LlmMode = 'off' | 'trial' | 'local';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const llmMode = ((process.env.LLM_MODE || 'off').toLowerCase() as LlmMode);
+const strictKnowledgeMode = (process.env.BESS_CHAT_STRICT_KB || 'true').toLowerCase() !== 'false';
 
 const extractPercent = (text: string) => {
   const match = text.match(/(\d{1,2})\s*%/);
@@ -363,8 +364,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Chybí zpráva.' }, { status: 400 });
   }
 
-  const response = buildResponse(message, payload.context ?? {});
   const citations = await retrieveKnowledge('bess', message, 3);
+
+  if (strictKnowledgeMode && citations.length === 0) {
+    return NextResponse.json({
+      reply:
+        'V dostupné znalostní bázi k tomu nemám ověřený podklad, takže nechci hádat. Pošlete prosím konkrétní URL zdroj (nebo rozšiřte sitemapu) a odpovím přesně.',
+      suggestions: [
+        'Doplnit URL produktu z Memodo',
+        'Doplnit URL kategorie z Memodo',
+        'Nahrát sitemapu Memodo',
+      ],
+      citations: [],
+    });
+  }
+
+  if (strictKnowledgeMode) {
+    const groundedReply = await maybeGenerateLlmReply({
+      message,
+      context: payload.context ?? {},
+      baseReply:
+        'Odpověz pouze podle citovaných zdrojů. Pokud něco ve zdrojích není, explicitně to řekni.',
+      citations,
+    });
+
+    const fallbackReply = [
+      'Našel jsem relevantní podklady v povolených URL zdrojích:',
+      ...citations.map((item, index) => `${index + 1}. ${item.sourceLabel}`),
+      'Bez dalších podkladů nechci doplňovat informace navíc.',
+    ].join('\n');
+
+    return NextResponse.json({
+      reply: groundedReply || fallbackReply,
+      suggestions: [
+        'Pošli přesnější URL produktu',
+        'Pošli URL kategorie',
+        'Přidej další URL do znalostní báze',
+      ],
+      citations,
+    });
+  }
+
+  const response = buildResponse(message, payload.context ?? {});
   const llmReply = await maybeGenerateLlmReply({
     message,
     context: payload.context ?? {},

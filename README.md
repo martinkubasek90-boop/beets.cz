@@ -51,7 +51,7 @@ Edit inputs at the top of the script:
 
 ## BESS Chatbot Knowledge Base (RAG MVP)
 
-The BESS calculator chatbot supports a lightweight knowledge base with URL/text ingestion and source citations.
+The BESS calculator chatbot supports a URL-based knowledge base with source citations.
 
 Setup:
 
@@ -65,20 +65,36 @@ Setup:
 
 API endpoints:
 - `POST /api/bess-kb/ingest`
-  - Body example:
+  - URL ingest body example:
     ```json
     {
       "namespace": "bess",
       "items": [
-        { "type": "url", "url": "https://example.com/bess-guide", "label": "BESS Guide" },
-        { "type": "text", "label": "Internal notes", "text": "..." }
+        { "type": "url", "url": "https://www.memodo.cz/produkt-1", "label": "Memodo produkt 1" }
       ]
+    }
+    ```
+  - Sitemap discovery example:
+    ```json
+    {
+      "namespace": "bess",
+      "sitemapUrl": "https://www.memodo.cz/sitemap.xml",
+      "discoverOnly": true,
+      "maxUrls": 2500
     }
     ```
   - If `BESS_KB_ADMIN_TOKEN` is set, pass header:
     - `Authorization: Bearer <token>`
 - `POST /api/bess-chat`
   - Returns assistant reply + optional `citations` from KB.
+
+Strict anti-hallucination mode:
+- `BESS_CHAT_STRICT_KB=true` (default): chatbot refuses to answer when no citation is found.
+- `BESS_CHAT_STRICT_KB=false`: fallback answers are allowed.
+
+URL allowlist:
+- `BESS_KB_ALLOWED_HOSTS=memodo.cz,www.memodo.cz`
+- Ingestion rejects URLs outside this host allowlist.
 
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.

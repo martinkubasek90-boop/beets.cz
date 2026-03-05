@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 type SourceType = 'url' | 'text';
 
-type KnowledgeItem = {
+export type KnowledgeItem = {
   type: SourceType;
   label?: string;
   url?: string;
@@ -30,6 +30,11 @@ export type KnowledgeCitation = {
   score: number;
 };
 
+export type SitemapDiscoveryResult = {
+  urls: string[];
+  sourceCount: number;
+};
+
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -44,8 +49,33 @@ function getServiceClient() {
 }
 
 const stopWords = new Set([
-  'a', 'i', 'o', 'u', 'v', 'z', 's', 'na', 'do', 'pro', 'po', 'od', 'k', 'se', 'si', 'je', 'to',
-  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'are', 'was', 'will',
+  'a',
+  'i',
+  'o',
+  'u',
+  'v',
+  'z',
+  's',
+  'na',
+  'do',
+  'pro',
+  'po',
+  'od',
+  'k',
+  'se',
+  'si',
+  'je',
+  'to',
+  'the',
+  'and',
+  'for',
+  'with',
+  'from',
+  'that',
+  'this',
+  'are',
+  'was',
+  'will',
 ]);
 
 const normalizeText = (value: string) =>
@@ -64,6 +94,7 @@ function stripHtml(input: string) {
   return input
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
@@ -97,6 +128,54 @@ function splitIntoChunks(text: string, chunkSize = 1200, overlap = 180) {
   return chunks;
 }
 
+function decodeXmlEntities(value: string) {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function normalizeUrl(input: string) {
+  const url = new URL(input.trim());
+  if (!/^https?:$/i.test(url.protocol)) {
+    throw new Error(`Unsupported protocol for URL: ${input}`);
+  }
+  url.hash = '';
+  if (url.pathname.length > 1) {
+    url.pathname = url.pathname.replace(/\/+$/, '');
+  }
+  return url.toString();
+}
+
+function getAllowedHosts() {
+  const fromEnv = (process.env.BESS_KB_ALLOWED_HOSTS || 'memodo.cz,www.memodo.cz')
+    .split(',')
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+
+  return new Set(fromEnv);
+}
+
+function isHostAllowed(hostname: string, allowedHosts: Set<string>) {
+  if (!allowedHosts.size) return true;
+  const host = hostname.toLowerCase();
+  for (const allowed of allowedHosts) {
+    if (host === allowed || host.endsWith(`.${allowed}`)) return true;
+  }
+  return false;
+}
+
+function assertAllowedUrl(rawUrl: string, allowedHosts: Set<string>) {
+  const normalized = normalizeUrl(rawUrl);
+  const host = new URL(normalized).hostname;
+  if (!isHostAllowed(host, allowedHosts)) {
+    throw new Error(`URL is outside allowed hosts: ${host}`);
+  }
+  return normalized;
+}
+
 async function fetchUrlText(url: string) {
   const response = await fetch(url, {
     method: 'GET',
@@ -104,7 +183,7 @@ async function fetchUrlText(url: string) {
       'User-Agent': 'BEETS-BESS-KB-Bot/1.0',
       Accept: 'text/html,application/xhtml+xml,application/xml,text/plain;q=0.9,*/*;q=0.8',
     },
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {
@@ -115,13 +194,92 @@ async function fetchUrlText(url: string) {
   return stripHtml(html);
 }
 
+function extractLocValues(xml: string) {
+  const values: string[] = [];
+  const regex = /<loc>([\s\S]*?)<\/loc>/gi;
+  let match = regex.exec(xml);
+  while (match) {
+    values.push(decodeXmlEntities(match[1].trim()));
+    match = regex.exec(xml);
+  }
+  return values;
+}
+
+export async function discoverUrlsFromSitemap(
+  sitemapUrl: string,
+  options?: { maxUrls?: number; allowedHosts?: string[] },
+): Promise<SitemapDiscoveryResult> {
+  const maxUrls = Math.min(Math.max(options?.maxUrls ?? 2500, 1), 10000);
+  const allowedHosts = new Set(
+    (options?.allowedHosts?.length ? options.allowedHosts : Array.from(getAllowedHosts())).map((host) =>
+      host.toLowerCase(),
+    ),
+  );
+
+  const pending = [assertAllowedUrl(sitemapUrl, allowedHosts)];
+  const visitedSitemaps = new Set<string>();
+  const urls: string[] = [];
+  const urlSeen = new Set<string>();
+
+  while (pending.length && urls.length < maxUrls) {
+    const current = pending.shift();
+    if (!current || visitedSitemaps.has(current)) continue;
+
+    visitedSitemaps.add(current);
+
+    const response = await fetch(current, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'BEETS-BESS-KB-Bot/1.0',
+        Accept: 'application/xml,text/xml,text/plain;q=0.9,*/*;q=0.8',
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Sitemap fetch failed (${response.status}) for ${current}`);
+    }
+
+    const xml = await response.text();
+    const locs = extractLocValues(xml);
+    const lower = xml.toLowerCase();
+    const isIndex = lower.includes('<sitemapindex');
+
+    for (const loc of locs) {
+      let normalized: string;
+      try {
+        normalized = assertAllowedUrl(loc, allowedHosts);
+      } catch {
+        continue;
+      }
+
+      if (isIndex) {
+        if (!visitedSitemaps.has(normalized)) {
+          pending.push(normalized);
+        }
+        continue;
+      }
+
+      if (!urlSeen.has(normalized)) {
+        urlSeen.add(normalized);
+        urls.push(normalized);
+      }
+
+      if (urls.length >= maxUrls) break;
+    }
+  }
+
+  return { urls, sourceCount: visitedSitemaps.size };
+}
+
 export async function ingestKnowledgeItems(namespace: string, items: KnowledgeItem[]) {
   const supabase = getServiceClient();
   if (!supabase) {
     throw new Error('Missing Supabase service configuration.');
   }
 
-  const summary: Array<{ label: string; chunks: number }> = [];
+  const allowedHosts = getAllowedHosts();
+  const summary: Array<{ label: string; chunks: number; status: 'ok' | 'skipped' }> = [];
 
   for (const item of items) {
     const sourceType = item.type;
@@ -134,19 +292,34 @@ export async function ingestKnowledgeItems(namespace: string, items: KnowledgeIt
       if (!item.url?.trim()) {
         throw new Error('Missing URL in url-type knowledge item.');
       }
-      sourceUrl = item.url.trim();
+      sourceUrl = assertAllowedUrl(item.url.trim(), allowedHosts);
       content = await fetchUrlText(sourceUrl);
     } else {
       content = (item.text || '').trim();
     }
 
     if (!content || content.length < 120) {
-      throw new Error(`Source "${sourceLabel || 'unknown'}" has too little content.`);
+      summary.push({ label: sourceLabel || 'unknown', chunks: 0, status: 'skipped' });
+      continue;
     }
 
-    const chunks = splitIntoChunks(content);
+    const trimmedContent = content.slice(0, 500000);
+    const chunks = splitIntoChunks(trimmedContent);
     if (!chunks.length) {
-      throw new Error(`No valid chunks generated for "${sourceLabel || 'unknown'}".`);
+      summary.push({ label: sourceLabel || 'unknown', chunks: 0, status: 'skipped' });
+      continue;
+    }
+
+    if (sourceUrl) {
+      const { error: deleteError } = await supabase
+        .from('bess_knowledge_sources')
+        .delete()
+        .eq('namespace', namespace)
+        .eq('source_url', sourceUrl);
+
+      if (deleteError) {
+        throw new Error(`Failed to clean source before upsert: ${deleteError.message}`);
+      }
     }
 
     const { data: source, error: sourceError } = await supabase
@@ -156,7 +329,7 @@ export async function ingestKnowledgeItems(namespace: string, items: KnowledgeIt
         source_type: sourceType,
         source_label: sourceLabel || null,
         source_url: sourceUrl,
-        content,
+        content: trimmedContent,
       })
       .select('id')
       .single();
@@ -178,7 +351,7 @@ export async function ingestKnowledgeItems(namespace: string, items: KnowledgeIt
       throw new Error(`Failed to insert chunks: ${chunkError.message}`);
     }
 
-    summary.push({ label: sourceLabel || `source-${source.id}`, chunks: chunkRows.length });
+    summary.push({ label: sourceLabel || `source-${source.id}`, chunks: chunkRows.length, status: 'ok' });
   }
 
   return summary;
@@ -217,17 +390,17 @@ export async function retrieveKnowledge(namespace: string, question: string, max
   const { data, error } = await supabase
     .from('bess_knowledge_chunks')
     .select(
-      'id,chunk_text,source_id,chunk_index,metadata,bess_knowledge_sources(id,source_label,source_url,namespace)'
+      'id,chunk_text,source_id,chunk_index,metadata,bess_knowledge_sources(id,source_label,source_url,namespace)',
     )
     .order('created_at', { ascending: false })
-    .limit(400);
+    .limit(600);
 
   if (error || !data?.length) {
     return [] as KnowledgeCitation[];
   }
 
   const rows = (data as unknown as KnowledgeChunk[]).filter(
-    (row) => row.bess_knowledge_sources?.namespace === namespace
+    (row) => row.bess_knowledge_sources?.namespace === namespace,
   );
 
   const ranked = rows
