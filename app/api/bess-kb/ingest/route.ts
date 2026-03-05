@@ -88,13 +88,12 @@ export async function POST(request: Request) {
       });
     }
 
-    const items = (payload.items || []).filter((item) => item.type === 'url');
+    const items = payload.items || [];
 
     if (!items.length) {
       return NextResponse.json(
         {
-          error:
-            'Missing ingestion items. Supported mode: URL items only (or sitemapUrl for bulk import).',
+          error: 'Missing ingestion items. Supported modes: url/text items or sitemapUrl for bulk import.',
         },
         { status: 400 },
       );

@@ -74,6 +74,15 @@ API endpoints:
       ]
     }
     ```
+  - Text ingest body example:
+    ```json
+    {
+      "namespace": "bess",
+      "items": [
+        { "type": "text", "label": "Interní poznámka", "text": "..." }
+      ]
+    }
+    ```
   - Sitemap discovery example:
     ```json
     {
@@ -87,6 +96,10 @@ API endpoints:
     - `Authorization: Bearer <token>`
 - `POST /api/bess-chat`
   - Returns assistant reply + optional `citations` from KB.
+- `POST /api/bess-kb/upload`
+  - multipart/form-data upload (`files[]`) for documents.
+  - Supported: `pdf`, `txt`, `md`, `csv`, `json`, `xml`, `html`.
+  - PDF extraction uses LLM (`LLM_API_KEY` required).
 
 Strict anti-hallucination mode:
 - `BESS_CHAT_STRICT_KB=true` (default): chatbot refuses to answer when no citation is found.

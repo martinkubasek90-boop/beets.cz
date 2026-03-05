@@ -328,6 +328,7 @@ async function maybeGenerateLlmReply(params: {
   baseReply: string;
   citations: KnowledgeCitation[];
   systemPrompt: string;
+  guidanceSteps: string[];
 }) {
   if (llmMode === 'off') return null;
 
@@ -343,6 +344,8 @@ async function maybeGenerateLlmReply(params: {
     '',
     'Podklady ze znalostní báze:',
     buildKnowledgeSummary(params.citations),
+    '',
+    params.guidanceSteps.length ? `Kroky odpovědi:\n${params.guidanceSteps.map((step, index) => `${index + 1}. ${step}`).join('\n')}` : '',
     '',
     'Úkol: napiš finální odpověď (2-4 věty), praktickou a bez marketingové omáčky.',
   ].join('\n');
@@ -391,6 +394,7 @@ export async function POST(request: Request) {
         'Odpověz pouze podle citovaných zdrojů. Pokud něco ve zdrojích není, explicitně to řekni.',
       citations,
       systemPrompt: adminConfig.assistant.systemPrompt,
+      guidanceSteps: adminConfig.assistant.guidanceSteps,
     });
 
     const fallbackReply = [
@@ -417,6 +421,7 @@ export async function POST(request: Request) {
     baseReply: response.reply,
     citations,
     systemPrompt: adminConfig.assistant.systemPrompt,
+    guidanceSteps: adminConfig.assistant.guidanceSteps,
   });
 
   if (llmReply) {

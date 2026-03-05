@@ -26,6 +26,7 @@ export type BessAdminConfig = {
   assistant: {
     welcomeMessage: string;
     quickActions: string[];
+    guidanceSteps: string[];
     strictKnowledgeMode: boolean;
     systemPrompt: string;
   };
@@ -61,6 +62,12 @@ export const defaultBessAdminConfig: BessAdminConfig = {
       'Mám výrobní podnik',
       'Přidej dotaci 20 %',
       'Přepni na konzervativní režim',
+    ],
+    guidanceSteps: [
+      'Nejdřív zjisti typ objektu a roční spotřebu.',
+      'Pak doporuč rozsah kapacity a využití baterie.',
+      'Uveď konkrétní produktové možnosti, pokud jsou ve zdrojích.',
+      'Nakonec navrhni další krok (kalkulace, konzultace, doplnění dat).',
     ],
     strictKnowledgeMode: true,
     systemPrompt:
@@ -135,6 +142,7 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
     assistant: {
       welcomeMessage: toString(assistant.welcomeMessage, defaultBessAdminConfig.assistant.welcomeMessage),
       quickActions: toStringArray(assistant.quickActions, defaultBessAdminConfig.assistant.quickActions),
+      guidanceSteps: toStringArray(assistant.guidanceSteps, defaultBessAdminConfig.assistant.guidanceSteps),
       strictKnowledgeMode: toBoolean(assistant.strictKnowledgeMode, defaultBessAdminConfig.assistant.strictKnowledgeMode),
       systemPrompt: toString(assistant.systemPrompt, defaultBessAdminConfig.assistant.systemPrompt),
     },

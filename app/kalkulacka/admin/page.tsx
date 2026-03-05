@@ -17,6 +17,10 @@ export default function KalkulackaAdminPage() {
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const [importing, setImporting] = useState(false);
+  const [singleUrl, setSingleUrl] = useState('');
+  const [freeText, setFreeText] = useState('');
+  const [textLabel, setTextLabel] = useState('Interní poznámka');
+  const [uploadFiles, setUploadFiles] = useState<FileList | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -124,6 +128,65 @@ export default function KalkulackaAdminPage() {
     }
   };
 
+  const ingestSingleUrl = async () => {
+    if (!singleUrl.trim()) return;
+    setStatus('');
+    const response = await fetch('/api/bess-kb/ingest', {
+      method: 'POST',
+      headers: kbHeaders,
+      body: JSON.stringify({
+        namespace: 'bess',
+        items: [{ type: 'url', url: singleUrl.trim(), label: singleUrl.trim() }],
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      setStatus(payload.error || 'URL ingest selhal.');
+      return;
+    }
+    setStatus('URL byla přidána do knowledge base.');
+  };
+
+  const ingestTextNote = async () => {
+    if (!freeText.trim()) return;
+    setStatus('');
+    const response = await fetch('/api/bess-kb/ingest', {
+      method: 'POST',
+      headers: kbHeaders,
+      body: JSON.stringify({
+        namespace: 'bess',
+        items: [{ type: 'text', label: textLabel.trim() || 'Interní poznámka', text: freeText }],
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      setStatus(payload.error || 'Text ingest selhal.');
+      return;
+    }
+    setStatus('Textová znalost byla přidána do knowledge base.');
+  };
+
+  const ingestFiles = async () => {
+    if (!uploadFiles?.length) return;
+    setStatus('');
+    const form = new FormData();
+    form.set('namespace', 'bess');
+    Array.from(uploadFiles).forEach((file) => form.append('files', file));
+
+    const response = await fetch('/api/bess-kb/upload', {
+      method: 'POST',
+      headers: kbToken.trim() ? { Authorization: `Bearer ${kbToken.trim()}` } : undefined,
+      body: form,
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as { error?: string; processed?: number };
+    if (!response.ok) {
+      setStatus(payload.error || 'File ingest selhal.');
+      return;
+    }
+    setStatus(`Dokumenty byly přidány do KB. Zpracováno souborů: ${payload.processed ?? uploadFiles.length}.`);
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-slate-950 text-slate-200 p-6">Načítám admin konfiguraci...</div>;
   }
@@ -178,6 +241,63 @@ export default function KalkulackaAdminPage() {
             >
               {importing ? 'Importuji URL...' : 'Načíst všechny URL ze sitemapy do KB'}
             </button>
+            <div className="pt-2 border-t border-slate-800 space-y-2">
+              <label className="block text-xs text-slate-400">Přidat jednu URL</label>
+              <input
+                value={singleUrl}
+                onChange={(e) => setSingleUrl(e.target.value)}
+                placeholder="https://www.memodo.cz/..."
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={ingestSingleUrl}
+                className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-sm font-medium"
+              >
+                Přidat URL do KB
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 space-y-2">
+              <label className="block text-xs text-slate-400">Nahrát dokumenty (PDF, TXT, MD, CSV, JSON, XML, HTML)</label>
+              <input
+                type="file"
+                multiple
+                onChange={(e) => setUploadFiles(e.target.files)}
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={ingestFiles}
+                className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-sm font-medium"
+              >
+                Nahrát dokumenty do KB
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-slate-800 space-y-2">
+              <label className="block text-xs text-slate-400">Interní textová znalost</label>
+              <input
+                value={textLabel}
+                onChange={(e) => setTextLabel(e.target.value)}
+                placeholder="Název poznámky"
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+              />
+              <textarea
+                rows={4}
+                value={freeText}
+                onChange={(e) => setFreeText(e.target.value)}
+                placeholder="Sem vložte interní instrukce nebo znalosti..."
+                className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+              />
+              <button
+                type="button"
+                onClick={ingestTextNote}
+                className="w-full rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-2 text-sm font-medium"
+              >
+                Přidat text do KB
+              </button>
+            </div>
           </div>
         </div>
 
@@ -214,7 +334,7 @@ export default function KalkulackaAdminPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
-            {[0, 1, 2, 3].map((index) => (
+            {[0, 1, 2, 3, 4, 5].map((index) => (
               <div key={index}>
                 <label className="block text-xs text-slate-400 mb-1">Quick action {index + 1}</label>
                 <input
@@ -224,7 +344,27 @@ export default function KalkulackaAdminPage() {
                     next[index] = e.target.value;
                     setConfig((prev) => ({
                       ...prev,
-                      assistant: { ...prev.assistant, quickActions: next.filter((item) => item.trim()) },
+                      assistant: { ...prev.assistant, quickActions: next },
+                    }));
+                  }}
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[0, 1, 2, 3, 4, 5].map((index) => (
+              <div key={index}>
+                <label className="block text-xs text-slate-400 mb-1">Krok konzultace {index + 1}</label>
+                <input
+                  value={config.assistant.guidanceSteps[index] || ''}
+                  onChange={(e) => {
+                    const next = [...config.assistant.guidanceSteps];
+                    next[index] = e.target.value;
+                    setConfig((prev) => ({
+                      ...prev,
+                      assistant: { ...prev.assistant, guidanceSteps: next },
                     }));
                   }}
                   className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
