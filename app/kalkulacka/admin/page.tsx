@@ -17,6 +17,7 @@ export default function KalkulackaAdminPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const [embedHeight, setEmbedHeight] = useState(1700);
   const [importing, setImporting] = useState(false);
   const [singleUrl, setSingleUrl] = useState('');
   const [freeText, setFreeText] = useState('');
@@ -53,6 +54,40 @@ export default function KalkulackaAdminPage() {
     if (kbToken.trim()) headers.Authorization = `Bearer ${kbToken.trim()}`;
     return headers;
   }, [kbToken]);
+
+  const embedBaseUrl =
+    typeof window !== 'undefined' ? `${window.location.origin}/kalkulacka` : 'https://beets.cz/kalkulacka';
+
+  const iframeEmbedCode = `<iframe src="${embedBaseUrl}" title="BESS kalkulačka" loading="lazy" style="width:100%;max-width:1200px;height:${embedHeight}px;border:0;border-radius:16px;overflow:hidden;" allow="clipboard-write"></iframe>`;
+
+  const scriptEmbedCode = `<div id="beets-bess-calculator"></div>
+<script>
+  (function () {
+    var host = ${JSON.stringify(embedBaseUrl)};
+    var target = document.getElementById('beets-bess-calculator');
+    if (!target) return;
+    var iframe = document.createElement('iframe');
+    iframe.src = host;
+    iframe.title = 'BESS kalkulačka';
+    iframe.loading = 'lazy';
+    iframe.style.width = '100%';
+    iframe.style.maxWidth = '1200px';
+    iframe.style.height = '${embedHeight}px';
+    iframe.style.border = '0';
+    iframe.style.borderRadius = '16px';
+    iframe.style.overflow = 'hidden';
+    target.appendChild(iframe);
+  })();
+</script>`;
+
+  const copyToClipboard = async (value: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setStatus(`${label} zkopírován do schránky.`);
+    } catch {
+      setStatus(`Nepodařilo se zkopírovat ${label.toLowerCase()}.`);
+    }
+  };
 
   const saveConfig = async () => {
     setSaving(true);
@@ -530,6 +565,58 @@ export default function KalkulackaAdminPage() {
                 />
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-200">Embed skript pro externí weby</h2>
+          <div className="grid sm:grid-cols-[220px_1fr] gap-3 items-center">
+            <label className="text-xs text-slate-400">Výška embedu (px)</label>
+            <input
+              type="number"
+              min={900}
+              max={2600}
+              step={50}
+              value={embedHeight}
+              onChange={(e) => setEmbedHeight(Math.max(900, Math.min(2600, Number(e.target.value) || 1700)))}
+              className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-slate-400">IFRAME embed</label>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(iframeEmbedCode, 'IFRAME embed')}
+                className="rounded-md bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-medium"
+              >
+                Kopírovat
+              </button>
+            </div>
+            <textarea
+              rows={4}
+              readOnly
+              value={iframeEmbedCode}
+              className="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-slate-400">JS embed</label>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(scriptEmbedCode, 'JS embed')}
+                className="rounded-md bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-medium"
+              >
+                Kopírovat
+              </button>
+            </div>
+            <textarea
+              rows={8}
+              readOnly
+              value={scriptEmbedCode}
+              className="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300"
+            />
           </div>
         </div>
 
