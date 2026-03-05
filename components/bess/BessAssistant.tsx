@@ -85,7 +85,8 @@ export default function BessAssistant({
   quickActions,
   defaultSitemapUrl,
 }: BessAssistantProps) {
-  const resolvedQuickActions = quickActions?.length ? quickActions : fallbackQuickActions;
+  const cleanedQuickActions = (quickActions || []).map((item) => item.trim()).filter(Boolean);
+  const resolvedQuickActions = cleanedQuickActions.length ? cleanedQuickActions : fallbackQuickActions;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

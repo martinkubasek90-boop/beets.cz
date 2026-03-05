@@ -482,6 +482,47 @@ export default function KalkulackaAdminPage() {
           </div>
         </div>
 
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-200">Python model tuning (výpočetní jádro)</h2>
+          <p className="text-xs text-slate-400">
+            Tyto parametry jsou napojené na výpočet CAPEX/FCR/arbitráže v kalkulačce.
+          </p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              ['Battery cost / MWh (Kč)', 'batteryCostPerMwh'],
+              ['PCS cost / MW (Kč)', 'pcsCostPerMw'],
+              ['Grid connection (Kč)', 'gridConnectionCost'],
+              ['EMS (Kč)', 'emsCost'],
+              ['Engineering (Kč)', 'engineeringCost'],
+              ['Construction (Kč)', 'constructionCost'],
+              ['Fire safety (Kč)', 'fireSafetyCost'],
+              ['Cycles / year', 'cyclesPerYear'],
+              ['Roundtrip efficiency (0-1)', 'roundtripEfficiency'],
+              ['Aggregator fee (%)', 'aggregatorFeePercent'],
+              ['Project lifetime (years)', 'projectLifetimeYears'],
+            ].map(([label, key]) => (
+              <div key={key}>
+                <label className="block text-xs text-slate-400 mb-1">{label}</label>
+                <input
+                  type="number"
+                  step={key === 'roundtripEfficiency' ? '0.01' : '1'}
+                  value={config.modelTuning[key as keyof BessAdminConfig['modelTuning']] as number}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      modelTuning: {
+                        ...prev.modelTuning,
+                        [key]: Number(e.target.value),
+                      },
+                    }))
+                  }
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center gap-3">
           <button
             type="button"

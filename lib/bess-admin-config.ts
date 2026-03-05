@@ -3,6 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 export type UtilizationType = 'stable' | 'combined' | 'arbitrage';
 export type InvestmentMode = 'conservative' | 'realistic' | 'dynamic';
 export type FinancingType = 'own' | 'bank';
+export type BessModelTuning = {
+  batteryCostPerMwh: number;
+  pcsCostPerMw: number;
+  gridConnectionCost: number;
+  emsCost: number;
+  engineeringCost: number;
+  constructionCost: number;
+  fireSafetyCost: number;
+  cyclesPerYear: number;
+  roundtripEfficiency: number;
+  aggregatorFeePercent: number;
+  projectLifetimeYears: number;
+};
 
 export type BessAdminConfig = {
   calculatorDefaults: {
@@ -33,6 +46,7 @@ export type BessAdminConfig = {
   knowledge: {
     sitemapUrl: string;
   };
+  modelTuning: BessModelTuning;
 };
 
 export const defaultBessAdminConfig: BessAdminConfig = {
@@ -76,6 +90,19 @@ export const defaultBessAdminConfig: BessAdminConfig = {
   knowledge: {
     sitemapUrl: 'https://www.memodo.cz/sitemap.xml',
   },
+  modelTuning: {
+    batteryCostPerMwh: 6_000_000,
+    pcsCostPerMw: 2_000_000,
+    gridConnectionCost: 4_000_000,
+    emsCost: 1_500_000,
+    engineeringCost: 1_500_000,
+    constructionCost: 2_000_000,
+    fireSafetyCost: 1_000_000,
+    cyclesPerYear: 280,
+    roundtripEfficiency: 0.88,
+    aggregatorFeePercent: 20,
+    projectLifetimeYears: 12,
+  },
 };
 
 function getServiceClient() {
@@ -113,6 +140,7 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
   const advanced = calc.advancedSettings || {};
   const assistant = source.assistant || {};
   const knowledge = source.knowledge || {};
+  const modelTuning = source.modelTuning || {};
 
   return {
     calculatorDefaults: {
@@ -148,6 +176,19 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
     },
     knowledge: {
       sitemapUrl: toString(knowledge.sitemapUrl, defaultBessAdminConfig.knowledge.sitemapUrl),
+    },
+    modelTuning: {
+      batteryCostPerMwh: toNumber(modelTuning.batteryCostPerMwh, defaultBessAdminConfig.modelTuning.batteryCostPerMwh),
+      pcsCostPerMw: toNumber(modelTuning.pcsCostPerMw, defaultBessAdminConfig.modelTuning.pcsCostPerMw),
+      gridConnectionCost: toNumber(modelTuning.gridConnectionCost, defaultBessAdminConfig.modelTuning.gridConnectionCost),
+      emsCost: toNumber(modelTuning.emsCost, defaultBessAdminConfig.modelTuning.emsCost),
+      engineeringCost: toNumber(modelTuning.engineeringCost, defaultBessAdminConfig.modelTuning.engineeringCost),
+      constructionCost: toNumber(modelTuning.constructionCost, defaultBessAdminConfig.modelTuning.constructionCost),
+      fireSafetyCost: toNumber(modelTuning.fireSafetyCost, defaultBessAdminConfig.modelTuning.fireSafetyCost),
+      cyclesPerYear: toNumber(modelTuning.cyclesPerYear, defaultBessAdminConfig.modelTuning.cyclesPerYear),
+      roundtripEfficiency: toNumber(modelTuning.roundtripEfficiency, defaultBessAdminConfig.modelTuning.roundtripEfficiency),
+      aggregatorFeePercent: toNumber(modelTuning.aggregatorFeePercent, defaultBessAdminConfig.modelTuning.aggregatorFeePercent),
+      projectLifetimeYears: toNumber(modelTuning.projectLifetimeYears, defaultBessAdminConfig.modelTuning.projectLifetimeYears),
     },
   };
 }

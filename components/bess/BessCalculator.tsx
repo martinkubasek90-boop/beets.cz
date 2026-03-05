@@ -10,7 +10,11 @@ import ComparePanel from '@/components/bess/ComparePanel';
 import SocialProof from '@/components/bess/SocialProof';
 import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
 import BessAssistant from '@/components/bess/BessAssistant';
-import { defaultBessAdminConfig, type BessAdminConfig } from '@/lib/bess-admin-config';
+import {
+  defaultBessAdminConfig,
+  type BessAdminConfig,
+  type BessModelTuning,
+} from '@/lib/bess-admin-config';
 
 const profiles = {
   stable: { fcrShare: 0.8, spread: 1.0, fcrPrice: 1900, degradation: 2 },
@@ -53,6 +57,7 @@ const calculateProject = (inputs: {
   degradation: number;
   omCosts: number;
   capexMultiplier?: number;
+  modelTuning: BessModelTuning;
 }) => {
   const {
     capacity,
@@ -68,23 +73,29 @@ const calculateProject = (inputs: {
     degradation,
     omCosts,
     capexMultiplier = 1,
+    modelTuning,
   } = inputs;
   const profile = profiles[utilizationType];
   const deg = degradation / 100;
   const omRate = omCosts / 100;
   const capacityMWh = capacity / 1000;
   const powerMW = capacityMWh;
-  const batteryModules = capacityMWh * 6_000_000;
-  const pcs = powerMW * 2_000_000;
-  const fixedCosts = 4_000_000 + 1_500_000 + 1_500_000 + 2_000_000 + 1_000_000;
+  const batteryModules = capacityMWh * modelTuning.batteryCostPerMwh;
+  const pcs = powerMW * modelTuning.pcsCostPerMw;
+  const fixedCosts =
+    modelTuning.gridConnectionCost +
+    modelTuning.emsCost +
+    modelTuning.engineeringCost +
+    modelTuning.constructionCost +
+    modelTuning.fireSafetyCost;
   const rawCapex = Math.round((batteryModules + pcs + fixedCosts) * capexMultiplier / 1000) * 1000;
   const effectiveCapex = rawCapex * (1 - subsidyPct / 100);
-  const power = capacity;
-  const fcrRevenue = power * profile.fcrShare * 12 * fcrPrice * 0.85;
+  const fcrNetFactor = Math.max(0, 1 - modelTuning.aggregatorFeePercent / 100);
+  const fcrRevenue = powerMW * 1000 * profile.fcrShare * 12 * fcrPrice * fcrNetFactor;
   const maxByConsumption = annualConsumption * 1000 * 0.35;
-  const maxByCycles = capacity * 300;
+  const maxByCycles = capacity * modelTuning.cyclesPerYear;
   const usedEnergy = Math.min(maxByConsumption, maxByCycles);
-  const arbitrageRevenue = usedEnergy * spread;
+  const arbitrageRevenue = usedEnergy * spread * modelTuning.roundtripEfficiency;
   const annualEnergyMWh = usedEnergy / 1000;
   const actualSelfConsumption = Math.min(annualEnergyMWh * 0.25, annualConsumption * 0.1);
   const selfSavings = actualSelfConsumption * electricityPrice * 1000;
@@ -101,7 +112,8 @@ const calculateProject = (inputs: {
   const omCostVal = rawCapex * omRate;
   const netRevenue = grossRevenue - omCostVal - annualLoanCost;
   const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
-  const yearlyRevenues = Array.from({ length: 12 }, (_, i) => netRevenue * Math.pow(1 - deg, i));
+  const horizon = Math.max(1, Math.round(modelTuning.projectLifetimeYears));
+  const yearlyRevenues = Array.from({ length: horizon }, (_, i) => netRevenue * Math.pow(1 - deg, i));
   const equityInvestment = financing === 'bank' ? effectiveCapex * 0.5 : effectiveCapex;
 
   const calculateIRR = (cashFlows: number[], inv: number) => {
@@ -241,6 +253,7 @@ export default function BessCalculator() {
       fcrPrice: advancedSettings.fcrPrice,
       degradation: advancedSettings.degradation,
       omCosts: advancedSettings.omCosts,
+      modelTuning: adminConfig.modelTuning,
     });
 
     const riskLevel: 'low' | 'medium' | 'high' =
@@ -263,6 +276,7 @@ export default function BessCalculator() {
     loanTermYears,
     subsidyPct,
     advancedSettings,
+    adminConfig.modelTuning,
   ]);
 
   const sensitivityData = useMemo(() => {
@@ -280,8 +294,9 @@ export default function BessCalculator() {
         spread: Math.max(0.6, advancedSettings.spread + delta),
         fcrPrice: advancedSettings.fcrPrice,
         degradation: advancedSettings.degradation,
-        omCosts: advancedSettings.omCosts,
-      });
+      omCosts: advancedSettings.omCosts,
+      modelTuning: adminConfig.modelTuning,
+    });
       const label = delta === 0 ? '0' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`.replace('.', ',');
       return { delta: label, payback: scenario.simplePayback };
     });
@@ -295,6 +310,7 @@ export default function BessCalculator() {
     loanTermYears,
     subsidyPct,
     advancedSettings,
+    adminConfig.modelTuning,
   ]);
 
   const capexSensitivityData = useMemo(() => {
@@ -314,6 +330,7 @@ export default function BessCalculator() {
         degradation: advancedSettings.degradation,
         omCosts: advancedSettings.omCosts,
         capexMultiplier: 1 + delta,
+        modelTuning: adminConfig.modelTuning,
       });
       const label = `${delta > 0 ? '+' : ''}${Math.round(delta * 100)}%`;
       return { delta: label, payback: scenario.simplePayback };
@@ -328,6 +345,7 @@ export default function BessCalculator() {
     loanTermYears,
     subsidyPct,
     advancedSettings,
+    adminConfig.modelTuning,
   ]);
 
   const scenarioA = {
