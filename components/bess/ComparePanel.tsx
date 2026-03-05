@@ -14,6 +14,7 @@ type ScenarioInputs = {
   financing: 'own' | 'bank';
   loanInterestRate: number;
   loanTermYears: number;
+  loanSharePct: number;
   subsidyPct: number;
   spread: number;
   fcrPrice: number;
@@ -43,6 +44,7 @@ function calcScenario(
     financing,
     loanInterestRate,
     loanTermYears,
+    loanSharePct,
     subsidyPct,
     spread,
     fcrPrice,
@@ -71,8 +73,8 @@ function calcScenario(
   const grossRevenue = fcrRevenue + arbitrageRevenue + selfSavings;
 
   let annualLoanCost = 0;
-  if (financing === 'bank') {
-    const loanAmount = rawCapex * 0.5;
+  if (financing === 'bank' && loanSharePct > 0) {
+    const loanAmount = rawCapex * (loanSharePct / 100);
     const r = loanInterestRate / 100;
     const n = loanTermYears;
     annualLoanCost = r === 0 ? loanAmount / n : (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
@@ -82,7 +84,7 @@ function calcScenario(
   const netRevenue = grossRevenue - omCostVal - annualLoanCost;
   const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
   const yearlyRevenues = Array.from({ length: 12 }, (_, i) => netRevenue * Math.pow(1 - deg, i));
-  const equityInvestment = financing === 'bank' ? effectiveCapex * 0.5 : effectiveCapex;
+  const equityInvestment = financing === 'bank' ? effectiveCapex * (1 - loanSharePct / 100) : effectiveCapex;
 
   const calculateIRR = (cashFlows: number[], inv: number) => {
     if (inv <= 0) return 0;
@@ -114,12 +116,13 @@ const profiles = {
 };
 
 const utilizationLabels = { stable: 'Stabilní', combined: 'Kombinovaný', arbitrage: 'Arbitráž' };
-const financingLabels = { own: 'Vlastní kapitál', bank: '50% úvěr' };
+const financingLabels = { own: 'Vlastní kapitál', bank: 'Bankovní úvěr' };
 
 type ComparePanelProps = {
   scenarioA: {
     capacity?: number;
     financingType?: 'own' | 'bank';
+    loanSharePct?: number;
     subsidyPct?: number;
     simplePayback: number;
     irr: number;
@@ -140,6 +143,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
     financing: 'bank',
     loanInterestRate: 6,
     loanTermYears: 8,
+    loanSharePct: 50,
     subsidyPct: 20,
     spread: 1.2,
     fcrPrice: 1900,
@@ -199,7 +203,12 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
                   Kapacita: <span className="text-slate-200">{scenarioA.capacity?.toLocaleString('cs-CZ') || '—'} kWh</span>
                 </div>
                 <div>
-                  Financování: <span className="text-slate-200">{financingLabels[scenarioA.financingType || 'own'] || '—'}</span>
+                  Financování:{' '}
+                  <span className="text-slate-200">
+                    {scenarioA.financingType === 'bank'
+                      ? `${scenarioA.loanSharePct || 50}% úvěr`
+                      : financingLabels[scenarioA.financingType || 'own'] || '—'}
+                  </span>
                 </div>
                 <div>
                   Dotace: <span className="text-slate-200">{scenarioA.subsidyPct || 0} %</span>
@@ -275,6 +284,21 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
                   ))}
                 </div>
               </div>
+              {scenarioB.financing === 'bank' ? (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Podíl úvěru</span>
+                    <span className="text-slate-200">{scenarioB.loanSharePct} %</span>
+                  </div>
+                  <Slider
+                    value={[scenarioB.loanSharePct]}
+                    onValueChange={([v]) => setScenarioB((p) => ({ ...p, loanSharePct: Math.round(v) }))}
+                    min={10}
+                    max={90}
+                    step={5}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
 

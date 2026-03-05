@@ -19,6 +19,7 @@ type ChatContext = {
   subsidyPct?: number;
   loanInterestRate?: number;
   loanTermYears?: number;
+  loanSharePct?: number;
   spread?: number;
   fcrPrice?: number;
   degradation?: number;
@@ -40,6 +41,7 @@ type AssistantPatch = Partial<{
   subsidyPct: number;
   loanInterestRate: number;
   loanTermYears: number;
+  loanSharePct: number;
   spread: number;
   fcrPrice: number;
   degradation: number;
@@ -87,6 +89,7 @@ function buildResponse(message: string, context: ChatContext): ChatResponse {
         electricityPrice: 5.2,
         investmentMode: 'realistic',
         financing: 'own',
+        loanSharePct: 0,
         subsidyPct: 0,
         spread: 1.2,
         fcrPrice: 1900,
@@ -183,6 +186,7 @@ function buildResponse(message: string, context: ChatContext): ChatResponse {
       suggestions: ['Nastav úrok 5 %', 'Nastav úrok 7 %', 'Vrať na vlastní kapitál'],
       patch: {
         financing: 'bank',
+        loanSharePct: context.loanSharePct ?? 50,
         loanInterestRate: context.loanInterestRate ?? 6,
         loanTermYears: context.loanTermYears ?? 8,
       },
@@ -196,7 +200,7 @@ function buildResponse(message: string, context: ChatContext): ChatResponse {
       return {
         reply: `Nastavil jsem úrokovou sazbu na ${loanInterestRate.toFixed(1)} %.`,
         suggestions: ['Nastav úvěr na 8 let', 'Přepnout na vlastní kapitál', 'Jak to ovlivní IRR?'],
-        patch: { financing: 'bank', loanInterestRate },
+        patch: { financing: 'bank', loanSharePct: context.loanSharePct ?? 50, loanInterestRate },
       };
     }
   }
@@ -235,6 +239,7 @@ function buildContextSummary(context: ChatContext) {
     ['Dotace (%)', context.subsidyPct],
     ['Úrok (%)', context.loanInterestRate],
     ['Splatnost (roky)', context.loanTermYears],
+    ['Podíl úvěru (%)', context.loanSharePct],
     ['Spread', context.spread],
     ['FCR cena', context.fcrPrice],
     ['Degradace (%)', context.degradation],

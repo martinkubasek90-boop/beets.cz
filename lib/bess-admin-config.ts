@@ -28,6 +28,7 @@ export type BessAdminConfig = {
     subsidyPct: number;
     loanInterestRate: number;
     loanTermYears: number;
+    loanSharePct: number;
     advancedSettings: {
       spread: number;
       fcrPrice: number;
@@ -60,6 +61,7 @@ export const defaultBessAdminConfig: BessAdminConfig = {
     subsidyPct: 0,
     loanInterestRate: 6,
     loanTermYears: 8,
+    loanSharePct: 50,
     advancedSettings: {
       spread: 1.2,
       fcrPrice: 1900,
@@ -159,6 +161,7 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
       subsidyPct: toNumber(calc.subsidyPct, defaultBessAdminConfig.calculatorDefaults.subsidyPct),
       loanInterestRate: toNumber(calc.loanInterestRate, defaultBessAdminConfig.calculatorDefaults.loanInterestRate),
       loanTermYears: toNumber(calc.loanTermYears, defaultBessAdminConfig.calculatorDefaults.loanTermYears),
+      loanSharePct: toNumber(calc.loanSharePct, defaultBessAdminConfig.calculatorDefaults.loanSharePct),
       advancedSettings: {
         spread: toNumber(advanced.spread, defaultBessAdminConfig.calculatorDefaults.advancedSettings.spread),
         fcrPrice: toNumber(advanced.fcrPrice, defaultBessAdminConfig.calculatorDefaults.advancedSettings.fcrPrice),

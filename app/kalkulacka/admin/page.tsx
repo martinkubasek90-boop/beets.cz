@@ -407,6 +407,7 @@ export default function KalkulackaAdminPage() {
               ['Dotace %', 'subsidyPct'],
               ['Úrok %', 'loanInterestRate'],
               ['Splatnost roky', 'loanTermYears'],
+              ['Podíl úvěru %', 'loanSharePct'],
             ].map(([label, key]) => (
               <div key={key}>
                 <label className="block text-xs text-slate-400 mb-1">{label}</label>

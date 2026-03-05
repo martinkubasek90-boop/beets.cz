@@ -16,6 +16,8 @@ type FinancingSectionProps = {
   setLoanInterestRate: (value: number) => void;
   loanTermYears: number;
   setLoanTermYears: (value: number) => void;
+  loanSharePct: number;
+  setLoanSharePct: (value: number) => void;
 };
 
 export default function FinancingSection({
@@ -27,6 +29,8 @@ export default function FinancingSection({
   setLoanInterestRate,
   loanTermYears,
   setLoanTermYears,
+  loanSharePct,
+  setLoanSharePct,
 }: FinancingSectionProps) {
   const [showLoanDetails, setShowLoanDetails] = React.useState(false);
 
@@ -48,7 +52,7 @@ export default function FinancingSection({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {[
           { id: 'own', label: 'Vlastní kapitál', icon: Building2, sub: '100 % equity' },
-          { id: 'bank', label: '50% bankovní úvěr', icon: Landmark, sub: 'páka na IRR' },
+          { id: 'bank', label: `${loanSharePct}% bankovní úvěr`, icon: Landmark, sub: 'páka na IRR' },
         ].map((opt) => {
           const Icon = opt.icon;
           const sel = financing === opt.id;
@@ -102,6 +106,13 @@ export default function FinancingSection({
                   >
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">Podíl úvěru</span>
+                        <span className="text-slate-300">{loanSharePct} %</span>
+                      </div>
+                      <Slider value={[loanSharePct]} onValueChange={([v]) => setLoanSharePct(v)} min={10} max={90} step={5} />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
                         <span className="text-slate-400">Úroková sazba</span>
                         <span className="text-slate-300">{loanInterestRate.toFixed(1)} %</span>
                       </div>
@@ -119,8 +130,8 @@ export default function FinancingSection({
               </AnimatePresence>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
                 {[
-                  { label: 'Vlastní kapitál', value: '50 %' },
-                  { label: 'Úvěr', value: '50 %' },
+                  { label: 'Vlastní kapitál', value: `${100 - loanSharePct} %` },
+                  { label: 'Úvěr', value: `${loanSharePct} %` },
                   { label: 'Sazba', value: `${loanInterestRate.toFixed(1)} %` },
                 ].map((item) => (
                   <div key={item.label} className="bg-slate-800/50 rounded-lg p-2">

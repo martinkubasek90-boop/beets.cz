@@ -19,6 +19,7 @@ type AssistantPatch = Partial<{
   subsidyPct: number;
   loanInterestRate: number;
   loanTermYears: number;
+  loanSharePct: number;
   spread: number;
   fcrPrice: number;
   degradation: number;
@@ -48,6 +49,7 @@ type BessAssistantProps = {
     subsidyPct: number;
     loanInterestRate: number;
     loanTermYears: number;
+    loanSharePct: number;
     spread: number;
     fcrPrice: number;
     degradation: number;

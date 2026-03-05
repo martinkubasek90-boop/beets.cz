@@ -37,6 +37,7 @@ type AssistantPatch = Partial<{
   subsidyPct: number;
   loanInterestRate: number;
   loanTermYears: number;
+  loanSharePct: number;
   spread: number;
   fcrPrice: number;
   degradation: number;
@@ -51,6 +52,7 @@ const calculateProject = (inputs: {
   financing: 'own' | 'bank';
   loanInterestRate: number;
   loanTermYears: number;
+  loanSharePct: number;
   subsidyPct: number;
   spread: number;
   fcrPrice: number;
@@ -67,6 +69,7 @@ const calculateProject = (inputs: {
     financing,
     loanInterestRate,
     loanTermYears,
+    loanSharePct,
     subsidyPct,
     spread,
     fcrPrice,
@@ -102,8 +105,8 @@ const calculateProject = (inputs: {
   const grossRevenue = fcrRevenue + arbitrageRevenue + selfSavings;
 
   let annualLoanCost = 0;
-  if (financing === 'bank') {
-    const loanAmount = rawCapex * 0.5;
+  if (financing === 'bank' && loanSharePct > 0) {
+    const loanAmount = rawCapex * (loanSharePct / 100);
     const r = loanInterestRate / 100;
     const n = loanTermYears;
     annualLoanCost = r === 0 ? loanAmount / n : (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
@@ -114,7 +117,7 @@ const calculateProject = (inputs: {
   const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
   const horizon = Math.max(1, Math.round(modelTuning.projectLifetimeYears));
   const yearlyRevenues = Array.from({ length: horizon }, (_, i) => netRevenue * Math.pow(1 - deg, i));
-  const equityInvestment = financing === 'bank' ? effectiveCapex * 0.5 : effectiveCapex;
+  const equityInvestment = financing === 'bank' ? effectiveCapex * (1 - loanSharePct / 100) : effectiveCapex;
 
   const calculateIRR = (cashFlows: number[], inv: number) => {
     if (inv <= 0) return 0;
@@ -160,6 +163,7 @@ export default function BessCalculator() {
     defaultBessAdminConfig.calculatorDefaults.loanInterestRate,
   );
   const [loanTermYears, setLoanTermYears] = useState(defaultBessAdminConfig.calculatorDefaults.loanTermYears);
+  const [loanSharePct, setLoanSharePct] = useState(defaultBessAdminConfig.calculatorDefaults.loanSharePct);
   const [advancedSettings, setAdvancedSettings] = useState({
     spread: defaultBessAdminConfig.calculatorDefaults.advancedSettings.spread,
     fcrPrice: defaultBessAdminConfig.calculatorDefaults.advancedSettings.fcrPrice,
@@ -188,6 +192,7 @@ export default function BessCalculator() {
         setSubsidyPct(next.calculatorDefaults.subsidyPct);
         setLoanInterestRate(next.calculatorDefaults.loanInterestRate);
         setLoanTermYears(next.calculatorDefaults.loanTermYears);
+        setLoanSharePct(next.calculatorDefaults.loanSharePct);
         setAdvancedSettings(next.calculatorDefaults.advancedSettings);
       } catch {
         // keep defaults when config API is unavailable
@@ -212,6 +217,7 @@ export default function BessCalculator() {
   const handleLoanInterestRateChange = (value: number) =>
     setLoanInterestRate(clamp(Number(value.toFixed(1)), 3, 10));
   const handleLoanTermYearsChange = (value: number) => setLoanTermYears(clamp(Math.round(value), 5, 12));
+  const handleLoanSharePctChange = (value: number) => setLoanSharePct(clamp(Math.round(value), 10, 90));
 
   const applyAssistantPatch = (patch: AssistantPatch) => {
     if (patch.capacity !== undefined) setCapacity(clamp(Math.round(patch.capacity / 100) * 100, 200, 5000));
@@ -223,6 +229,7 @@ export default function BessCalculator() {
     if (patch.subsidyPct !== undefined) setSubsidyPct(clamp(Math.round(patch.subsidyPct / 5) * 5, 0, 50));
     if (patch.loanInterestRate !== undefined) setLoanInterestRate(clamp(patch.loanInterestRate, 3, 10));
     if (patch.loanTermYears !== undefined) setLoanTermYears(clamp(Math.round(patch.loanTermYears), 5, 12));
+    if (patch.loanSharePct !== undefined) setLoanSharePct(clamp(Math.round(patch.loanSharePct), 10, 90));
     if (
       patch.spread !== undefined ||
       patch.fcrPrice !== undefined ||
@@ -248,6 +255,7 @@ export default function BessCalculator() {
       financing,
       loanInterestRate,
       loanTermYears,
+      loanSharePct,
       subsidyPct,
       spread: advancedSettings.spread,
       fcrPrice: advancedSettings.fcrPrice,
@@ -274,6 +282,7 @@ export default function BessCalculator() {
     financing,
     loanInterestRate,
     loanTermYears,
+    loanSharePct,
     subsidyPct,
     advancedSettings,
     adminConfig.modelTuning,
@@ -290,13 +299,14 @@ export default function BessCalculator() {
         financing,
         loanInterestRate,
         loanTermYears,
+        loanSharePct,
         subsidyPct,
         spread: Math.max(0.6, advancedSettings.spread + delta),
         fcrPrice: advancedSettings.fcrPrice,
         degradation: advancedSettings.degradation,
-      omCosts: advancedSettings.omCosts,
-      modelTuning: adminConfig.modelTuning,
-    });
+        omCosts: advancedSettings.omCosts,
+        modelTuning: adminConfig.modelTuning,
+      });
       const label = delta === 0 ? '0' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`.replace('.', ',');
       return { delta: label, payback: scenario.simplePayback };
     });
@@ -308,6 +318,7 @@ export default function BessCalculator() {
     financing,
     loanInterestRate,
     loanTermYears,
+    loanSharePct,
     subsidyPct,
     advancedSettings,
     adminConfig.modelTuning,
@@ -324,6 +335,7 @@ export default function BessCalculator() {
         financing,
         loanInterestRate,
         loanTermYears,
+        loanSharePct,
         subsidyPct,
         spread: advancedSettings.spread,
         fcrPrice: advancedSettings.fcrPrice,
@@ -343,6 +355,7 @@ export default function BessCalculator() {
     financing,
     loanInterestRate,
     loanTermYears,
+    loanSharePct,
     subsidyPct,
     advancedSettings,
     adminConfig.modelTuning,
@@ -353,23 +366,27 @@ export default function BessCalculator() {
     capacity,
     financingType: financing,
     subsidyPct,
+    loanSharePct,
   };
 
   const validationHints = useMemo(() => {
     const hints: string[] = [];
     const maxArbitrageByConsumption = annualConsumption * 1000 * 0.35;
-    const maxArbitrageByCycles = capacity * 300;
+    const maxArbitrageByCycles = capacity * adminConfig.modelTuning.cyclesPerYear;
     if (maxArbitrageByConsumption < maxArbitrageByCycles * 0.55) {
       hints.push('Nízká spotřeba vůči kapacitě může snižovat reálně využitelnou arbitráž.');
     }
     if (financing === 'bank' && loanInterestRate >= 8) {
       hints.push('Vyšší úrok významně zatěžuje roční cashflow projektu.');
     }
+    if (financing === 'bank' && loanSharePct >= 75) {
+      hints.push('Vysoký podíl úvěru zvyšuje citlivost projektu na změny tržních podmínek.');
+    }
     if (utilizationType === 'arbitrage' && advancedSettings.spread < 1.1) {
       hints.push('U čisté arbitráže je nízký spread citlivý na volatilitu trhu.');
     }
     return hints;
-  }, [annualConsumption, capacity, financing, loanInterestRate, utilizationType, advancedSettings.spread]);
+  }, [annualConsumption, capacity, financing, loanInterestRate, loanSharePct, utilizationType, advancedSettings.spread, adminConfig.modelTuning.cyclesPerYear]);
 
   return (
     <div className="relative overflow-x-hidden w-full min-w-0 max-w-full">
@@ -425,6 +442,8 @@ export default function BessCalculator() {
                 setLoanInterestRate={handleLoanInterestRateChange}
                 loanTermYears={loanTermYears}
                 setLoanTermYears={handleLoanTermYearsChange}
+                loanSharePct={loanSharePct}
+                setLoanSharePct={handleLoanSharePctChange}
               />
             </div>
 
@@ -483,6 +502,7 @@ export default function BessCalculator() {
           subsidyPct,
           loanInterestRate,
           loanTermYears,
+          loanSharePct,
           spread: advancedSettings.spread,
           fcrPrice: advancedSettings.fcrPrice,
           degradation: advancedSettings.degradation,
