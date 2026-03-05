@@ -113,20 +113,7 @@ async function createDeal(token: string, payload: LeadPayload, contactId: string
     return null;
   }
 
-  const capacity = toNumber(payload.inputs?.capacity);
-  const payback = toNumber(payload.calculations?.simplePayback);
-  const irr = toNumber(payload.calculations?.irr);
-  const revenue = toNumber(payload.calculations?.netRevenue);
-
-  const descriptionLines = [
-    `Zdroj: BESS kalkulačka (${payload.type === 'pdf' ? 'PDF' : 'Analýza'})`,
-    capacity !== undefined ? `Kapacita: ${Math.round(capacity)} kWh` : null,
-    payback !== undefined ? `Návratnost: ${payback.toFixed(1)} let` : null,
-    irr !== undefined ? `IRR: ${irr.toFixed(1)} %` : null,
-    revenue !== undefined ? `Roční čistý výnos: ${Math.round(revenue).toLocaleString('cs-CZ')} Kč` : null,
-    payload.message?.trim() ? `Poznámka klienta: ${payload.message.trim()}` : null,
-    payload.sourceUrl?.trim() ? `URL: ${payload.sourceUrl.trim()}` : null,
-  ].filter(Boolean);
+  const summary = buildDealSummary(payload);
 
   const dealName = `${payload.type === 'pdf' ? 'PDF lead' : 'BESS lead'} - ${payload.company?.trim() || payload.name?.trim() || payload.email}`;
 
@@ -137,7 +124,7 @@ async function createDeal(token: string, payload: LeadPayload, contactId: string
         dealname: dealName,
         pipeline,
         dealstage,
-        description: descriptionLines.join('\n'),
+        description: summary,
       },
     }),
   });
@@ -157,6 +144,57 @@ async function createDeal(token: string, payload: LeadPayload, contactId: string
   return deal.id;
 }
 
+async function createDealNote(token: string, dealId: string, contactId: string, summary: string) {
+  const note = await hubspotRequest<{ id: string }>(token, '/crm/v3/objects/notes', {
+    method: 'POST',
+    body: JSON.stringify({
+      properties: {
+        hs_timestamp: new Date().toISOString(),
+        hs_note_body: summary.replace(/\n/g, '<br>'),
+      },
+    }),
+  });
+
+  try {
+    await hubspotRequest(
+      token,
+      `/crm/v4/objects/notes/${note.id}/associations/default/deals/${dealId}`,
+      { method: 'PUT' },
+    );
+  } catch {
+    // Do not block lead capture when note association fails.
+  }
+
+  try {
+    await hubspotRequest(
+      token,
+      `/crm/v4/objects/notes/${note.id}/associations/default/contacts/${contactId}`,
+      { method: 'PUT' },
+    );
+  } catch {
+    // Do not block lead capture when note association fails.
+  }
+}
+
+function buildDealSummary(payload: LeadPayload) {
+  const capacity = toNumber(payload.inputs?.capacity);
+  const payback = toNumber(payload.calculations?.simplePayback);
+  const irr = toNumber(payload.calculations?.irr);
+  const revenue = toNumber(payload.calculations?.netRevenue);
+
+  return [
+    `Zdroj: BESS kalkulačka (${payload.type === 'pdf' ? 'PDF' : 'Analýza'})`,
+    capacity !== undefined ? `Kapacita: ${Math.round(capacity)} kWh` : null,
+    payback !== undefined ? `Návratnost: ${payback.toFixed(1)} let` : null,
+    irr !== undefined ? `IRR: ${irr.toFixed(1)} %` : null,
+    revenue !== undefined ? `Roční čistý výnos: ${Math.round(revenue).toLocaleString('cs-CZ')} Kč` : null,
+    payload.message?.trim() ? `Poznámka klienta: ${payload.message.trim()}` : null,
+    payload.sourceUrl?.trim() ? `URL: ${payload.sourceUrl.trim()}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 export async function POST(request: Request) {
   const token = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
   if (!token) {
@@ -174,6 +212,11 @@ export async function POST(request: Request) {
   try {
     const contactId = await upsertContact(token, payload);
     const dealId = await createDeal(token, payload, contactId);
+    const summary = buildDealSummary(payload);
+
+    if (dealId && summary) {
+      await createDealNote(token, dealId, contactId, summary);
+    }
 
     return NextResponse.json({ ok: true, contactId, dealId: dealId || null });
   } catch (error: any) {
