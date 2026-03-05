@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Slider } from '@/components/ui/slider';
-import { Building2, Landmark, Gift, ChevronDown, Info } from 'lucide-react';
+import { Building2, Landmark, Gift, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -32,8 +32,6 @@ export default function FinancingSection({
   loanSharePct,
   setLoanSharePct,
 }: FinancingSectionProps) {
-  const [showLoanDetails, setShowLoanDetails] = React.useState(false);
-
   return (
     <div className="space-y-4 w-full min-w-0">
       <TooltipProvider>
@@ -88,46 +86,30 @@ export default function FinancingSection({
             className="overflow-hidden"
           >
             <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 space-y-4">
-              <button
-                onClick={() => setShowLoanDetails(!showLoanDetails)}
-                className="flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                <ChevronDown className={cn('w-3 h-3 transition-transform', showLoanDetails && 'rotate-180')} />
-                Parametry úvěru
-              </button>
-              <AnimatePresence>
-                {showLoanDetails && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="overflow-hidden space-y-3"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Podíl úvěru</span>
-                        <span className="text-slate-300">{loanSharePct} %</span>
-                      </div>
-                      <Slider value={[loanSharePct]} onValueChange={([v]) => setLoanSharePct(v)} min={10} max={90} step={5} />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Úroková sazba</span>
-                        <span className="text-slate-300">{loanInterestRate.toFixed(1)} %</span>
-                      </div>
-                      <Slider value={[loanInterestRate]} onValueChange={([v]) => setLoanInterestRate(v)} min={3} max={10} step={0.5} />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Délka splácení</span>
-                        <span className="text-slate-300">{loanTermYears} let</span>
-                      </div>
-                      <Slider value={[loanTermYears]} onValueChange={([v]) => setLoanTermYears(v)} min={5} max={12} step={1} />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="text-xs text-blue-400">Parametry úvěru</div>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Podíl úvěru</span>
+                    <span className="text-slate-300">{loanSharePct} %</span>
+                  </div>
+                  <Slider value={[loanSharePct]} onValueChange={([v]) => setLoanSharePct(v)} min={10} max={90} step={5} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Úroková sazba</span>
+                    <span className="text-slate-300">{loanInterestRate.toFixed(1)} %</span>
+                  </div>
+                  <Slider value={[loanInterestRate]} onValueChange={([v]) => setLoanInterestRate(v)} min={3} max={10} step={0.5} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Délka splácení</span>
+                    <span className="text-slate-300">{loanTermYears} let</span>
+                  </div>
+                  <Slider value={[loanTermYears]} onValueChange={([v]) => setLoanTermYears(v)} min={5} max={12} step={1} />
+                </div>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center text-xs">
                 {[
                   { label: 'Vlastní kapitál', value: `${100 - loanSharePct} %` },
