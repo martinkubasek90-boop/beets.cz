@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bot, Link2, Send, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,9 @@ type BessAssistantProps = {
     omCosts: number;
   };
   applyPatch: (patch: AssistantPatch) => void;
+  welcomeMessage?: string;
+  quickActions?: string[];
+  defaultSitemapUrl?: string;
 };
 
 type ChatApiResponse = {
@@ -68,29 +71,43 @@ type ChatApiResponse = {
   }>;
 };
 
-const quickActions = [
+const fallbackQuickActions = [
   'Start: nastav realistický scénář',
   'Mám výrobní podnik',
   'Přidej dotaci 20 %',
   'Přepni na konzervativní režim',
 ];
 
-export default function BessAssistant({ context, applyPatch }: BessAssistantProps) {
+export default function BessAssistant({
+  context,
+  applyPatch,
+  welcomeMessage,
+  quickActions,
+  defaultSitemapUrl,
+}: BessAssistantProps) {
+  const resolvedQuickActions = quickActions?.length ? quickActions : fallbackQuickActions;
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ingesting, setIngesting] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>(quickActions);
+  const [suggestions, setSuggestions] = useState<string[]>(resolvedQuickActions);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       role: 'assistant',
       text:
+        welcomeMessage ||
         'Jsem AI asistent pro BESS kalkulačku. Napište typ provozu nebo požadovaný cíl (např. „dotace 20 %“, „konzervativní režim“), a upravím parametry.',
     },
   ]);
 
   const canSend = input.trim().length > 0 && !loading;
+
+  useEffect(() => {
+    if (quickActions?.length) {
+      setSuggestions(quickActions);
+    }
+  }, [quickActions]);
 
   const sendMessage = async (text: string) => {
     const message = text.trim();
@@ -139,7 +156,7 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
           citations: payload.citations,
         },
       ]);
-      setSuggestions(payload.suggestions?.length ? payload.suggestions : quickActions);
+      setSuggestions(payload.suggestions?.length ? payload.suggestions : resolvedQuickActions);
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -171,7 +188,7 @@ export default function BessAssistant({ context, applyPatch }: BessAssistantProp
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             namespace: 'bess',
-            sitemapUrl: value.trim(),
+            sitemapUrl: value.trim() || defaultSitemapUrl || 'https://www.memodo.cz/sitemap.xml',
             discoverOnly: true,
             maxUrls: 2500,
           }),

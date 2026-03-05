@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { retrieveKnowledge, type KnowledgeCitation } from '@/lib/bess-knowledge';
+import { getBessAdminConfig } from '@/lib/bess-admin-config';
 
 export const runtime = 'nodejs';
 
@@ -56,7 +57,6 @@ type LlmMode = 'off' | 'trial' | 'local';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const llmMode = ((process.env.LLM_MODE || 'off').toLowerCase() as LlmMode);
-const strictKnowledgeMode = (process.env.BESS_CHAT_STRICT_KB || 'true').toLowerCase() !== 'false';
 
 const extractPercent = (text: string) => {
   const match = text.match(/(\d{1,2})\s*%/);
@@ -271,7 +271,7 @@ function getOpenAIClient() {
   return openaiClient;
 }
 
-async function callTrialLlm(prompt: string) {
+async function callTrialLlm(prompt: string, systemPrompt: string) {
   const client = getOpenAIClient();
   if (!client) return null;
 
@@ -281,8 +281,7 @@ async function callTrialLlm(prompt: string) {
     input: [
       {
         role: 'system',
-        content:
-          'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
+        content: systemPrompt,
       },
       { role: 'user', content: prompt },
     ],
@@ -328,6 +327,7 @@ async function maybeGenerateLlmReply(params: {
   context: ChatContext;
   baseReply: string;
   citations: KnowledgeCitation[];
+  systemPrompt: string;
 }) {
   if (llmMode === 'off') return null;
 
@@ -348,7 +348,7 @@ async function maybeGenerateLlmReply(params: {
   ].join('\n');
 
   try {
-    if (llmMode === 'trial') return await callTrialLlm(prompt);
+    if (llmMode === 'trial') return await callTrialLlm(prompt, params.systemPrompt);
     if (llmMode === 'local') return await callLocalLlm(prompt);
     return null;
   } catch {
@@ -365,6 +365,10 @@ export async function POST(request: Request) {
   }
 
   const citations = await retrieveKnowledge('bess', message, 3);
+  const adminConfig = await getBessAdminConfig();
+  const envStrict = process.env.BESS_CHAT_STRICT_KB;
+  const strictKnowledgeMode =
+    envStrict !== undefined ? envStrict.toLowerCase() !== 'false' : adminConfig.assistant.strictKnowledgeMode;
 
   if (strictKnowledgeMode && citations.length === 0) {
     return NextResponse.json({
@@ -386,6 +390,7 @@ export async function POST(request: Request) {
       baseReply:
         'Odpověz pouze podle citovaných zdrojů. Pokud něco ve zdrojích není, explicitně to řekni.',
       citations,
+      systemPrompt: adminConfig.assistant.systemPrompt,
     });
 
     const fallbackReply = [
@@ -411,6 +416,7 @@ export async function POST(request: Request) {
     context: payload.context ?? {},
     baseReply: response.reply,
     citations,
+    systemPrompt: adminConfig.assistant.systemPrompt,
   });
 
   if (llmReply) {

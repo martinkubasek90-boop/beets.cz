@@ -26,3 +26,15 @@ create index if not exists idx_bess_knowledge_chunks_created_at on public.bess_k
 
 alter table public.bess_knowledge_sources enable row level security;
 alter table public.bess_knowledge_chunks enable row level security;
+
+create table if not exists public.bess_admin_config (
+  id text primary key,
+  config jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.bess_admin_config (id, config)
+values ('default', '{}'::jsonb)
+on conflict (id) do nothing;
+
+alter table public.bess_admin_config enable row level security;

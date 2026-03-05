@@ -96,6 +96,14 @@ URL allowlist:
 - `BESS_KB_ALLOWED_HOSTS=memodo.cz,www.memodo.cz`
 - Ingestion rejects URLs outside this host allowlist.
 
+Admin page for calculator/chatbot:
+- URL: `/kalkulacka/admin`
+- API config endpoint: `GET/PUT /api/kalkulacka/admin-config`
+- Optional token for config changes:
+  - `BESS_ADMIN_TOKEN`
+- Optional token for KB ingest actions:
+  - `BESS_KB_ADMIN_TOKEN`
+
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.
 - `LLM_MODE=trial`: uses remote LLM API (trial key).

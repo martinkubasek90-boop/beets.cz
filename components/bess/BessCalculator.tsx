@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import InputPanel from '@/components/bess/InputPanel';
 import ResultsPanel from '@/components/bess/ResultsPanel';
@@ -10,6 +10,7 @@ import ComparePanel from '@/components/bess/ComparePanel';
 import SocialProof from '@/components/bess/SocialProof';
 import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
 import BessAssistant from '@/components/bess/BessAssistant';
+import { defaultBessAdminConfig, type BessAdminConfig } from '@/lib/bess-admin-config';
 
 const profiles = {
   stable: { fcrShare: 0.8, spread: 1.0, fcrPrice: 1900, degradation: 2 },
@@ -127,23 +128,64 @@ const calculateProject = (inputs: {
 };
 
 export default function BessCalculator() {
-  const [capacity, setCapacity] = useState(500);
-  const [utilizationType, setUtilizationType] = useState<UtilizationType>('combined');
-  const [annualConsumption, setAnnualConsumption] = useState(3000);
-  const [electricityPrice, setElectricityPrice] = useState(4.5);
-  const [investmentMode, setInvestmentMode] = useState<InvestmentMode>('realistic');
-  const [financing, setFinancing] = useState<FinancingType>('own');
-  const [subsidyPct, setSubsidyPct] = useState(0);
-  const [loanInterestRate, setLoanInterestRate] = useState(6);
-  const [loanTermYears, setLoanTermYears] = useState(8);
+  const [adminConfig, setAdminConfig] = useState<BessAdminConfig>(defaultBessAdminConfig);
+  const [capacity, setCapacity] = useState(defaultBessAdminConfig.calculatorDefaults.capacity);
+  const [utilizationType, setUtilizationType] = useState<UtilizationType>(
+    defaultBessAdminConfig.calculatorDefaults.utilizationType,
+  );
+  const [annualConsumption, setAnnualConsumption] = useState(
+    defaultBessAdminConfig.calculatorDefaults.annualConsumption,
+  );
+  const [electricityPrice, setElectricityPrice] = useState(
+    defaultBessAdminConfig.calculatorDefaults.electricityPrice,
+  );
+  const [investmentMode, setInvestmentMode] = useState<InvestmentMode>(
+    defaultBessAdminConfig.calculatorDefaults.investmentMode,
+  );
+  const [financing, setFinancing] = useState<FinancingType>(defaultBessAdminConfig.calculatorDefaults.financing);
+  const [subsidyPct, setSubsidyPct] = useState(defaultBessAdminConfig.calculatorDefaults.subsidyPct);
+  const [loanInterestRate, setLoanInterestRate] = useState(
+    defaultBessAdminConfig.calculatorDefaults.loanInterestRate,
+  );
+  const [loanTermYears, setLoanTermYears] = useState(defaultBessAdminConfig.calculatorDefaults.loanTermYears);
   const [advancedSettings, setAdvancedSettings] = useState({
-    spread: profiles.combined.spread,
-    fcrPrice: profiles.combined.fcrPrice,
-    degradation: profiles.combined.degradation,
-    omCosts: 2.5,
-    discountRate: 8,
+    spread: defaultBessAdminConfig.calculatorDefaults.advancedSettings.spread,
+    fcrPrice: defaultBessAdminConfig.calculatorDefaults.advancedSettings.fcrPrice,
+    degradation: defaultBessAdminConfig.calculatorDefaults.advancedSettings.degradation,
+    omCosts: defaultBessAdminConfig.calculatorDefaults.advancedSettings.omCosts,
+    discountRate: defaultBessAdminConfig.calculatorDefaults.advancedSettings.discountRate,
   });
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/kalkulacka/admin-config', { cache: 'no-store' });
+        if (!response.ok) return;
+        const payload = (await response.json().catch(() => ({}))) as { config?: BessAdminConfig };
+        if (!active || !payload.config) return;
+        const next = payload.config;
+        setAdminConfig(next);
+        setCapacity(next.calculatorDefaults.capacity);
+        setUtilizationType(next.calculatorDefaults.utilizationType);
+        setAnnualConsumption(next.calculatorDefaults.annualConsumption);
+        setElectricityPrice(next.calculatorDefaults.electricityPrice);
+        setInvestmentMode(next.calculatorDefaults.investmentMode);
+        setFinancing(next.calculatorDefaults.financing);
+        setSubsidyPct(next.calculatorDefaults.subsidyPct);
+        setLoanInterestRate(next.calculatorDefaults.loanInterestRate);
+        setLoanTermYears(next.calculatorDefaults.loanTermYears);
+        setAdvancedSettings(next.calculatorDefaults.advancedSettings);
+      } catch {
+        // keep defaults when config API is unavailable
+      }
+    };
+    void loadConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleCapacityChange = (value: number) =>
     setCapacity(clamp(Math.round(value / 100) * 100, 200, 5000));
@@ -429,6 +471,9 @@ export default function BessCalculator() {
           omCosts: advancedSettings.omCosts,
         }}
         applyPatch={applyAssistantPatch}
+        welcomeMessage={adminConfig.assistant.welcomeMessage}
+        quickActions={adminConfig.assistant.quickActions}
+        defaultSitemapUrl={adminConfig.knowledge.sitemapUrl}
       />
     </div>
   );
