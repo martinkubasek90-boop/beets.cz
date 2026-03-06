@@ -57,6 +57,7 @@ export default function KalkulackaAdminPage() {
 
   const embedBaseUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/kalkulacka` : 'https://beets.cz/kalkulacka';
+  const wordpressEmbedUrl = `${embedBaseUrl}?embed=wordpress`;
 
   const iframeEmbedCode = `<iframe src="${embedBaseUrl}" title="BESS kalkulačka" loading="lazy" style="width:100%;max-width:1200px;height:${embedHeight}px;border:0;border-radius:16px;overflow:hidden;" allow="clipboard-write"></iframe>`;
 
@@ -570,6 +571,26 @@ export default function KalkulackaAdminPage() {
 
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
           <h2 className="text-sm font-semibold text-slate-200">Embed skript pro externí weby</h2>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-slate-400">WordPress URL embed</label>
+              <button
+                type="button"
+                onClick={() => copyToClipboard(wordpressEmbedUrl, 'WordPress URL embed')}
+                className="rounded-md bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-medium"
+              >
+                Kopírovat URL
+              </button>
+            </div>
+            <input
+              readOnly
+              value={wordpressEmbedUrl}
+              className="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300"
+            />
+            <p className="text-[11px] text-slate-500">
+              Ve WordPressu vložte do Custom HTML bloku jako iframe src nebo použijte plugin pro iframe embed.
+            </p>
+          </div>
           <div className="grid sm:grid-cols-[220px_1fr] gap-3 items-center">
             <label className="text-xs text-slate-400">Výška embedu (px)</label>
             <input
