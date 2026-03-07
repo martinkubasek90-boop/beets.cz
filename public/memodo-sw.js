@@ -4,6 +4,8 @@ const APP_SHELL = [
   "/Memodo/katalog",
   "/Memodo/poptavka",
   "/apple-touch-icon.png",
+  "/memodo-icon-192.png",
+  "/memodo-icon-512.png",
   "/favicon-48x48.png",
 ];
 
@@ -59,4 +61,3 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
-

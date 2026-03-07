@@ -17,13 +17,20 @@ export async function GET() {
     lang: "cs",
     icons: [
       {
-        src: "/apple-touch-icon.png",
-        sizes: "180x180",
+        src: "/memodo-icon-192.png",
+        sizes: "192x192",
         type: "image/png",
+        purpose: "any maskable",
       },
       {
-        src: "/favicon-48x48.png",
-        sizes: "48x48",
+        src: "/memodo-icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any maskable",
+      },
+      {
+        src: "/apple-touch-icon.png",
+        sizes: "180x180",
         type: "image/png",
       },
     ],
@@ -36,4 +43,3 @@ export async function GET() {
     },
   });
 }
-
