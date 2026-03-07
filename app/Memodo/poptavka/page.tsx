@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { CheckCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +32,6 @@ type FormState = {
 };
 
 export default function MemodoInquiryPage() {
-  const searchParams = useSearchParams();
-  const productIdFromQuery = searchParams.get("product") || "";
-  const selectedProduct = products.find((product) => product.id === productIdFromQuery);
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -44,11 +40,25 @@ export default function MemodoInquiryPage() {
     company: "",
     email: "",
     phone: "",
-    product_interest: selectedProduct?.category || "",
+    product_interest: "",
     message: "",
     estimated_quantity: "",
-    product_id: productIdFromQuery,
+    product_id: "",
   });
+  const selectedProduct = products.find((product) => product.id === form.product_id);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("product") || "";
+    if (!productId) return;
+
+    const product = products.find((item) => item.id === productId);
+    setForm((prev) => ({
+      ...prev,
+      product_id: productId,
+      product_interest: prev.product_interest || product?.category || "",
+    }));
+  }, []);
 
   const setField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
