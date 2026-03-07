@@ -128,6 +128,9 @@ async function generateReply(params: {
   set: RecommendedSet;
   shoppingPrompt: string;
   technicalPrompt: string;
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
 }) {
   const client = getOpenAIClient();
   if (!client) {
@@ -136,7 +139,9 @@ async function generateReply(params: {
 
   const { system, user } = buildPrompt(params);
   const response = await client.responses.create({
-    model: process.env.LLM_MODEL || "gpt-4o-mini",
+    model: params.model || process.env.LLM_MODEL || "gpt-4o-mini",
+    temperature: params.temperature,
+    max_output_tokens: params.maxOutputTokens,
     input: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -156,7 +161,7 @@ export async function POST(request: Request) {
   try {
     const [config, citations, products] = await Promise.all([
       getMemodoAdminConfig(),
-      retrieveKnowledge("memodo", message, 5),
+      retrieveKnowledge("memodo", message, 6),
       getMemodoProducts(),
     ]);
 
@@ -165,21 +170,25 @@ export async function POST(request: Request) {
       (mode === "shopping" ? config.shoppingChatbotEnabled : config.technicalAdvisorEnabled);
 
     const set = pickRecommendedSet(products, message);
+    const limitedCitations = citations.slice(0, config.aiCitationLimit);
     const reply = aiEnabled
       ? await generateReply({
           mode,
           message,
-          citations,
+          citations: limitedCitations,
           set,
           shoppingPrompt: config.shoppingAssistantPrompt,
           technicalPrompt: config.technicalAdvisorPrompt,
+          model: config.aiModel,
+          temperature: config.aiTemperature,
+          maxOutputTokens: config.aiMaxOutputTokens,
         })
       : `${set.summary}\n\nAI je v adminu vypnuté. Zapni AI přepínače pro generované odpovědi.`;
 
     const offerMessage = `${set.summary}\n\nDotaz zákazníka:\n${message}`;
     const response: ChatResponse = {
       reply,
-      citations,
+      citations: limitedCitations,
       recommendedSet: set,
       offerPrefill: {
         productId: set.inverter?.id,
@@ -194,4 +203,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

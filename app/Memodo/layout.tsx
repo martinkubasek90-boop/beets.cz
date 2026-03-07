@@ -64,6 +64,9 @@ export default async function MemodoLayout({ children }: { children: React.React
       <MemodoAiAssistant
         shoppingEnabled={config.aiSearchEnabled && config.shoppingChatbotEnabled}
         technicalEnabled={config.aiSearchEnabled && config.technicalAdvisorEnabled}
+        defaultMode={config.aiDefaultMode}
+        fabLabel={config.aiFabLabel}
+        welcomeMessage={config.aiWelcomeMessage}
       />
 
       <MemodoBottomNav />

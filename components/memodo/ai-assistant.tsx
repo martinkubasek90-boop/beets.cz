@@ -41,20 +41,31 @@ type Mode = "shopping" | "technical";
 export function MemodoAiAssistant({
   shoppingEnabled,
   technicalEnabled,
+  defaultMode,
+  fabLabel,
+  welcomeMessage,
 }: {
   shoppingEnabled: boolean;
   technicalEnabled: boolean;
+  defaultMode: Mode;
+  fabLabel: string;
+  welcomeMessage: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>(shoppingEnabled ? "shopping" : "technical");
+  const [mode, setMode] = useState<Mode>(
+    defaultMode === "technical" && technicalEnabled
+      ? "technical"
+      : shoppingEnabled
+        ? "shopping"
+        : "technical",
+  );
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      text:
-        "Ahoj, jsem AI rádce. Popiš požadavek a doporučím set střídač + baterie. Klikem ho rovnou propíšeš do nabídky.",
+      text: welcomeMessage,
     },
   ]);
 
@@ -116,7 +127,7 @@ export function MemodoAiAssistant({
         className="fixed bottom-24 right-4 z-40 flex h-12 items-center gap-2 rounded-full bg-[#0F172A] px-4 text-white shadow-xl"
       >
         <Bot className="h-4 w-4" />
-        <span className="text-xs font-semibold">AI rádce</span>
+        <span className="text-xs font-semibold">{fabLabel}</span>
       </button>
 
       {open ? (

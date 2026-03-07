@@ -23,6 +23,12 @@ export default function MemodoAdminPage() {
   const [kbTotalUrls, setKbTotalUrls] = useState<number | null>(null);
   const [kbLastProcessed, setKbLastProcessed] = useState(0);
   const [kbStatus, setKbStatus] = useState("");
+  const [kbSources, setKbSources] = useState<number | null>(null);
+  const [kbResetting, setKbResetting] = useState(false);
+  const [aiTestMode, setAiTestMode] = useState<"shopping" | "technical">("shopping");
+  const [aiTestMessage, setAiTestMessage] = useState("Potřebuji set střídač + baterie pro rodinný dům 10 kW.");
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiTestReply, setAiTestReply] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -36,7 +42,15 @@ export default function MemodoAdminPage() {
         setStatus("Nepodařilo se načíst konfiguraci, zobrazuji default.");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (active) {
+          void fetch("/api/memodo-ai/stats", { cache: "no-store" })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((payload: { sources?: number } | null) => {
+              if (typeof payload?.sources === "number") setKbSources(payload.sources);
+            })
+            .catch(() => null);
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -186,6 +200,12 @@ export default function MemodoAdminPage() {
               ? `${processedTotal}/${discoveredTotal}`
               : String(processedTotal);
           setKbStatus(`AI ingest dokončen. Zpracováno ${totalLabel} URL.`);
+          void fetch("/api/memodo-ai/stats", { cache: "no-store" })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((stats: { sources?: number } | null) => {
+              if (typeof stats?.sources === "number") setKbSources(stats.sources);
+            })
+            .catch(() => null);
           break;
         }
 
@@ -197,6 +217,59 @@ export default function MemodoAdminPage() {
       setKbStatus(message);
     } finally {
       setKbIngesting(false);
+    }
+  };
+
+  const runKnowledgeReset = async () => {
+    if (!window.confirm("Opravdu chceš smazat celou AI znalostní bázi pro Memodo?")) return;
+    setKbResetting(true);
+    setKbStatus("");
+    try {
+      const response = await fetch("/api/memodo-ai/stats", {
+        method: "DELETE",
+        headers,
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "Reset selhal.");
+      setKbSources(0);
+      setKbTotalUrls(null);
+      setKbLastProcessed(0);
+      setKbStatus("AI znalostní báze byla vymazána.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Reset selhal.";
+      setKbStatus(message);
+    } finally {
+      setKbResetting(false);
+    }
+  };
+
+  const runAiTest = async () => {
+    const message = aiTestMessage.trim();
+    if (!message) return;
+    setAiTesting(true);
+    setAiTestReply("");
+    try {
+      const response = await fetch("/api/memodo-ai/chat", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          mode: aiTestMode,
+          message,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        reply?: string;
+      };
+      if (!response.ok || !payload.reply) {
+        throw new Error(payload.error || "AI test selhal.");
+      }
+      setAiTestReply(payload.reply);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "AI test selhal.";
+      setAiTestReply(message);
+    } finally {
+      setAiTesting(false);
     }
   };
 
@@ -262,7 +335,7 @@ export default function MemodoAdminPage() {
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200">AI přepínače</h2>
+          <h2 className="text-sm font-semibold text-slate-200">AI chatbot nastavení</h2>
           <label className="flex items-center gap-2 text-sm text-slate-200">
             <input
               type="checkbox"
@@ -288,6 +361,97 @@ export default function MemodoAdminPage() {
             Technický poradce
           </label>
 
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Výchozí režim
+              <select
+                value={config.aiDefaultMode}
+                onChange={(e) =>
+                  setConfig((prev) => ({ ...prev, aiDefaultMode: e.target.value as "shopping" | "technical" }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              >
+                <option value="shopping">Nákupní</option>
+                <option value="technical">Technický</option>
+              </select>
+            </label>
+            <label className="text-xs text-slate-400">
+              Max citací na odpověď
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={config.aiCitationLimit}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiCitationLimit: Math.min(8, Math.max(1, Number(e.target.value) || 5)),
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+          </div>
+
+          <label className="block text-xs text-slate-400">Text tlačítka (floating button)</label>
+          <input
+            value={config.aiFabLabel}
+            onChange={(e) => setConfig((prev) => ({ ...prev, aiFabLabel: e.target.value }))}
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+          />
+
+          <label className="block text-xs text-slate-400">Uvítací zpráva chatbota</label>
+          <textarea
+            rows={2}
+            value={config.aiWelcomeMessage}
+            onChange={(e) => setConfig((prev) => ({ ...prev, aiWelcomeMessage: e.target.value }))}
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+          />
+
+          <div className="grid grid-cols-3 gap-2">
+            <label className="text-xs text-slate-400">
+              LLM model
+              <input
+                value={config.aiModel}
+                onChange={(e) => setConfig((prev) => ({ ...prev, aiModel: e.target.value }))}
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Temperature
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.1}
+                value={config.aiTemperature}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiTemperature: Math.min(1, Math.max(0, Number(e.target.value) || 0)),
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Max output tokens
+              <input
+                type="number"
+                min={100}
+                max={2000}
+                value={config.aiMaxOutputTokens}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiMaxOutputTokens: Math.min(2000, Math.max(100, Number(e.target.value) || 500)),
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+          </div>
+
           <label className="block text-xs text-slate-400">Prompt - nákupní chatbot</label>
           <textarea
             rows={2}
@@ -303,6 +467,40 @@ export default function MemodoAdminPage() {
             onChange={(e) => setConfig((prev) => ({ ...prev, technicalAdvisorPrompt: e.target.value }))}
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
           />
+
+          <div className="rounded-lg border border-slate-700 bg-slate-900/80 p-3 space-y-2">
+            <p className="text-xs font-semibold text-slate-200">Rychlý AI test</p>
+            <div className="flex gap-2">
+              <select
+                value={aiTestMode}
+                onChange={(e) => setAiTestMode(e.target.value as "shopping" | "technical")}
+                className="h-10 rounded-lg border border-slate-700 bg-slate-800 px-3 text-xs text-slate-100"
+              >
+                <option value="shopping">Nákupní mód</option>
+                <option value="technical">Technický mód</option>
+              </select>
+              <button
+                type="button"
+                onClick={runAiTest}
+                disabled={aiTesting}
+                className="h-10 rounded-lg bg-cyan-600 px-3 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
+              >
+                {aiTesting ? "Testuji..." : "Spustit test odpovědi"}
+              </button>
+            </div>
+            <textarea
+              rows={2}
+              value={aiTestMessage}
+              onChange={(e) => setAiTestMessage(e.target.value)}
+              className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+              placeholder="Testovací dotaz"
+            />
+            {aiTestReply ? (
+              <div className="whitespace-pre-wrap rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200">
+                {aiTestReply}
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
@@ -382,6 +580,17 @@ export default function MemodoAdminPage() {
             Stav: {kbLastProcessed}
             {kbTotalUrls !== null ? ` / ${kbTotalUrls}` : ""} URL
           </p>
+          <p className="text-xs text-slate-400">
+            Uložené zdroje v KB: {kbSources !== null ? kbSources : "-"}
+          </p>
+          <button
+            type="button"
+            onClick={runKnowledgeReset}
+            disabled={kbResetting || kbIngesting || kbDiscovering}
+            className="w-full rounded-lg bg-rose-700 px-3 py-2 text-sm font-medium text-white hover:bg-rose-600 disabled:opacity-50"
+          >
+            {kbResetting ? "Mažu znalostní bázi..." : "Reset AI znalostní báze"}
+          </button>
           {kbStatus ? <p className="text-xs text-slate-300">{kbStatus}</p> : null}
         </div>
 

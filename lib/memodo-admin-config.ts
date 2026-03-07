@@ -6,6 +6,13 @@ export type MemodoAdminConfig = {
   aiSearchEnabled: boolean;
   shoppingChatbotEnabled: boolean;
   technicalAdvisorEnabled: boolean;
+  aiDefaultMode: "shopping" | "technical";
+  aiFabLabel: string;
+  aiWelcomeMessage: string;
+  aiCitationLimit: number;
+  aiModel: string;
+  aiTemperature: number;
+  aiMaxOutputTokens: number;
   shoppingAssistantPrompt: string;
   technicalAdvisorPrompt: string;
 };
@@ -16,6 +23,14 @@ export const defaultMemodoAdminConfig: MemodoAdminConfig = {
   aiSearchEnabled: false,
   shoppingChatbotEnabled: false,
   technicalAdvisorEnabled: false,
+  aiDefaultMode: "shopping",
+  aiFabLabel: "AI rádce",
+  aiWelcomeMessage:
+    "Ahoj, jsem AI rádce. Popiš požadavek a doporučím set střídač + baterie. Klikem ho rovnou propíšeš do nabídky.",
+  aiCitationLimit: 5,
+  aiModel: "gpt-4o-mini",
+  aiTemperature: 0.2,
+  aiMaxOutputTokens: 500,
   shoppingAssistantPrompt:
     "Pomoz zákazníkovi vybrat vhodný produkt podle účelu, výkonu, kompatibility a rozpočtu.",
   technicalAdvisorPrompt:
@@ -52,6 +67,34 @@ function sanitizeConfig(input: unknown): MemodoAdminConfig {
       typeof source.technicalAdvisorEnabled === "boolean"
         ? source.technicalAdvisorEnabled
         : defaultMemodoAdminConfig.technicalAdvisorEnabled,
+    aiDefaultMode:
+      source.aiDefaultMode === "technical" || source.aiDefaultMode === "shopping"
+        ? source.aiDefaultMode
+        : defaultMemodoAdminConfig.aiDefaultMode,
+    aiFabLabel:
+      typeof source.aiFabLabel === "string" && source.aiFabLabel.trim()
+        ? source.aiFabLabel.trim()
+        : defaultMemodoAdminConfig.aiFabLabel,
+    aiWelcomeMessage:
+      typeof source.aiWelcomeMessage === "string" && source.aiWelcomeMessage.trim()
+        ? source.aiWelcomeMessage
+        : defaultMemodoAdminConfig.aiWelcomeMessage,
+    aiCitationLimit:
+      typeof source.aiCitationLimit === "number" && Number.isFinite(source.aiCitationLimit)
+        ? Math.min(8, Math.max(1, Math.floor(source.aiCitationLimit)))
+        : defaultMemodoAdminConfig.aiCitationLimit,
+    aiModel:
+      typeof source.aiModel === "string" && source.aiModel.trim()
+        ? source.aiModel.trim()
+        : defaultMemodoAdminConfig.aiModel,
+    aiTemperature:
+      typeof source.aiTemperature === "number" && Number.isFinite(source.aiTemperature)
+        ? Math.min(1, Math.max(0, source.aiTemperature))
+        : defaultMemodoAdminConfig.aiTemperature,
+    aiMaxOutputTokens:
+      typeof source.aiMaxOutputTokens === "number" && Number.isFinite(source.aiMaxOutputTokens)
+        ? Math.min(2000, Math.max(100, Math.floor(source.aiMaxOutputTokens)))
+        : defaultMemodoAdminConfig.aiMaxOutputTokens,
     shoppingAssistantPrompt:
       typeof source.shoppingAssistantPrompt === "string" && source.shoppingAssistantPrompt.trim()
         ? source.shoppingAssistantPrompt
@@ -98,4 +141,3 @@ export async function saveMemodoAdminConfig(input: MemodoAdminConfig): Promise<M
 
   return payload;
 }
-
