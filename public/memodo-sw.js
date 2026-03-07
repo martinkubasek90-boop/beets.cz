@@ -32,7 +32,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET") return;
-  if (!url.pathname.startsWith("/Memodo")) return;
+  const isMemodoPath = url.pathname.startsWith("/Memodo");
+  const isMemodoApi = url.pathname.startsWith("/api/memodo/");
+  if (!isMemodoPath && !isMemodoApi) return;
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -45,6 +47,22 @@ self.addEventListener("fetch", (event) => {
         .catch(async () => {
           const cached = await caches.match(request);
           return cached || caches.match("/Memodo/akce");
+        }),
+    );
+    return;
+  }
+
+  if (isMemodoApi) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => {
+          const cached = await caches.match(request);
+          return cached || new Response(JSON.stringify({ ok: false, offline: true }), { status: 503 });
         }),
     );
     return;

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { categoryLabels } from "@/lib/memodo-data";
 import { getMemodoProductById } from "@/lib/memodo-catalog";
 
@@ -29,6 +30,7 @@ export default async function MemodoProductDetailPage({
 
   return (
     <div className="space-y-6 px-4 py-6">
+      <MemodoViewTracker page="product_detail" />
       <Link href="/Memodo/katalog" className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-700">
         <ArrowLeft className="h-4 w-4" /> Zpět na katalog
       </Link>

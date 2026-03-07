@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Copy, Download, Info } from "lucide-react";
+import { trackMemodoEvent } from "@/lib/memodo-analytics";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -60,10 +61,14 @@ export function MemodoInstallAppButton() {
 
   const handleInstall = async () => {
     if (!promptEvent) return;
+    trackMemodoEvent("memodo_install_prompt_open");
     await promptEvent.prompt();
     const choice = await promptEvent.userChoice;
     if (choice.outcome === "accepted") {
       setInstalled(true);
+      trackMemodoEvent("memodo_install_accepted");
+    } else {
+      trackMemodoEvent("memodo_install_dismissed");
     }
     setPromptEvent(null);
   };
@@ -104,7 +109,10 @@ export function MemodoInstallAppButton() {
       <div className="relative">
         <button
           type="button"
-          onClick={() => setShowIosHelp((prev) => !prev)}
+          onClick={() => {
+            setShowIosHelp((prev) => !prev);
+            trackMemodoEvent("memodo_open_ios_install_help");
+          }}
           className="inline-flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700"
         >
           <Info className="h-3.5 w-3.5" />

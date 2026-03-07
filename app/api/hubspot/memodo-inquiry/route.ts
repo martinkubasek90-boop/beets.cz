@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { categoryLabels, type InquiryInterest } from "@/lib/memodo-data";
+import { sendEmail } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -168,15 +169,22 @@ async function createNote(token: string, dealId: string | null, contactId: strin
 
 function buildSummary(payload: MemodoInquiryPayload) {
   const qty = normalizeNumber(payload.estimated_quantity);
+  const interest = payload.product_interest || "kompletni_sestava";
   const category =
-    payload.product_interest && payload.product_interest !== "kompletni_sestava"
-      ? categoryLabels[payload.product_interest]
-      : payload.product_interest === "kompletni_sestava"
+    interest !== "kompletni_sestava"
+      ? categoryLabels[interest]
+      : interest === "kompletni_sestava"
         ? "Kompletní sestava"
         : undefined;
+  const leadScore =
+    (payload.company?.trim() ? 20 : 0) +
+    (payload.phone?.trim() ? 20 : 0) +
+    (qty && qty > 0 ? Math.min(40, Math.round(qty / 5)) : 0) +
+    (payload.product_id?.trim() ? 20 : 0);
 
   return [
     "Zdroj: Memodo PWA poptávka",
+    `Lead score: ${leadScore}/100`,
     category ? `Oblast zájmu: ${category}` : null,
     qty !== undefined ? `Odhadované množství: ${qty} ks` : null,
     payload.product_id?.trim() ? `ID produktu: ${payload.product_id.trim()}` : null,
@@ -185,6 +193,30 @@ function buildSummary(payload: MemodoInquiryPayload) {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+async function sendInquiryEmails(payload: MemodoInquiryPayload) {
+  const customerEmail = payload.email?.trim();
+  if (!customerEmail) return;
+
+  const customerName = payload.contact_name?.trim() || "zákazníku";
+  const internalEmail = process.env.MEMODO_SALES_EMAIL || process.env.NOTIFY_EMAIL_FROM;
+  const summary = buildSummary(payload);
+
+  await Promise.allSettled([
+    sendEmail({
+      to: customerEmail,
+      subject: "Potvrzení přijetí poptávky | Memodo",
+      text: `Dobrý den ${customerName},\n\npotvrzujeme přijetí vaší poptávky. Ozveme se vám co nejdříve.\n\nShrnutí:\n${summary}\n\nTým Memodo`,
+    }),
+    internalEmail
+      ? sendEmail({
+          to: internalEmail,
+          subject: `Nová Memodo poptávka: ${payload.contact_name || payload.email}`,
+          text: `Přišla nová poptávka z Memodo aplikace.\n\n${summary}`,
+        })
+      : Promise.resolve({ ok: false }),
+  ]);
 }
 
 export async function POST(request: Request) {
@@ -197,23 +229,26 @@ export async function POST(request: Request) {
   const email = payload.email?.trim().toLowerCase();
   const name = payload.contact_name?.trim();
   const message = payload.message?.trim();
-  const interest = payload.product_interest;
+  const normalizedPayload: MemodoInquiryPayload = {
+    ...payload,
+    product_interest: payload.product_interest || "kompletni_sestava",
+  };
 
-  if (!email || !name || !message || !interest) {
+  if (!email || !name || !message) {
     return NextResponse.json({ error: "Missing required inquiry fields." }, { status: 400 });
   }
 
   try {
-    const contactId = await upsertContact(token, payload);
-    const dealId = await createDeal(token, payload, contactId);
-    const summary = buildSummary(payload);
+    const contactId = await upsertContact(token, normalizedPayload);
+    const dealId = await createDeal(token, normalizedPayload, contactId);
+    const summary = buildSummary(normalizedPayload);
     if (summary) {
       await createNote(token, dealId, contactId, summary);
     }
+    await sendInquiryEmails(normalizedPayload);
     return NextResponse.json({ ok: true, contactId, dealId: dealId || null });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "HubSpot sync failed.";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

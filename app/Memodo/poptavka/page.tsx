@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Product } from "@/lib/memodo-data";
+import { trackMemodoEvent } from "@/lib/memodo-analytics";
+import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 
 const interestOptions = [
   { value: "panely", label: "Solární panely" },
@@ -35,6 +37,7 @@ export default function MemodoInquiryPage() {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState>({
     contact_name: "",
@@ -83,6 +86,11 @@ export default function MemodoInquiryPage() {
     e.preventDefault();
     setError("");
     setSending(true);
+    trackMemodoEvent("memodo_submit_inquiry_attempt", {
+      has_product_id: Boolean(form.product_id),
+      has_phone: Boolean(form.phone),
+      has_company: Boolean(form.company),
+    });
     try {
       const response = await fetch("/api/hubspot/memodo-inquiry", {
         method: "POST",
@@ -97,9 +105,11 @@ export default function MemodoInquiryPage() {
       if (!response.ok) {
         throw new Error(data.error || "Nepodařilo se odeslat poptávku.");
       }
+      trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id) });
       setSubmitted(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Nepodařilo se odeslat poptávku.";
+      trackMemodoEvent("memodo_submit_inquiry_error");
       setError(message);
     } finally {
       setSending(false);
@@ -142,9 +152,10 @@ export default function MemodoInquiryPage() {
 
   return (
     <div className="px-4 py-6">
+      <MemodoViewTracker page="inquiry_form" />
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
-        <p className="mt-1 text-sm text-gray-500">Vyplňte formulář a my vám připravíme nabídku na míru.</p>
+        <p className="mt-1 text-sm text-gray-500">Rychlá poptávka do 30 vteřin. Ozveme se obvykle do 2 hodin.</p>
         {selectedProduct ? (
           <p className="mt-2 text-xs font-medium text-gray-500">
             Poptáváš produkt ID: <span className="text-gray-700">{selectedProduct.id}</span>
@@ -160,16 +171,6 @@ export default function MemodoInquiryPage() {
             value={form.contact_name}
             onChange={(e) => setField("contact_name", e.target.value)}
             placeholder="Jan Novák"
-            className="h-12 rounded-xl"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Firma</Label>
-          <Input
-            value={form.company}
-            onChange={(e) => setField("company", e.target.value)}
-            placeholder="Název firmy s.r.o."
             className="h-12 rounded-xl"
           />
         </div>
@@ -197,14 +198,13 @@ export default function MemodoInquiryPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Oblast zájmu *</Label>
+          <Label className="text-sm font-medium">Oblast zájmu</Label>
           <select
-            required
             value={form.product_interest}
             onChange={(e) => setField("product_interest", e.target.value)}
             className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm"
           >
-            <option value="">Vyberte kategorii produktů</option>
+            <option value="">Vyberte kategorii (volitelné)</option>
             {interestOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
@@ -213,16 +213,38 @@ export default function MemodoInquiryPage() {
           </select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Odhadované množství (ks)</Label>
-          <Input
-            type="number"
-            value={form.estimated_quantity}
-            onChange={(e) => setField("estimated_quantity", e.target.value)}
-            placeholder="např. 50"
-            className="h-12 rounded-xl"
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowAdvanced((prev) => !prev)}
+          className="text-xs font-semibold text-gray-600 underline underline-offset-2"
+        >
+          {showAdvanced ? "Skrýt rozšířená pole" : "Rozšířená pole (firma, množství)"}
+        </button>
+
+        {showAdvanced ? (
+          <>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Firma</Label>
+              <Input
+                value={form.company}
+                onChange={(e) => setField("company", e.target.value)}
+                placeholder="Název firmy s.r.o."
+                className="h-12 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Odhadované množství (ks)</Label>
+              <Input
+                type="number"
+                value={form.estimated_quantity}
+                onChange={(e) => setField("estimated_quantity", e.target.value)}
+                placeholder="např. 50"
+                className="h-12 rounded-xl"
+              />
+            </div>
+          </>
+        ) : null}
 
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Zpráva / popis poptávky *</Label>

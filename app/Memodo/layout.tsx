@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Tag, ShoppingBag, FileText } from "lucide-react";
 import type { Metadata, Viewport } from "next";
 import { MemodoInstallAppButton } from "@/components/memodo/install-app-button";
+import { MemodoOnboardingBanner, MemodoStickyCta } from "@/components/memodo/mobile-ux";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -47,9 +48,11 @@ export default function MemodoLayout({ children }: { children: React.ReactNode }
             </Link>
           </div>
         </div>
+        <MemodoOnboardingBanner />
       </header>
 
       <main className="flex-1 pb-20">{children}</main>
+      <MemodoStickyCta />
 
       <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 border-t border-gray-100 bg-white">
         <div className="flex items-center justify-around px-4 py-2">

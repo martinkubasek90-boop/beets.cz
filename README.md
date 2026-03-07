@@ -134,6 +134,9 @@ Memodo inquiry integration:
 - Optional env for Memodo-specific Deal pipeline:
   - `HUBSPOT_MEMODO_PIPELINE` (fallback: `HUBSPOT_PIPELINE`)
   - `HUBSPOT_MEMODO_DEAL_STAGE` (fallback: `HUBSPOT_DEAL_STAGE`)
+- Optional follow-up email env:
+  - `MEMODO_SALES_EMAIL` (internal notification recipient)
+  - SMTP/webhook env from `lib/email.ts` (`SMTP_*`, `NOTIFY_EMAIL_FROM`, etc.)
 
 Memodo XML catalog import:
 - SQL schema:

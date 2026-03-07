@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Clock, Percent, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MemodoProductCard } from "@/components/memodo/product-card";
+import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { getMemodoProducts, getMemodoPromotions } from "@/lib/memodo-catalog";
 
 export const revalidate = 300;
@@ -18,6 +19,7 @@ export default async function MemodoPromotionsPage() {
 
   return (
     <div className="space-y-6 px-4 py-6">
+      <MemodoViewTracker page="promotions" />
       <div>
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-[#FFE500] px-3 py-1 text-xs font-bold text-black">
           <Percent className="h-3 w-3" /> Aktuální akce

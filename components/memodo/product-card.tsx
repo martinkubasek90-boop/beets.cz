@@ -4,11 +4,19 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Package, Tag } from "lucide-react";
 import { Product, categoryLabels } from "@/lib/memodo-data";
+import { trackMemodoEvent } from "@/lib/memodo-analytics";
 
 export function MemodoProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/Memodo/produkt/${product.id}`}
+      onClick={() =>
+        trackMemodoEvent("memodo_open_product_detail", {
+          product_id: product.id,
+          category: product.category,
+          promo: Boolean(product.is_promo),
+        })
+      }
       className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:border-[#FFE500] hover:shadow-lg"
     >
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-gray-50 p-4">
@@ -16,6 +24,8 @@ export function MemodoProductCard({ product }: { product: Product }) {
           <img
             src={product.image_url}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -80,4 +90,3 @@ export function MemodoProductCard({ product }: { product: Product }) {
     </Link>
   );
 }
-
