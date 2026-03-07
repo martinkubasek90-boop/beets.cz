@@ -15,6 +15,19 @@ export default function MemodoAdminPage() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [feedUrl, setFeedUrl] = useState("");
+  const [feedAuthType, setFeedAuthType] = useState<"none" | "basic" | "bearer" | "header" | "query">("none");
+  const [feedUsername, setFeedUsername] = useState("");
+  const [feedPassword, setFeedPassword] = useState("");
+  const [feedToken, setFeedToken] = useState("");
+  const [feedHeaderName, setFeedHeaderName] = useState("X-Feed-Token");
+  const [feedQueryParam, setFeedQueryParam] = useState("token");
+  const [feedUseProxy, setFeedUseProxy] = useState(false);
+  const [feedProxyUrl, setFeedProxyUrl] = useState("");
+  const [feedProxyAuthType, setFeedProxyAuthType] = useState<"none" | "basic" | "bearer" | "header">("none");
+  const [feedProxyUsername, setFeedProxyUsername] = useState("");
+  const [feedProxyPassword, setFeedProxyPassword] = useState("");
+  const [feedProxyToken, setFeedProxyToken] = useState("");
+  const [feedProxyHeaderName, setFeedProxyHeaderName] = useState("X-Proxy-Token");
   const [kbSitemapUrl, setKbSitemapUrl] = useState("https://memodo.cz/sitemap.xml");
   const [kbBatchSize, setKbBatchSize] = useState(60);
   const [kbMaxUrls, setKbMaxUrls] = useState(1500);
@@ -98,6 +111,19 @@ export default function MemodoAdminPage() {
         body: JSON.stringify({
           feedUrl: feedUrl.trim() || undefined,
           deactivateMissing: true,
+          feedAuthType,
+          feedUsername: feedUsername.trim() || undefined,
+          feedPassword: feedPassword || undefined,
+          feedToken: feedToken.trim() || undefined,
+          feedHeaderName: feedHeaderName.trim() || undefined,
+          feedQueryParam: feedQueryParam.trim() || undefined,
+          useProxy: feedUseProxy,
+          proxyUrl: feedProxyUrl.trim() || undefined,
+          proxyAuthType: feedProxyAuthType,
+          proxyUsername: feedProxyUsername.trim() || undefined,
+          proxyPassword: feedProxyPassword || undefined,
+          proxyToken: feedProxyToken.trim() || undefined,
+          proxyHeaderName: feedProxyHeaderName.trim() || undefined,
         }),
       });
       const payload = (await response.json().catch(() => ({}))) as {
@@ -512,6 +538,187 @@ export default function MemodoAdminPage() {
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
             placeholder="https://..."
           />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Feed auth
+              <select
+                value={feedAuthType}
+                onChange={(e) =>
+                  setFeedAuthType(e.target.value as "none" | "basic" | "bearer" | "header" | "query")
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              >
+                <option value="none">Bez autentizace</option>
+                <option value="basic">Basic Auth</option>
+                <option value="bearer">Bearer token</option>
+                <option value="header">Custom header token</option>
+                <option value="query">Query token</option>
+              </select>
+            </label>
+            {feedAuthType === "basic" ? (
+              <label className="text-xs text-slate-400">
+                Username
+                <input
+                  value={feedUsername}
+                  onChange={(e) => setFeedUsername(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                />
+              </label>
+            ) : null}
+            {feedAuthType === "basic" ? (
+              <label className="text-xs text-slate-400">
+                Password
+                <input
+                  type="password"
+                  value={feedPassword}
+                  onChange={(e) => setFeedPassword(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                />
+              </label>
+            ) : null}
+            {feedAuthType === "bearer" ? (
+              <label className="text-xs text-slate-400 col-span-2">
+                Bearer token
+                <input
+                  type="password"
+                  value={feedToken}
+                  onChange={(e) => setFeedToken(e.target.value)}
+                  className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                />
+              </label>
+            ) : null}
+            {feedAuthType === "header" ? (
+              <>
+                <label className="text-xs text-slate-400">
+                  Header name
+                  <input
+                    value={feedHeaderName}
+                    onChange={(e) => setFeedHeaderName(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                  />
+                </label>
+                <label className="text-xs text-slate-400">
+                  Header token
+                  <input
+                    type="password"
+                    value={feedToken}
+                    onChange={(e) => setFeedToken(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                  />
+                </label>
+              </>
+            ) : null}
+            {feedAuthType === "query" ? (
+              <>
+                <label className="text-xs text-slate-400">
+                  Query param
+                  <input
+                    value={feedQueryParam}
+                    onChange={(e) => setFeedQueryParam(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                  />
+                </label>
+                <label className="text-xs text-slate-400">
+                  Query token
+                  <input
+                    type="password"
+                    value={feedToken}
+                    onChange={(e) => setFeedToken(e.target.value)}
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                  />
+                </label>
+              </>
+            ) : null}
+          </div>
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <input
+              type="checkbox"
+              checked={feedUseProxy}
+              onChange={(e) => setFeedUseProxy(e.target.checked)}
+            />
+            Stahovat feed přes externí proxy endpoint (pro statickou IP)
+          </label>
+          {feedUseProxy ? (
+            <div className="rounded-lg border border-slate-700 bg-slate-900/70 p-3 space-y-2">
+              <label className="block text-xs text-slate-400">Proxy endpoint URL</label>
+              <input
+                value={feedProxyUrl}
+                onChange={(e) => setFeedProxyUrl(e.target.value)}
+                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+                placeholder="https://proxy.example.com/fetch"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs text-slate-400">
+                  Proxy auth
+                  <select
+                    value={feedProxyAuthType}
+                    onChange={(e) =>
+                      setFeedProxyAuthType(e.target.value as "none" | "basic" | "bearer" | "header")
+                    }
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                  >
+                    <option value="none">Bez autentizace</option>
+                    <option value="basic">Basic Auth</option>
+                    <option value="bearer">Bearer token</option>
+                    <option value="header">Custom header token</option>
+                  </select>
+                </label>
+                {feedProxyAuthType === "basic" ? (
+                  <label className="text-xs text-slate-400">
+                    Proxy username
+                    <input
+                      value={feedProxyUsername}
+                      onChange={(e) => setFeedProxyUsername(e.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                    />
+                  </label>
+                ) : null}
+                {feedProxyAuthType === "basic" ? (
+                  <label className="text-xs text-slate-400">
+                    Proxy password
+                    <input
+                      type="password"
+                      value={feedProxyPassword}
+                      onChange={(e) => setFeedProxyPassword(e.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                    />
+                  </label>
+                ) : null}
+                {feedProxyAuthType === "bearer" ? (
+                  <label className="text-xs text-slate-400 col-span-2">
+                    Proxy bearer token
+                    <input
+                      type="password"
+                      value={feedProxyToken}
+                      onChange={(e) => setFeedProxyToken(e.target.value)}
+                      className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                    />
+                  </label>
+                ) : null}
+                {feedProxyAuthType === "header" ? (
+                  <>
+                    <label className="text-xs text-slate-400">
+                      Proxy header name
+                      <input
+                        value={feedProxyHeaderName}
+                        onChange={(e) => setFeedProxyHeaderName(e.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                      />
+                    </label>
+                    <label className="text-xs text-slate-400">
+                      Proxy header token
+                      <input
+                        type="password"
+                        value={feedProxyToken}
+                        onChange={(e) => setFeedProxyToken(e.target.value)}
+                        className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+                      />
+                    </label>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={runImport}
@@ -522,6 +729,13 @@ export default function MemodoAdminPage() {
           </button>
           <p className="text-xs text-slate-400">
             Pro velké feedy (30k+) spusť endpoint opakovaně, dokud nevrátí `done: true`.
+          </p>
+          <p className="text-xs text-slate-500">
+            Přihlašovací údaje se používají jen pro aktuální spuštění importu. Pro trvalé nastavení použij `.env`.
+          </p>
+          <p className="text-xs text-slate-500">
+            Proxy endpoint má dostat payload: targetUrl, method, headers a vrátit XML text nebo JSON objekt s polem
+            xml.
           </p>
         </div>
 

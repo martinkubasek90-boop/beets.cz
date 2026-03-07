@@ -149,6 +149,20 @@ Memodo XML catalog import:
 - Env:
   - `MEMODO_XML_FEED_URL` (default feed URL for import endpoint)
   - `MEMODO_FEED_IMPORT_TOKEN` (optional Bearer token protection)
+  - feed auth (optional, when supplier protects XML):
+    - `MEMODO_XML_FEED_AUTH_TYPE` = `none|basic|bearer|header|query`
+    - `MEMODO_XML_FEED_USERNAME`, `MEMODO_XML_FEED_PASSWORD` (for `basic`)
+    - `MEMODO_XML_FEED_TOKEN` (for `bearer|header|query`)
+    - `MEMODO_XML_FEED_HEADER_NAME` (for `header`, default `X-Feed-Token`)
+    - `MEMODO_XML_FEED_QUERY_PARAM` (for `query`, default `token`)
+  - static-IP proxy mode (optional):
+    - `MEMODO_FEED_USE_PROXY=true`
+    - `MEMODO_FEED_PROXY_URL` (e.g. `https://proxy.example.com/fetch`)
+    - `MEMODO_FEED_PROXY_AUTH_TYPE` = `none|basic|bearer|header`
+    - `MEMODO_FEED_PROXY_USERNAME`, `MEMODO_FEED_PROXY_PASSWORD` (for `basic`)
+    - `MEMODO_FEED_PROXY_TOKEN` (for `bearer|header`)
+    - `MEMODO_FEED_PROXY_HEADER_NAME` (for `header`, default `X-Proxy-Token`)
+    - `MEMODO_FEED_TIMEOUT_MS` (optional, default `25000`)
 - Example import call:
   - `curl -X POST https://beets.cz/api/memodo/import-xml -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"deactivateMissing":true}'`
   - dry-run:
@@ -163,6 +177,14 @@ Memodo XML catalog import:
     - `nextStartIndex`, `done`, `syncStartedAt`, `processedCount`
   - pagination read API:
     - `GET /api/memodo/products?offset=0&limit=40&q=...&category=...&promo=1&in_stock=1&sort=popular|price_asc|price_desc|name`
+  - proxy request contract:
+    - importer sends `POST` JSON to `MEMODO_FEED_PROXY_URL`:
+      - `targetUrl` (string)
+      - `method` (always `GET`)
+      - `headers` (object)
+    - proxy should return:
+      - plain XML text, or
+      - JSON with `xml` field (`{ "xml": "<...>" }`)
 
 Memodo admin:
 - URL: `/Memodo/admin`
@@ -176,6 +198,7 @@ Memodo admin:
   - přepínač `catalogRequiresSearch` (produkty v katalogu až po fulltextu)
   - AI feature toggles (`aiSearchEnabled`, `shoppingChatbotEnabled`, `technicalAdvisorEnabled`)
   - AI prompt nastavení pro nákupního chatbota a technického poradce
+  - XML feed auth mode (none/basic/bearer/custom header/query token) + one-run credentials
 
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.

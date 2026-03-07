@@ -13,6 +13,19 @@ type ImportPayload = {
   batchSize?: number;
   syncStartedAt?: string;
   finalize?: boolean;
+  feedAuthType?: "none" | "basic" | "bearer" | "header" | "query";
+  feedUsername?: string;
+  feedPassword?: string;
+  feedToken?: string;
+  feedHeaderName?: string;
+  feedQueryParam?: string;
+  useProxy?: boolean;
+  proxyUrl?: string;
+  proxyAuthType?: "none" | "basic" | "bearer" | "header";
+  proxyUsername?: string;
+  proxyPassword?: string;
+  proxyToken?: string;
+  proxyHeaderName?: string;
 };
 
 function isAuthorized(request: Request) {
@@ -23,25 +36,109 @@ function isAuthorized(request: Request) {
   return token === expected;
 }
 
-async function resolveXmlPayload(body: ImportPayload) {
-  if (body.xml?.trim()) return body.xml;
-
+function buildFeedRequest(body: ImportPayload) {
   const feedUrl = body.feedUrl?.trim() || process.env.MEMODO_XML_FEED_URL;
   if (!feedUrl) {
     throw new Error("Missing XML payload. Provide xml body or MEMODO_XML_FEED_URL.");
   }
 
-  const response = await fetch(feedUrl, {
-    method: "GET",
-    headers: {
-      "User-Agent": "BEETS-Memodo-Importer/1.0",
-      Accept: "application/xml,text/xml,text/plain;q=0.9,*/*;q=0.8",
-    },
-    signal: AbortSignal.timeout(25000),
-  });
+  const authType = body.feedAuthType || (process.env.MEMODO_XML_FEED_AUTH_TYPE as ImportPayload["feedAuthType"]) || "none";
+  const username = body.feedUsername?.trim() || process.env.MEMODO_XML_FEED_USERNAME || "";
+  const password = body.feedPassword || process.env.MEMODO_XML_FEED_PASSWORD || "";
+  const token = body.feedToken?.trim() || process.env.MEMODO_XML_FEED_TOKEN || "";
+  const headerName = body.feedHeaderName?.trim() || process.env.MEMODO_XML_FEED_HEADER_NAME || "X-Feed-Token";
+  const queryParam = body.feedQueryParam?.trim() || process.env.MEMODO_XML_FEED_QUERY_PARAM || "token";
+
+  const url = new URL(feedUrl);
+  const headers: Record<string, string> = {
+    "User-Agent": "BEETS-Memodo-Importer/1.0",
+    Accept: "application/xml,text/xml,text/plain;q=0.9,*/*;q=0.8",
+  };
+
+  if (authType === "basic" && username) {
+    headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+  } else if (authType === "bearer" && token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else if (authType === "header" && token) {
+    headers[headerName] = token;
+  } else if (authType === "query" && token) {
+    url.searchParams.set(queryParam, token);
+  }
+
+  return { url: url.toString(), headers };
+}
+
+function buildProxyRequest(body: ImportPayload) {
+  const useProxy = Boolean(body.useProxy) || process.env.MEMODO_FEED_USE_PROXY === "true";
+  if (!useProxy) return null;
+
+  const proxyUrl = body.proxyUrl?.trim() || process.env.MEMODO_FEED_PROXY_URL;
+  if (!proxyUrl) {
+    throw new Error("Proxy mode enabled but missing proxy URL.");
+  }
+
+  const authType = body.proxyAuthType || (process.env.MEMODO_FEED_PROXY_AUTH_TYPE as ImportPayload["proxyAuthType"]) || "none";
+  const username = body.proxyUsername?.trim() || process.env.MEMODO_FEED_PROXY_USERNAME || "";
+  const password = body.proxyPassword || process.env.MEMODO_FEED_PROXY_PASSWORD || "";
+  const token = body.proxyToken?.trim() || process.env.MEMODO_FEED_PROXY_TOKEN || "";
+  const headerName = body.proxyHeaderName?.trim() || process.env.MEMODO_FEED_PROXY_HEADER_NAME || "X-Proxy-Token";
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json,text/plain,*/*",
+    "User-Agent": "BEETS-Memodo-Importer/1.0",
+  };
+
+  if (authType === "basic" && username) {
+    headers.Authorization = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`;
+  } else if (authType === "bearer" && token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else if (authType === "header" && token) {
+    headers[headerName] = token;
+  }
+
+  return { proxyUrl, headers };
+}
+
+async function resolveXmlPayload(body: ImportPayload) {
+  if (body.xml?.trim()) return body.xml;
+
+  const request = buildFeedRequest(body);
+  const proxy = buildProxyRequest(body);
+  const timeoutMs = Math.min(90000, Math.max(10000, Number(process.env.MEMODO_FEED_TIMEOUT_MS || 25000)));
+
+  const response = proxy
+    ? await fetch(proxy.proxyUrl, {
+        method: "POST",
+        headers: proxy.headers,
+        body: JSON.stringify({
+          targetUrl: request.url,
+          method: "GET",
+          headers: request.headers,
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+    : await fetch(request.url, {
+        method: "GET",
+        headers: request.headers,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
 
   if (!response.ok) {
     throw new Error(`Feed download failed (${response.status}).`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (proxy && contentType.toLowerCase().includes("application/json")) {
+    const payload = (await response.json().catch(() => ({}))) as { xml?: string; body?: string; error?: string };
+    if (payload.error) {
+      throw new Error(`Proxy feed error: ${payload.error}`);
+    }
+    const xml = payload.xml || payload.body || "";
+    if (!xml.trim()) {
+      throw new Error("Proxy response did not include XML payload.");
+    }
+    return xml;
   }
 
   return response.text();
