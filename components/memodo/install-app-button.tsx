@@ -20,6 +20,8 @@ export function MemodoInstallAppButton() {
   const [isIosSafari, setIsIosSafari] = useState(false);
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -36,8 +38,35 @@ export function MemodoInstallAppButton() {
     setInstalled(Boolean(standalone));
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/memodo-sw.js", { scope: "/Memodo/" }).catch(() => {
-        // SW registration failure should not block page usage.
+      const buildVersion = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 8) || "dev";
+      navigator.serviceWorker
+        .register(`/memodo-sw.js?v=${buildVersion}`, { scope: "/Memodo/" })
+        .then((registration) => {
+          const markUpdateIfWaiting = () => {
+            if (registration.waiting) {
+              setWaitingWorker(registration.waiting);
+              setUpdateAvailable(true);
+            }
+          };
+
+          markUpdateIfWaiting();
+          registration.addEventListener("updatefound", () => {
+            const installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener("statechange", () => {
+              if (installing.state === "installed" && navigator.serviceWorker.controller) {
+                setWaitingWorker(registration.waiting || null);
+                setUpdateAvailable(true);
+              }
+            });
+          });
+        })
+        .catch(() => {
+          // SW registration failure should not block page usage.
+        });
+
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
       });
     }
 
@@ -82,6 +111,23 @@ export function MemodoInstallAppButton() {
       // Clipboard can be unavailable in some contexts.
     }
   };
+
+  const applyUpdate = () => {
+    if (!waitingWorker) return;
+    waitingWorker.postMessage({ type: "SKIP_WAITING" });
+  };
+
+  if (updateAvailable) {
+    return (
+      <button
+        type="button"
+        onClick={applyUpdate}
+        className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-xs font-bold text-white hover:bg-blue-500"
+      >
+        Aktualizovat appku
+      </button>
+    );
+  }
 
   if (installed) {
     return (

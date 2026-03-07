@@ -1,6 +1,7 @@
-const CACHE_NAME = "memodo-v1";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "v1";
+const CACHE_NAME = `memodo-${SW_VERSION}`;
 const APP_SHELL = [
-  "/Memodo/akce",
+  "/Memodo/akcni-produkty",
   "/Memodo/katalog",
   "/Memodo/poptavka",
   "/apple-touch-icon.png",
@@ -27,6 +28,12 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -46,7 +53,7 @@ self.addEventListener("fetch", (event) => {
         })
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match("/Memodo/akce");
+          return cached || caches.match("/Memodo/akcni-produkty");
         }),
     );
     return;
@@ -68,14 +75,18 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Default dynamic strategy for Memodo app data/assets: network-first.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
+    fetch(request)
+      .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
         return response;
-      });
-    }),
+      })
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return new Response("Offline", { status: 503 });
+      }),
   );
 });
