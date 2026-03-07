@@ -17,9 +17,9 @@ export function MemodoProductCard({ product }: { product: Product }) {
           promo: Boolean(product.is_promo),
         })
       }
-      className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:border-[#FFE500] hover:shadow-lg"
+      className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-300 hover:border-[#FFE500] hover:shadow-lg"
     >
-      <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-gray-50 p-4">
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#F7F7F7] p-4">
         {product.image_url ? (
           <img
             src={product.image_url}

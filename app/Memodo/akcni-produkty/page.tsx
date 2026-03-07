@@ -19,12 +19,12 @@ export default async function MemodoFeaturedProductsPage() {
   return (
     <div className="space-y-6 px-4 py-6">
       <MemodoViewTracker page="featured_products" />
-      <div>
+      <div className="rounded-2xl bg-[#25C1E6] px-4 py-5 text-gray-900">
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-[#FFE500] px-3 py-1 text-xs font-bold text-black">
           <Percent className="h-3 w-3" /> Akční produkty
         </div>
-        <h1 className="text-2xl font-black tracking-tight">Vybrané nabídky</h1>
-        <p className="mt-1 text-sm text-gray-500">Zde vidíš pouze vybrané produkty. Ostatní najdeš přes fulltext.</p>
+        <h1 className="text-2xl font-black tracking-tight">Úspěšné projekty s Memodem</h1>
+        <p className="mt-1 text-sm text-gray-800">Vybrané nabídky. Ostatní produkty najdeš přes fulltext v katalogu.</p>
       </div>
 
       {featured.length > 0 ? (
