@@ -15,6 +15,12 @@ type MemodoInquiryPayload = {
   message?: string;
   estimated_quantity?: number;
   product_id?: string;
+  battery_id?: string;
+  recommended_set?: {
+    inverterId?: string;
+    batteryId?: string;
+  };
+  recommended_set_text?: string;
   sourceUrl?: string;
 };
 
@@ -195,6 +201,11 @@ function buildSummary(payload: MemodoInquiryPayload) {
     category ? `Oblast zájmu: ${category}` : null,
     qty !== undefined ? `Odhadované množství: ${qty} ks` : null,
     payload.product_id?.trim() ? `ID produktu: ${payload.product_id.trim()}` : null,
+    payload.battery_id?.trim() ? `ID baterie: ${payload.battery_id.trim()}` : null,
+    payload.recommended_set?.inverterId || payload.recommended_set?.batteryId
+      ? `AI set: měnič=${payload.recommended_set?.inverterId || "-"}, baterie=${payload.recommended_set?.batteryId || "-"}`
+      : null,
+    payload.recommended_set_text?.trim() ? `AI doporučení:\n${payload.recommended_set_text.trim()}` : null,
     payload.message?.trim() ? `Zpráva klienta: ${payload.message.trim()}` : null,
     payload.sourceUrl?.trim() ? `URL: ${payload.sourceUrl.trim()}` : null,
   ]

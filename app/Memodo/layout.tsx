@@ -4,6 +4,8 @@ import { MemodoInstallAppButton } from "@/components/memodo/install-app-button";
 import { MemodoOnboardingBanner, MemodoStickyCta } from "@/components/memodo/mobile-ux";
 import Image from "next/image";
 import { MemodoBottomNav } from "@/components/memodo/bottom-nav";
+import { MemodoAiAssistant } from "@/components/memodo/ai-assistant";
+import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -24,7 +26,8 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function MemodoLayout({ children }: { children: React.ReactNode }) {
+export default async function MemodoLayout({ children }: { children: React.ReactNode }) {
+  const config = await getMemodoAdminConfig();
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
@@ -58,6 +61,10 @@ export default function MemodoLayout({ children }: { children: React.ReactNode }
 
       <main className="flex-1 pb-20">{children}</main>
       <MemodoStickyCta />
+      <MemodoAiAssistant
+        shoppingEnabled={config.aiSearchEnabled && config.shoppingChatbotEnabled}
+        technicalEnabled={config.aiSearchEnabled && config.technicalAdvisorEnabled}
+      />
 
       <MemodoBottomNav />
     </div>

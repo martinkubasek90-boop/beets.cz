@@ -32,6 +32,8 @@ type FormState = {
   message: string;
   estimated_quantity: string;
   product_id: string;
+  battery_id: string;
+  ai_prefill: string;
 };
 
 type SavedProfile = {
@@ -62,6 +64,8 @@ export default function MemodoInquiryPage() {
     message: "",
     estimated_quantity: "",
     product_id: "",
+    battery_id: "",
+    ai_prefill: "",
   });
 
   useEffect(() => {
@@ -86,6 +90,16 @@ export default function MemodoInquiryPage() {
 
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("product") || "";
+    const batteryId = params.get("set") || "";
+    const prefill = params.get("prefill") || "";
+    if (batteryId || prefill) {
+      setForm((prev) => ({
+        ...prev,
+        battery_id: batteryId,
+        ai_prefill: prefill,
+        message: prev.message || prefill,
+      }));
+    }
     if (!productId) return;
 
     let ignore = false;
@@ -151,6 +165,10 @@ export default function MemodoInquiryPage() {
         body: JSON.stringify({
           ...form,
           contact_name,
+          recommended_set: form.battery_id
+            ? { inverterId: form.product_id || undefined, batteryId: form.battery_id }
+            : undefined,
+          recommended_set_text: form.ai_prefill || undefined,
           estimated_quantity: form.estimated_quantity ? Number(form.estimated_quantity) : undefined,
           sourceUrl: typeof window !== "undefined" ? window.location.href : "/Memodo/poptavka",
         }),
@@ -192,6 +210,8 @@ export default function MemodoInquiryPage() {
               message: "",
               estimated_quantity: "",
               product_id: "",
+              battery_id: "",
+              ai_prefill: "",
             });
             setSelectedProduct(null);
             setError("");
@@ -228,6 +248,11 @@ export default function MemodoInquiryPage() {
         {selectedProduct ? (
           <p className="mt-2 text-xs font-medium text-gray-500">
             Poptáváš produkt ID: <span className="text-gray-700">{selectedProduct.id}</span>
+          </p>
+        ) : null}
+        {form.battery_id ? (
+          <p className="mt-1 text-xs font-medium text-gray-500">
+            Doporučená baterie ID: <span className="text-gray-700">{form.battery_id}</span>
           </p>
         ) : null}
       </div>

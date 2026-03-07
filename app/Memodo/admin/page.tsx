@@ -15,6 +15,14 @@ export default function MemodoAdminPage() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [feedUrl, setFeedUrl] = useState("");
+  const [kbSitemapUrl, setKbSitemapUrl] = useState("https://memodo.cz/sitemap.xml");
+  const [kbBatchSize, setKbBatchSize] = useState(60);
+  const [kbMaxUrls, setKbMaxUrls] = useState(1500);
+  const [kbDiscovering, setKbDiscovering] = useState(false);
+  const [kbIngesting, setKbIngesting] = useState(false);
+  const [kbTotalUrls, setKbTotalUrls] = useState<number | null>(null);
+  const [kbLastProcessed, setKbLastProcessed] = useState(0);
+  const [kbStatus, setKbStatus] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -96,6 +104,99 @@ export default function MemodoAdminPage() {
       setStatus(message);
     } finally {
       setImporting(false);
+    }
+  };
+
+  const runKnowledgeDiscovery = async () => {
+    setKbDiscovering(true);
+    setKbStatus("");
+    setKbLastProcessed(0);
+    setKbTotalUrls(null);
+    try {
+      const response = await fetch("/api/memodo-ai/ingest", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          sitemapUrl: kbSitemapUrl.trim(),
+          discoverOnly: true,
+          maxUrls: kbMaxUrls,
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        totalUrls?: number;
+        sitemapSourceCount?: number;
+      };
+      if (!response.ok) throw new Error(payload.error || "Discovery selhalo.");
+      const total = payload.totalUrls ?? 0;
+      setKbTotalUrls(total);
+      setKbStatus(
+        `Discovery hotové. Nalezeno ${total} URL (zdrojů v sitemap indexu: ${payload.sitemapSourceCount ?? 1}).`,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Discovery selhalo.";
+      setKbStatus(message);
+    } finally {
+      setKbDiscovering(false);
+    }
+  };
+
+  const runKnowledgeIngest = async () => {
+    setKbIngesting(true);
+    setKbStatus("");
+    setKbLastProcessed(0);
+    try {
+      let startIndex = 0;
+      let processedTotal = 0;
+      let discoveredTotal: number | null = null;
+      const safeBatchSize = Math.min(200, Math.max(10, Math.floor(kbBatchSize)));
+      const safeMaxUrls = Math.min(1500, Math.max(1, Math.floor(kbMaxUrls)));
+
+      while (true) {
+        const response = await fetch("/api/memodo-ai/ingest", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            sitemapUrl: kbSitemapUrl.trim(),
+            startIndex,
+            batchSize: safeBatchSize,
+            maxUrls: safeMaxUrls,
+          }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as {
+          error?: string;
+          totalUrls?: number;
+          processed?: number;
+          nextStartIndex?: number | null;
+          done?: boolean;
+        };
+        if (!response.ok) throw new Error(payload.error || "Ingest selhal.");
+
+        const processed = payload.processed ?? 0;
+        processedTotal += processed;
+        setKbLastProcessed(processedTotal);
+        if (typeof payload.totalUrls === "number") {
+          discoveredTotal = payload.totalUrls;
+          setKbTotalUrls(payload.totalUrls);
+        }
+
+        if (payload.done || payload.nextStartIndex === null || processed === 0) {
+          const totalLabel =
+            discoveredTotal !== null
+              ? `${processedTotal}/${discoveredTotal}`
+              : String(processedTotal);
+          setKbStatus(`AI ingest dokončen. Zpracováno ${totalLabel} URL.`);
+          break;
+        }
+
+        startIndex = payload.nextStartIndex ?? startIndex + processed;
+        setKbStatus(`AI ingest běží... zpracováno ${processedTotal}${discoveredTotal ? `/${discoveredTotal}` : ""} URL`);
+      }
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Ingest selhal.";
+      setKbStatus(message);
+    } finally {
+      setKbIngesting(false);
     }
   };
 
@@ -226,6 +327,64 @@ export default function MemodoAdminPage() {
           </p>
         </div>
 
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">AI znalostní báze (Memodo.cz)</h2>
+          <label className="block text-xs text-slate-400">Sitemap URL</label>
+          <input
+            value={kbSitemapUrl}
+            onChange={(e) => setKbSitemapUrl(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+            placeholder="https://memodo.cz/sitemap.xml"
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Batch size
+              <input
+                type="number"
+                min={10}
+                max={200}
+                value={kbBatchSize}
+                onChange={(e) => setKbBatchSize(Number(e.target.value) || 60)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Max URL (1-1500)
+              <input
+                type="number"
+                min={1}
+                max={1500}
+                value={kbMaxUrls}
+                onChange={(e) => setKbMaxUrls(Number(e.target.value) || 1500)}
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100"
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={runKnowledgeDiscovery}
+              disabled={kbDiscovering || kbIngesting}
+              className="w-full rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium text-white hover:bg-slate-600 disabled:opacity-50"
+            >
+              {kbDiscovering ? "Načítám URL..." : "1) Discovery URL"}
+            </button>
+            <button
+              type="button"
+              onClick={runKnowledgeIngest}
+              disabled={kbDiscovering || kbIngesting}
+              className="w-full rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+            >
+              {kbIngesting ? "Ingestuji..." : "2) Spustit AI ingest"}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">
+            Stav: {kbLastProcessed}
+            {kbTotalUrls !== null ? ` / ${kbTotalUrls}` : ""} URL
+          </p>
+          {kbStatus ? <p className="text-xs text-slate-300">{kbStatus}</p> : null}
+        </div>
+
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -241,4 +400,3 @@ export default function MemodoAdminPage() {
     </div>
   );
 }
-
