@@ -164,6 +164,19 @@ Memodo XML catalog import:
   - pagination read API:
     - `GET /api/memodo/products?offset=0&limit=40&q=...&category=...&promo=1&in_stock=1&sort=popular|price_asc|price_desc|name`
 
+Memodo admin:
+- URL: `/Memodo/admin`
+- API endpoint: `GET/PUT /api/memodo/admin-config`
+- SQL schema:
+  - `supabase/memodo_admin_config.sql`
+- Optional env protection:
+  - `MEMODO_ADMIN_TOKEN` (Bearer token for saving config/import actions)
+- Admin controls:
+  - ruční výběr featured product IDs pro sekci `Akční produkty`
+  - přepínač `catalogRequiresSearch` (produkty v katalogu až po fulltextu)
+  - AI feature toggles (`aiSearchEnabled`, `shoppingChatbotEnabled`, `technicalAdvisorEnabled`)
+  - AI prompt nastavení pro nákupního chatbota a technického poradce
+
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.
 - `LLM_MODE=trial`: uses remote LLM API (trial key).

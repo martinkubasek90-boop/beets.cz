@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 };
 
 const navItems = [
-  { label: "Akce", href: "/Memodo/akce", icon: Tag },
+  { label: "Akční", href: "/Memodo/akcni-produkty", icon: Tag },
   { label: "Katalog", href: "/Memodo/katalog", icon: ShoppingBag },
   { label: "Poptávka", href: "/Memodo/poptavka", icon: FileText },
 ];
@@ -34,7 +34,7 @@ export default function MemodoLayout({ children }: { children: React.ReactNode }
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-gray-50">
       <header className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
         <div className="flex h-14 items-center justify-between px-4">
-          <Link href="/Memodo/akce" className="flex items-center gap-1.5">
+          <Link href="/Memodo/akcni-produkty" className="flex items-center gap-1.5">
             <span className="text-xl font-black tracking-tight text-gray-900">memodo</span>
             <div className="h-2 w-2 rounded-full bg-[#FFE500]" />
           </Link>

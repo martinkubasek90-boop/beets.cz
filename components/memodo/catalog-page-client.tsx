@@ -17,7 +17,7 @@ type ApiResponse = {
 
 const PAGE_SIZE = 40;
 
-export function MemodoCatalogPageClient() {
+export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSearch?: boolean }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -49,6 +49,14 @@ export function MemodoCatalogPageClient() {
 
   useEffect(() => {
     const controller = new AbortController();
+    if (requiresSearch && trimmedSearch.length < 2) {
+      setProducts([]);
+      setTotal(0);
+      setOffset(0);
+      setLoading(false);
+      return () => controller.abort();
+    }
+
     const params = new URLSearchParams();
     if (category) params.set("category", category);
     if (inStockOnly) params.set("in_stock", "1");
@@ -74,7 +82,7 @@ export function MemodoCatalogPageClient() {
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [category, inStockOnly, promoOnly, trimmedSearch, sortBy]);
+  }, [category, inStockOnly, promoOnly, trimmedSearch, sortBy, requiresSearch]);
 
   const loadMore = async () => {
     if (loadingMore) return;
@@ -160,7 +168,7 @@ export function MemodoCatalogPageClient() {
             type="button"
             onClick={() => setInStockOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-              inStockOnly ? "bg-green-100 text-green-700" : "bg-white text-gray-600 border border-gray-200"
+              inStockOnly ? "bg-green-100 text-green-700" : "border border-gray-200 bg-white text-gray-600"
             }`}
           >
             Jen skladem
@@ -169,7 +177,7 @@ export function MemodoCatalogPageClient() {
             type="button"
             onClick={() => setPromoOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-              promoOnly ? "bg-yellow-100 text-yellow-700" : "bg-white text-gray-600 border border-gray-200"
+              promoOnly ? "bg-yellow-100 text-yellow-700" : "border border-gray-200 bg-white text-gray-600"
             }`}
           >
             Jen akce
@@ -178,7 +186,11 @@ export function MemodoCatalogPageClient() {
       </div>
 
       <p className="text-xs text-gray-400">
-        {loading ? "Načítám produkty..." : `${total} produktů`}
+        {requiresSearch && trimmedSearch.length < 2
+          ? "Napiš alespoň 2 znaky do fulltextu pro zobrazení produktů."
+          : loading
+            ? "Načítám produkty..."
+            : `${total} produktů`}
       </p>
 
       {!loading && products.length > 0 ? (
@@ -206,7 +218,7 @@ export function MemodoCatalogPageClient() {
             type="button"
             disabled={loadingMore}
             onClick={loadMore}
-            className="w-full rounded-xl bg-white text-gray-900 border border-gray-200 hover:bg-gray-50"
+            className="w-full rounded-xl border border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
           >
             {loadingMore ? "Načítám..." : "Načíst další produkty"}
           </Button>
@@ -215,3 +227,4 @@ export function MemodoCatalogPageClient() {
     </div>
   );
 }
+
