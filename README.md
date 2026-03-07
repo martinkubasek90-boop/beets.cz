@@ -126,6 +126,15 @@ HubSpot lead integration:
   - `HUBSPOT_PIPELINE`
   - `HUBSPOT_DEAL_STAGE`
 
+Memodo inquiry integration:
+- Endpoint: `POST /api/hubspot/memodo-inquiry`
+- Triggered from `/Memodo/poptavka` submit.
+- Required env:
+  - `HUBSPOT_PRIVATE_APP_TOKEN`
+- Optional env for Memodo-specific Deal pipeline:
+  - `HUBSPOT_MEMODO_PIPELINE` (fallback: `HUBSPOT_PIPELINE`)
+  - `HUBSPOT_MEMODO_DEAL_STAGE` (fallback: `HUBSPOT_DEAL_STAGE`)
+
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.
 - `LLM_MODE=trial`: uses remote LLM API (trial key).

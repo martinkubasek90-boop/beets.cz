@@ -1,5 +1,18 @@
 import Link from "next/link";
 import { Tag, ShoppingBag, FileText } from "lucide-react";
+import type { Metadata } from "next";
+import { MemodoInstallAppButton } from "@/components/memodo/install-app-button";
+
+export const metadata: Metadata = {
+  title: "Memodo | BEETS.CZ",
+  description: "Mobilní katalog a poptávková aplikace Memodo.",
+  manifest: "/Memodo/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Memodo",
+    statusBarStyle: "default",
+  },
+};
 
 const navItems = [
   { label: "Akce", href: "/Memodo/akce", icon: Tag },
@@ -16,12 +29,15 @@ export default function MemodoLayout({ children }: { children: React.ReactNode }
             <span className="text-xl font-black tracking-tight text-gray-900">memodo</span>
             <div className="h-2 w-2 rounded-full bg-[#FFE500]" />
           </Link>
-          <Link
-            href="/Memodo/poptavka"
-            className="rounded-xl bg-[#FFE500] px-4 py-2 text-xs font-bold text-black transition-colors hover:bg-yellow-400"
-          >
-            Poptat
-          </Link>
+          <div className="flex items-center gap-2">
+            <MemodoInstallAppButton />
+            <Link
+              href="/Memodo/poptavka"
+              className="rounded-xl bg-[#FFE500] px-4 py-2 text-xs font-bold text-black transition-colors hover:bg-yellow-400"
+            >
+              Poptat
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -49,4 +65,3 @@ export default function MemodoLayout({ children }: { children: React.ReactNode }
     </div>
   );
 }
-

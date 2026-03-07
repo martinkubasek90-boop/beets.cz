@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { products } from "@/lib/memodo-data";
 
 const interestOptions = [
   { value: "panely", label: "Solární panely" },
@@ -33,17 +34,20 @@ type FormState = {
 
 export default function MemodoInquiryPage() {
   const searchParams = useSearchParams();
+  const productIdFromQuery = searchParams.get("product") || "";
+  const selectedProduct = products.find((product) => product.id === productIdFromQuery);
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const [form, setForm] = useState<FormState>({
     contact_name: "",
     company: "",
     email: "",
     phone: "",
-    product_interest: "",
+    product_interest: selectedProduct?.category || "",
     message: "",
     estimated_quantity: "",
-    product_id: searchParams.get("product") || "",
+    product_id: productIdFromQuery,
   });
 
   const setField = (field: keyof FormState, value: string) => {
@@ -52,10 +56,29 @@ export default function MemodoInquiryPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
     setSending(true);
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setSending(false);
-    setSubmitted(true);
+    try {
+      const response = await fetch("/api/hubspot/memodo-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          estimated_quantity: form.estimated_quantity ? Number(form.estimated_quantity) : undefined,
+          sourceUrl: typeof window !== "undefined" ? window.location.href : "/Memodo/poptavka",
+        }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(data.error || "Nepodařilo se odeslat poptávku.");
+      }
+      setSubmitted(true);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Nepodařilo se odeslat poptávku.";
+      setError(message);
+    } finally {
+      setSending(false);
+    }
   };
 
   if (submitted) {
@@ -80,6 +103,7 @@ export default function MemodoInquiryPage() {
               estimated_quantity: "",
               product_id: "",
             });
+            setError("");
             setSubmitted(false);
           }}
           className="mt-8 rounded-xl bg-[#FFE500] px-10 py-5 font-bold text-black hover:bg-yellow-400"
@@ -95,6 +119,11 @@ export default function MemodoInquiryPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
         <p className="mt-1 text-sm text-gray-500">Vyplňte formulář a my vám připravíme nabídku na míru.</p>
+        {selectedProduct ? (
+          <p className="mt-2 text-xs font-medium text-gray-500">
+            Poptáváš produkt ID: <span className="text-gray-700">{selectedProduct.id}</span>
+          </p>
+        ) : null}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -187,6 +216,9 @@ export default function MemodoInquiryPage() {
         >
           {sending ? "Odesílám..." : <><Send className="mr-2 h-5 w-5" /> Odeslat poptávku</>}
         </Button>
+        {error ? (
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+        ) : null}
         <p className="pb-4 text-center text-xs text-gray-400">
           Odesláním souhlasíte se zpracováním osobních údajů.
         </p>
@@ -194,4 +226,3 @@ export default function MemodoInquiryPage() {
     </div>
   );
 }
-
