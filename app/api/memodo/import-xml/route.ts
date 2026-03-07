@@ -9,6 +9,10 @@ type ImportPayload = {
   xml?: string;
   dryRun?: boolean;
   deactivateMissing?: boolean;
+  startIndex?: number;
+  batchSize?: number;
+  syncStartedAt?: string;
+  finalize?: boolean;
 };
 
 function isAuthorized(request: Request) {
@@ -61,10 +65,13 @@ export async function POST(request: Request) {
     }
 
     if (body.dryRun) {
+      const recommendedBatchSize = Math.min(1000, Math.max(200, Number(process.env.MEMODO_IMPORT_BATCH_SIZE || 800)));
       return NextResponse.json({
         ok: true,
         dryRun: true,
         parsedCount: parsed.length,
+        recommendedBatchSize,
+        estimatedBatches: Math.ceil(parsed.length / recommendedBatchSize),
         sample: parsed.slice(0, 5),
       });
     }
@@ -77,8 +84,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const now = new Date().toISOString();
-    const rows = parsed.map((item) => ({
+    const syncStartedAt = body.syncStartedAt || new Date().toISOString();
+    const startIndex = Math.max(0, Math.floor(body.startIndex || 0));
+    const batchSize = Math.min(
+      5000,
+      Math.max(100, Math.floor(body.batchSize || Number(process.env.MEMODO_IMPORT_BATCH_SIZE || 800))),
+    );
+    const slice = parsed.slice(startIndex, startIndex + batchSize);
+    const done = startIndex + slice.length >= parsed.length;
+
+    const rows = slice.map((item) => ({
       external_id: item.id,
       name: item.name,
       category: item.category,
@@ -95,52 +110,60 @@ export async function POST(request: Request) {
       original_price: item.original_price ?? null,
       is_active: true,
       raw_payload: item.raw,
-      updated_at: now,
+      updated_at: syncStartedAt,
     }));
 
-    const { error: upsertError } = await supabase.from("memodo_products").upsert(rows, {
-      onConflict: "external_id",
-    });
-    if (upsertError) {
-      throw new Error(`Upsert failed: ${upsertError.message}`);
+    const upsertChunkSize = Math.min(
+      2000,
+      Math.max(100, Math.floor(Number(process.env.MEMODO_IMPORT_UPSERT_CHUNK || 500))),
+    );
+
+    for (let i = 0; i < rows.length; i += upsertChunkSize) {
+      const chunk = rows.slice(i, i + upsertChunkSize);
+      const { error: upsertError } = await supabase.from("memodo_products").upsert(chunk, {
+        onConflict: "external_id",
+      });
+      if (upsertError) {
+        throw new Error(`Upsert failed: ${upsertError.message}`);
+      }
     }
 
     let deactivatedCount = 0;
     const deactivateMissing = body.deactivateMissing !== false;
-    if (deactivateMissing) {
-      const importedSet = new Set(parsed.map((item) => item.id));
-      const { data: activeRows, error: activeError } = await supabase
+    const shouldFinalize = Boolean(body.finalize) || done;
+
+    if (deactivateMissing && shouldFinalize) {
+      const { data: staleRows, error: staleError } = await supabase
         .from("memodo_products")
         .select("external_id")
-        .eq("is_active", true);
+        .eq("is_active", true)
+        .lt("updated_at", syncStartedAt);
 
-      if (activeError) {
-        throw new Error(`Failed to load current active products: ${activeError.message}`);
-      }
+      if (staleError) throw new Error(`Failed to load stale products: ${staleError.message}`);
 
-      const toDeactivate = (activeRows || [])
-        .map((row) => row.external_id as string)
-        .filter((id) => !importedSet.has(id));
-
-      for (let i = 0; i < toDeactivate.length; i += 200) {
-        const batch = toDeactivate.slice(i, i + 200);
+      const staleIds = (staleRows || []).map((row) => row.external_id as string);
+      for (let i = 0; i < staleIds.length; i += 500) {
+        const batch = staleIds.slice(i, i + 500);
         if (!batch.length) continue;
-
         const { error: deactivateError } = await supabase
           .from("memodo_products")
-          .update({ is_active: false, updated_at: now })
+          .update({ is_active: false })
           .in("external_id", batch);
-
-        if (deactivateError) {
-          throw new Error(`Deactivate failed: ${deactivateError.message}`);
-        }
+        if (deactivateError) throw new Error(`Deactivate failed: ${deactivateError.message}`);
       }
-      deactivatedCount = toDeactivate.length;
+      deactivatedCount = staleIds.length;
     }
 
     return NextResponse.json({
       ok: true,
-      importedCount: parsed.length,
+      parsedCount: parsed.length,
+      processedCount: rows.length,
+      startIndex,
+      batchSize,
+      nextStartIndex: done ? null : startIndex + rows.length,
+      done,
+      syncStartedAt,
+      finalized: shouldFinalize,
       deactivatedCount,
     });
   } catch (error: unknown) {
@@ -148,4 +171,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

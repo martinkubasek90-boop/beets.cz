@@ -153,6 +153,16 @@ Memodo XML catalog import:
   - `curl -X POST https://beets.cz/api/memodo/import-xml -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"deactivateMissing":true}'`
   - dry-run:
   - `curl -X POST https://beets.cz/api/memodo/import-xml -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"dryRun":true}'`
+- Large feed mode (recommended for 30k+ items):
+  - request body supports:
+    - `startIndex` (default `0`)
+    - `batchSize` (default `800`)
+    - `syncStartedAt` (timestamp returned by first batch; reuse for all following batches)
+    - `finalize` (`true` on last batch to deactivate missing products)
+  - response contains:
+    - `nextStartIndex`, `done`, `syncStartedAt`, `processedCount`
+  - pagination read API:
+    - `GET /api/memodo/products?offset=0&limit=40&q=...&category=...&promo=1&in_stock=1&sort=popular|price_asc|price_desc|name`
 
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.

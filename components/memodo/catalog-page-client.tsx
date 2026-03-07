@@ -1,47 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MemodoProductCard } from "@/components/memodo/product-card";
 import { categoryLabels, type Product } from "@/lib/memodo-data";
 import { trackMemodoEvent } from "@/lib/memodo-analytics";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
+import { Button } from "@/components/ui/button";
 
-export function MemodoCatalogPageClient({ initialProducts }: { initialProducts: Product[] }) {
+type ApiResponse = {
+  ok: boolean;
+  count: number;
+  products: Product[];
+};
+
+const PAGE_SIZE = 40;
+
+export function MemodoCatalogPageClient() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [promoOnly, setPromoOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "name">("popular");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const filtered = useMemo(() => {
-    const list = initialProducts.filter((p) => {
-      if (category && p.category !== category) return false;
-      if (inStockOnly && !p.in_stock) return false;
-      if (promoOnly && !p.is_promo) return false;
-      if (!search) return true;
-      const s = search.toLowerCase();
-      return (
-        p.name?.toLowerCase().includes(s) ||
-        p.brand?.toLowerCase().includes(s) ||
-        p.art_number?.toLowerCase().includes(s)
-      );
-    });
-
-    if (sortBy === "price_asc") {
-      return [...list].sort((a, b) => (a.price || Number.MAX_SAFE_INTEGER) - (b.price || Number.MAX_SAFE_INTEGER));
-    }
-    if (sortBy === "price_desc") {
-      return [...list].sort((a, b) => (b.price || 0) - (a.price || 0));
-    }
-    if (sortBy === "name") {
-      return [...list].sort((a, b) => a.name.localeCompare(b.name, "cs"));
-    }
-
-    // "popular" fallback: promo + in-stock first.
-    return [...list].sort((a, b) => Number(Boolean(b.is_promo)) - Number(Boolean(a.is_promo)));
-  }, [initialProducts, category, inStockOnly, promoOnly, search, sortBy]);
+  const trimmedSearch = debouncedSearch.trim();
 
   useEffect(() => {
     trackMemodoEvent("memodo_catalog_filter_change", {
@@ -49,9 +38,69 @@ export function MemodoCatalogPageClient({ initialProducts }: { initialProducts: 
       in_stock_only: inStockOnly,
       promo_only: promoOnly,
       sort_by: sortBy,
-      results: filtered.length,
+      results: total,
     });
-  }, [category, inStockOnly, promoOnly, sortBy, filtered.length]);
+  }, [category, inStockOnly, promoOnly, sortBy, total]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(search), 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (inStockOnly) params.set("in_stock", "1");
+    if (promoOnly) params.set("promo", "1");
+    if (trimmedSearch) params.set("q", trimmedSearch);
+    params.set("sort", sortBy);
+    params.set("limit", String(PAGE_SIZE));
+    params.set("offset", "0");
+
+    setLoading(true);
+    fetch(`/api/memodo/products?${params.toString()}`, { signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("Failed to fetch products"))))
+      .then((data: ApiResponse) => {
+        setProducts(data.products || []);
+        setTotal(data.count || 0);
+        setOffset((data.products || []).length);
+      })
+      .catch(() => {
+        setProducts([]);
+        setTotal(0);
+        setOffset(0);
+      })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [category, inStockOnly, promoOnly, trimmedSearch, sortBy]);
+
+  const loadMore = async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const params = new URLSearchParams();
+      if (category) params.set("category", category);
+      if (inStockOnly) params.set("in_stock", "1");
+      if (promoOnly) params.set("promo", "1");
+      if (trimmedSearch) params.set("q", trimmedSearch);
+      params.set("sort", sortBy);
+      params.set("limit", String(PAGE_SIZE));
+      params.set("offset", String(offset));
+
+      const response = await fetch(`/api/memodo/products?${params.toString()}`);
+      if (!response.ok) return;
+      const data = (await response.json()) as ApiResponse;
+      const next = data.products || [];
+      setProducts((prev) => [...prev, ...next]);
+      setTotal(data.count || 0);
+      setOffset((prev) => prev + next.length);
+      trackMemodoEvent("memodo_catalog_load_more", { offset, loaded: next.length });
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <div className="space-y-5 px-4 py-6">
@@ -128,12 +177,20 @@ export function MemodoCatalogPageClient({ initialProducts }: { initialProducts: 
         </div>
       </div>
 
-      <p className="text-xs text-gray-400">{filtered.length} produktů</p>
+      <p className="text-xs text-gray-400">
+        {loading ? "Načítám produkty..." : `${total} produktů`}
+      </p>
 
-      {filtered.length > 0 ? (
+      {!loading && products.length > 0 ? (
         <div className="grid grid-cols-2 gap-3">
-          {filtered.map((product) => (
+          {products.map((product) => (
             <MemodoProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : loading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="h-64 animate-pulse rounded-2xl bg-gray-100" />
           ))}
         </div>
       ) : (
@@ -142,6 +199,19 @@ export function MemodoCatalogPageClient({ initialProducts }: { initialProducts: 
           <p className="mt-3 text-sm text-gray-500">Žádné produkty</p>
         </div>
       )}
+
+      {!loading && products.length > 0 && products.length < total ? (
+        <div className="pt-2">
+          <Button
+            type="button"
+            disabled={loadingMore}
+            onClick={loadMore}
+            className="w-full rounded-xl bg-white text-gray-900 border border-gray-200 hover:bg-gray-50"
+          >
+            {loadingMore ? "Načítám..." : "Načíst další produkty"}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }
