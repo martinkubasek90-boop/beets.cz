@@ -23,7 +23,8 @@ const interestOptions = [
 ];
 
 type FormState = {
-  contact_name: string;
+  first_name: string;
+  last_name: string;
   company: string;
   email: string;
   phone: string;
@@ -33,14 +34,27 @@ type FormState = {
   product_id: string;
 };
 
+type SavedProfile = {
+  first_name: string;
+  last_name: string;
+  company: string;
+  email: string;
+  phone: string;
+};
+
+const PROFILE_STORAGE_KEY = "memodo_profile_v1";
+
 export default function MemodoInquiryPage() {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [rememberProfile, setRememberProfile] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState>({
-    contact_name: "",
+    first_name: "",
+    last_name: "",
     company: "",
     email: "",
     phone: "",
@@ -51,6 +65,25 @@ export default function MemodoInquiryPage() {
   });
 
   useEffect(() => {
+    const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (raw) {
+      try {
+        const saved = JSON.parse(raw) as SavedProfile;
+        setForm((prev) => ({
+          ...prev,
+          first_name: prev.first_name || saved.first_name || "",
+          last_name: prev.last_name || saved.last_name || "",
+          company: prev.company || saved.company || "",
+          email: prev.email || saved.email || "",
+          phone: prev.phone || saved.phone || "",
+        }));
+        setProfileLoaded(true);
+        trackMemodoEvent("memodo_profile_prefilled");
+      } catch {
+        // Ignore invalid local profile payload.
+      }
+    }
+
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("product") || "";
     if (!productId) return;
@@ -82,6 +115,12 @@ export default function MemodoInquiryPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
+  const clearSavedProfile = () => {
+    window.localStorage.removeItem(PROFILE_STORAGE_KEY);
+    setProfileLoaded(false);
+    trackMemodoEvent("memodo_profile_cleared");
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -92,11 +131,26 @@ export default function MemodoInquiryPage() {
       has_company: Boolean(form.company),
     });
     try {
+      const contact_name = `${form.first_name} ${form.last_name}`.trim();
+      if (rememberProfile) {
+        const profile: SavedProfile = {
+          first_name: form.first_name,
+          last_name: form.last_name,
+          company: form.company,
+          email: form.email,
+          phone: form.phone,
+        };
+        window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+        setProfileLoaded(true);
+        trackMemodoEvent("memodo_profile_saved");
+      }
+
       const response = await fetch("/api/hubspot/memodo-inquiry", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
+          contact_name,
           estimated_quantity: form.estimated_quantity ? Number(form.estimated_quantity) : undefined,
           sourceUrl: typeof window !== "undefined" ? window.location.href : "/Memodo/poptavka",
         }),
@@ -129,10 +183,11 @@ export default function MemodoInquiryPage() {
         <Button
           onClick={() => {
             setForm({
-              contact_name: "",
-              company: "",
-              email: "",
-              phone: "",
+              first_name: rememberProfile ? form.first_name : "",
+              last_name: rememberProfile ? form.last_name : "",
+              company: rememberProfile ? form.company : "",
+              email: rememberProfile ? form.email : "",
+              phone: rememberProfile ? form.phone : "",
               product_interest: "",
               message: "",
               estimated_quantity: "",
@@ -156,6 +211,20 @@ export default function MemodoInquiryPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
         <p className="mt-1 text-sm text-gray-500">Rychlá poptávka do 30 vteřin. Ozveme se obvykle do 2 hodin.</p>
+        {profileLoaded ? (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700">
+              Údaje předvyplněny
+            </span>
+            <button
+              type="button"
+              onClick={clearSavedProfile}
+              className="text-[10px] font-semibold text-gray-500 underline underline-offset-2"
+            >
+              Zapomenout údaje
+            </button>
+          </div>
+        ) : null}
         {selectedProduct ? (
           <p className="mt-2 text-xs font-medium text-gray-500">
             Poptáváš produkt ID: <span className="text-gray-700">{selectedProduct.id}</span>
@@ -164,15 +233,27 @@ export default function MemodoInquiryPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Jméno a příjmení *</Label>
-          <Input
-            required
-            value={form.contact_name}
-            onChange={(e) => setField("contact_name", e.target.value)}
-            placeholder="Jan Novák"
-            className="h-12 rounded-xl"
-          />
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Jméno *</Label>
+            <Input
+              required
+              value={form.first_name}
+              onChange={(e) => setField("first_name", e.target.value)}
+              placeholder="Jan"
+              className="h-12 rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Příjmení *</Label>
+            <Input
+              required
+              value={form.last_name}
+              onChange={(e) => setField("last_name", e.target.value)}
+              placeholder="Novák"
+              className="h-12 rounded-xl"
+            />
+          </div>
         </div>
 
         <div className="space-y-1.5">
@@ -245,6 +326,16 @@ export default function MemodoInquiryPage() {
             </div>
           </>
         ) : null}
+
+        <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+          <input
+            type="checkbox"
+            checked={rememberProfile}
+            onChange={(e) => setRememberProfile(e.target.checked)}
+            className="h-4 w-4 accent-black"
+          />
+          Zapamatovat moje údaje pro příště
+        </label>
 
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">Zpráva / popis poptávky *</Label>

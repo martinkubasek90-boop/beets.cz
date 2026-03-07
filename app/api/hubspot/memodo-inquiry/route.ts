@@ -5,6 +5,8 @@ import { sendEmail } from "@/lib/email";
 export const runtime = "nodejs";
 
 type MemodoInquiryPayload = {
+  first_name?: string;
+  last_name?: string;
   contact_name?: string;
   company?: string;
   email?: string;
@@ -59,8 +61,10 @@ async function hubspotRequest<T>(token: string, path: string, init: RequestInit)
 
 async function upsertContact(token: string, payload: MemodoInquiryPayload) {
   const email = payload.email!.trim().toLowerCase();
-  const name = payload.contact_name?.trim() || "";
-  const { firstname, lastname } = splitName(name);
+  const fullName = payload.contact_name?.trim() || "";
+  const split = splitName(fullName);
+  const firstname = payload.first_name?.trim() || split.firstname;
+  const lastname = payload.last_name?.trim() || split.lastname;
 
   const contactProps: Record<string, string> = { email };
   if (firstname) contactProps.firstname = firstname;
@@ -185,6 +189,9 @@ function buildSummary(payload: MemodoInquiryPayload) {
   return [
     "Zdroj: Memodo PWA poptávka",
     `Lead score: ${leadScore}/100`,
+    payload.first_name || payload.last_name
+      ? `Kontakt: ${[payload.first_name?.trim(), payload.last_name?.trim()].filter(Boolean).join(" ")}`
+      : null,
     category ? `Oblast zájmu: ${category}` : null,
     qty !== undefined ? `Odhadované množství: ${qty} ks` : null,
     payload.product_id?.trim() ? `ID produktu: ${payload.product_id.trim()}` : null,
@@ -227,14 +234,17 @@ export async function POST(request: Request) {
 
   const payload = (await request.json().catch(() => ({}))) as MemodoInquiryPayload;
   const email = payload.email?.trim().toLowerCase();
-  const name = payload.contact_name?.trim();
+  const firstName = payload.first_name?.trim();
+  const lastName = payload.last_name?.trim();
+  const combinedName = payload.contact_name?.trim() || [firstName, lastName].filter(Boolean).join(" ").trim();
   const message = payload.message?.trim();
   const normalizedPayload: MemodoInquiryPayload = {
     ...payload,
+    contact_name: combinedName,
     product_interest: payload.product_interest || "kompletni_sestava",
   };
 
-  if (!email || !name || !message) {
+  if (!email || !combinedName || !message) {
     return NextResponse.json({ error: "Missing required inquiry fields." }, { status: 400 });
   }
 
