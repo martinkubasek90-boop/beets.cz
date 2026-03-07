@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Tag, ShoppingBag, FileText } from "lucide-react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { MemodoInstallAppButton } from "@/components/memodo/install-app-button";
 
 export const metadata: Metadata = {
@@ -12,6 +12,14 @@ export const metadata: Metadata = {
     title: "Memodo",
     statusBarStyle: "default",
   },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FFE500",
+  viewportFit: "cover",
 };
 
 const navItems = [
