@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { products } from "@/lib/memodo-data";
+import type { Product } from "@/lib/memodo-data";
 
 const interestOptions = [
   { value: "panely", label: "Solární panely" },
@@ -35,6 +35,7 @@ export default function MemodoInquiryPage() {
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState>({
     contact_name: "",
     company: "",
@@ -45,19 +46,33 @@ export default function MemodoInquiryPage() {
     estimated_quantity: "",
     product_id: "",
   });
-  const selectedProduct = products.find((product) => product.id === form.product_id);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("product") || "";
     if (!productId) return;
 
-    const product = products.find((item) => item.id === productId);
-    setForm((prev) => ({
-      ...prev,
-      product_id: productId,
-      product_interest: prev.product_interest || product?.category || "",
-    }));
+    let ignore = false;
+    setForm((prev) => ({ ...prev, product_id: productId }));
+
+    fetch(`/api/memodo/products/${encodeURIComponent(productId)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data: { product?: Product } | null) => {
+        if (ignore || !data?.product) return;
+        setSelectedProduct(data.product);
+        setForm((prev) => ({
+          ...prev,
+          product_id: productId,
+          product_interest: prev.product_interest || data.product?.category || "",
+        }));
+      })
+      .catch(() => {
+        // Product lookup is optional for form submission.
+      });
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const setField = (field: keyof FormState, value: string) => {
@@ -113,6 +128,7 @@ export default function MemodoInquiryPage() {
               estimated_quantity: "",
               product_id: "",
             });
+            setSelectedProduct(null);
             setError("");
             setSubmitted(false);
           }}

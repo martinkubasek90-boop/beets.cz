@@ -11,14 +11,18 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { categoryLabels, products } from "@/lib/memodo-data";
+import { categoryLabels } from "@/lib/memodo-data";
+import { getMemodoProductById } from "@/lib/memodo-catalog";
 
-export default function MemodoProductDetailPage({
+export const revalidate = 300;
+
+export default async function MemodoProductDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const product = products.find((p) => p.id === params.id);
+  const resolvedParams = await params;
+  const product = await getMemodoProductById(resolvedParams.id);
   if (!product) notFound();
 
   const specs = product.specifications || {};
@@ -134,4 +138,3 @@ export default function MemodoProductDetailPage({
     </div>
   );
 }
-

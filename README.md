@@ -135,6 +135,22 @@ Memodo inquiry integration:
   - `HUBSPOT_MEMODO_PIPELINE` (fallback: `HUBSPOT_PIPELINE`)
   - `HUBSPOT_MEMODO_DEAL_STAGE` (fallback: `HUBSPOT_DEAL_STAGE`)
 
+Memodo XML catalog import:
+- SQL schema:
+  - `supabase/memodo_catalog.sql`
+- Import endpoint:
+  - `POST /api/memodo/import-xml`
+- Optional read endpoints:
+  - `GET /api/memodo/products`
+  - `GET /api/memodo/products/:id`
+- Env:
+  - `MEMODO_XML_FEED_URL` (default feed URL for import endpoint)
+  - `MEMODO_FEED_IMPORT_TOKEN` (optional Bearer token protection)
+- Example import call:
+  - `curl -X POST https://beets.cz/api/memodo/import-xml -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"deactivateMissing":true}'`
+  - dry-run:
+  - `curl -X POST https://beets.cz/api/memodo/import-xml -H "Authorization: Bearer <TOKEN>" -H "Content-Type: application/json" -d '{"dryRun":true}'`
+
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.
 - `LLM_MODE=trial`: uses remote LLM API (trial key).

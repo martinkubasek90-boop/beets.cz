@@ -2,14 +2,17 @@ import Link from "next/link";
 import { ArrowRight, Clock, Percent, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MemodoProductCard } from "@/components/memodo/product-card";
-import { products, promotions } from "@/lib/memodo-data";
+import { getMemodoProducts, getMemodoPromotions } from "@/lib/memodo-catalog";
+
+export const revalidate = 300;
 
 function formatDate(input?: string) {
   if (!input) return "";
   return new Date(input).toLocaleDateString("cs-CZ", { day: "numeric", month: "short" });
 }
 
-export default function MemodoPromotionsPage() {
+export default async function MemodoPromotionsPage() {
+  const [products, promotions] = await Promise.all([getMemodoProducts(), getMemodoPromotions()]);
   const activePromotions = promotions.filter((promo) => promo.is_active);
   const promoProducts = products.filter((product) => product.is_promo);
 
@@ -79,4 +82,3 @@ export default function MemodoPromotionsPage() {
     </div>
   );
 }
-
