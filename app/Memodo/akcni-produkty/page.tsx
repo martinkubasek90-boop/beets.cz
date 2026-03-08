@@ -4,11 +4,17 @@ import { MemodoProductCard } from "@/components/memodo/product-card";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { getMemodoProducts } from "@/lib/memodo-catalog";
 import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
+import { getMemodoViewerPriceAccess, maskProductPriceList } from "@/lib/memodo-price-access";
 
 export const revalidate = 300;
 
 export default async function MemodoFeaturedProductsPage() {
-  const [products, config] = await Promise.all([getMemodoProducts(), getMemodoAdminConfig()]);
+  const [productsRaw, config, access] = await Promise.all([
+    getMemodoProducts(),
+    getMemodoAdminConfig(),
+    getMemodoViewerPriceAccess(),
+  ]);
+  const products = maskProductPriceList(productsRaw, access.canSeePrices);
   const featuredByConfig = config.featuredProductIds
     .map((id) => products.find((product) => product.id === id))
     .filter(Boolean);

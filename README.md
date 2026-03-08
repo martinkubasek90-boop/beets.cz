@@ -191,6 +191,7 @@ Memodo admin:
 - API endpoint: `GET/PUT /api/memodo/admin-config`
 - SQL schema:
   - `supabase/memodo_admin_config.sql`
+  - `supabase/memodo_price_allowlist.sql` (allowlist e-mailů pro ceny)
   - `supabase/memodo_events.sql` (volitelné: event analytics dashboard)
 - Optional env protection:
   - `MEMODO_ADMIN_TOKEN` (Bearer token for saving config/import actions)
@@ -201,6 +202,13 @@ Memodo admin:
   - AI prompt nastavení pro nákupního chatbota a technického poradce
   - XML feed auth mode (none/basic/bearer/custom header/query token) + one-run credentials
   - funnel analytics + top searches (pokud existuje tabulka `memodo_events`)
+  - allowlist e-mailů: ceny vidí jen schválené e-maily
+
+Memodo price access:
+- `GET /api/memodo/price-access` (vrací `canSeePrices` pro přihlášeného uživatele)
+- `GET/PUT /api/memodo/price-allowlist` (admin token required)
+- `POST /api/memodo/auth/request-link`
+  - odešle magic-link pouze pokud je e-mail v allowlistu
 
 LLM modes for chatbot:
 - `LLM_MODE=off` (default): rule-based + RAG citations only.

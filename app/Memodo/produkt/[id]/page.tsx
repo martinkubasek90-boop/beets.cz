@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { categoryLabels } from "@/lib/memodo-data";
 import { getMemodoProductById, getMemodoProducts } from "@/lib/memodo-catalog";
+import { getMemodoViewerPriceAccess, maskProductPrices } from "@/lib/memodo-price-access";
 
 export const revalidate = 300;
 
@@ -24,11 +25,13 @@ export default async function MemodoProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = await params;
-  const [product, allProducts] = await Promise.all([
+  const [productRaw, allProducts, access] = await Promise.all([
     getMemodoProductById(resolvedParams.id),
     getMemodoProducts(),
+    getMemodoViewerPriceAccess(),
   ]);
-  if (!product) notFound();
+  if (!productRaw) notFound();
+  const product = maskProductPrices(productRaw, access.canSeePrices);
 
   const recommendedBattery =
     allProducts.find((item) => item.category === "baterie" && item.in_stock && item.brand === product.brand) ||
@@ -111,9 +114,16 @@ export default async function MemodoProductDetailPage({
         ) : (
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-[#FFE500]" />
-            <span className="text-lg font-bold">Cena na dotaz</span>
+            <span className="text-lg font-bold">
+              {access.canSeePrices ? "Cena na dotaz" : "Cena po přihlášení"}
+            </span>
           </div>
         )}
+        {!access.canSeePrices ? (
+          <Link href="/Memodo/prihlaseni" className="mt-3 inline-block text-xs font-semibold text-gray-700 underline">
+            Přihlásit se pro zobrazení cen
+          </Link>
+        ) : null}
       </div>
 
       <Link href={`/Memodo/poptavka?product=${product.id}`}>

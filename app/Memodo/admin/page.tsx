@@ -97,6 +97,9 @@ export default function MemodoAdminPage() {
   const [hubspotTestRunning, setHubspotTestRunning] = useState(false);
   const [hubspotTestEmail, setHubspotTestEmail] = useState("");
   const [hubspotTestResult, setHubspotTestResult] = useState("");
+  const [allowlistText, setAllowlistText] = useState("");
+  const [allowlistLoading, setAllowlistLoading] = useState(false);
+  const [allowlistSaving, setAllowlistSaving] = useState(false);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
   const [dashboard, setDashboard] = useState<DashboardState | null>(null);
@@ -166,6 +169,28 @@ export default function MemodoAdminPage() {
     if (adminToken.trim()) out.Authorization = `Bearer ${adminToken.trim()}`;
     return out;
   }, [adminToken]);
+
+  const loadPriceAllowlist = useCallback(async () => {
+    setAllowlistLoading(true);
+    try {
+      const response = await fetch("/api/memodo/price-allowlist", {
+        method: "GET",
+        headers,
+      });
+      const payload = (await response.json().catch(() => ({}))) as { emails?: string[] };
+      if (!response.ok || !Array.isArray(payload.emails)) {
+        setAllowlistText("");
+        return;
+      }
+      setAllowlistText(payload.emails.join("\n"));
+    } finally {
+      setAllowlistLoading(false);
+    }
+  }, [headers]);
+
+  useEffect(() => {
+    void loadPriceAllowlist();
+  }, [loadPriceAllowlist]);
 
   const saveConfig = async () => {
     setSaving(true);
@@ -433,6 +458,32 @@ export default function MemodoAdminPage() {
     }
   };
 
+  const savePriceAllowlist = async () => {
+    setAllowlistSaving(true);
+    setStatus("");
+    try {
+      const emails = allowlistText
+        .split(/\n|,|;|\s+/)
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean);
+
+      const response = await fetch("/api/memodo/price-allowlist", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ emails }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; count?: number };
+      if (!response.ok) throw new Error(payload.error || "Uložení allowlistu selhalo.");
+      setStatus(`Allowlist uložen (${payload.count ?? emails.length} e-mailů).`);
+      void loadPriceAllowlist();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Uložení allowlistu selhalo.";
+      setStatus(message);
+    } finally {
+      setAllowlistSaving(false);
+    }
+  };
+
   const toggleUatTask = (id: string) => {
     setUatState((prev) => {
       const next = { ...prev, [id]: !prev[id] };
@@ -644,6 +695,38 @@ export default function MemodoAdminPage() {
             className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
             placeholder="Bearer token pro save/import"
           />
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">Allowlist pro zobrazení cen</h2>
+          <p className="text-xs text-slate-400">
+            Ceny uvidí pouze přihlášení uživatelé s e-mailem v tomto seznamu.
+          </p>
+          <textarea
+            rows={8}
+            value={allowlistText}
+            onChange={(e) => setAllowlistText(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs"
+            placeholder="partner1@firma.cz&#10;partner2@firma.cz"
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={savePriceAllowlist}
+              disabled={allowlistSaving}
+              className="rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-600 disabled:opacity-50"
+            >
+              {allowlistSaving ? "Ukládám..." : "Uložit allowlist"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadPriceAllowlist()}
+              disabled={allowlistLoading}
+              className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-600 disabled:opacity-50"
+            >
+              {allowlistLoading ? "Načítám..." : "Obnovit seznam"}
+            </button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">

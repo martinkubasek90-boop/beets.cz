@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMemodoProducts, getMemodoServiceClient } from "@/lib/memodo-catalog";
 import type { ProductCategory } from "@/lib/memodo-data";
+import { getMemodoViewerPriceAccess, maskProductPriceList } from "@/lib/memodo-price-access";
 
 export const runtime = "nodejs";
 
@@ -96,6 +97,7 @@ function scoreSearch(item: ProductListItem, q: string) {
 }
 
 export async function GET(request: Request) {
+  const access = await getMemodoViewerPriceAccess();
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
   const promoOnly = searchParams.get("promo") === "1";
@@ -162,13 +164,15 @@ export async function GET(request: Request) {
             .sort((a, b) => scoreSearch(b, q) - scoreSearch(a, q))
             .slice(offset, offset + limit)
         : mapped;
+      const visibleProducts = maskProductPriceList(products, access.canSeePrices);
 
       return NextResponse.json({
         ok: true,
         count: count ?? mapped.length,
         offset,
         limit,
-        products,
+        canSeePrices: access.canSeePrices,
+        products: visibleProducts,
       });
     }
   }
@@ -205,6 +209,7 @@ export async function GET(request: Request) {
     count: products.length,
     offset,
     limit,
-    products: products.slice(offset, offset + limit),
+    canSeePrices: access.canSeePrices,
+    products: maskProductPriceList(products.slice(offset, offset + limit), access.canSeePrices),
   });
 }

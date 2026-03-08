@@ -39,6 +39,12 @@ export default async function MemodoLayout({ children }: { children: React.React
           <div className="flex items-center gap-1.5">
             <MemodoInstallAppButton />
             <Link
+              href="/Memodo/prihlaseni"
+              className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
+            >
+              Přihlásit ceny
+            </Link>
+            <Link
               href="/Memodo/poptavka"
               className="min-h-[44px] rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
             >
