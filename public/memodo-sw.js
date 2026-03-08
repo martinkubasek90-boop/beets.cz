@@ -1,4 +1,4 @@
-const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "v2";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "v3";
 const CACHE_NAME = `memodo-${SW_VERSION}`;
 const APP_SHELL = [
   "/Memodo/akcni-produkty",

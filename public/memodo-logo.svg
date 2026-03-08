@@ -1,5 +1,5 @@
-<svg width="420" height="110" viewBox="0 0 420 110" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="420" height="110" fill="transparent"/>
+<svg width="520" height="110" viewBox="0 0 520 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="520" height="110" fill="transparent"/>
   <text
     x="18"
     y="74"
@@ -11,7 +11,7 @@
   >
     memodo
   </text>
-  <path d="M334 22L355 34L334 46L313 34L334 22Z" fill="#21C0EA"/>
-  <path d="M358 38L379 50L358 62L337 50L358 38Z" fill="#14B3E2"/>
-  <path d="M334 54L355 66L334 78L313 66L334 54Z" fill="#0895C8"/>
+  <path d="M434 22L455 34L434 46L413 34L434 22Z" fill="#21C0EA"/>
+  <path d="M458 38L479 50L458 62L437 50L458 38Z" fill="#14B3E2"/>
+  <path d="M434 54L455 66L434 78L413 66L434 54Z" fill="#0895C8"/>
 </svg>

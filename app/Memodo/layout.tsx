@@ -34,17 +34,19 @@ export default async function MemodoLayout({ children }: { children: React.React
   return (
     <div className="memodo-app mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
-        <div className="flex items-center justify-between px-4 pb-2 pt-3">
-          <Link href="/Memodo/akcni-produkty" className="flex min-w-0 flex-1 items-center">
+        <div className="px-4 pt-3">
+          <Link href="/Memodo/akcni-produkty" className="block w-full">
             <Image
               src="/memodo-logo.svg"
               alt="Memodo"
-              width={420}
+              width={520}
               height={110}
-              className="h-11 w-full max-w-[260px] object-contain object-left"
+              className="h-12 w-full max-w-[320px] object-contain object-left"
             />
           </Link>
-          <div className="flex items-center gap-1.5">
+        </div>
+        <div className="flex justify-end px-4 pb-2">
+          <div className="flex items-center">
             <MemodoInstallAppButton />
           </div>
         </div>
