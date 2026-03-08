@@ -62,6 +62,9 @@ export default function MemodoAdminPage() {
   const [aiTestMessage, setAiTestMessage] = useState("Potřebuji set střídač + baterie pro rodinný dům 10 kW.");
   const [aiTesting, setAiTesting] = useState(false);
   const [aiTestReply, setAiTestReply] = useState("");
+  const [hubspotTestRunning, setHubspotTestRunning] = useState(false);
+  const [hubspotTestEmail, setHubspotTestEmail] = useState("");
+  const [hubspotTestResult, setHubspotTestResult] = useState("");
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
   const [dashboard, setDashboard] = useState<{
@@ -371,6 +374,50 @@ export default function MemodoAdminPage() {
     }
   };
 
+  const runHubspotSmokeTest = async () => {
+    const email = hubspotTestEmail.trim();
+    if (!email) {
+      setHubspotTestResult("Zadej testovací e-mail.");
+      return;
+    }
+
+    setHubspotTestRunning(true);
+    setHubspotTestResult("");
+    try {
+      const response = await fetch("/api/hubspot/memodo-inquiry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          first_name: "Memodo",
+          last_name: "UAT",
+          contact_name: "Memodo UAT",
+          email,
+          phone: "+420000000000",
+          company: "UAT Test",
+          product_interest: "kompletni_sestava",
+          message: "Automatický smoke test propsání poptávky do HubSpotu z Memodo adminu.",
+          sourceUrl: "/Memodo/admin",
+        }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        contactId?: string;
+        dealId?: string | null;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "HubSpot smoke test selhal.");
+      }
+      setHubspotTestResult(
+        `OK. Kontakt: ${payload.contactId || "-"}, Deal: ${payload.dealId || "nevytvořen"}`
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "HubSpot smoke test selhal.";
+      setHubspotTestResult(message);
+    } finally {
+      setHubspotTestRunning(false);
+    }
+  };
+
   const toggleUatTask = (id: string) => {
     setUatState((prev) => {
       const next = { ...prev, [id]: !prev[id] };
@@ -510,6 +557,33 @@ export default function MemodoAdminPage() {
               Reset checklistu
             </button>
           </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">HubSpot smoke test</h2>
+          <p className="text-xs text-slate-400">
+            Ověří propsání poptávky do HubSpotu bez čekání na ruční mobilní test.
+          </p>
+          <input
+            type="email"
+            value={hubspotTestEmail}
+            onChange={(e) => setHubspotTestEmail(e.target.value)}
+            className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm"
+            placeholder="test@email.cz"
+          />
+          <button
+            type="button"
+            onClick={runHubspotSmokeTest}
+            disabled={hubspotTestRunning}
+            className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600 disabled:opacity-50"
+          >
+            {hubspotTestRunning ? "Ověřuji..." : "Spustit HubSpot smoke test"}
+          </button>
+          {hubspotTestResult ? (
+            <p className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200">
+              {hubspotTestResult}
+            </p>
+          ) : null}
         </div>
 
         <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
@@ -670,6 +744,98 @@ export default function MemodoAdminPage() {
               />
             </label>
           </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Preferované značky střídačů (čárkou)
+              <input
+                value={config.aiPreferredInverterBrands.join(", ")}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiPreferredInverterBrands: e.target.value
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Preferované značky baterií (čárkou)
+              <input
+                value={config.aiPreferredBatteryBrands.join(", ")}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiPreferredBatteryBrands: e.target.value
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  }))
+                }
+                className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-slate-400">
+              Povolené páry značek (INV:BAT, po řádcích)
+              <textarea
+                rows={3}
+                value={config.aiAllowedBrandPairs.join("\n")}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiAllowedBrandPairs: e.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  }))
+                }
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-100"
+                placeholder="Huawei:BYD"
+              />
+            </label>
+            <label className="text-xs text-slate-400">
+              Blokované páry značek (INV:BAT, po řádcích)
+              <textarea
+                rows={3}
+                value={config.aiBlockedBrandPairs.join("\n")}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    aiBlockedBrandPairs: e.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  }))
+                }
+                className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-100"
+                placeholder="GoodWe:Dyness"
+              />
+            </label>
+          </div>
+
+          <label className="text-xs text-slate-400">
+            Maržový bias (0-1, vyšší = preference dražšího setu)
+            <input
+              type="number"
+              min={0}
+              max={1}
+              step={0.1}
+              value={config.aiMarginBias}
+              onChange={(e) =>
+                setConfig((prev) => ({
+                  ...prev,
+                  aiMarginBias: Math.min(1, Math.max(0, Number(e.target.value) || 0)),
+                }))
+              }
+              className="mt-1 h-10 w-full rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm text-slate-100"
+            />
+          </label>
 
           <label className="block text-xs text-slate-400">Prompt - nákupní chatbot</label>
           <textarea

@@ -13,6 +13,11 @@ export type MemodoAdminConfig = {
   aiModel: string;
   aiTemperature: number;
   aiMaxOutputTokens: number;
+  aiPreferredInverterBrands: string[];
+  aiPreferredBatteryBrands: string[];
+  aiAllowedBrandPairs: string[];
+  aiBlockedBrandPairs: string[];
+  aiMarginBias: number;
   shoppingAssistantPrompt: string;
   technicalAdvisorPrompt: string;
 };
@@ -31,6 +36,11 @@ export const defaultMemodoAdminConfig: MemodoAdminConfig = {
   aiModel: "gpt-4o-mini",
   aiTemperature: 0.2,
   aiMaxOutputTokens: 500,
+  aiPreferredInverterBrands: ["Huawei", "Fronius", "GoodWe"],
+  aiPreferredBatteryBrands: ["BYD", "Pylontech", "Dyness"],
+  aiAllowedBrandPairs: [],
+  aiBlockedBrandPairs: [],
+  aiMarginBias: 0.2,
   shoppingAssistantPrompt:
     "Pomoz zákazníkovi vybrat vhodný produkt podle účelu, výkonu, kompatibility a rozpočtu.",
   technicalAdvisorPrompt:
@@ -95,6 +105,34 @@ function sanitizeConfig(input: unknown): MemodoAdminConfig {
       typeof source.aiMaxOutputTokens === "number" && Number.isFinite(source.aiMaxOutputTokens)
         ? Math.min(2000, Math.max(100, Math.floor(source.aiMaxOutputTokens)))
         : defaultMemodoAdminConfig.aiMaxOutputTokens,
+    aiPreferredInverterBrands: Array.isArray(source.aiPreferredInverterBrands)
+      ? source.aiPreferredInverterBrands
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : defaultMemodoAdminConfig.aiPreferredInverterBrands,
+    aiPreferredBatteryBrands: Array.isArray(source.aiPreferredBatteryBrands)
+      ? source.aiPreferredBatteryBrands
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : defaultMemodoAdminConfig.aiPreferredBatteryBrands,
+    aiAllowedBrandPairs: Array.isArray(source.aiAllowedBrandPairs)
+      ? source.aiAllowedBrandPairs
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : defaultMemodoAdminConfig.aiAllowedBrandPairs,
+    aiBlockedBrandPairs: Array.isArray(source.aiBlockedBrandPairs)
+      ? source.aiBlockedBrandPairs
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      : defaultMemodoAdminConfig.aiBlockedBrandPairs,
+    aiMarginBias:
+      typeof source.aiMarginBias === "number" && Number.isFinite(source.aiMarginBias)
+        ? Math.min(1, Math.max(0, source.aiMarginBias))
+        : defaultMemodoAdminConfig.aiMarginBias,
     shoppingAssistantPrompt:
       typeof source.shoppingAssistantPrompt === "string" && source.shoppingAssistantPrompt.trim()
         ? source.shoppingAssistantPrompt

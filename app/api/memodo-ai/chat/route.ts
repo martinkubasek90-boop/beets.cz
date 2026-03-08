@@ -52,30 +52,101 @@ function buildSetSummary(set: RecommendedSet) {
     .join("\n");
 }
 
-function pickRecommendedSet(products: Product[], message: string): RecommendedSet {
+function normalizeBrand(value?: string) {
+  return (value || "").trim().toLowerCase();
+}
+
+function parsePairs(input: string[]) {
+  const pairs = new Set<string>();
+  for (const row of input) {
+    const [left, right] = row.split(":").map((part) => part.trim().toLowerCase());
+    if (!left || !right) continue;
+    pairs.add(`${left}:${right}`);
+  }
+  return pairs;
+}
+
+function detectBudget(message: string) {
+  const match = message.match(/(\d[\d\s]{2,})\s*(k[cč]|czk)/i);
+  if (!match?.[1]) return null;
+  const num = Number(match[1].replace(/\s+/g, ""));
+  return Number.isFinite(num) ? num : null;
+}
+
+function pickRecommendedSet(
+  products: Product[],
+  message: string,
+  rules: {
+    preferredInverterBrands: string[];
+    preferredBatteryBrands: string[];
+    allowedBrandPairs: string[];
+    blockedBrandPairs: string[];
+    marginBias: number;
+  },
+): RecommendedSet {
   const lower = message.toLowerCase();
   const inStock = products.filter((item) => item.in_stock);
   const inverters = inStock.filter((item) => item.category === "stridace");
   const batteries = inStock.filter((item) => item.category === "baterie");
 
-  const prioritizePromo = (list: Product[]) =>
-    [...list].sort(
-      (a, b) =>
-        Number(Boolean(b.is_promo)) - Number(Boolean(a.is_promo)) ||
-        (a.price || Number.MAX_SAFE_INTEGER) - (b.price || Number.MAX_SAFE_INTEGER),
-    );
-
-  const sortedInverters = prioritizePromo(inverters);
-  const sortedBatteries = prioritizePromo(batteries);
-
   const kwMatch = lower.match(/(\d+(?:[.,]\d+)?)\s*k?w/i);
   const hintPower = kwMatch ? Number(kwMatch[1].replace(",", ".")) : null;
+  const budget = detectBudget(message);
+  const preferredInv = new Set(rules.preferredInverterBrands.map((item) => normalizeBrand(item)));
+  const preferredBat = new Set(rules.preferredBatteryBrands.map((item) => normalizeBrand(item)));
+  const allowedPairs = parsePairs(rules.allowedBrandPairs);
+  const blockedPairs = parsePairs(rules.blockedBrandPairs);
 
-  const inverter =
-    (hintPower
-      ? sortedInverters.find((item) => item.name.toLowerCase().includes(String(Math.round(hintPower))))
-      : null) || sortedInverters[0];
-  const battery = sortedBatteries[0];
+  const allSetPrices = inverters.flatMap((inv) =>
+    batteries.map((bat) => (inv.price || 0) + (bat.price || 0)).filter((price) => price > 0),
+  );
+  const minTotalPrice = allSetPrices.length ? Math.min(...allSetPrices) : 0;
+  const maxTotalPrice = allSetPrices.length ? Math.max(...allSetPrices) : 0;
+
+  let best: { inverter: Product; battery: Product; score: number } | null = null;
+
+  for (const inverter of inverters) {
+    for (const battery of batteries) {
+      const invBrand = normalizeBrand(inverter.brand);
+      const batBrand = normalizeBrand(battery.brand);
+      const pairKey = `${invBrand}:${batBrand}`;
+
+      if (blockedPairs.has(pairKey)) continue;
+      if (allowedPairs.size > 0 && !allowedPairs.has(pairKey)) continue;
+
+      let score = 0;
+      if (inverter.is_promo) score += 2;
+      if (battery.is_promo) score += 2;
+      if (preferredInv.has(invBrand)) score += 4;
+      if (preferredBat.has(batBrand)) score += 4;
+      if (inverter.brand && lower.includes(inverter.brand.toLowerCase())) score += 3;
+      if (battery.brand && lower.includes(battery.brand.toLowerCase())) score += 3;
+
+      if (hintPower) {
+        const inverterName = inverter.name.toLowerCase();
+        const rounded = String(Math.round(hintPower));
+        if (inverterName.includes(rounded)) score += 6;
+      }
+
+      const totalPrice = (inverter.price || 0) + (battery.price || 0);
+      if (budget && totalPrice > 0) {
+        if (totalPrice <= budget) score += 6;
+        else score -= Math.min(8, (totalPrice - budget) / budget * 10);
+      }
+
+      if (rules.marginBias > 0 && totalPrice > 0 && maxTotalPrice > minTotalPrice) {
+        const normalized = (totalPrice - minTotalPrice) / (maxTotalPrice - minTotalPrice);
+        score += normalized * rules.marginBias * 8;
+      }
+
+      if (!best || score > best.score) {
+        best = { inverter, battery, score };
+      }
+    }
+  }
+
+  const inverter = best?.inverter || inverters[0];
+  const battery = best?.battery || batteries[0];
 
   const summary =
     inverter && battery
@@ -169,7 +240,13 @@ export async function POST(request: Request) {
       config.aiSearchEnabled &&
       (mode === "shopping" ? config.shoppingChatbotEnabled : config.technicalAdvisorEnabled);
 
-    const set = pickRecommendedSet(products, message);
+    const set = pickRecommendedSet(products, message, {
+      preferredInverterBrands: config.aiPreferredInverterBrands,
+      preferredBatteryBrands: config.aiPreferredBatteryBrands,
+      allowedBrandPairs: config.aiAllowedBrandPairs,
+      blockedBrandPairs: config.aiBlockedBrandPairs,
+      marginBias: config.aiMarginBias,
+    });
     const limitedCitations = citations.slice(0, config.aiCitationLimit);
     const reply = aiEnabled
       ? await generateReply({
