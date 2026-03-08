@@ -86,7 +86,8 @@ export function MemodoAiAssistant({
         body: JSON.stringify({ message, mode }),
       });
       const payload = (await response.json().catch(() => ({}))) as Partial<ChatApiResponse> & { error?: string };
-      if (!response.ok || !payload.reply) {
+      const replyText = payload.reply;
+      if (!response.ok || typeof replyText !== "string" || !replyText.trim()) {
         setMessages((prev) => [
           ...prev,
           { id: crypto.randomUUID(), role: "assistant", text: payload.error || "AI teď neodpovídá." },
@@ -98,7 +99,7 @@ export function MemodoAiAssistant({
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          text: payload.reply,
+          text: replyText,
           citations: payload.citations || [],
           offerPrefill: payload.offerPrefill,
         },
