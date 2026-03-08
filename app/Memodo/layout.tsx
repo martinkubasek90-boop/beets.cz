@@ -34,17 +34,17 @@ export default async function MemodoLayout({ children }: { children: React.React
     <div className="memodo-app mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
-          <Link href="/Memodo/akcni-produkty" className="flex items-center">
-            <Image src="/memodo-logo.svg" alt="Memodo" width={184} height={44} className="h-10 w-auto" />
+          <Link href="/Memodo/akcni-produkty" className="flex min-w-0 flex-1 items-center">
+            <Image
+              src="/memodo-logo.svg"
+              alt="Memodo"
+              width={420}
+              height={110}
+              className="h-11 w-full max-w-[260px] object-contain object-left"
+            />
           </Link>
           <div className="flex items-center gap-1.5">
             <MemodoInstallAppButton />
-            <Link
-              href="/Memodo/poptavka"
-              className="min-h-[44px] rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
-            >
-              Poptat nabídku
-            </Link>
           </div>
         </div>
 
