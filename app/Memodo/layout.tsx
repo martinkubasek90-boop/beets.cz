@@ -8,6 +8,7 @@ import { MemodoAiAssistant } from "@/components/memodo/ai-assistant";
 import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
 import { MemodoWebVitalsTracker } from "@/components/memodo/web-vitals-tracker";
 import { MemodoPriceEmailGate } from "@/components/memodo/price-email-gate";
+import { Search } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -49,9 +50,13 @@ export default async function MemodoLayout({ children }: { children: React.React
         </div>
 
         <div className="px-4 pb-3">
-          <div className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-500">
-            Hledat dle čísla položky nebo názvu v Katalogu
-          </div>
+          <Link
+            href="/Memodo/katalog"
+            className="flex min-h-[52px] items-center gap-2 rounded-2xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-500 shadow-sm"
+          >
+            <Search className="h-5 w-5 text-gray-400" />
+            <span>Hledat dle čísla položky nebo názvu v Katalogu</span>
+          </Link>
         </div>
         <div className="px-4 pb-3">
           <MemodoPriceEmailGate />
