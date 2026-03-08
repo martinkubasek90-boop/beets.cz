@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CheckCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Product } from "@/lib/memodo-data";
 import { trackMemodoEvent } from "@/lib/memodo-analytics";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
+import { addMemodoInquiryHistoryItem, getMemodoInquiryHistory, normalizeMemodoEmail } from "@/lib/memodo-inquiry-history";
 
 const interestOptions = [
   { value: "panely", label: "Solární panely" },
@@ -44,6 +46,12 @@ type SavedProfile = {
   phone: string;
 };
 
+type PriceAccessResponse = {
+  ok: boolean;
+  canSeePrices: boolean;
+  email: string | null;
+};
+
 const PROFILE_STORAGE_KEY = "memodo_profile_v1";
 
 export default function MemodoInquiryPage() {
@@ -55,6 +63,8 @@ export default function MemodoInquiryPage() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [notice, setNotice] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [historyEmail, setHistoryEmail] = useState("");
+  const [historyCount, setHistoryCount] = useState(0);
   const [form, setForm] = useState<FormState>({
     first_name: "",
     last_name: "",
@@ -70,6 +80,18 @@ export default function MemodoInquiryPage() {
   });
 
   useEffect(() => {
+    fetch("/api/memodo/price-access", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as PriceAccessResponse | null;
+        if (!response.ok || !payload?.ok || !payload.email) return;
+        const normalized = normalizeMemodoEmail(payload.email);
+        setHistoryEmail(normalized);
+        setHistoryCount(getMemodoInquiryHistory(normalized).length);
+      })
+      .catch(() => {
+        // Ignore access state fetch failure here.
+      });
+
     const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
     if (raw) {
       try {
@@ -153,6 +175,20 @@ export default function MemodoInquiryPage() {
     });
     try {
       const contact_name = `${form.first_name} ${form.last_name}`.trim();
+      const normalizedFormEmail = normalizeMemodoEmail(form.email);
+      if (normalizedFormEmail) {
+        try {
+          await fetch("/api/memodo/price-access", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: normalizedFormEmail }),
+          });
+          setHistoryEmail(normalizedFormEmail);
+        } catch {
+          // Identity sync is best-effort and should not block inquiry submit.
+        }
+      }
+
       if (rememberProfile) {
         const profile: SavedProfile = {
           first_name: form.first_name,
@@ -185,6 +221,24 @@ export default function MemodoInquiryPage() {
       if (!response.ok) {
         throw new Error(data.error || "Nepodařilo se odeslat poptávku.");
       }
+
+      if (normalizedFormEmail) {
+        addMemodoInquiryHistoryItem(normalizedFormEmail, {
+          id: crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          email: normalizedFormEmail,
+          contactName: contact_name,
+          company: form.company || undefined,
+          phone: form.phone || undefined,
+          productInterest: form.product_interest || undefined,
+          productId: form.product_id || undefined,
+          batteryId: form.battery_id || undefined,
+          estimatedQuantity: form.estimated_quantity ? Number(form.estimated_quantity) : undefined,
+          message: form.message,
+        });
+        setHistoryCount(getMemodoInquiryHistory(normalizedFormEmail).length);
+      }
+
       trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id) });
       setNotice("Poptávka byla odeslána.");
       setSubmitted(true);
@@ -243,9 +297,24 @@ export default function MemodoInquiryPage() {
       ) : null}
       <MemodoViewTracker page="inquiry_form" />
       <div className="mb-8">
-        <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
+          <Link
+            href="/Memodo/moje-poptavky"
+            className="inline-flex min-h-[44px] items-center rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700"
+          >
+            Moje poptávky{historyCount > 0 ? ` (${historyCount})` : ""}
+          </Link>
+        </div>
         <p className="mt-1 text-sm text-gray-500">Rychlá poptávka do 30 vteřin. Bez závazku.</p>
         <p className="mt-1 text-xs font-semibold text-gray-500">Odpovíme obvykle do 2 hodin v pracovní době.</p>
+        {historyEmail ? (
+          <p className="mt-1 text-xs text-gray-500">
+            Historie poptávek je vedena pro e-mail: <span className="font-semibold text-gray-700">{historyEmail}</span>
+          </p>
+        ) : (
+          <p className="mt-1 text-xs text-gray-500">Pro historii poptávek nejdřív zadejte e-mail nahoře v aplikaci.</p>
+        )}
         {profileLoaded ? (
           <div className="mt-2 flex items-center gap-2">
             <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700">

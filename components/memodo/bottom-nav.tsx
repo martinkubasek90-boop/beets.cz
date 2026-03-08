@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, ShoppingBag, Tag } from "lucide-react";
+import { Clock3, FileText, ShoppingBag, Tag } from "lucide-react";
 
 const navItems = [
   { label: "Akční", href: "/Memodo/akcni-produkty", icon: Tag },
   { label: "Katalog", href: "/Memodo/katalog", icon: ShoppingBag },
   { label: "Poptávka", href: "/Memodo/poptavka", icon: FileText },
+  { label: "Moje", href: "/Memodo/moje-poptavky", icon: Clock3 },
 ];
 
 export function MemodoBottomNav() {
@@ -23,7 +24,7 @@ export function MemodoBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex min-h-[44px] flex-col items-center gap-1 rounded-xl px-6 py-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 ${
+              className={`flex min-h-[44px] flex-col items-center gap-1 rounded-xl px-4 py-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 ${
                 active ? "text-black" : "text-gray-500 hover:text-black"
               }`}
             >
