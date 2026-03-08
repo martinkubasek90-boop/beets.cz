@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata, Viewport } from "next";
 import { MemodoInstallAppButton } from "@/components/memodo/install-app-button";
-import { MemodoOnboardingBanner, MemodoStickyCta } from "@/components/memodo/mobile-ux";
+import { MemodoStickyCta } from "@/components/memodo/mobile-ux";
 import Image from "next/image";
 import { MemodoBottomNav } from "@/components/memodo/bottom-nav";
 import { MemodoAiAssistant } from "@/components/memodo/ai-assistant";
@@ -31,21 +31,17 @@ export default async function MemodoLayout({ children }: { children: React.React
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
-        <div className="bg-[#FFE500] px-4 py-2 text-center text-[11px] font-medium text-gray-900">
-          Trh zdražuje. My držíme ceny. Nakupujte skladové zboží za původní ceny.
-        </div>
-
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
           <Link href="/Memodo/akcni-produkty" className="flex items-center">
-            <Image src="/memodo-logo.svg" alt="Memodo" width={132} height={32} className="h-8 w-auto" />
+            <Image src="/memodo-logo.svg" alt="Memodo" width={184} height={44} className="h-10 w-auto" />
           </Link>
           <div className="flex items-center gap-1.5">
             <MemodoInstallAppButton />
             <Link
               href="/Memodo/poptavka"
-              className="rounded-xl bg-[#FFE500] px-4 py-2 text-xs font-bold text-black transition-colors hover:bg-yellow-400"
+              className="rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400"
             >
-              Poptat
+              Poptat nabídku
             </Link>
           </div>
         </div>
@@ -56,7 +52,6 @@ export default async function MemodoLayout({ children }: { children: React.React
           </div>
         </div>
 
-        <MemodoOnboardingBanner />
       </header>
 
       <main className="flex-1 pb-20">{children}</main>
