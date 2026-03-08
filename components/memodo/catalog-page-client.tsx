@@ -41,6 +41,8 @@ export function MemodoCatalogPageClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Array<{ id: string; name: string }>>([]);
 
   const trimmedSearch = debouncedSearch.trim();
 
@@ -63,7 +65,33 @@ export function MemodoCatalogPageClient({
     const q = debouncedSearch.trim();
     if (q.length < 2) return;
     trackMemodoEvent("memodo_funnel_search", { query_length: q.length });
+
+    const key = "memodo_recent_searches_v1";
+    setRecentSearches((prev) => {
+      const next = [q, ...prev.filter((item) => item !== q)].slice(0, 8);
+      window.localStorage.setItem(key, JSON.stringify(next));
+      return next;
+    });
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    const searchRaw = window.localStorage.getItem("memodo_recent_searches_v1");
+    const viewedRaw = window.localStorage.getItem("memodo_recently_viewed_v1");
+    if (searchRaw) {
+      try {
+        setRecentSearches(JSON.parse(searchRaw) as string[]);
+      } catch {
+        setRecentSearches([]);
+      }
+    }
+    if (viewedRaw) {
+      try {
+        setRecentlyViewed(JSON.parse(viewedRaw) as Array<{ id: string; name: string }>);
+      } catch {
+        setRecentlyViewed([]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -237,6 +265,39 @@ export function MemodoCatalogPageClient({
             ? "Načítám produkty..."
             : `${total} produktů`}
       </p>
+      {!trimmedSearch && recentSearches.length > 0 ? (
+        <div>
+          <p className="mb-1 text-[11px] font-semibold text-gray-500">Nedávná hledání</p>
+          <div className="flex flex-wrap gap-2">
+            {recentSearches.slice(0, 5).map((item) => (
+              <button
+                key={`recent-${item}`}
+                type="button"
+                onClick={() => setSearch(item)}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700"
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+      {!trimmedSearch && recentlyViewed.length > 0 ? (
+        <div>
+          <p className="mb-1 text-[11px] font-semibold text-gray-500">Naposledy prohlížené</p>
+          <div className="flex flex-wrap gap-2">
+            {recentlyViewed.slice(0, 4).map((item) => (
+              <a
+                key={`viewed-${item.id}`}
+                href={`/Memodo/produkt/${item.id}`}
+                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700"
+              >
+                {item.name}
+              </a>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {!loading && products.length > 0 ? (
         <div className="grid grid-cols-2 gap-3">

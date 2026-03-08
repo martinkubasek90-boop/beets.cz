@@ -9,6 +9,12 @@ const frameAncestorsValue = ["'self'", ...embedOrigins].join(" ");
 
 const nextConfig: NextConfig = {
   cacheComponents: false,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "plus.unsplash.com" },
+    ],
+  },
   async headers() {
     return [
       {

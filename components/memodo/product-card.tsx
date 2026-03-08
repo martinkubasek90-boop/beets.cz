@@ -1,31 +1,49 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Package, Tag } from "lucide-react";
 import { Product, categoryLabels } from "@/lib/memodo-data";
 import { trackMemodoEvent } from "@/lib/memodo-analytics";
 
+function rememberViewedProduct(product: Product) {
+  if (typeof window === "undefined") return;
+  const key = "memodo_recently_viewed_v1";
+  const current = window.localStorage.getItem(key);
+  let parsed: Array<{ id: string; name: string }> = [];
+  if (current) {
+    try {
+      parsed = JSON.parse(current) as Array<{ id: string; name: string }>;
+    } catch {
+      parsed = [];
+    }
+  }
+  const next = [{ id: product.id, name: product.name }, ...parsed.filter((item) => item.id !== product.id)].slice(0, 8);
+  window.localStorage.setItem(key, JSON.stringify(next));
+}
+
 export function MemodoProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/Memodo/produkt/${product.id}`}
-      onClick={() =>
+      onClick={() => {
+        rememberViewedProduct(product);
         trackMemodoEvent("memodo_open_product_detail", {
           product_id: product.id,
           category: product.category,
           promo: Boolean(product.is_promo),
-        })
-      }
+        });
+      }}
       className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-300 hover:border-[#FFE500] hover:shadow-lg"
     >
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[#F7F7F7] p-4">
         {product.image_url ? (
-          <img
+          <Image
             src={product.image_url}
             alt={product.name}
-            loading="lazy"
-            decoding="async"
+            width={420}
+            height={420}
             className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
           />
         ) : (

@@ -53,6 +53,7 @@ export default function MemodoInquiryPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [rememberProfile, setRememberProfile] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [notice, setNotice] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<FormState>({
     first_name: "",
@@ -125,6 +126,12 @@ export default function MemodoInquiryPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 2200);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
   const setField = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -157,6 +164,7 @@ export default function MemodoInquiryPage() {
         window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
         setProfileLoaded(true);
         trackMemodoEvent("memodo_profile_saved");
+        setNotice("Profilové údaje uloženy pro příští poptávku.");
       }
 
       const response = await fetch("/api/hubspot/memodo-inquiry", {
@@ -178,6 +186,7 @@ export default function MemodoInquiryPage() {
         throw new Error(data.error || "Nepodařilo se odeslat poptávku.");
       }
       trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id) });
+      setNotice("Poptávka byla odeslána.");
       setSubmitted(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Nepodařilo se odeslat poptávku.";
@@ -227,6 +236,11 @@ export default function MemodoInquiryPage() {
 
   return (
     <div className="px-4 py-6">
+      {notice ? (
+        <div className="mb-3 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white">
+          {notice}
+        </div>
+      ) : null}
       <MemodoViewTracker page="inquiry_form" />
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>

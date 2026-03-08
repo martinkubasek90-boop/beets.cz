@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
@@ -44,7 +45,13 @@ export default async function MemodoProductDetailPage({
 
       <div className="relative flex aspect-square items-center justify-center rounded-2xl border border-gray-100 bg-gray-50 p-8">
         {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="max-h-full max-w-full object-contain" />
+          <Image
+            src={product.image_url}
+            alt={product.name}
+            width={900}
+            height={900}
+            className="max-h-full max-w-full object-contain"
+          />
         ) : (
           <Package className="h-32 w-32 text-gray-200" />
         )}

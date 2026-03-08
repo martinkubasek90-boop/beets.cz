@@ -15,6 +15,54 @@ const categories = new Set<ProductCategory>([
   "prislusenstvi",
 ]);
 
+type ProductListItem = {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  brand?: string;
+  price?: number;
+  price_with_vat?: number;
+  image_url?: string;
+  description?: string;
+  specifications?: Record<string, string | number | boolean>;
+  art_number?: string;
+  in_stock?: boolean;
+  is_promo?: boolean;
+  promo_label?: string;
+  original_price?: number;
+};
+
+function normalize(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function scoreSearch(item: ProductListItem, q: string) {
+  const query = normalize(q);
+  const name = normalize(item.name || "");
+  const brand = normalize(item.brand || "");
+  const sku = normalize(item.art_number || "");
+  let score = 0;
+
+  if (sku === query) score += 120;
+  else if (sku.startsWith(query)) score += 95;
+  else if (sku.includes(query)) score += 70;
+
+  if (name === query) score += 90;
+  else if (name.startsWith(query)) score += 75;
+  else if (name.includes(query)) score += 50;
+
+  if (brand === query) score += 45;
+  else if (brand.startsWith(query)) score += 35;
+  else if (brand.includes(query)) score += 20;
+
+  if (item.is_promo) score += 2;
+  if (item.in_stock) score += 2;
+  return score;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category");
@@ -45,19 +93,22 @@ export async function GET(request: Request) {
       query = query.or(`name.ilike.%${escaped}%,brand.ilike.%${escaped}%,art_number.ilike.%${escaped}%`);
     }
 
+    const shouldRankByQuery = Boolean(q) && sort === "popular";
     if (sort === "price_asc") {
       query = query.order("price", { ascending: true, nullsFirst: false });
     } else if (sort === "price_desc") {
       query = query.order("price", { ascending: false, nullsFirst: false });
     } else if (sort === "name") {
       query = query.order("name", { ascending: true });
-    } else {
+    } else if (!shouldRankByQuery) {
       query = query.order("is_promo", { ascending: false }).order("in_stock", { ascending: false }).order("name");
     }
 
-    const { data, error, count } = await query.range(offset, offset + limit - 1);
+    const rangeEnd = shouldRankByQuery ? 799 : offset + limit - 1;
+    const rangeStart = shouldRankByQuery ? 0 : offset;
+    const { data, error, count } = await query.range(rangeStart, rangeEnd);
     if (!error && data) {
-      const products = data.map((row) => ({
+      const mapped = data.map((row) => ({
         id: row.external_id as string,
         name: row.name as string,
         category: row.category as ProductCategory,
@@ -74,9 +125,15 @@ export async function GET(request: Request) {
         original_price: (row.original_price as number | null) ?? undefined,
       }));
 
+      const products = shouldRankByQuery
+        ? [...mapped]
+            .sort((a, b) => scoreSearch(b, q) - scoreSearch(a, q))
+            .slice(offset, offset + limit)
+        : mapped;
+
       return NextResponse.json({
         ok: true,
-        count: count ?? products.length,
+        count: count ?? mapped.length,
         offset,
         limit,
         products,
@@ -99,6 +156,7 @@ export async function GET(request: Request) {
         item.brand?.toLowerCase().includes(search) ||
         item.art_number?.toLowerCase().includes(search),
     );
+    products = [...products].sort((a, b) => scoreSearch(b, q) - scoreSearch(a, q));
   }
   if (sort === "price_asc") {
     products = [...products].sort((a, b) => (a.price || Number.MAX_SAFE_INTEGER) - (b.price || Number.MAX_SAFE_INTEGER));
@@ -106,7 +164,7 @@ export async function GET(request: Request) {
     products = [...products].sort((a, b) => (b.price || 0) - (a.price || 0));
   } else if (sort === "name") {
     products = [...products].sort((a, b) => a.name.localeCompare(b.name, "cs"));
-  } else {
+  } else if (!q) {
     products = [...products].sort((a, b) => Number(Boolean(b.is_promo)) - Number(Boolean(a.is_promo)));
   }
 

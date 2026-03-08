@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bot, Link2, Send, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -61,6 +61,7 @@ export function MemodoAiAssistant({
   );
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -68,6 +69,12 @@ export function MemodoAiAssistant({
       text: welcomeMessage,
     },
   ]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 1800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   if (!shoppingEnabled && !technicalEnabled) return null;
 
@@ -113,15 +120,23 @@ export function MemodoAiAssistant({
 
   const applyOfferPrefill = (prefill?: ChatApiResponse["offerPrefill"]) => {
     if (!prefill) return;
+    setToast("Připravuji poptávku s předvyplněným setem...");
     const params = new URLSearchParams();
     if (prefill.productId) params.set("product", prefill.productId);
     if (prefill.batteryId) params.set("set", prefill.batteryId);
     params.set("prefill", prefill.message);
-    window.location.href = `/Memodo/poptavka?${params.toString()}`;
+    window.setTimeout(() => {
+      window.location.href = `/Memodo/poptavka?${params.toString()}`;
+    }, 450);
   };
 
   return (
     <>
+      {toast ? (
+        <div className="fixed left-1/2 top-20 z-[60] -translate-x-1/2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow-xl">
+          {toast}
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={() => setOpen(true)}
