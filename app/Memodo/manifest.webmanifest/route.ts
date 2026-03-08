@@ -29,7 +29,7 @@ export async function GET() {
         purpose: "any maskable",
       },
       {
-        src: "/apple-touch-icon.png",
+        src: "/memodo-apple-touch-icon.png",
         sizes: "180x180",
         type: "image/png",
       },
