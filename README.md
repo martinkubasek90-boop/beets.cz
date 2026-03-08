@@ -137,6 +137,10 @@ Memodo inquiry integration:
 - Optional follow-up email env:
   - `MEMODO_SALES_EMAIL` (internal notification recipient)
   - SMTP/webhook env from `lib/email.ts` (`SMTP_*`, `NOTIFY_EMAIL_FROM`, etc.)
+- Optional inquiry history storage (per e-mail account identity):
+  - SQL schema: `supabase/memodo_inquiries.sql`
+  - API: `GET/DELETE /api/memodo/inquiries`
+  - each successful Memodo inquiry is stored with e-mail + HubSpot contact/deal IDs
 
 Memodo XML catalog import:
 - SQL schema:
@@ -205,7 +209,8 @@ Memodo admin:
   - allowlist e-mailů: ceny vidí jen schválené e-maily
 
 Memodo price access:
-- `GET /api/memodo/price-access` (vrací `canSeePrices` pro přihlášeného uživatele)
+- `GET /api/memodo/price-access` (vrací `canSeePrices` + aktivní e-mail identitu)
+- `POST /api/memodo/price-access` (nastaví e-mail identitu/cookie pro app účet)
 - `GET/PUT /api/memodo/price-allowlist` (admin token required)
 - `POST /api/memodo/auth/request-link`
   - odešle magic-link pouze pokud je e-mail v allowlistu

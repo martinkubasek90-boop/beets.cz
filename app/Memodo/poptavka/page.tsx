@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Product } from "@/lib/memodo-data";
 import { trackMemodoEvent } from "@/lib/memodo-analytics";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
-import { addMemodoInquiryHistoryItem, getMemodoInquiryHistory, normalizeMemodoEmail } from "@/lib/memodo-inquiry-history";
 
 const interestOptions = [
   { value: "panely", label: "Solární panely" },
@@ -52,6 +51,15 @@ type PriceAccessResponse = {
   email: string | null;
 };
 
+type InquiriesResponse = {
+  ok: boolean;
+  total?: number;
+};
+
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
 const PROFILE_STORAGE_KEY = "memodo_profile_v1";
 
 export default function MemodoInquiryPage() {
@@ -79,14 +87,26 @@ export default function MemodoInquiryPage() {
     ai_prefill: "",
   });
 
+  const refreshHistoryMeta = async (email: string) => {
+    const normalized = normalizeEmail(email);
+    if (!normalized) return;
+    setHistoryEmail(normalized);
+    try {
+      const response = await fetch("/api/memodo/inquiries?limit=1", { cache: "no-store" });
+      const payload = (await response.json().catch(() => null)) as InquiriesResponse | null;
+      if (!response.ok || !payload?.ok) return;
+      setHistoryCount(payload.total || 0);
+    } catch {
+      // Non-blocking for inquiry form flow.
+    }
+  };
+
   useEffect(() => {
     fetch("/api/memodo/price-access", { cache: "no-store" })
       .then(async (response) => {
         const payload = (await response.json().catch(() => null)) as PriceAccessResponse | null;
         if (!response.ok || !payload?.ok || !payload.email) return;
-        const normalized = normalizeMemodoEmail(payload.email);
-        setHistoryEmail(normalized);
-        setHistoryCount(getMemodoInquiryHistory(normalized).length);
+        void refreshHistoryMeta(payload.email);
       })
       .catch(() => {
         // Ignore access state fetch failure here.
@@ -175,7 +195,7 @@ export default function MemodoInquiryPage() {
     });
     try {
       const contact_name = `${form.first_name} ${form.last_name}`.trim();
-      const normalizedFormEmail = normalizeMemodoEmail(form.email);
+      const normalizedFormEmail = normalizeEmail(form.email);
       if (normalizedFormEmail) {
         try {
           await fetch("/api/memodo/price-access", {
@@ -183,7 +203,7 @@ export default function MemodoInquiryPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: normalizedFormEmail }),
           });
-          setHistoryEmail(normalizedFormEmail);
+          await refreshHistoryMeta(normalizedFormEmail);
         } catch {
           // Identity sync is best-effort and should not block inquiry submit.
         }
@@ -221,23 +241,7 @@ export default function MemodoInquiryPage() {
       if (!response.ok) {
         throw new Error(data.error || "Nepodařilo se odeslat poptávku.");
       }
-
-      if (normalizedFormEmail) {
-        addMemodoInquiryHistoryItem(normalizedFormEmail, {
-          id: crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          email: normalizedFormEmail,
-          contactName: contact_name,
-          company: form.company || undefined,
-          phone: form.phone || undefined,
-          productInterest: form.product_interest || undefined,
-          productId: form.product_id || undefined,
-          batteryId: form.battery_id || undefined,
-          estimatedQuantity: form.estimated_quantity ? Number(form.estimated_quantity) : undefined,
-          message: form.message,
-        });
-        setHistoryCount(getMemodoInquiryHistory(normalizedFormEmail).length);
-      }
+      if (normalizedFormEmail) await refreshHistoryMeta(normalizedFormEmail);
 
       trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id) });
       setNotice("Poptávka byla odeslána.");

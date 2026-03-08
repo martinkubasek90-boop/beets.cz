@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { categoryLabels, type InquiryInterest } from "@/lib/memodo-data";
 import { sendEmail } from "@/lib/email";
+import { getMemodoServiceClient } from "@/lib/memodo-catalog";
 
 export const runtime = "nodejs";
 
@@ -237,6 +238,35 @@ async function sendInquiryEmails(payload: MemodoInquiryPayload) {
   ]);
 }
 
+async function storeInquiryHistory(payload: MemodoInquiryPayload, contactId: string, dealId: string | null) {
+  const email = payload.email?.trim().toLowerCase();
+  const contactName = payload.contact_name?.trim();
+  const message = payload.message?.trim();
+  if (!email || !contactName || !message) return;
+
+  const supabase = getMemodoServiceClient();
+  if (!supabase) return;
+
+  try {
+    const qty = normalizeNumber(payload.estimated_quantity);
+    await supabase.from("memodo_inquiries").insert({
+      email,
+      contact_name: contactName,
+      company: payload.company?.trim() || null,
+      phone: payload.phone?.trim() || null,
+      product_interest: payload.product_interest || null,
+      message,
+      estimated_quantity: qty ?? null,
+      product_id: payload.product_id?.trim() || null,
+      battery_id: payload.battery_id?.trim() || null,
+      hubspot_contact_id: contactId,
+      hubspot_deal_id: dealId || null,
+    });
+  } catch {
+    // Non-blocking persistence.
+  }
+}
+
 export async function POST(request: Request) {
   const token = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
   if (!token) {
@@ -266,6 +296,7 @@ export async function POST(request: Request) {
     if (summary) {
       await createNote(token, dealId, contactId, summary);
     }
+    await storeInquiryHistory(normalizedPayload, contactId, dealId);
     await sendInquiryEmails(normalizedPayload);
     return NextResponse.json({ ok: true, contactId, dealId: dealId || null });
   } catch (error: unknown) {
