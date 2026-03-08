@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { Clock3, FileText, ShoppingBag, Tag } from "lucide-react";
 
 const navItems = [
-  { label: "Akční", href: "/Memodo/akcni-produkty", icon: Tag },
-  { label: "Katalog", href: "/Memodo/katalog", icon: ShoppingBag },
+  { label: "Akce", href: "/Memodo/akcni-produkty", icon: Tag },
+  { label: "Produkty", href: "/Memodo/katalog", icon: ShoppingBag },
   { label: "Poptávka", href: "/Memodo/poptavka", icon: FileText },
-  { label: "Moje", href: "/Memodo/moje-poptavky", icon: Clock3 },
+  { label: "Můj účet", href: "/Memodo/moje-poptavky", icon: Clock3 },
 ];
 
 export function MemodoBottomNav() {

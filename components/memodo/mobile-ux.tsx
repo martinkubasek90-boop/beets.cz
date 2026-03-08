@@ -56,11 +56,11 @@ export function MemodoStickyCta() {
   if (!pathname || pathname.startsWith("/Memodo/poptavka")) return null;
 
   return (
-    <div className="fixed bottom-[68px] left-1/2 z-40 w-full max-w-lg -translate-x-1/2 px-4">
+    <div className="fixed bottom-[70px] left-1/2 z-40 w-full max-w-lg -translate-x-1/2 px-4">
       <Link
         href="/Memodo/poptavka"
         onClick={() => trackMemodoEvent("memodo_click_sticky_cta", { from_path: pathname })}
-        className="block min-h-[44px] rounded-2xl bg-[#FFE500] px-5 py-4 text-center text-base font-black text-black shadow-lg shadow-yellow-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
+        className="block min-h-[58px] rounded-[22px] bg-[#FFE500] px-6 py-4 text-center text-lg font-black text-black shadow-[0_14px_30px_rgba(234,179,8,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
       >
         Poptat nabídku
       </Link>
