@@ -43,3 +43,19 @@ body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text',
     'Segoe UI', sans-serif;
 }
+
+.memodo-app {
+  --memodo-bg: #efefef;
+  --memodo-surface: #ffffff;
+  --memodo-primary: #ffe500;
+  --memodo-primary-text: #111111;
+  --memodo-border: #d9d9d9;
+  --memodo-radius: 14px;
+  background: var(--memodo-bg);
+  color: #111827;
+}
+
+.memodo-app :where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid rgba(17, 24, 39, 0.35);
+  outline-offset: 2px;
+}

@@ -39,6 +39,33 @@ function normalize(value: string) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function toBigrams(value: string) {
+  const clean = normalize(value).replace(/\s+/g, " ");
+  if (clean.length < 2) return [clean];
+  const out: string[] = [];
+  for (let i = 0; i < clean.length - 1; i += 1) out.push(clean.slice(i, i + 2));
+  return out;
+}
+
+function diceSimilarity(a: string, b: string) {
+  const aBigrams = toBigrams(a);
+  const bBigrams = toBigrams(b);
+  if (!aBigrams.length || !bBigrams.length) return 0;
+  const bCounts = new Map<string, number>();
+  for (const gram of bBigrams) {
+    bCounts.set(gram, (bCounts.get(gram) || 0) + 1);
+  }
+  let overlap = 0;
+  for (const gram of aBigrams) {
+    const count = bCounts.get(gram) || 0;
+    if (count > 0) {
+      overlap += 1;
+      bCounts.set(gram, count - 1);
+    }
+  }
+  return (2 * overlap) / (aBigrams.length + bBigrams.length);
+}
+
 function scoreSearch(item: ProductListItem, q: string) {
   const query = normalize(q);
   const name = normalize(item.name || "");
@@ -57,6 +84,11 @@ function scoreSearch(item: ProductListItem, q: string) {
   if (brand === query) score += 45;
   else if (brand.startsWith(query)) score += 35;
   else if (brand.includes(query)) score += 20;
+
+  const fuzzyName = diceSimilarity(query, name);
+  const fuzzyBrand = diceSimilarity(query, brand);
+  const fuzzySku = diceSimilarity(query, sku);
+  score += Math.round(fuzzyName * 24 + fuzzyBrand * 10 + fuzzySku * 14);
 
   if (item.is_promo) score += 2;
   if (item.in_stock) score += 2;

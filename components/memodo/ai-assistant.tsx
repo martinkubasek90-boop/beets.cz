@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bot, Link2, Send, Wrench, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackMemodoEvent } from "@/lib/memodo-analytics";
 
 type Citation = {
   sourceLabel: string;
@@ -82,6 +83,7 @@ export function MemodoAiAssistant({
     const message = input.trim();
     if (!message || loading) return;
 
+    trackMemodoEvent("memodo_ai_message_sent", { mode });
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text: message }]);
     setInput("");
     setLoading(true);

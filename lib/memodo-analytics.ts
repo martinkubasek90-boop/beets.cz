@@ -9,12 +9,30 @@ declare global {
 
 export function trackMemodoEvent(event: string, params: EventParams = {}) {
   if (typeof window === "undefined") return;
-  if (typeof window.gtag !== "function") return;
+  if (typeof window.gtag === "function") {
+    window.gtag("event", event, {
+      app_section: "memodo",
+      ...params,
+    });
+  }
 
-  window.gtag("event", event, {
-    app_section: "memodo",
-    ...params,
-  });
+  const payload = JSON.stringify({ event, params: { app_section: "memodo", ...params } });
+  try {
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: "application/json" });
+      navigator.sendBeacon("/api/memodo/events", blob);
+      return;
+    }
+  } catch {
+    // Fall through to fetch.
+  }
+
+  void fetch("/api/memodo/events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch(() => undefined);
 }
 
 export function getMemodoExperimentVariant() {

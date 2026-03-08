@@ -27,6 +27,38 @@ const uatTasks: UatTask[] = [
   { id: "flow_hubspot", group: "Flow", label: "Flow: ověřit propsání do HubSpotu" },
 ];
 
+type DashboardState = {
+  productsActive: number;
+  productsInStock: number;
+  productsPromo: number;
+  productsWithImage: number;
+  kbSources: number;
+  lastProductUpdate: string | null;
+  checks: {
+    hubspotToken: boolean;
+    xmlFeedUrl: boolean;
+    importTokenProtected: boolean;
+  };
+  ai: {
+    enabled: boolean;
+    shopping: boolean;
+    technical: boolean;
+  };
+  analytics?: {
+    eventsTracked: boolean;
+    periodDays: number;
+    funnel: {
+      views: number;
+      searches: number;
+      productDetailOpens: number;
+      inquiryAttempts: number;
+      inquirySuccess: number;
+      aiMessages: number;
+    };
+    topSearches: Array<{ query: string; count: number }>;
+  };
+};
+
 export default function MemodoAdminPage() {
   const [config, setConfig] = useState<MemodoAdminConfig>(defaultMemodoAdminConfig);
   const [adminToken, setAdminToken] = useState("");
@@ -67,24 +99,7 @@ export default function MemodoAdminPage() {
   const [hubspotTestResult, setHubspotTestResult] = useState("");
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState("");
-  const [dashboard, setDashboard] = useState<{
-    productsActive: number;
-    productsInStock: number;
-    productsPromo: number;
-    productsWithImage: number;
-    kbSources: number;
-    lastProductUpdate: string | null;
-    checks: {
-      hubspotToken: boolean;
-      xmlFeedUrl: boolean;
-      importTokenProtected: boolean;
-    };
-    ai: {
-      enabled: boolean;
-      shopping: boolean;
-      technical: boolean;
-    };
-  } | null>(null);
+  const [dashboard, setDashboard] = useState<DashboardState | null>(null);
   const [uatState, setUatState] = useState<Record<string, boolean>>({});
 
   const loadDashboard = useCallback(async () => {
@@ -94,7 +109,7 @@ export default function MemodoAdminPage() {
       const response = await fetch("/api/memodo/admin-dashboard", { cache: "no-store" });
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
-        dashboard?: typeof dashboard;
+        dashboard?: DashboardState;
       };
       if (!response.ok || !payload.dashboard) {
         throw new Error(payload.error || "Nepodařilo se načíst dashboard.");
@@ -483,42 +498,76 @@ export default function MemodoAdminPage() {
           </div>
           {dashboardError ? <p className="text-xs text-rose-300">{dashboardError}</p> : null}
           {dashboard ? (
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                Aktivní produkty: <span className="font-semibold">{dashboard.productsActive}</span>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  Aktivní produkty: <span className="font-semibold">{dashboard.productsActive}</span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  Skladem: <span className="font-semibold">{dashboard.productsInStock}</span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  Promo: <span className="font-semibold">{dashboard.productsPromo}</span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  S obrázkem: <span className="font-semibold">{dashboard.productsWithImage}</span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  KB zdroje: <span className="font-semibold">{dashboard.kbSources}</span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  Posl. update:{" "}
+                  <span className="font-semibold">
+                    {dashboard.lastProductUpdate
+                      ? new Date(dashboard.lastProductUpdate).toLocaleString("cs-CZ")
+                      : "-"}
+                  </span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  HubSpot token:{" "}
+                  <span className={dashboard.checks.hubspotToken ? "text-emerald-300" : "text-rose-300"}>
+                    {dashboard.checks.hubspotToken ? "OK" : "Chybí"}
+                  </span>
+                </div>
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                  XML feed URL:{" "}
+                  <span className={dashboard.checks.xmlFeedUrl ? "text-emerald-300" : "text-rose-300"}>
+                    {dashboard.checks.xmlFeedUrl ? "OK" : "Chybí"}
+                  </span>
+                </div>
               </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                Skladem: <span className="font-semibold">{dashboard.productsInStock}</span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                Promo: <span className="font-semibold">{dashboard.productsPromo}</span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                S obrázkem: <span className="font-semibold">{dashboard.productsWithImage}</span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                KB zdroje: <span className="font-semibold">{dashboard.kbSources}</span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                Posl. update:{" "}
-                <span className="font-semibold">
-                  {dashboard.lastProductUpdate
-                    ? new Date(dashboard.lastProductUpdate).toLocaleString("cs-CZ")
-                    : "-"}
-                </span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                HubSpot token:{" "}
-                <span className={dashboard.checks.hubspotToken ? "text-emerald-300" : "text-rose-300"}>
-                  {dashboard.checks.hubspotToken ? "OK" : "Chybí"}
-                </span>
-              </div>
-              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
-                XML feed URL:{" "}
-                <span className={dashboard.checks.xmlFeedUrl ? "text-emerald-300" : "text-rose-300"}>
-                  {dashboard.checks.xmlFeedUrl ? "OK" : "Chybí"}
-                </span>
-              </div>
+
+              {dashboard.analytics ? (
+                <div className="rounded-lg border border-slate-700 bg-slate-950 p-3 text-xs">
+                  <p className="font-semibold text-slate-200">
+                    Funnel ({dashboard.analytics.periodDays} dní)
+                    {!dashboard.analytics.eventsTracked ? " - event tabulka zatím není dostupná" : ""}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-slate-300">
+                    <div>Zobrazení: {dashboard.analytics.funnel.views}</div>
+                    <div>Hledání: {dashboard.analytics.funnel.searches}</div>
+                    <div>Detail produktu: {dashboard.analytics.funnel.productDetailOpens}</div>
+                    <div>Poptávka start: {dashboard.analytics.funnel.inquiryAttempts}</div>
+                    <div>Poptávka úspěch: {dashboard.analytics.funnel.inquirySuccess}</div>
+                    <div>AI zprávy: {dashboard.analytics.funnel.aiMessages}</div>
+                  </div>
+                  {dashboard.analytics.topSearches.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="font-semibold text-slate-200">Top hledání</p>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {dashboard.analytics.topSearches.map((item) => (
+                          <span
+                            key={item.query}
+                            className="rounded-full border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-300"
+                          >
+                            {item.query} ({item.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

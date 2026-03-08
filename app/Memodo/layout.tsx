@@ -30,7 +30,7 @@ export const viewport: Viewport = {
 export default async function MemodoLayout({ children }: { children: React.ReactNode }) {
   const config = await getMemodoAdminConfig();
   return (
-    <div className="mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
+    <div className="memodo-app mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
         <div className="flex items-center justify-between px-4 pb-2 pt-3">
           <Link href="/Memodo/akcni-produkty" className="flex items-center">

@@ -67,7 +67,7 @@ export function MemodoCatalogPageClient({
   useEffect(() => {
     const q = debouncedSearch.trim();
     if (q.length < 2) return;
-    trackMemodoEvent("memodo_funnel_search", { query_length: q.length });
+    trackMemodoEvent("memodo_funnel_search", { query_length: q.length, query: q.slice(0, 80) });
 
     const key = "memodo_recent_searches_v1";
     setRecentSearches((prev) => {
