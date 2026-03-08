@@ -1,12 +1,12 @@
-const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "v1";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "v2";
 const CACHE_NAME = `memodo-${SW_VERSION}`;
 const APP_SHELL = [
   "/Memodo/akcni-produkty",
   "/Memodo/katalog",
   "/Memodo/poptavka",
-  "/apple-touch-icon.png",
-  "/memodo-icon-192.png",
-  "/memodo-icon-512.png",
+  "/memodo-apple-touch-icon-v2.png",
+  "/memodo-icon-blue-192.png",
+  "/memodo-icon-blue-512.png",
   "/favicon-48x48.png",
 ];
 
