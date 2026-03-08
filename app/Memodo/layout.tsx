@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    apple: "/memodo-apple-touch-icon.png",
+    apple: "/memodo-apple-touch-icon-v2.png",
   },
 };
 
