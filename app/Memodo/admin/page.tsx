@@ -1,11 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   defaultMemodoAdminConfig,
   type MemodoAdminConfig,
 } from "@/lib/memodo-admin-config";
+
+type UatTask = {
+  id: string;
+  label: string;
+  group: "iOS" | "Android" | "Flow";
+};
+
+const UAT_STORAGE_KEY = "memodo_uat_checklist_v1";
+
+const uatTasks: UatTask[] = [
+  { id: "ios_open_safari", group: "iOS", label: "iPhone: otevřít app v Safari" },
+  { id: "ios_add_home", group: "iOS", label: "iPhone: Přidat na plochu + ověřit ikonu" },
+  { id: "ios_reopen", group: "iOS", label: "iPhone: otevřít z plochy bez browser lišty" },
+  { id: "android_install", group: "Android", label: "Android: nainstalovat přes install prompt" },
+  { id: "android_reopen", group: "Android", label: "Android: otevřít z launcheru" },
+  { id: "flow_search", group: "Flow", label: "Flow: vyhledat produkt v katalogu" },
+  { id: "flow_detail", group: "Flow", label: "Flow: otevřít detail produktu" },
+  { id: "flow_inquiry", group: "Flow", label: "Flow: odeslat test poptávku" },
+  { id: "flow_hubspot", group: "Flow", label: "Flow: ověřit propsání do HubSpotu" },
+];
 
 export default function MemodoAdminPage() {
   const [config, setConfig] = useState<MemodoAdminConfig>(defaultMemodoAdminConfig);
@@ -42,6 +62,48 @@ export default function MemodoAdminPage() {
   const [aiTestMessage, setAiTestMessage] = useState("Potřebuji set střídač + baterie pro rodinný dům 10 kW.");
   const [aiTesting, setAiTesting] = useState(false);
   const [aiTestReply, setAiTestReply] = useState("");
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState("");
+  const [dashboard, setDashboard] = useState<{
+    productsActive: number;
+    productsInStock: number;
+    productsPromo: number;
+    productsWithImage: number;
+    kbSources: number;
+    lastProductUpdate: string | null;
+    checks: {
+      hubspotToken: boolean;
+      xmlFeedUrl: boolean;
+      importTokenProtected: boolean;
+    };
+    ai: {
+      enabled: boolean;
+      shopping: boolean;
+      technical: boolean;
+    };
+  } | null>(null);
+  const [uatState, setUatState] = useState<Record<string, boolean>>({});
+
+  const loadDashboard = useCallback(async () => {
+    setDashboardLoading(true);
+    setDashboardError("");
+    try {
+      const response = await fetch("/api/memodo/admin-dashboard", { cache: "no-store" });
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        dashboard?: typeof dashboard;
+      };
+      if (!response.ok || !payload.dashboard) {
+        throw new Error(payload.error || "Nepodařilo se načíst dashboard.");
+      }
+      setDashboard(payload.dashboard);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Nepodařilo se načíst dashboard.";
+      setDashboardError(message);
+    } finally {
+      setDashboardLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -62,6 +124,16 @@ export default function MemodoAdminPage() {
               if (typeof payload?.sources === "number") setKbSources(payload.sources);
             })
             .catch(() => null);
+          void loadDashboard();
+          const rawUat = window.localStorage.getItem(UAT_STORAGE_KEY);
+          if (rawUat) {
+            try {
+              const parsed = JSON.parse(rawUat) as Record<string, boolean>;
+              setUatState(parsed || {});
+            } catch {
+              setUatState({});
+            }
+          }
           setLoading(false);
         }
       });
@@ -69,7 +141,7 @@ export default function MemodoAdminPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadDashboard]);
 
   const headers = useMemo(() => {
     const out: Record<string, string> = { "Content-Type": "application/json" };
@@ -299,6 +371,37 @@ export default function MemodoAdminPage() {
     }
   };
 
+  const toggleUatTask = (id: string) => {
+    setUatState((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      window.localStorage.setItem(UAT_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const resetUatChecklist = () => {
+    setUatState({});
+    window.localStorage.removeItem(UAT_STORAGE_KEY);
+  };
+
+  const copyUatReport = async () => {
+    const done = uatTasks.filter((task) => uatState[task.id]).length;
+    const rows = uatTasks.map((task) => `- [${uatState[task.id] ? "x" : " "}] ${task.group}: ${task.label}`);
+    const report = [
+      `Memodo UAT report`,
+      `Datum: ${new Date().toISOString()}`,
+      `Hotovo: ${done}/${uatTasks.length}`,
+      "",
+      ...rows,
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(report);
+      setStatus("UAT report zkopírován do schránky.");
+    } catch {
+      setStatus("Nepodařilo se zkopírovat UAT report.");
+    }
+  };
+
   if (loading) {
     return <div className="min-h-screen bg-slate-950 p-6 text-slate-200">Načítám Memodo admin...</div>;
   }
@@ -316,6 +419,96 @@ export default function MemodoAdminPage() {
             >
               Otevřít Memodo aplikaci
             </Link>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-200">Provozní dashboard</h2>
+            <button
+              type="button"
+              onClick={loadDashboard}
+              disabled={dashboardLoading}
+              className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-600 disabled:opacity-50"
+            >
+              {dashboardLoading ? "Načítám..." : "Obnovit"}
+            </button>
+          </div>
+          {dashboardError ? <p className="text-xs text-rose-300">{dashboardError}</p> : null}
+          {dashboard ? (
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                Aktivní produkty: <span className="font-semibold">{dashboard.productsActive}</span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                Skladem: <span className="font-semibold">{dashboard.productsInStock}</span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                Promo: <span className="font-semibold">{dashboard.productsPromo}</span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                S obrázkem: <span className="font-semibold">{dashboard.productsWithImage}</span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                KB zdroje: <span className="font-semibold">{dashboard.kbSources}</span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                Posl. update:{" "}
+                <span className="font-semibold">
+                  {dashboard.lastProductUpdate
+                    ? new Date(dashboard.lastProductUpdate).toLocaleString("cs-CZ")
+                    : "-"}
+                </span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                HubSpot token:{" "}
+                <span className={dashboard.checks.hubspotToken ? "text-emerald-300" : "text-rose-300"}>
+                  {dashboard.checks.hubspotToken ? "OK" : "Chybí"}
+                </span>
+              </div>
+              <div className="rounded-lg border border-slate-700 bg-slate-950 p-2">
+                XML feed URL:{" "}
+                <span className={dashboard.checks.xmlFeedUrl ? "text-emerald-300" : "text-rose-300"}>
+                  {dashboard.checks.xmlFeedUrl ? "OK" : "Chybí"}
+                </span>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200">UAT checklist (mobil)</h2>
+          <p className="text-xs text-slate-400">
+            Projdi test instalace i flow poptávky. Stav se ukládá lokálně v tomto prohlížeči.
+          </p>
+          <div className="space-y-1">
+            {uatTasks.map((task) => (
+              <label key={task.id} className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={Boolean(uatState[task.id])}
+                  onChange={() => toggleUatTask(task.id)}
+                />
+                <span className="text-slate-400">{task.group}</span>
+                <span className="text-slate-200">{task.label}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={copyUatReport}
+              className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-semibold text-white hover:bg-cyan-600"
+            >
+              Kopírovat UAT report
+            </button>
+            <button
+              type="button"
+              onClick={resetUatChecklist}
+              className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-600"
+            >
+              Reset checklistu
+            </button>
           </div>
         </div>
 
