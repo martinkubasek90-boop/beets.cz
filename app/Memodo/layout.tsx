@@ -7,6 +7,7 @@ import { MemodoBottomNav } from "@/components/memodo/bottom-nav";
 import { MemodoAiAssistant } from "@/components/memodo/ai-assistant";
 import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
 import { MemodoWebVitalsTracker } from "@/components/memodo/web-vitals-tracker";
+import { MemodoPriceEmailGate } from "@/components/memodo/price-email-gate";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -39,12 +40,6 @@ export default async function MemodoLayout({ children }: { children: React.React
           <div className="flex items-center gap-1.5">
             <MemodoInstallAppButton />
             <Link
-              href="/Memodo/prihlaseni"
-              className="min-h-[44px] rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
-            >
-              Přihlásit ceny
-            </Link>
-            <Link
               href="/Memodo/poptavka"
               className="min-h-[44px] rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
             >
@@ -57,6 +52,9 @@ export default async function MemodoLayout({ children }: { children: React.React
           <div className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-500">
             Hledat dle čísla položky nebo názvu v Katalogu
           </div>
+        </div>
+        <div className="px-4 pb-3">
+          <MemodoPriceEmailGate />
         </div>
 
       </header>

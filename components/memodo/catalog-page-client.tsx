@@ -302,10 +302,7 @@ export function MemodoCatalogPageClient({
       </p>
       {!canSeePrices ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Ceny vidí pouze schválení partneři.
-          <Link href="/Memodo/prihlaseni" className="ml-1 font-semibold underline">
-            Přihlásit se
-          </Link>
+          Ceny vidí pouze schválení partneři. Ověření e-mailu najdete nahoře v aplikaci.
         </div>
       ) : null}
       {!trimmedSearch && recentSearches.length > 0 ? (

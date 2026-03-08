@@ -1,6 +1,7 @@
 import { createClient as createServerSupabaseClient } from "@/lib/supabase/server";
 import { getMemodoServiceClient } from "@/lib/memodo-catalog";
 import type { Product } from "@/lib/memodo-data";
+import { cookies } from "next/headers";
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
@@ -26,13 +27,26 @@ export async function isMemodoEmailAllowed(email: string) {
 }
 
 export async function getMemodoViewerPriceAccess() {
+  let authEmail = "";
   try {
     const supabase = await createServerSupabaseClient();
     const { data } = await supabase.auth.getUser();
-    const email = data.user?.email?.trim().toLowerCase() || "";
-    if (!email) return { canSeePrices: false, email: "" };
-    const canSeePrices = await isMemodoEmailAllowed(email);
-    return { canSeePrices, email };
+    authEmail = data.user?.email?.trim().toLowerCase() || "";
+  } catch {
+    authEmail = "";
+  }
+
+  if (authEmail) {
+    const canSeePrices = await isMemodoEmailAllowed(authEmail);
+    return { canSeePrices, email: authEmail };
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const emailFromCookie = normalizeEmail(cookieStore.get("memodo_price_email")?.value || "");
+    if (!emailFromCookie) return { canSeePrices: false, email: "" };
+    const canSeePrices = await isMemodoEmailAllowed(emailFromCookie);
+    return { canSeePrices, email: emailFromCookie };
   } catch {
     return { canSeePrices: false, email: "" };
   }

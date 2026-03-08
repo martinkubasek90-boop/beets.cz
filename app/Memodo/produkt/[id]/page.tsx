@@ -115,14 +115,12 @@ export default async function MemodoProductDetailPage({
           <div className="flex items-center gap-2">
             <Tag className="h-5 w-5 text-[#FFE500]" />
             <span className="text-lg font-bold">
-              {access.canSeePrices ? "Cena na dotaz" : "Cena po přihlášení"}
+              {access.canSeePrices ? "Cena na dotaz" : "Cena po ověření e-mailu"}
             </span>
           </div>
         )}
         {!access.canSeePrices ? (
-          <Link href="/Memodo/prihlaseni" className="mt-3 inline-block text-xs font-semibold text-gray-700 underline">
-            Přihlásit se pro zobrazení cen
-          </Link>
+          <p className="mt-3 text-xs font-semibold text-gray-700">Ověření e-mailu najdete nahoře v aplikaci.</p>
         ) : null}
       </div>
 
