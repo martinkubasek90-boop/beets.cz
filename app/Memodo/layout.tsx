@@ -6,6 +6,7 @@ import Image from "next/image";
 import { MemodoBottomNav } from "@/components/memodo/bottom-nav";
 import { MemodoAiAssistant } from "@/components/memodo/ai-assistant";
 import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
+import { MemodoWebVitalsTracker } from "@/components/memodo/web-vitals-tracker";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -39,7 +40,7 @@ export default async function MemodoLayout({ children }: { children: React.React
             <MemodoInstallAppButton />
             <Link
               href="/Memodo/poptavka"
-              className="rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400"
+              className="min-h-[44px] rounded-xl bg-[#FFE500] px-5 py-2.5 text-sm font-black text-black transition-colors hover:bg-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
             >
               Poptat nabídku
             </Link>
@@ -55,6 +56,7 @@ export default async function MemodoLayout({ children }: { children: React.React
       </header>
 
       <main className="flex-1 pb-20">{children}</main>
+      <MemodoWebVitalsTracker />
       <MemodoStickyCta />
       <MemodoAiAssistant
         shoppingEnabled={config.aiSearchEnabled && config.shoppingChatbotEnabled}

@@ -23,7 +23,7 @@ export function MemodoBottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 rounded-xl px-6 py-1 transition-all ${
+              className={`flex min-h-[44px] flex-col items-center gap-1 rounded-xl px-6 py-1 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40 ${
                 active ? "text-black" : "text-gray-500 hover:text-black"
               }`}
             >
@@ -38,4 +38,3 @@ export function MemodoBottomNav() {
     </nav>
   );
 }
-

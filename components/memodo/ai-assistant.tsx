@@ -140,7 +140,8 @@ export function MemodoAiAssistant({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 z-40 flex h-12 items-center gap-2 rounded-full bg-[#0F172A] px-4 text-white shadow-xl"
+        className="fixed bottom-24 right-4 z-40 flex min-h-[44px] h-12 items-center gap-2 rounded-full bg-[#0F172A] px-4 text-white shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        aria-label="Otevřít AI rádce"
       >
         <Bot className="h-4 w-4" />
         <span className="text-xs font-semibold">{fabLabel}</span>
@@ -160,7 +161,12 @@ export function MemodoAiAssistant({
                 <p className="text-sm font-semibold text-white">Memodo AI rádce</p>
                 <p className="text-xs text-slate-400">Doporučení setu + propsání do nabídky</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="min-h-[44px] rounded-lg p-2 text-slate-400 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-label="Zavřít AI chat"
+              >
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -242,7 +248,8 @@ export function MemodoAiAssistant({
                   type="button"
                   onClick={() => void sendMessage()}
                   disabled={loading}
-                  className="rounded-lg bg-blue-600 px-3 text-white disabled:opacity-50"
+                  className="min-h-[44px] rounded-lg bg-blue-600 px-3 text-white disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  aria-label="Odeslat zprávu"
                 >
                   <Send className="h-4 w-4" />
                 </button>

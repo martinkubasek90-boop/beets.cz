@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MemodoProductCard } from "@/components/memodo/product-card";
@@ -41,6 +42,8 @@ export function MemodoCatalogPageClient({
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<Array<{ id: string; name: string }>>([]);
 
@@ -99,6 +102,7 @@ export function MemodoCatalogPageClient({
       setProducts([]);
       setTotal(0);
       setOffset(0);
+      setError("");
       setLoading(false);
       return () => controller.abort();
     }
@@ -113,6 +117,7 @@ export function MemodoCatalogPageClient({
     params.set("offset", "0");
 
     setLoading(true);
+    setError("");
     fetch(`/api/memodo/products?${params.toString()}`, { signal: controller.signal })
       .then((response) => (response.ok ? response.json() : Promise.reject(new Error("Failed to fetch products"))))
       .then((data: ApiResponse) => {
@@ -124,11 +129,12 @@ export function MemodoCatalogPageClient({
         setProducts([]);
         setTotal(0);
         setOffset(0);
+        setError("Nepodařilo se načíst produkty. Zkus to prosím znovu.");
       })
       .finally(() => setLoading(false));
 
     return () => controller.abort();
-  }, [category, inStockOnly, promoOnly, trimmedSearch, sortBy, requiresSearch]);
+  }, [category, inStockOnly, promoOnly, trimmedSearch, sortBy, requiresSearch, reloadKey]);
 
   const loadMore = async () => {
     if (loadingMore) return;
@@ -151,6 +157,9 @@ export function MemodoCatalogPageClient({
       setTotal(data.count || 0);
       setOffset((prev) => prev + next.length);
       trackMemodoEvent("memodo_catalog_load_more", { offset, loaded: next.length });
+      setError("");
+    } catch {
+      setError("Nepodařilo se načíst další produkty.");
     } finally {
       setLoadingMore(false);
     }
@@ -176,6 +185,7 @@ export function MemodoCatalogPageClient({
               type="button"
               onClick={() => setSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2"
+              aria-label="Vymazat hledání"
             >
               <X className="h-4 w-4 text-gray-400" />
             </button>
@@ -220,7 +230,7 @@ export function MemodoCatalogPageClient({
                 category === chip.value
                   ? "bg-slate-900 text-white"
                   : "border border-gray-200 bg-white text-gray-600"
-              }`}
+              } min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
             >
               {chip.label}
             </button>
@@ -230,7 +240,7 @@ export function MemodoCatalogPageClient({
             onClick={() => setInStockOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
               inStockOnly ? "bg-green-100 text-green-700" : "border border-gray-200 bg-white text-gray-600"
-            }`}
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
           >
             Jen skladem
           </button>
@@ -239,7 +249,7 @@ export function MemodoCatalogPageClient({
             onClick={() => setPromoOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
               promoOnly ? "bg-yellow-100 text-yellow-700" : "border border-gray-200 bg-white text-gray-600"
-            }`}
+            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
           >
             Jen akce
           </button>
@@ -251,12 +261,33 @@ export function MemodoCatalogPageClient({
               setPromoOnly(false);
               setSearch("");
             }}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-500"
+            className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
           >
             Reset
           </button>
         </div>
       </div>
+
+      {error ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800">
+          <p>{error}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setReloadKey((prev) => prev + 1)}
+              className="min-h-[44px] rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800"
+            >
+              Zkusit znovu
+            </button>
+            <Link
+              href="/Memodo/poptavka"
+              className="min-h-[44px] rounded-lg bg-[#FFE500] px-3 py-2 text-xs font-bold text-black"
+            >
+              Přejít na poptávku
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <p className="text-xs text-gray-400">
         {requiresSearch && trimmedSearch.length < 2
@@ -274,7 +305,7 @@ export function MemodoCatalogPageClient({
                 key={`recent-${item}`}
                 type="button"
                 onClick={() => setSearch(item)}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700"
+                className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
               >
                 {item}
               </button>
@@ -287,13 +318,13 @@ export function MemodoCatalogPageClient({
           <p className="mb-1 text-[11px] font-semibold text-gray-500">Naposledy prohlížené</p>
           <div className="flex flex-wrap gap-2">
             {recentlyViewed.slice(0, 4).map((item) => (
-              <a
+              <Link
                 key={`viewed-${item.id}`}
                 href={`/Memodo/produkt/${item.id}`}
-                className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700"
+                className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
               >
                 {item.name}
-              </a>
+              </Link>
             ))}
           </div>
         </div>

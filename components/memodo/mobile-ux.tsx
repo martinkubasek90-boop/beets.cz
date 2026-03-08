@@ -60,7 +60,7 @@ export function MemodoStickyCta() {
       <Link
         href="/Memodo/poptavka"
         onClick={() => trackMemodoEvent("memodo_click_sticky_cta", { from_path: pathname })}
-        className="block rounded-2xl bg-[#FFE500] px-5 py-4 text-center text-base font-black text-black shadow-lg shadow-yellow-500/20"
+        className="block min-h-[44px] rounded-2xl bg-[#FFE500] px-5 py-4 text-center text-base font-black text-black shadow-lg shadow-yellow-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"
       >
         Poptat nabídku
       </Link>
