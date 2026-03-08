@@ -16,10 +16,22 @@ type ApiResponse = {
 };
 
 const PAGE_SIZE = 40;
+const quickCategoryChips = [
+  { value: "", label: "Vše" },
+  { value: "stridace", label: "Střídače" },
+  { value: "baterie", label: "Baterie" },
+  { value: "panely", label: "Panely" },
+];
 
-export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSearch?: boolean }) {
+export function MemodoCatalogPageClient({
+  requiresSearch = true,
+  initialCategory = "",
+}: {
+  requiresSearch?: boolean;
+  initialCategory?: string;
+}) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState(initialCategory);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [promoOnly, setPromoOnly] = useState(false);
   const [sortBy, setSortBy] = useState<"popular" | "price_asc" | "price_desc" | "name">("popular");
@@ -46,6 +58,12 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
     const timer = window.setTimeout(() => setDebouncedSearch(search), 250);
     return () => window.clearTimeout(timer);
   }, [search]);
+
+  useEffect(() => {
+    const q = debouncedSearch.trim();
+    if (q.length < 2) return;
+    trackMemodoEvent("memodo_funnel_search", { query_length: q.length });
+  }, [debouncedSearch]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,8 +132,9 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
     <div className="space-y-5 px-4 py-6">
       <MemodoViewTracker page="catalog" />
       <h1 className="text-2xl font-black tracking-tight">Katalog</h1>
+      <p className="text-xs text-gray-500">Rychlé vyhledání podle názvu, SKU nebo značky</p>
 
-      <div className="space-y-3">
+      <div className="sticky top-[108px] z-20 -mx-1 rounded-2xl border border-gray-200 bg-[#EFEFEF]/95 p-2 backdrop-blur supports-[backdrop-filter]:bg-[#EFEFEF]/80">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
@@ -135,7 +154,7 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
           ) : null}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 flex-shrink-0 text-gray-400" />
           <div className="grid w-full grid-cols-2 gap-2">
             <select
@@ -163,7 +182,21 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {quickCategoryChips.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => setCategory(chip.value)}
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                category === chip.value
+                  ? "bg-slate-900 text-white"
+                  : "border border-gray-200 bg-white text-gray-600"
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
           <button
             type="button"
             onClick={() => setInStockOnly((prev) => !prev)}
@@ -181,6 +214,18 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
             }`}
           >
             Jen akce
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setCategory("");
+              setInStockOnly(false);
+              setPromoOnly(false);
+              setSearch("");
+            }}
+            className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-500"
+          >
+            Reset
           </button>
         </div>
       </div>
@@ -206,9 +251,24 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
           ))}
         </div>
       ) : (
-        <div className="py-16 text-center">
+        <div className="rounded-2xl border border-gray-100 bg-white px-4 py-10 text-center">
           <Package className="mx-auto h-12 w-12 text-gray-200" />
-          <p className="mt-3 text-sm text-gray-500">Žádné produkty</p>
+          <p className="mt-3 text-sm font-semibold text-gray-700">Žádné produkty pro tento dotaz</p>
+          <p className="mt-1 text-xs text-gray-500">Zkus změnit filtr, nebo napiš AI rádci co hledáš.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {quickCategoryChips
+              .filter((chip) => chip.value)
+              .map((chip) => (
+                <button
+                  key={`empty-${chip.value}`}
+                  type="button"
+                  onClick={() => setCategory(chip.value)}
+                  className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+                >
+                  {chip.label}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 
@@ -227,4 +287,3 @@ export function MemodoCatalogPageClient({ requiresSearch = true }: { requiresSea
     </div>
   );
 }
-

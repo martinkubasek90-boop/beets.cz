@@ -61,13 +61,17 @@ export function MemodoProductCard({ product }: { product: Product }) {
             {categoryLabels[product.category] || product.category}
           </Badge>
           {product.in_stock ? (
-            <span className="text-[10px] font-medium text-green-600">● Skladem</span>
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">
+              Skladem
+            </span>
           ) : (
-            <span className="text-[10px] font-medium text-orange-500">Na objednávku</span>
+            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+              Na objednávku
+            </span>
           )}
         </div>
 
-        <div className="mt-2 border-t border-gray-50 pt-2">
+        <div className="mt-2 rounded-xl bg-gray-50 px-2.5 py-2">
           {product.price ? (
             <div className="flex flex-wrap items-end gap-1.5">
               {product.original_price && product.original_price > product.price && (
@@ -75,7 +79,7 @@ export function MemodoProductCard({ product }: { product: Product }) {
                   {product.original_price.toLocaleString("cs-CZ")} Kč
                 </span>
               )}
-              <span className="text-sm font-bold text-gray-900">
+              <span className="text-base font-black text-gray-900">
                 {product.price.toLocaleString("cs-CZ")} Kč
               </span>
               <span className="text-[10px] text-gray-400">bez DPH</span>

@@ -1,4 +1,5 @@
 import { Percent, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { MemodoProductCard } from "@/components/memodo/product-card";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { getMemodoProducts } from "@/lib/memodo-catalog";
@@ -37,6 +38,20 @@ export default async function MemodoFeaturedProductsPage() {
         <div className="rounded-2xl border border-gray-100 bg-white py-12 text-center">
           <Sparkles className="mx-auto h-10 w-10 text-gray-200" />
           <p className="mt-3 text-sm text-gray-500">Aktuálně nejsou vybrané produkty nastavené.</p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Link
+              href="/Memodo/katalog?category=stridace"
+              className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+            >
+              Střídače
+            </Link>
+            <Link
+              href="/Memodo/katalog?category=baterie"
+              className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+            >
+              Baterie
+            </Link>
+          </div>
         </div>
       )}
     </div>

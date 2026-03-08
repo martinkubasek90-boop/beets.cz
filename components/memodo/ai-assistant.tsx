@@ -132,11 +132,14 @@ export function MemodoAiAssistant({
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-50 bg-black/50 p-3" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setOpen(false)}>
           <div
-            className="mx-auto mt-8 w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-slate-950"
+            className="absolute bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 overflow-hidden rounded-t-3xl border border-b-0 border-slate-700 bg-slate-950"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="flex justify-center py-2">
+              <div className="h-1.5 w-12 rounded-full bg-slate-700" />
+            </div>
             <div className="flex items-center justify-between border-b border-slate-800 p-3">
               <div>
                 <p className="text-sm font-semibold text-white">Memodo AI rádce</p>
@@ -170,7 +173,7 @@ export function MemodoAiAssistant({
               ) : null}
             </div>
 
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto p-3">
+            <div className="max-h-[56vh] space-y-3 overflow-y-auto p-3">
               {messages.map((message) => (
                 <div
                   key={message.id}

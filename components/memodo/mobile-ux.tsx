@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
-import { trackMemodoEvent } from "@/lib/memodo-analytics";
+import { getMemodoExperimentVariant, trackMemodoEvent } from "@/lib/memodo-analytics";
 
 export function MemodoViewTracker({ page }: { page: string }) {
   useEffect(() => {
-    trackMemodoEvent("memodo_view_page", { page });
+    trackMemodoEvent("memodo_view_page", { page, variant: getMemodoExperimentVariant() });
   }, [page]);
   return null;
 }

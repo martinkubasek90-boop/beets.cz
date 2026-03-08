@@ -230,7 +230,8 @@ export default function MemodoInquiryPage() {
       <MemodoViewTracker page="inquiry_form" />
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight">Poptávkový formulář</h1>
-        <p className="mt-1 text-sm text-gray-500">Rychlá poptávka do 30 vteřin. Ozveme se obvykle do 2 hodin.</p>
+        <p className="mt-1 text-sm text-gray-500">Rychlá poptávka do 30 vteřin. Bez závazku.</p>
+        <p className="mt-1 text-xs font-semibold text-gray-500">Odpovíme obvykle do 2 hodin v pracovní době.</p>
         {profileLoaded ? (
           <div className="mt-2 flex items-center gap-2">
             <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-semibold text-green-700">
@@ -293,32 +294,6 @@ export default function MemodoInquiryPage() {
           />
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Telefon</Label>
-          <Input
-            value={form.phone}
-            onChange={(e) => setField("phone", e.target.value)}
-            placeholder="+420 123 456 789"
-            className="h-12 rounded-xl"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium">Oblast zájmu</Label>
-          <select
-            value={form.product_interest}
-            onChange={(e) => setField("product_interest", e.target.value)}
-            className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm"
-          >
-            <option value="">Vyberte kategorii (volitelné)</option>
-            {interestOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <button
           type="button"
           onClick={() => setShowAdvanced((prev) => !prev)}
@@ -329,6 +304,32 @@ export default function MemodoInquiryPage() {
 
         {showAdvanced ? (
           <>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Telefon</Label>
+              <Input
+                value={form.phone}
+                onChange={(e) => setField("phone", e.target.value)}
+                placeholder="+420 123 456 789"
+                className="h-12 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Oblast zájmu</Label>
+              <select
+                value={form.product_interest}
+                onChange={(e) => setField("product_interest", e.target.value)}
+                className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm"
+              >
+                <option value="">Vyberte kategorii (volitelné)</option>
+                {interestOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-sm font-medium">Firma</Label>
               <Input

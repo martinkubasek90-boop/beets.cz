@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { categoryLabels } from "@/lib/memodo-data";
-import { getMemodoProductById } from "@/lib/memodo-catalog";
+import { getMemodoProductById, getMemodoProducts } from "@/lib/memodo-catalog";
 
 export const revalidate = 300;
 
@@ -23,8 +23,15 @@ export default async function MemodoProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const resolvedParams = await params;
-  const product = await getMemodoProductById(resolvedParams.id);
+  const [product, allProducts] = await Promise.all([
+    getMemodoProductById(resolvedParams.id),
+    getMemodoProducts(),
+  ]);
   if (!product) notFound();
+
+  const recommendedBattery =
+    allProducts.find((item) => item.category === "baterie" && item.in_stock && item.brand === product.brand) ||
+    allProducts.find((item) => item.category === "baterie" && item.in_stock);
 
   const specs = product.specifications || {};
 
@@ -107,6 +114,28 @@ export default async function MemodoProductDetailPage({
           <FileText className="mr-2 h-5 w-5" /> Poptat tento produkt
         </Button>
       </Link>
+      <p className="-mt-3 text-center text-xs text-gray-500">Bez závazku. Odpovíme obvykle do 2 hodin.</p>
+
+      {recommendedBattery ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Doporučený set</p>
+          <h2 className="mt-1 text-sm font-bold text-gray-900">
+            {product.brand || "Střídač"} + {recommendedBattery.brand || "Baterie"}
+          </h2>
+          <p className="mt-1 text-xs text-gray-600">
+            {product.name} + {recommendedBattery.name}
+          </p>
+          <Link
+            href={`/Memodo/poptavka?product=${product.id}&set=${recommendedBattery.id}&prefill=${encodeURIComponent(
+              `Doporučený set:\n- Střídač: ${product.name}\n- Baterie: ${recommendedBattery.name}`,
+            )}`}
+          >
+            <Button className="mt-3 w-full rounded-xl bg-slate-900 py-5 text-sm font-bold text-white hover:bg-slate-800">
+              <FileText className="mr-2 h-4 w-4" /> Poptat tento set
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex items-center gap-2 text-xs text-gray-500">
