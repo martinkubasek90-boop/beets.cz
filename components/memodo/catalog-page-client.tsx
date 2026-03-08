@@ -28,11 +28,13 @@ const quickCategoryChips = [
 export function MemodoCatalogPageClient({
   requiresSearch = true,
   initialCategory = "",
+  initialSearch = "",
 }: {
   requiresSearch?: boolean;
   initialCategory?: string;
+  initialSearch?: string;
 }) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [category, setCategory] = useState(initialCategory);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [promoOnly, setPromoOnly] = useState(false);
