@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Search, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 
 export default function MemodoIndexPage() {
@@ -23,14 +23,6 @@ export default function MemodoIndexPage() {
       >
         Poptat nabídku
         <ArrowRight className="h-5 w-5" />
-      </Link>
-
-      <Link
-        href="/Memodo/katalog"
-        className="flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
-      >
-        Vyhledat v katalogu
-        <Search className="h-4 w-4 text-gray-500" />
       </Link>
 
       <Link
