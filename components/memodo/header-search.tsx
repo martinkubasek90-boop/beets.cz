@@ -152,6 +152,7 @@ export function MemodoHeaderSearch() {
   const voiceTranscriptRef = useRef("");
   const voiceFinishedRef = useRef(false);
   const voiceStoppingRef = useRef(false);
+  const voiceFinalizeTimerRef = useRef<number | null>(null);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
 
@@ -320,15 +321,30 @@ export function MemodoHeaderSearch() {
       setVoiceAnswer({ text: "Hlasové hledání selhalo. Zkuste to prosím znovu." });
     };
     recognition.onend = async () => {
+      if (voiceFinalizeTimerRef.current) {
+        window.clearTimeout(voiceFinalizeTimerRef.current);
+        voiceFinalizeTimerRef.current = null;
+      }
       setVoiceListening(false);
       recognitionRef.current = null;
-       voiceStoppingRef.current = false;
+      voiceStoppingRef.current = false;
       const transcript = voiceTranscriptRef.current.trim();
-      if (!transcript || voiceFinishedRef.current) return;
+      if (!transcript) {
+        setVoiceAnswer({ text: "Nerozuměl jsem dotazu. Zkuste to prosím znovu." });
+        return;
+      }
+      if (voiceFinishedRef.current) return;
       voiceFinishedRef.current = true;
       await handleVoiceTranscript(transcript);
     };
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      setVoiceListening(false);
+      recognitionRef.current = null;
+      voiceStoppingRef.current = false;
+      setVoiceAnswer({ text: "Hlasové hledání se nepodařilo spustit." });
+    }
   };
 
   const stopVoiceSearch = () => {
@@ -337,6 +353,23 @@ export function MemodoHeaderSearch() {
     voiceStoppingRef.current = true;
     recognition.stop();
     setVoiceAnswer({ text: "Zpracovávám dotaz..." });
+    if (voiceFinalizeTimerRef.current) {
+      window.clearTimeout(voiceFinalizeTimerRef.current);
+    }
+    voiceFinalizeTimerRef.current = window.setTimeout(() => {
+      if (!voiceStoppingRef.current) return;
+      voiceStoppingRef.current = false;
+      setVoiceListening(false);
+      recognitionRef.current = null;
+      const transcript = voiceTranscriptRef.current.trim();
+      if (!transcript) {
+        setVoiceAnswer({ text: "Nerozuměl jsem dotazu. Zkuste to prosím znovu." });
+        return;
+      }
+      if (voiceFinishedRef.current) return;
+      voiceFinishedRef.current = true;
+      void handleVoiceTranscript(transcript);
+    }, 1800);
   };
 
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
