@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Mic, MicOff, Search, X } from "lucide-react";
@@ -72,6 +72,9 @@ export function MemodoHeaderSearch() {
   const [voiceListening, setVoiceListening] = useState(false);
   const [canSeePrices, setCanSeePrices] = useState(false);
   const [voiceAnswer, setVoiceAnswer] = useState<VoicePriceAnswer | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const voiceTranscriptRef = useRef("");
+  const voiceFinishedRef = useRef(false);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
 
@@ -188,6 +191,8 @@ export function MemodoHeaderSearch() {
   };
 
   const startVoiceSearch = () => {
+    if (voiceListening) return;
+
     const speechWindow = window as WindowWithSpeechRecognition;
     const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!Recognition) {
@@ -197,22 +202,45 @@ export function MemodoHeaderSearch() {
 
     const recognition = new Recognition();
     recognition.lang = "cs-CZ";
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+    voiceTranscriptRef.current = "";
+    voiceFinishedRef.current = false;
+    recognitionRef.current = recognition;
     setVoiceListening(true);
+    setVoiceAnswer({ text: "Mluvte, držte tlačítko mikrofonu a po puštění vyhledám." });
 
     recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
+      const chunks: string[] = [];
+      for (let i = 0; i < event.results.length; i += 1) {
+        const part = event.results[i]?.[0]?.transcript?.trim();
+        if (part) chunks.push(part);
+      }
+      const transcript = chunks.join(" ").trim();
       if (!transcript) return;
-      void handleVoiceTranscript(transcript);
+      voiceTranscriptRef.current = transcript;
+      setQuery(transcript);
+      setDebounced(transcript);
     };
     recognition.onerror = () => {
       setVoiceListening(false);
+      recognitionRef.current = null;
     };
-    recognition.onend = () => {
+    recognition.onend = async () => {
       setVoiceListening(false);
+      recognitionRef.current = null;
+      const transcript = voiceTranscriptRef.current.trim();
+      if (!transcript || voiceFinishedRef.current) return;
+      voiceFinishedRef.current = true;
+      await handleVoiceTranscript(transcript);
     };
     recognition.start();
+  };
+
+  const stopVoiceSearch = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    recognition.stop();
   };
 
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
@@ -253,7 +281,21 @@ export function MemodoHeaderSearch() {
         ) : null}
         <button
           type="button"
-          onClick={startVoiceSearch}
+          onMouseDown={startVoiceSearch}
+          onMouseUp={stopVoiceSearch}
+          onMouseLeave={stopVoiceSearch}
+          onTouchStart={(event) => {
+            event.preventDefault();
+            startVoiceSearch();
+          }}
+          onTouchEnd={(event) => {
+            event.preventDefault();
+            stopVoiceSearch();
+          }}
+          onTouchCancel={(event) => {
+            event.preventDefault();
+            stopVoiceSearch();
+          }}
           className={`rounded-md p-1 ${voiceListening ? "text-red-500" : "text-gray-400"}`}
           aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
         >
