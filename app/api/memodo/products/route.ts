@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMemodoProducts, getMemodoServiceClient } from "@/lib/memodo-catalog";
-import type { ProductCategory } from "@/lib/memodo-data";
+import { categoryLabels, type ProductCategory } from "@/lib/memodo-data";
 import { getMemodoViewerPriceAccess, maskProductPriceList } from "@/lib/memodo-price-access";
 
 export const runtime = "nodejs";
@@ -33,11 +33,104 @@ type ProductListItem = {
   original_price?: number;
 };
 
+const synonymGroups = [
+  ["stridac", "stridace", "menic", "menice", "invertor", "invertory", "inverter", "inverters"],
+  ["baterie", "baterka", "battery", "storage", "uloziste", "ulozistem", "akumulator", "akku"],
+  ["panel", "panely", "pv", "fotovoltaika", "fotovoltaicky", "photovoltaic", "module", "modul"],
+  ["nabijecka", "nabijeci", "ev", "wallbox", "charger"],
+  ["tepelne", "tepelna", "tepelna_cerpadla", "cerpadlo", "tc", "heatpump", "heat", "pump"],
+  ["montaz", "montazni", "konstrukce", "drzak", "mounting", "racking"],
+  ["prislusenstvi", "kabel", "konektor", "connector", "accessory", "accessories"],
+  ["ems", "rizeni", "management", "energy", "monitoring"],
+];
+
+const categoryKeywordMap: Array<{ key: string; category: ProductCategory }> = [
+  { key: "panel", category: "panely" },
+  { key: "pv", category: "panely" },
+  { key: "stridac", category: "stridace" },
+  { key: "menic", category: "stridace" },
+  { key: "invertor", category: "stridace" },
+  { key: "inverter", category: "stridace" },
+  { key: "baterie", category: "baterie" },
+  { key: "storage", category: "baterie" },
+  { key: "uloziste", category: "baterie" },
+  { key: "ems", category: "ems" },
+  { key: "nabijecka", category: "nabijeci_stanice" },
+  { key: "wallbox", category: "nabijeci_stanice" },
+  { key: "charger", category: "nabijeci_stanice" },
+  { key: "tepelna", category: "tepelna_cerpadla" },
+  { key: "cerpadlo", category: "tepelna_cerpadla" },
+  { key: "heatpump", category: "tepelna_cerpadla" },
+  { key: "montaz", category: "montazni_systemy" },
+  { key: "konstrukce", category: "montazni_systemy" },
+  { key: "prislusenstvi", category: "prislusenstvi" },
+  { key: "accessory", category: "prislusenstvi" },
+];
+
+const synonymLookup = new Map<string, string[]>();
+for (const group of synonymGroups) {
+  for (const term of group) {
+    synonymLookup.set(term, group);
+  }
+}
+
 function normalize(value: string) {
   return value
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeForSearch(value: string) {
+  return normalize(value)
+    .replace(/[_/()+.,]/g, " ")
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenize(value: string) {
+  return normalizeForSearch(value)
+    .split(" ")
+    .filter((token) => token.length >= 2)
+    .slice(0, 8);
+}
+
+function expandTokens(tokens: string[]) {
+  const out = new Set<string>();
+  for (const token of tokens) {
+    out.add(token);
+    const group = synonymLookup.get(token);
+    if (group) {
+      for (const synonym of group) out.add(synonym);
+    }
+  }
+  return Array.from(out);
+}
+
+function compactSku(value: string) {
+  return normalize(value).replace(/[^a-z0-9]/g, "");
+}
+
+function looksLikeSkuQuery(value: string) {
+  const normalized = normalizeForSearch(value);
+  if (!normalized) return false;
+  const hasLetter = /[a-z]/.test(normalized);
+  const hasDigit = /[0-9]/.test(normalized);
+  if (hasLetter && hasDigit && normalized.length >= 4) return true;
+  return /^[a-z0-9\-_]{5,}$/i.test(value.trim()) && !value.includes(" ");
+}
+
+function detectCategoryIntent(tokens: string[]) {
+  for (const token of tokens) {
+    const match = categoryKeywordMap.find((item) => item.key === token);
+    if (match) return match.category;
+  }
+  return undefined;
+}
+
+function escapeLikeTerm(value: string) {
+  return value.replace(/[%_,]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function toBigrams(value: string) {
@@ -68,32 +161,95 @@ function diceSimilarity(a: string, b: string) {
 }
 
 function scoreSearch(item: ProductListItem, q: string) {
-  const query = normalize(q);
-  const name = normalize(item.name || "");
-  const brand = normalize(item.brand || "");
-  const sku = normalize(item.art_number || "");
+  const query = normalizeForSearch(q);
+  const queryTokens = tokenize(q);
+  const expandedTokens = expandTokens(queryTokens);
+
+  const name = normalizeForSearch(item.name || "");
+  const brand = normalizeForSearch(item.brand || "");
+  const sku = normalizeForSearch(item.art_number || "");
+  const categoryKey = normalizeForSearch(item.category || "");
+  const categoryLabel = normalizeForSearch(categoryLabels[item.category] || "");
+  const combined = `${name} ${brand} ${sku} ${categoryKey} ${categoryLabel}`.trim();
+
+  const querySku = compactSku(q);
+  const itemSku = compactSku(item.art_number || "");
+
   let score = 0;
 
-  if (sku === query) score += 120;
-  else if (sku.startsWith(query)) score += 95;
-  else if (sku.includes(query)) score += 70;
+  if (querySku && itemSku) {
+    if (itemSku === querySku) score += 380;
+    else if (itemSku.startsWith(querySku)) score += 240;
+    else if (itemSku.includes(querySku)) score += 140;
+  }
 
-  if (name === query) score += 90;
-  else if (name.startsWith(query)) score += 75;
-  else if (name.includes(query)) score += 50;
+  if (name === query) score += 110;
+  else if (name.startsWith(query)) score += 90;
+  else if (name.includes(query)) score += 62;
 
-  if (brand === query) score += 45;
-  else if (brand.startsWith(query)) score += 35;
-  else if (brand.includes(query)) score += 20;
+  if (brand === query) score += 58;
+  else if (brand.startsWith(query)) score += 42;
+  else if (brand.includes(query)) score += 28;
+
+  if (combined.includes(query)) score += 34;
+
+  for (const token of expandedTokens) {
+    if (token.length < 2) continue;
+    if (name.startsWith(token)) score += 20;
+    else if (name.includes(token)) score += 11;
+    if (sku.startsWith(token)) score += 26;
+    else if (sku.includes(token)) score += 16;
+    if (brand.startsWith(token)) score += 10;
+    else if (brand.includes(token)) score += 7;
+    if (categoryKey.includes(token) || categoryLabel.includes(token)) score += 8;
+  }
+
+  const categoryIntent = detectCategoryIntent(expandedTokens);
+  if (categoryIntent) {
+    score += item.category === categoryIntent ? 28 : -8;
+  }
 
   const fuzzyName = diceSimilarity(query, name);
   const fuzzyBrand = diceSimilarity(query, brand);
   const fuzzySku = diceSimilarity(query, sku);
-  score += Math.round(fuzzyName * 24 + fuzzyBrand * 10 + fuzzySku * 14);
+  score += Math.round(fuzzyName * 26 + fuzzyBrand * 12 + fuzzySku * 18);
 
   if (item.is_promo) score += 2;
-  if (item.in_stock) score += 2;
+  if (item.in_stock) score += 8;
+  else score -= 4;
+
+  if (looksLikeSkuQuery(q) && itemSku && !itemSku.includes(querySku)) score -= 50;
   return score;
+}
+
+function matchesQuery(item: ProductListItem, q: string) {
+  const skuQuery = compactSku(q);
+  const itemSku = compactSku(item.art_number || "");
+  if (looksLikeSkuQuery(q) && skuQuery) {
+    if (!itemSku) return false;
+    return itemSku.includes(skuQuery);
+  }
+
+  const queryNorm = normalizeForSearch(q);
+  const tokens = tokenize(q);
+  const expanded = expandTokens(tokens);
+
+  const haystack = normalizeForSearch(
+    `${item.name || ""} ${item.brand || ""} ${item.art_number || ""} ${item.category} ${categoryLabels[item.category] || ""}`,
+  );
+  if (!haystack) return false;
+  if (queryNorm && haystack.includes(queryNorm)) return true;
+
+  let matchedOriginalTokens = 0;
+  for (const original of tokens) {
+    const group = synonymLookup.get(original) || [original];
+    const found = group.some((variant) => haystack.includes(variant));
+    if (found) matchedOriginalTokens += 1;
+  }
+
+  if (tokens.length <= 1) return matchedOriginalTokens >= 1 || expanded.some((token) => haystack.includes(token));
+  if (tokens.length === 2) return matchedOriginalTokens >= 2;
+  return matchedOriginalTokens >= 2;
 }
 
 export async function GET(request: Request) {
@@ -106,6 +262,7 @@ export async function GET(request: Request) {
   const q = (searchParams.get("q") || "").trim();
   const limit = Math.max(1, Math.min(120, Number(searchParams.get("limit") || "40")));
   const offset = Math.max(0, Number(searchParams.get("offset") || "0"));
+  const isSkuQuery = looksLikeSkuQuery(q);
 
   const supabase = getMemodoServiceClient();
   if (supabase) {
@@ -123,8 +280,24 @@ export async function GET(request: Request) {
     if (promoOnly) query = query.eq("is_promo", true);
     if (inStockOnly) query = query.eq("in_stock", true);
     if (q) {
-      const escaped = q.replace(/[%_]/g, "");
-      query = query.or(`name.ilike.%${escaped}%,brand.ilike.%${escaped}%,art_number.ilike.%${escaped}%`);
+      const tokens = tokenize(q).map(escapeLikeTerm).filter(Boolean).slice(0, 4);
+      const fullTerm = escapeLikeTerm(q);
+      const clauses = new Set<string>();
+      if (fullTerm) {
+        clauses.add(`name.ilike.%${fullTerm}%`);
+        clauses.add(`brand.ilike.%${fullTerm}%`);
+        clauses.add(`art_number.ilike.%${fullTerm}%`);
+      }
+      for (const token of tokens) {
+        clauses.add(`name.ilike.%${token}%`);
+        clauses.add(`brand.ilike.%${token}%`);
+        clauses.add(`art_number.ilike.%${token}%`);
+      }
+      if (isSkuQuery && fullTerm) {
+        clauses.add(`art_number.ilike.${fullTerm}%`);
+      }
+      const orFilter = Array.from(clauses).join(",");
+      if (orFilter) query = query.or(orFilter);
     }
 
     const shouldRankByQuery = Boolean(q) && sort === "popular";
@@ -138,7 +311,7 @@ export async function GET(request: Request) {
       query = query.order("is_promo", { ascending: false }).order("in_stock", { ascending: false }).order("name");
     }
 
-    const rangeEnd = shouldRankByQuery ? 799 : offset + limit - 1;
+    const rangeEnd = shouldRankByQuery ? (isSkuQuery ? 299 : 999) : offset + limit - 1;
     const rangeStart = shouldRankByQuery ? 0 : offset;
     const { data, error, count } = await query.range(rangeStart, rangeEnd);
     if (!error && data) {
@@ -185,13 +358,7 @@ export async function GET(request: Request) {
   if (promoOnly) products = products.filter((item) => item.is_promo);
   if (inStockOnly) products = products.filter((item) => item.in_stock);
   if (q) {
-    const search = q.toLowerCase();
-    products = products.filter(
-      (item) =>
-        item.name.toLowerCase().includes(search) ||
-        item.brand?.toLowerCase().includes(search) ||
-        item.art_number?.toLowerCase().includes(search),
-    );
+    products = products.filter((item) => matchesQuery(item, q));
     products = [...products].sort((a, b) => scoreSearch(b, q) - scoreSearch(a, q));
   }
   if (sort === "price_asc") {
