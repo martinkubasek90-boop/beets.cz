@@ -145,6 +145,8 @@ Memodo inquiry integration:
 Memodo XML catalog import:
 - SQL schema:
   - `supabase/memodo_catalog.sql`
+  - optional dummy seed for testing before XML feed:
+    - `supabase/memodo_dummy_products_seed.sql`
 - Import endpoint:
   - `POST /api/memodo/import-xml`
 - Optional read endpoints:
