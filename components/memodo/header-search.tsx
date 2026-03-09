@@ -23,7 +23,8 @@ type VoicePriceAnswer = {
 };
 
 type SpeechRecognitionEventLike = Event & {
-  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+  results: ArrayLike<ArrayLike<{ transcript: string } & { confidence?: number }> & { isFinal?: boolean }>;
+  resultIndex?: number;
 };
 
 type SpeechRecognitionLike = {
@@ -150,6 +151,7 @@ export function MemodoHeaderSearch() {
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceTranscriptRef = useRef("");
   const voiceFinishedRef = useRef(false);
+  const voiceStoppingRef = useRef(false);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
 
@@ -290,35 +292,37 @@ export function MemodoHeaderSearch() {
 
     const recognition = new Recognition();
     recognition.lang = "cs-CZ";
-    recognition.interimResults = true;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
     voiceTranscriptRef.current = "";
     voiceFinishedRef.current = false;
+    voiceStoppingRef.current = false;
     recognitionRef.current = recognition;
     setVoiceListening(true);
     setVoiceAnswer({ text: "Mluvte, držte tlačítko mikrofonu a po puštění vyhledám." });
 
     recognition.onresult = (event) => {
       const chunks: string[] = [];
-      const startIndex = (event as unknown as { resultIndex?: number }).resultIndex || 0;
+      const startIndex = event.resultIndex || 0;
       for (let i = startIndex; i < event.results.length; i += 1) {
         const part = event.results[i]?.[0]?.transcript?.trim();
-        if (part) chunks.push(part);
+        const isFinal = event.results[i]?.isFinal ?? true;
+        if (part && isFinal) chunks.push(part);
       }
       const transcript = chunks.join(" ").trim();
       if (!transcript) return;
-      const merged = [voiceTranscriptRef.current, transcript].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-      voiceTranscriptRef.current = merged;
-      setQuery(merged);
-      setDebounced(merged);
+      voiceTranscriptRef.current = transcript;
     };
     recognition.onerror = () => {
       setVoiceListening(false);
       recognitionRef.current = null;
+      voiceStoppingRef.current = false;
+      setVoiceAnswer({ text: "Hlasové hledání selhalo. Zkuste to prosím znovu." });
     };
     recognition.onend = async () => {
       setVoiceListening(false);
       recognitionRef.current = null;
+       voiceStoppingRef.current = false;
       const transcript = voiceTranscriptRef.current.trim();
       if (!transcript || voiceFinishedRef.current) return;
       voiceFinishedRef.current = true;
@@ -329,8 +333,10 @@ export function MemodoHeaderSearch() {
 
   const stopVoiceSearch = () => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
+    if (!recognition || voiceStoppingRef.current) return;
+    voiceStoppingRef.current = true;
     recognition.stop();
+    setVoiceAnswer({ text: "Zpracovávám dotaz..." });
   };
 
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
