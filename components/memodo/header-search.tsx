@@ -342,7 +342,7 @@ export function MemodoHeaderSearch() {
           event.preventDefault();
           submitSearch();
         }}
-        className="flex min-h-[52px] items-center gap-2 rounded-2xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-500 shadow-sm"
+        className="flex min-h-[56px] items-center gap-2 rounded-2xl border border-gray-300 bg-white px-4 text-base font-medium text-gray-500 shadow-sm"
       >
         <Search className="h-5 w-5 text-gray-400" />
         <input
@@ -386,12 +386,20 @@ export function MemodoHeaderSearch() {
             event.preventDefault();
             stopVoiceSearch();
           }}
-          className={`rounded-md p-1 ${voiceListening ? "text-red-500" : "text-gray-400"}`}
+          className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border text-black shadow-sm transition-all ${
+            voiceListening
+              ? "animate-pulse border-red-300 bg-red-50 text-red-600 ring-2 ring-red-200"
+              : "border-yellow-300 bg-[#FFE500] hover:bg-yellow-400"
+          }`}
           aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
+          title={voiceListening ? "Nahrávám - pusťte pro vyhledání" : "Držte pro hlasové hledání"}
         >
-          {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </button>
       </form>
+      <p className={`mt-1 text-[11px] font-semibold ${voiceListening ? "text-red-600" : "text-gray-600"}`}>
+        {voiceListening ? "Poslouchám... pusťte mikrofon pro vyhledání." : "Tip: Podrž mikrofon a nadiktuj dotaz."}
+      </p>
       {voiceAnswer ? (
         <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
           <p className="font-semibold">{voiceAnswer.text}</p>
