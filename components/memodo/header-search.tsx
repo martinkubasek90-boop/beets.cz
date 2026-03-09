@@ -11,6 +11,17 @@ type ProductsResponse = {
   products: Product[];
 };
 
+type PriceAccessResponse = {
+  ok: boolean;
+  canSeePrices: boolean;
+  email: string | null;
+};
+
+type VoicePriceAnswer = {
+  text: string;
+  product?: Product;
+};
+
 type SpeechRecognitionEventLike = Event & {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
 };
@@ -33,6 +44,23 @@ type WindowWithSpeechRecognition = Window & {
   webkitSpeechRecognition?: SpeechRecognitionCtor;
 };
 
+function isPriceIntent(text: string) {
+  const normalized = text.toLowerCase();
+  return /(jak[aá]\s+je\s+cena|kolik\s+stoj[ií]|za\s+kolik|cena)/.test(normalized);
+}
+
+function cleanupPriceQuery(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/jak[aá]\s+je\s+cena\s*/g, "")
+    .replace(/kolik\s+stoj[ií]\s*/g, "")
+    .replace(/za\s+kolik\s*/g, "")
+    .replace(/\bcena\b/g, "")
+    .replace(/[?.,!]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function MemodoHeaderSearch() {
   const router = useRouter();
   const pathname = usePathname();
@@ -42,6 +70,8 @@ export function MemodoHeaderSearch() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
+  const [canSeePrices, setCanSeePrices] = useState(false);
+  const [voiceAnswer, setVoiceAnswer] = useState<VoicePriceAnswer | null>(null);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
 
@@ -49,6 +79,18 @@ export function MemodoHeaderSearch() {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 220);
     return () => window.clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    fetch("/api/memodo/price-access", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = (await response.json().catch(() => null)) as PriceAccessResponse | null;
+        if (!response.ok || !payload?.ok) return;
+        setCanSeePrices(payload.canSeePrices);
+      })
+      .catch(() => {
+        setCanSeePrices(false);
+      });
+  }, []);
 
   useEffect(() => {
     if (isCatalogPage) {
@@ -90,6 +132,61 @@ export function MemodoHeaderSearch() {
     setOpen(false);
   };
 
+  const speak = (text: string) => {
+    if (!("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "cs-CZ";
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleVoiceTranscript = async (transcript: string) => {
+    setQuery(transcript);
+    setDebounced(transcript);
+
+    if (!isPriceIntent(transcript)) {
+      router.push(`/Memodo/katalog?q=${encodeURIComponent(transcript)}`);
+      setOpen(false);
+      setVoiceAnswer(null);
+      return;
+    }
+
+    try {
+      const cleaned = cleanupPriceQuery(transcript) || transcript;
+      const response = await fetch(`/api/memodo/products?q=${encodeURIComponent(cleaned)}&sort=popular&limit=8&offset=0`);
+      const payload = (await response.json().catch(() => null)) as ProductsResponse | null;
+      if (!response.ok || !payload?.ok || !payload.products?.length) {
+        const text = "Nenašel jsem odpovídající produkt.";
+        setVoiceAnswer({ text });
+        speak(text);
+        return;
+      }
+
+      const candidate = payload.products.find((item) => typeof item.price === "number") || payload.products[0];
+      if (!candidate) {
+        const text = "Nenašel jsem odpovídající produkt.";
+        setVoiceAnswer({ text });
+        speak(text);
+        return;
+      }
+
+      if (!canSeePrices || typeof candidate.price !== "number") {
+        const text = "Váš e-mail není ověřen pro zobrazení cen. Ukazuji produkt bez ceny.";
+        setVoiceAnswer({ text, product: candidate });
+        speak(text);
+        return;
+      }
+
+      const text = `Cena produktu ${candidate.name} je ${candidate.price.toLocaleString("cs-CZ")} korun bez DPH.`;
+      setVoiceAnswer({ text, product: candidate });
+      speak(text);
+    } catch {
+      const text = "Nepodařilo se načíst cenu produktu.";
+      setVoiceAnswer({ text });
+      speak(text);
+    }
+  };
+
   const startVoiceSearch = () => {
     const speechWindow = window as WindowWithSpeechRecognition;
     const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
@@ -107,10 +204,7 @@ export function MemodoHeaderSearch() {
     recognition.onresult = (event) => {
       const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
       if (!transcript) return;
-      setQuery(transcript);
-      setDebounced(transcript);
-      router.push(`/Memodo/katalog?q=${encodeURIComponent(transcript)}`);
-      setOpen(false);
+      void handleVoiceTranscript(transcript);
     };
     recognition.onerror = () => {
       setVoiceListening(false);
@@ -166,6 +260,16 @@ export function MemodoHeaderSearch() {
           {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </button>
       </form>
+      {voiceAnswer ? (
+        <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
+          <p className="font-semibold">{voiceAnswer.text}</p>
+          {voiceAnswer.product ? (
+            <Link href={`/Memodo/produkt/${voiceAnswer.product.id}`} className="mt-1 inline-block font-bold underline">
+              Otevřít: {voiceAnswer.product.name}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       {!isCatalogPage && open ? (
         <div className="absolute left-0 right-0 top-[56px] z-30 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
