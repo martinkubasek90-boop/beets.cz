@@ -212,6 +212,16 @@ export function MemodoHeaderSearch() {
     return () => controller.abort();
   }, [debounced, isCatalogPage]);
 
+  useEffect(() => {
+    if (isCatalogPage) return;
+    const q = debounced.trim();
+    if (q.length < 2) return;
+    const timer = window.setTimeout(() => {
+      router.replace(`/Memodo/katalog?q=${encodeURIComponent(q)}`);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [debounced, isCatalogPage, router]);
+
   const submitSearch = () => {
     const q = query.trim();
     if (!q) {
