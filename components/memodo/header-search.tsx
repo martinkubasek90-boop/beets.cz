@@ -318,7 +318,7 @@ export function MemodoHeaderSearch() {
 
     const recognition = new Recognition();
     recognition.lang = "cs-CZ";
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     voiceTranscriptRef.current = "";
     voiceFinishedRef.current = false;
@@ -328,14 +328,13 @@ export function MemodoHeaderSearch() {
     setVoiceAnswer({ text: "Mluvte, držte tlačítko mikrofonu a po puštění vyhledám." });
 
     recognition.onresult = (event) => {
-      const chunks: string[] = [];
-      const startIndex = event.resultIndex || 0;
-      for (let i = startIndex; i < event.results.length; i += 1) {
+      // Keep the latest best transcript continuously so releasing mic always has something to process.
+      const parts: string[] = [];
+      for (let i = 0; i < event.results.length; i += 1) {
         const part = event.results[i]?.[0]?.transcript?.trim();
-        const isFinal = event.results[i]?.isFinal ?? true;
-        if (part && isFinal) chunks.push(part);
+        if (part) parts.push(part);
       }
-      const transcript = chunks.join(" ").trim();
+      const transcript = parts.join(" ").trim();
       if (!transcript) return;
       voiceTranscriptRef.current = transcript;
     };
