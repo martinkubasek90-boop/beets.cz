@@ -3,12 +3,34 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Mic, MicOff, Search, X } from "lucide-react";
 import type { Product } from "@/lib/memodo-data";
 
 type ProductsResponse = {
   ok: boolean;
   products: Product[];
+};
+
+type SpeechRecognitionEventLike = Event & {
+  results: ArrayLike<ArrayLike<{ transcript: string }>>;
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  start: () => void;
+  stop: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+type WindowWithSpeechRecognition = Window & {
+  SpeechRecognition?: SpeechRecognitionCtor;
+  webkitSpeechRecognition?: SpeechRecognitionCtor;
 };
 
 export function MemodoHeaderSearch() {
@@ -19,6 +41,7 @@ export function MemodoHeaderSearch() {
   const [results, setResults] = useState<Product[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
 
@@ -67,6 +90,37 @@ export function MemodoHeaderSearch() {
     setOpen(false);
   };
 
+  const startVoiceSearch = () => {
+    const speechWindow = window as WindowWithSpeechRecognition;
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      window.alert("Hlasové vyhledávání není v tomto prohlížeči podporováno.");
+      return;
+    }
+
+    const recognition = new Recognition();
+    recognition.lang = "cs-CZ";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setVoiceListening(true);
+
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[0]?.[0]?.transcript?.trim() || "";
+      if (!transcript) return;
+      setQuery(transcript);
+      setDebounced(transcript);
+      router.push(`/Memodo/katalog?q=${encodeURIComponent(transcript)}`);
+      setOpen(false);
+    };
+    recognition.onerror = () => {
+      setVoiceListening(false);
+    };
+    recognition.onend = () => {
+      setVoiceListening(false);
+    };
+    recognition.start();
+  };
+
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
 
   return (
@@ -103,6 +157,14 @@ export function MemodoHeaderSearch() {
             <X className="h-4 w-4" />
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={startVoiceSearch}
+          className={`rounded-md p-1 ${voiceListening ? "text-red-500" : "text-gray-400"}`}
+          aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
+        >
+          {voiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
       </form>
 
       {!isCatalogPage && open ? (
