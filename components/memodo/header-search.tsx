@@ -433,6 +433,14 @@ export function MemodoHeaderSearch() {
           </button>
         ) : null}
         <button
+          type="submit"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-gray-200 bg-gray-100 px-3 text-xs font-bold text-gray-800 hover:bg-gray-200"
+          aria-label="Hledat v katalogu"
+          title="Hledat v katalogu"
+        >
+          Hledat
+        </button>
+        <button
           type="button"
           onMouseDown={startVoiceSearch}
           onMouseUp={stopVoiceSearch}
