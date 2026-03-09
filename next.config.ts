@@ -15,6 +15,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "plus.unsplash.com" },
       { protocol: "https", hostname: "www.memodo.cz" },
       { protocol: "https", hostname: "memodo.cz" },
+      { protocol: "https", hostname: "cz.mgmbh-600-web-sw6-memodo-staging.shopware-dev.datamints.com" },
     ],
   },
   async headers() {

@@ -115,7 +115,17 @@ export function parseMemodoProductsFromXml(xml: string) {
     const brand = textFromTag(block, ["brand", "manufacturer", "producer", "MANUFACTURER"]) || undefined;
     const description =
       textFromTag(block, ["description", "short_description", "PRODUCT", "PRODUCT_DESCRIPTION"]) || undefined;
-    const imageUrl = textFromTag(block, ["image_url", "image", "imgurl", "IMGURL", "url_img"]) || undefined;
+    const imageUrl =
+      textFromTag(block, [
+        "g:image_link",
+        "image_link",
+        "image_url",
+        "image",
+        "imgurl",
+        "IMGURL",
+        "url_img",
+        "picture",
+      ]) || undefined;
     const artNumber = textFromTag(block, ["art_number", "artnum", "ean", "code", "PRODUCTNO"]) || undefined;
     const price = parseNumber(textFromTag(block, ["price", "g:price", "PRICE", "price_without_vat"]));
     const priceWithVat = parseNumber(textFromTag(block, ["price_with_vat", "price_vat", "PRICE_VAT", "priceFinal"]));
@@ -154,4 +164,3 @@ export function parseMemodoProductsFromXml(xml: string) {
 
   return parsed;
 }
-
