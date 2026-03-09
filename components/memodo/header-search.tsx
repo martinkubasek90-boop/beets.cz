@@ -61,6 +61,81 @@ function cleanupPriceQuery(text: string) {
     .trim();
 }
 
+const VOICE_BRAND_HINTS = [
+  "dyness",
+  "pylontech",
+  "goodwe",
+  "sungrow",
+  "trina",
+  "huawei",
+  "byd",
+  "fronius",
+  "solax",
+  "canadian",
+  "ja",
+];
+
+function normalizeVoiceText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshteinDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const matrix: number[][] = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+function correctVoiceBrands(value: string) {
+  const tokens = normalizeVoiceText(value).split(" ").filter(Boolean);
+  const corrected = tokens.map((token) => {
+    if (token.length < 3) return token;
+    let best = token;
+    let bestDistance = Number.MAX_SAFE_INTEGER;
+    for (const brand of VOICE_BRAND_HINTS) {
+      const d = levenshteinDistance(token, brand);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = brand;
+      }
+    }
+    if (bestDistance <= 2) return best;
+    return token;
+  });
+  return corrected.join(" ").trim();
+}
+
+function extractSpeechCandidates(transcript: string) {
+  const normalized = normalizeVoiceText(transcript);
+  const corrected = correctVoiceBrands(normalized);
+  const compact = normalized
+    .replace(/\b(chci|prosim|potrebuju|hledam|dej|ukaz|jaka|je|cena|kolik|stoji)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const correctedCompact = correctVoiceBrands(compact);
+
+  return Array.from(new Set([normalized, corrected, compact, correctedCompact].filter((item) => item.length >= 2)));
+}
+
 export function MemodoHeaderSearch() {
   const router = useRouter();
   const pathname = usePathname();
@@ -147,25 +222,38 @@ export function MemodoHeaderSearch() {
     setQuery(transcript);
     setDebounced(transcript);
 
+    const candidates = extractSpeechCandidates(transcript);
+
     if (!isPriceIntent(transcript)) {
-      router.push(`/Memodo/katalog?q=${encodeURIComponent(transcript)}`);
+      const primary = candidates[0] || transcript;
+      router.push(`/Memodo/katalog?q=${encodeURIComponent(primary)}`);
       setOpen(false);
       setVoiceAnswer(null);
       return;
     }
 
     try {
-      const cleaned = cleanupPriceQuery(transcript) || transcript;
-      const response = await fetch(`/api/memodo/products?q=${encodeURIComponent(cleaned)}&sort=popular&limit=8&offset=0`);
-      const payload = (await response.json().catch(() => null)) as ProductsResponse | null;
-      if (!response.ok || !payload?.ok || !payload.products?.length) {
+      const base = cleanupPriceQuery(transcript) || transcript;
+      const priceCandidates = extractSpeechCandidates(base);
+      let matchedProducts: Product[] = [];
+      for (const candidateQuery of priceCandidates) {
+        const response = await fetch(
+          `/api/memodo/products?q=${encodeURIComponent(candidateQuery)}&sort=popular&limit=8&offset=0`,
+        );
+        const payload = (await response.json().catch(() => null)) as ProductsResponse | null;
+        if (!response.ok || !payload?.ok || !payload.products?.length) continue;
+        matchedProducts = payload.products;
+        break;
+      }
+
+      if (!matchedProducts.length) {
         const text = "Nenašel jsem odpovídající produkt.";
         setVoiceAnswer({ text });
         speak(text);
         return;
       }
 
-      const candidate = payload.products.find((item) => typeof item.price === "number") || payload.products[0];
+      const candidate = matchedProducts.find((item) => typeof item.price === "number") || matchedProducts[0];
       if (!candidate) {
         const text = "Nenašel jsem odpovídající produkt.";
         setVoiceAnswer({ text });
@@ -212,15 +300,17 @@ export function MemodoHeaderSearch() {
 
     recognition.onresult = (event) => {
       const chunks: string[] = [];
-      for (let i = 0; i < event.results.length; i += 1) {
+      const startIndex = (event as unknown as { resultIndex?: number }).resultIndex || 0;
+      for (let i = startIndex; i < event.results.length; i += 1) {
         const part = event.results[i]?.[0]?.transcript?.trim();
         if (part) chunks.push(part);
       }
       const transcript = chunks.join(" ").trim();
       if (!transcript) return;
-      voiceTranscriptRef.current = transcript;
-      setQuery(transcript);
-      setDebounced(transcript);
+      const merged = [voiceTranscriptRef.current, transcript].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+      voiceTranscriptRef.current = merged;
+      setQuery(merged);
+      setDebounced(merged);
     };
     recognition.onerror = () => {
       setVoiceListening(false);
