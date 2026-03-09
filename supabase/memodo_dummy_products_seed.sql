@@ -26,7 +26,7 @@ values
     'Pylontech Force H3 10,24 kWh',
     'baterie',
     'Pylontech',
-    1961.00,
+    49275.77,
     null,
     'https://www.memodo.cz/media/67/92/13/1772008509/20230629200630_6315-2-6ae3bf7abcc15f368ba76f45ca5e19c8.jpg?ts=1772008509',
     'Rezidenční vysokonapěťové úložiště z feedu Memodo.',
@@ -37,14 +37,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12752',
     'GoodWe Lynx D - 10 kWh',
     'baterie',
     'GoodWe',
-    2230.00,
+    56035.17,
     null,
     'https://www.memodo.cz/media/f6/8e/1d/1772095912/2x-01-a30116bc43545b6da2d1d5b21adf6178.png?ts=1772095912',
     'Rezidenční vysokonapěťová baterie GoodWe Lynx D z feedu Memodo.',
@@ -55,14 +55,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '13415',
     'Dyness Tower Pro TP11',
     'baterie',
     'Dyness',
-    2358.00,
+    59251.54,
     null,
     'https://www.memodo.cz/media/d3/e1/58/1772179929/tower_pro_tp11-front_side-6d93c11aface5237895c8a37d68e4a8e.png?ts=1772179929',
     'Rezidenční vysokonapěťové úložiště Dyness Tower Pro.',
@@ -73,14 +73,14 @@ values
     'Novinka',
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12306',
     'Dyness Tower T10 2.0 s WiFi modulem',
     'baterie',
     'Dyness',
-    2076.00,
+    52165.48,
     null,
     'https://www.memodo.cz/media/3f/7b/74/1772469790/dyness-v2_3-2-61dd0f2d34df51afb48cde3179e2e33b.jpg?ts=1772469790',
     'Rezidenční vysokonapěťová baterie Dyness Tower.',
@@ -91,14 +91,14 @@ values
     '-39%',
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12319',
     'Pylontech Force H3 15,36 kWh',
     'baterie',
     'Pylontech',
-    2724.00,
+    68448.35,
     null,
     'https://www.memodo.cz/media/d3/56/1f/1772008512/20230629200619_9376-4b2c300025b25698b74cc9f78f3a265e.jpg?ts=1772008512',
     'Rezidenční vysokonapěťové úložiště Pylontech Force H3.',
@@ -109,14 +109,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12320',
     'Pylontech Force H3 20,48 kWh',
     'baterie',
     'Pylontech',
-    3487.00,
+    87620.92,
     null,
     'https://www.memodo.cz/media/a7/a6/c1/1772008512/20230629200543_2243-c7a16f6741505134b3302c7e731560c0.jpeg?ts=1772008512',
     'Rezidenční vysokonapěťové úložiště Pylontech Force H3.',
@@ -127,14 +127,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12324',
     'Pylontech Force H3 25,6 kWh',
     'baterie',
     'Pylontech',
-    4250.00,
+    106793.49,
     null,
     'https://www.memodo.cz/media/16/08/27/1772008806/20230629200531_0993-2-1d1db61838f55c3c9221c293faef01e0.jpeg?ts=1772008806',
     'Rezidenční vysokonapěťové úložiště Pylontech Force H3.',
@@ -145,14 +145,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '13335',
     'GoodWe Lynx D - 5 kWh',
     'baterie',
     'GoodWe',
-    1115.00,
+    28017.59,
     null,
     'https://www.memodo.cz/media/32/df/eb/1772095911/01-2-a5d7ccc7a6a85d99b59d2a48c9ba2a48.png?ts=1772095911',
     'Rezidenční vysokonapěťová baterie GoodWe Lynx D.',
@@ -163,14 +163,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12753',
     'GoodWe Lynx D - 15 kWh',
     'baterie',
     'GoodWe',
-    3345.00,
+    84052.76,
     null,
     'https://www.memodo.cz/media/06/81/e7/1772095913/3x-01-fd5a89f18bb45917a56a63f5e3f95656.png?ts=1772095913',
     'Rezidenční vysokonapěťová baterie GoodWe Lynx D.',
@@ -181,14 +181,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '12754',
     'GoodWe Lynx D - 20 kWh',
     'baterie',
     'GoodWe',
-    4460.00,
+    112070.34,
     null,
     'https://www.memodo.cz/media/e8/ee/23/1772095913/4x-01_1-3996e796bce25ebca5f0a04f135a16b0.png?ts=1772095913',
     'Rezidenční vysokonapěťová baterie GoodWe Lynx D.',
@@ -199,14 +199,14 @@ values
     null,
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '13301',
     'Sungrow SBH100 baterie',
     'baterie',
     'Sungrow',
-    3409.00,
+    85660.94,
     null,
     'https://www.memodo.cz/media/1e/0a/cf/1772197014/sungrow-sbh100-f6490474b41a51f98e73585bcf6a17a8.png?ts=1772197014',
     'Rezidenční vysokonapěťová baterie Sungrow SBH.',
@@ -217,14 +217,14 @@ values
     'Novinka',
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   ),
   (
     '13302',
     'Sungrow SBH150 baterie',
     'baterie',
     'Sungrow',
-    4853.00,
+    121945.60,
     null,
     'https://www.memodo.cz/media/be/ab/ba/1772197014/sungrow-sbh150-ac2f5a613b6d5c3d8d4faa2884a0d40f.png?ts=1772197014',
     'Rezidenční vysokonapěťová baterie Sungrow SBH.',
@@ -235,7 +235,7 @@ values
     'Novinka',
     null,
     true,
-    '{"source":"dummy_seed","currency":"EUR"}'::jsonb
+    '{"source":"dummy_seed","currency":"CZK","fx_source":"ECB","fx_date":"2026-03-05","fx_rate_eur_czk":24.396,"fx_markup_pct":3}'::jsonb
   )
 on conflict (external_id) do update
 set
