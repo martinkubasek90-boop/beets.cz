@@ -147,6 +147,8 @@ Memodo XML catalog import:
   - `supabase/memodo_catalog.sql`
   - optional dummy seed for testing before XML feed:
     - `supabase/memodo_dummy_products_seed.sql`
+  - one-shot setup bundle (all Memodo SQL tasks in one run):
+    - `supabase/memodo_setup_all_in_one.sql`
 - Import endpoint:
   - `POST /api/memodo/import-xml`
 - Optional read endpoints:
