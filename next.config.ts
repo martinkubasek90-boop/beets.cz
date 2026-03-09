@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
+      { protocol: "https", hostname: "www.memodo.cz" },
+      { protocol: "https", hostname: "memodo.cz" },
     ],
   },
   async headers() {
