@@ -22,6 +22,15 @@ type VoicePriceAnswer = {
   product?: Product;
 };
 
+type VoiceNormalizeResponse = {
+  ok: boolean;
+  normalizedText: string;
+  searchQuery: string;
+  priceQuery: string;
+  isPriceIntent: boolean;
+  provider: "llm" | "fallback";
+};
+
 type SpeechRecognitionEventLike = Event & {
   results: ArrayLike<ArrayLike<{ transcript: string } & { confidence?: number }> & { isFinal?: boolean }>;
   resultIndex?: number;
@@ -221,14 +230,30 @@ export function MemodoHeaderSearch() {
     window.speechSynthesis.speak(utterance);
   };
 
+  const normalizeVoiceQuery = async (transcript: string) => {
+    const response = await fetch("/api/memodo/voice-normalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: transcript }),
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json().catch(() => null)) as VoiceNormalizeResponse | null;
+    if (!payload?.ok) return null;
+    return payload;
+  };
+
   const handleVoiceTranscript = async (transcript: string) => {
-    setQuery(transcript);
-    setDebounced(transcript);
+    const normalized = await normalizeVoiceQuery(transcript).catch(() => null);
+    const effectiveText = normalized?.normalizedText || transcript;
+    setQuery(effectiveText);
+    setDebounced(effectiveText);
 
-    const candidates = extractSpeechCandidates(transcript);
+    const searchInput = normalized?.searchQuery || effectiveText;
+    const candidates = extractSpeechCandidates(searchInput);
+    const priceIntent = normalized?.isPriceIntent ?? isPriceIntent(effectiveText);
 
-    if (!isPriceIntent(transcript)) {
-      const primary = candidates[0] || transcript;
+    if (!priceIntent) {
+      const primary = candidates[0] || searchInput || effectiveText;
       router.push(`/Memodo/katalog?q=${encodeURIComponent(primary)}`);
       setOpen(false);
       setVoiceAnswer(null);
@@ -236,7 +261,7 @@ export function MemodoHeaderSearch() {
     }
 
     try {
-      const base = cleanupPriceQuery(transcript) || transcript;
+      const base = normalized?.priceQuery || cleanupPriceQuery(effectiveText) || searchInput || effectiveText;
       const priceCandidates = extractSpeechCandidates(base);
       let matchedProducts: Product[] = [];
       for (const candidateQuery of priceCandidates) {
