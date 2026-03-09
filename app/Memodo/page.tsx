@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
+import { MemodoQuickPriceLookup } from "@/components/memodo/quick-price-lookup";
 
 export default function MemodoIndexPage() {
   return (
@@ -32,6 +33,8 @@ export default function MemodoIndexPage() {
         Akční produkty
         <p className="mt-1 text-xs font-normal text-gray-500">Vybraný sortiment připravený k objednání</p>
       </Link>
+
+      <MemodoQuickPriceLookup />
     </div>
   );
 }
