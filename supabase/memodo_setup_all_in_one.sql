@@ -417,3 +417,13 @@ set
   original_price = excluded.original_price,
   is_active = excluded.is_active,
   raw_payload = excluded.raw_payload;
+
+-- 7) Cleanup old testing items
+-- Keeps dummy seed rows and removes legacy test rows.
+delete from public.memodo_products
+where coalesce(raw_payload->>'source', '') <> 'dummy_seed'
+  and (
+    coalesce(name, '') ilike '%test%'
+    or coalesce(description, '') ilike '%test%'
+    or coalesce(image_url, '') = ''
+  );

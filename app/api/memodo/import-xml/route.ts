@@ -26,6 +26,7 @@ type ImportPayload = {
   proxyPassword?: string;
   proxyToken?: string;
   proxyHeaderName?: string;
+  onlyWithImage?: boolean;
 };
 
 function isAuthorized(request: Request) {
@@ -153,7 +154,8 @@ export async function POST(request: Request) {
 
   try {
     const xml = await resolveXmlPayload(body);
-    const parsed = parseMemodoProductsFromXml(xml);
+    const parsedAll = parseMemodoProductsFromXml(xml);
+    const parsed = body.onlyWithImage ? parsedAll.filter((item) => Boolean(item.image_url)) : parsedAll;
     if (!parsed.length) {
       return NextResponse.json(
         { error: "No products parsed from XML feed. Check feed structure mapping." },
@@ -166,6 +168,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         ok: true,
         dryRun: true,
+        onlyWithImage: Boolean(body.onlyWithImage),
+        parsedAllCount: parsedAll.length,
         parsedCount: parsed.length,
         recommendedBatchSize,
         estimatedBatches: Math.ceil(parsed.length / recommendedBatchSize),
@@ -232,13 +236,21 @@ export async function POST(request: Request) {
     if (deactivateMissing && shouldFinalize) {
       const { data: staleRows, error: staleError } = await supabase
         .from("memodo_products")
-        .select("external_id")
+        .select("external_id, raw_payload")
         .eq("is_active", true)
         .lt("updated_at", syncStartedAt);
 
       if (staleError) throw new Error(`Failed to load stale products: ${staleError.message}`);
 
-      const staleIds = (staleRows || []).map((row) => row.external_id as string);
+      const staleIds = (staleRows || [])
+        .filter((row) => {
+          const source =
+            row && typeof row.raw_payload === "object" && row.raw_payload
+              ? (row.raw_payload as Record<string, unknown>).source
+              : null;
+          return source !== "dummy_seed";
+        })
+        .map((row) => row.external_id as string);
       for (let i = 0; i < staleIds.length; i += 500) {
         const batch = staleIds.slice(i, i + 500);
         if (!batch.length) continue;
@@ -253,6 +265,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      onlyWithImage: Boolean(body.onlyWithImage),
+      parsedAllCount: parsedAll.length,
       parsedCount: parsed.length,
       processedCount: rows.length,
       startIndex,

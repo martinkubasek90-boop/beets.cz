@@ -226,6 +226,7 @@ export default function MemodoAdminPage() {
         body: JSON.stringify({
           feedUrl: feedUrl.trim() || undefined,
           deactivateMissing: true,
+          onlyWithImage: true,
           feedAuthType,
           feedUsername: feedUsername.trim() || undefined,
           feedPassword: feedPassword || undefined,
