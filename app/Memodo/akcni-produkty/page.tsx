@@ -24,14 +24,16 @@ export default async function MemodoFeaturedProductsPage() {
       : products.filter((product) => product.is_promo).slice(0, 80);
 
   return (
-    <div className="space-y-6 px-4 py-6">
+    <div className="space-y-6 px-4 pb-6 pt-2">
       <MemodoViewTracker page="featured_products" />
       <div className="rounded-2xl bg-[#25C1E6] px-4 py-5 text-gray-900">
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-[#FFE500] px-3 py-1 text-xs font-bold text-black">
           <Percent className="h-3 w-3" /> Akční produkty
         </div>
-        <h1 className="text-2xl font-black tracking-tight">Úspěšné projekty s Memodem</h1>
-        <p className="mt-1 text-sm text-gray-800">Vybrané nabídky. Ostatní produkty najdeš přes fulltext v katalogu.</p>
+        <h1 className="text-2xl font-black tracking-tight">Najděte nejaktuálnější ceny pro váš projekt</h1>
+        <p className="mt-1 text-sm text-gray-800">
+          Vyhledejte oblíbené produkty, porovnejte aktuální ceny a získejte cenovou nabídku během pár hodin.
+        </p>
       </div>
 
       {featured.length > 0 ? (
