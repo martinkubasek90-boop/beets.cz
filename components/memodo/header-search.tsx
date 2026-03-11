@@ -157,6 +157,7 @@ export function MemodoHeaderSearch() {
   const [voiceListening, setVoiceListening] = useState(false);
   const [canSeePrices, setCanSeePrices] = useState(false);
   const [voiceAnswer, setVoiceAnswer] = useState<VoicePriceAnswer | null>(null);
+  const [animatedPlaceholder, setAnimatedPlaceholder] = useState("Dyness Tower");
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const voiceTranscriptRef = useRef("");
   const voiceFinishedRef = useRef(false);
@@ -164,6 +165,40 @@ export function MemodoHeaderSearch() {
   const voiceFinalizeTimerRef = useRef<number | null>(null);
 
   const isCatalogPage = pathname?.startsWith("/Memodo/katalog");
+  const placeholderSamples = useMemo(
+    () => ["Dyness Tower", "Pylontech Force H3", "GoodWe Lynx D", "Sungrow SBH100"],
+    [],
+  );
+
+  useEffect(() => {
+    let sampleIndex = 0;
+    let charIndex = 0;
+    let deleting = false;
+    let timeout: number | null = null;
+
+    const tick = () => {
+      const current = placeholderSamples[sampleIndex] || "";
+      const next = deleting ? current.slice(0, Math.max(0, charIndex - 1)) : current.slice(0, charIndex + 1);
+      setAnimatedPlaceholder(next || current.slice(0, 1));
+      charIndex = deleting ? Math.max(0, charIndex - 1) : Math.min(current.length, charIndex + 1);
+
+      if (!deleting && charIndex >= current.length) {
+        deleting = true;
+        timeout = window.setTimeout(tick, 900);
+        return;
+      }
+      if (deleting && charIndex <= 0) {
+        deleting = false;
+        sampleIndex = (sampleIndex + 1) % placeholderSamples.length;
+      }
+      timeout = window.setTimeout(tick, deleting ? 45 : 80);
+    };
+
+    timeout = window.setTimeout(tick, 400);
+    return () => {
+      if (timeout) window.clearTimeout(timeout);
+    };
+  }, [placeholderSamples]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebounced(query.trim()), 220);
@@ -424,7 +459,7 @@ export function MemodoHeaderSearch() {
           onFocus={() => {
             if (results.length > 0) setOpen(true);
           }}
-          placeholder="Hledat dle čísla položky nebo názvu v Katalogu"
+          placeholder={`Pište např. ${animatedPlaceholder}`}
           className="h-10 w-full border-0 bg-transparent text-[15px] text-gray-800 outline-none placeholder:text-gray-500"
         />
         {query ? (
@@ -450,37 +485,8 @@ export function MemodoHeaderSearch() {
         >
           Hledat
         </button>
-        <button
-          type="button"
-          onMouseDown={startVoiceSearch}
-          onMouseUp={stopVoiceSearch}
-          onMouseLeave={stopVoiceSearch}
-          onTouchStart={(event) => {
-            event.preventDefault();
-            startVoiceSearch();
-          }}
-          onTouchEnd={(event) => {
-            event.preventDefault();
-            stopVoiceSearch();
-          }}
-          onTouchCancel={(event) => {
-            event.preventDefault();
-            stopVoiceSearch();
-          }}
-          className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border text-black shadow-sm transition-all ${
-            voiceListening
-              ? "animate-pulse border-red-300 bg-red-50 text-red-600 ring-2 ring-red-200"
-              : "border-yellow-300 bg-[#FFE500] hover:bg-yellow-400"
-          }`}
-          aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
-          title={voiceListening ? "Nahrávám - pusťte pro vyhledání" : "Držte pro hlasové hledání"}
-        >
-          {voiceListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-        </button>
       </form>
-      <p className={`mt-1 text-[11px] font-semibold ${voiceListening ? "text-red-600" : "text-gray-600"}`}>
-        {voiceListening ? "Poslouchám... pusťte mikrofon pro vyhledání." : "Tip: Podrž mikrofon a nadiktuj dotaz."}
-      </p>
+      <p className="mt-1 text-[11px] font-semibold text-gray-600">Fulltext: pište název produktu, značku nebo číslo položky.</p>
       {voiceAnswer ? (
         <div className="mt-2 rounded-xl border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
           <p className="font-semibold">{voiceAnswer.text}</p>
@@ -520,6 +526,37 @@ export function MemodoHeaderSearch() {
           {emptyHint ? <p className="px-4 py-3 text-xs text-gray-500">Žádné výsledky pro tento dotaz.</p> : null}
         </div>
       ) : null}
+
+      <button
+        type="button"
+        onMouseDown={startVoiceSearch}
+        onMouseUp={stopVoiceSearch}
+        onMouseLeave={stopVoiceSearch}
+        onTouchStart={(event) => {
+          event.preventDefault();
+          startVoiceSearch();
+        }}
+        onTouchEnd={(event) => {
+          event.preventDefault();
+          stopVoiceSearch();
+        }}
+        onTouchCancel={(event) => {
+          event.preventDefault();
+          stopVoiceSearch();
+        }}
+        className={`fixed bottom-24 left-4 z-40 inline-flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border text-black shadow-lg transition-all ${
+          voiceListening
+            ? "animate-pulse border-red-300 bg-red-50 text-red-600 ring-2 ring-red-200"
+            : "border-yellow-300 bg-[#FFE500] hover:bg-yellow-400"
+        }`}
+        aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
+        title={voiceListening ? "Nahrávám - pusťte pro vyhledání" : "Podržte pro hlasové hledání"}
+      >
+        {voiceListening ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
+      </button>
+      <p className="fixed bottom-16 left-4 z-40 rounded-md bg-white/95 px-2 py-1 text-[10px] font-semibold text-gray-700 shadow">
+        {voiceListening ? "Poslouchám... pusťte." : "Podrž pro hlas"}
+      </p>
     </div>
   );
 }
