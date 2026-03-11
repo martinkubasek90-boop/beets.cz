@@ -35,13 +35,13 @@ export default async function MemodoLayout({ children }: { children: React.React
     <div className="memodo-app mx-auto flex min-h-screen max-w-lg flex-col bg-[#EFEFEF]">
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-[#EFEFEF] shadow-sm">
         <div className="px-4 pt-3">
-          <Link href="/Memodo/akcni-produkty" className="block w-full">
+          <Link href="/Memodo/akcni-produkty" className="flex w-full justify-center">
             <Image
               src="/memodo-logo.svg"
               alt="Memodo"
               width={520}
               height={110}
-              className="h-12 w-full max-w-[320px] object-contain object-left"
+              className="mx-auto h-12 w-full max-w-[320px] object-contain object-center"
             />
           </Link>
         </div>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Mic, MicOff, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import type { Product } from "@/lib/memodo-data";
 
 type ProductsResponse = {
@@ -441,6 +441,21 @@ export function MemodoHeaderSearch() {
     }, 1800);
   };
 
+  useEffect(() => {
+    const onStart = () => startVoiceSearch();
+    const onStop = () => stopVoiceSearch();
+    window.addEventListener("memodo-voice-start", onStart as EventListener);
+    window.addEventListener("memodo-voice-stop", onStop as EventListener);
+    return () => {
+      window.removeEventListener("memodo-voice-start", onStart as EventListener);
+      window.removeEventListener("memodo-voice-stop", onStop as EventListener);
+    };
+  });
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("memodo-voice-state", { detail: { listening: voiceListening } }));
+  }, [voiceListening]);
+
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
 
   return (
@@ -527,36 +542,6 @@ export function MemodoHeaderSearch() {
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onMouseDown={startVoiceSearch}
-        onMouseUp={stopVoiceSearch}
-        onMouseLeave={stopVoiceSearch}
-        onTouchStart={(event) => {
-          event.preventDefault();
-          startVoiceSearch();
-        }}
-        onTouchEnd={(event) => {
-          event.preventDefault();
-          stopVoiceSearch();
-        }}
-        onTouchCancel={(event) => {
-          event.preventDefault();
-          stopVoiceSearch();
-        }}
-        className={`fixed bottom-24 left-4 z-40 inline-flex min-h-[52px] min-w-[52px] items-center justify-center rounded-full border text-black shadow-lg transition-all ${
-          voiceListening
-            ? "animate-pulse border-red-300 bg-red-50 text-red-600 ring-2 ring-red-200"
-            : "border-yellow-300 bg-[#FFE500] hover:bg-yellow-400"
-        }`}
-        aria-label={voiceListening ? "Nahrávání hlasu" : "Hledat hlasem"}
-        title={voiceListening ? "Nahrávám - pusťte pro vyhledání" : "Podržte pro hlasové hledání"}
-      >
-        {voiceListening ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
-      </button>
-      <p className="fixed bottom-16 left-4 z-40 rounded-md bg-white/95 px-2 py-1 text-[10px] font-semibold text-gray-700 shadow">
-        {voiceListening ? "Poslouchám... pusťte." : "Podrž pro hlas"}
-      </p>
     </div>
   );
 }
