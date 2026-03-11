@@ -9,6 +9,7 @@ import { getMemodoAdminConfig } from "@/lib/memodo-admin-config";
 import { MemodoWebVitalsTracker } from "@/components/memodo/web-vitals-tracker";
 import { MemodoPriceEmailGate } from "@/components/memodo/price-email-gate";
 import { MemodoHeaderSearch } from "@/components/memodo/header-search";
+import { MemodoFeaturedHeroBanner } from "@/components/memodo/featured-hero-banner";
 
 export const metadata: Metadata = {
   title: "Memodo | BEETS.CZ",
@@ -51,6 +52,7 @@ export default async function MemodoLayout({ children }: { children: React.React
           </div>
         </div>
 
+        <MemodoFeaturedHeroBanner />
         <div className="px-4 pb-3">
           <MemodoHeaderSearch />
         </div>
