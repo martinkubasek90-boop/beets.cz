@@ -49,7 +49,6 @@ export function MemodoCatalogPageClient({
   const [reloadKey, setReloadKey] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<Array<{ id: string; name: string }>>([]);
-  const [canSeePrices, setCanSeePrices] = useState<boolean>(false);
 
   const trimmedSearch = debouncedSearch.trim();
 
@@ -128,7 +127,6 @@ export function MemodoCatalogPageClient({
         setProducts(data.products || []);
         setTotal(data.count || 0);
         setOffset((data.products || []).length);
-        setCanSeePrices(Boolean(data.canSeePrices));
       })
       .catch(() => {
         setProducts([]);
@@ -161,7 +159,6 @@ export function MemodoCatalogPageClient({
       setProducts((prev) => [...prev, ...next]);
       setTotal(data.count || 0);
       setOffset((prev) => prev + next.length);
-      setCanSeePrices(Boolean(data.canSeePrices));
       trackMemodoEvent("memodo_catalog_load_more", { offset, loaded: next.length });
       setError("");
     } catch {
@@ -302,11 +299,6 @@ export function MemodoCatalogPageClient({
             ? "Načítám produkty..."
             : `${total} produktů`}
       </p>
-      {!canSeePrices ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          Ceny vidí pouze schválení partneři. Ověření e-mailu najdete nahoře v aplikaci.
-        </div>
-      ) : null}
       {!trimmedSearch && recentSearches.length > 0 ? (
         <div>
           <p className="mb-1 text-[11px] font-semibold text-gray-500">Nedávná hledání</p>
