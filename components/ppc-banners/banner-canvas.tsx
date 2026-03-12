@@ -81,6 +81,9 @@ function applyStep(value: number, delta: number, min: number, max: number) {
   return clamp(Number((value + delta).toFixed(2)), min, max);
 }
 
+const LOGO_SCALE_MIN = 0.4;
+const LOGO_SCALE_MAX = 12;
+
 export function BannerCanvas({
   banner,
   format,
@@ -102,7 +105,7 @@ export function BannerCanvas({
   const headlineSize = Math.max(12, Math.round(resolvedFormat.headlineSize * scale));
   const subheadlineSize = Math.max(10, Math.round(resolvedFormat.subheadlineSize * scale));
   const ctaSize = Math.max(10, Math.round(resolvedFormat.ctaSize * scale));
-  const logoScale = Math.max(0.5, Math.min(2.4, resolvedFormat.logoScale || 1));
+  const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, resolvedFormat.logoScale || 1));
   const logoOffsetX = Math.round((resolvedFormat.logoOffsetX || 0) * scale);
   const logoOffsetY = Math.round((resolvedFormat.logoOffsetY || 0) * scale);
   const textOffsetX = Math.round((resolvedFormat.textOffsetX || 0) * scale);
@@ -110,7 +113,7 @@ export function BannerCanvas({
   const ctaOffsetX = Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
   const ctaOffsetY = Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
   const bgPreviewUrl = toPreviewImageUrl(banner.bgImageUrl);
-  const bgScale = clamp(typeof banner.bgScale === "number" ? banner.bgScale : 100, 60, 220);
+  const bgScale = clamp(typeof banner.bgScale === "number" ? banner.bgScale : 100, 10, 260);
   const bgPositionX = clamp(typeof banner.bgPositionX === "number" ? banner.bgPositionX : 50, 0, 100);
   const bgPositionY = clamp(typeof banner.bgPositionY === "number" ? banner.bgPositionY : 50, 0, 100);
   const boxW = Math.round(resolvedFormat.width * scale);
@@ -150,6 +153,9 @@ export function BannerCanvas({
   const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - padding - estimatedCtaH;
   const ctaLeft = ctaBaseX + ctaOffsetX;
   const ctaTop = ctaBaseY + ctaOffsetY;
+  const hasLogo = Boolean((banner.logoUrl || "").trim());
+  const hasHeadline = Boolean((banner.headline || "").trim());
+  const hasSubheadline = Boolean((banner.subheadline || "").trim());
 
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
@@ -165,7 +171,7 @@ export function BannerCanvas({
       }
       if (target === "logo") {
         onFormatPatch({
-          logoScale: applyStep(resolvedFormat.logoScale || 1, direction * 0.08, 0.6, 2.4),
+          logoScale: applyStep(resolvedFormat.logoScale || 1, direction * 0.1, LOGO_SCALE_MIN, LOGO_SCALE_MAX),
         });
         return;
       }
@@ -240,7 +246,7 @@ export function BannerCanvas({
       if (resizeState) {
         const dragDelta = (event.clientX - resizeState.startX + (event.clientY - resizeState.startY)) / (2 * scale);
         if (resizeState.target === "logo") {
-          const nextLogoScale = applyStep(resizeState.origin.logoScale, dragDelta / 140, 0.6, 2.4);
+          const nextLogoScale = applyStep(resizeState.origin.logoScale, dragDelta / 120, LOGO_SCALE_MIN, LOGO_SCALE_MAX);
           onFormatPatch({ logoScale: nextLogoScale });
           return;
         }
@@ -373,13 +379,13 @@ export function BannerCanvas({
           {editable ? <div className="absolute right-2 top-2 rounded bg-slate-900/70 px-2 py-1 text-[10px] text-white">Drag: logo / text / CTA / shape</div> : null}
           {editable && sizeTarget ? <div className="absolute left-2 top-2 z-20 rounded-md bg-slate-900/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Resize: táhni rohový bod, nebo kolečko myši</div> : null}
 
-          <div
-            className={`absolute flex items-center gap-2 ${editable ? "cursor-move" : ""} ${selected === "logo" ? "ring-2 ring-cyan-300" : ""} ${editable ? "relative" : ""}`}
-            style={{ left: `${logoLeft}px`, top: `${logoTop}px`, zIndex: zLogo }}
-            onMouseDown={(event) => startDrag("logo", event)}
-            onWheel={(event) => onResizeWheel("logo", event)}
-          >
-            {banner.logoUrl ? (
+          {hasLogo ? (
+            <div
+              className={`absolute flex items-center gap-2 ${editable ? "cursor-move" : ""} ${selected === "logo" ? "ring-2 ring-cyan-300" : ""} ${editable ? "relative" : ""}`}
+              style={{ left: `${logoLeft}px`, top: `${logoTop}px`, zIndex: zLogo }}
+              onMouseDown={(event) => startDrag("logo", event)}
+              onWheel={(event) => onResizeWheel("logo", event)}
+            >
               <img
                 src={banner.logoUrl}
                 alt="Logo"
@@ -389,45 +395,51 @@ export function BannerCanvas({
                   maxWidth: `${Math.round(130 * scale * logoScale)}px`,
                 }}
               />
-            ) : null}
-            {editable && selected === "logo" ? (
-              <button
-                type="button"
-                aria-label="Resize logo"
-                className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
-                onMouseDown={(event) => startResize("logo", event)}
-              />
-            ) : null}
-          </div>
+              {editable && selected === "logo" ? (
+                <button
+                  type="button"
+                  aria-label="Resize logo"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("logo", event)}
+                />
+              ) : null}
+            </div>
+          ) : null}
 
-          <div
-            className={`absolute ${editable ? "cursor-move" : ""} ${selected === "text" ? "ring-2 ring-cyan-300" : ""}`}
-            style={{
-              left: `${textLeft}px`,
-              top: `${textTop}px`,
-              width: `${textW}px`,
-              transform: "translateY(-50%)",
-              textAlign: textContentAlign,
-              zIndex: zText,
-            }}
-            onMouseDown={(event) => startDrag("text", event)}
-            onWheel={(event) => onResizeWheel("text", event)}
-          >
-            <h2 className="font-extrabold leading-[1.05]" style={{ color: banner.textColor, fontSize: `${headlineSize}px` }}>
-              {banner.headline || "Silný headline pro PPC kampaň"}
-            </h2>
-            <p className="mt-2 font-medium" style={{ color: banner.textColor, fontSize: `${subheadlineSize}px` }}>
-              {banner.subheadline || "Doplňte krátký benefit a důvod kliknout"}
-            </p>
-            {editable && selected === "text" ? (
-              <button
-                type="button"
-                aria-label="Resize text"
-                className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
-                onMouseDown={(event) => startResize("text", event)}
-              />
-            ) : null}
-          </div>
+          {hasHeadline || hasSubheadline ? (
+            <div
+              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "text" ? "ring-2 ring-cyan-300" : ""}`}
+              style={{
+                left: `${textLeft}px`,
+                top: `${textTop}px`,
+                width: `${textW}px`,
+                transform: "translateY(-50%)",
+                textAlign: textContentAlign,
+                zIndex: zText,
+              }}
+              onMouseDown={(event) => startDrag("text", event)}
+              onWheel={(event) => onResizeWheel("text", event)}
+            >
+              {hasHeadline ? (
+                <h2 className="font-extrabold leading-[1.05]" style={{ color: banner.textColor, fontSize: `${headlineSize}px` }}>
+                  {banner.headline}
+                </h2>
+              ) : null}
+              {hasSubheadline ? (
+                <p className={`${hasHeadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadlineSize}px` }}>
+                  {banner.subheadline}
+                </p>
+              ) : null}
+              {editable && selected === "text" ? (
+                <button
+                  type="button"
+                  aria-label="Resize text"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("text", event)}
+                />
+              ) : null}
+            </div>
+          ) : null}
 
           <div
             className={`absolute ${editable ? "cursor-move" : ""} ${selected === "cta" ? "ring-2 ring-cyan-300" : ""}`}

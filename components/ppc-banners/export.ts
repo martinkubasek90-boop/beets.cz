@@ -87,6 +87,9 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const LOGO_SCALE_MIN = 0.4;
+const LOGO_SCALE_MAX = 12;
+
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
   const canvas = document.createElement("canvas");
   canvas.width = format.width;
@@ -101,18 +104,21 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   if (bgSrc) {
     try {
       const bg = await loadImage(bgSrc);
-      const scale = Math.max(canvas.width / bg.width, canvas.height / bg.height);
-      const drawW = bg.width * scale;
-      const drawH = bg.height * scale;
-      const x = (canvas.width - drawW) / 2;
-      const y = (canvas.height - drawH) / 2;
+      const coverScale = Math.max(canvas.width / bg.width, canvas.height / bg.height);
+      const scaleFactor = (typeof banner.bgScale === "number" ? Math.max(10, Math.min(260, banner.bgScale)) : 100) / 100;
+      const drawW = bg.width * coverScale * scaleFactor;
+      const drawH = bg.height * coverScale * scaleFactor;
+      const posX = typeof banner.bgPositionX === "number" ? Math.max(0, Math.min(100, banner.bgPositionX)) : 50;
+      const posY = typeof banner.bgPositionY === "number" ? Math.max(0, Math.min(100, banner.bgPositionY)) : 50;
+      const x = (canvas.width - drawW) * (posX / 100);
+      const y = (canvas.height - drawH) * (posY / 100);
       ctx.drawImage(bg, x, y, drawW, drawH);
     } catch {}
   }
 
   const pad = format.padding;
   const maxWidth = canvas.width - pad * 2;
-  const logoScale = Math.max(0.5, Math.min(2.4, format.logoScale || 1));
+  const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, format.logoScale || 1));
   const logoOffsetX = format.logoOffsetX || 0;
   const logoOffsetY = format.logoOffsetY || 0;
   const textOffsetX = format.textOffsetX || 0;
@@ -158,38 +164,37 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       const h = logo.height * scale;
       const logoX = pad + logoOffsetX;
       ctx.drawImage(logo, logoX, headerY, w, h);
-      ctx.font = "700 24px Inter, Arial, sans-serif";
-      ctx.fillStyle = banner.textColor || "#ffffff";
-      ctx.textBaseline = "middle";
-      ctx.fillText(banner.brandName || "", logoX + w + 14, headerY + h / 2);
       headerY += h + 18;
     } catch {}
-  } else {
-    ctx.font = "700 24px Inter, Arial, sans-serif";
-    ctx.fillStyle = banner.textColor || "#ffffff";
-    ctx.textBaseline = "top";
-    ctx.fillText((banner.brandName || "Brand").toUpperCase(), pad + logoOffsetX, headerY);
-    headerY += 38;
   }
 
-  ctx.fillStyle = banner.textColor || "#ffffff";
-  ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
-  ctx.textBaseline = "top";
-  const textX = pad + textOffsetX;
-  const headlineLines = wrapLines(ctx, banner.headline || "Silný headline", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
-  let textY = headerY + textOffsetY;
-  headlineLines.forEach((line) => {
-    ctx.fillText(line, textX, textY);
-    textY += format.headlineSize * 1.12;
-  });
+  const hasHeadline = Boolean((banner.headline || "").trim());
+  const hasSubheadline = Boolean((banner.subheadline || "").trim());
+  if (hasHeadline || hasSubheadline) {
+    ctx.fillStyle = banner.textColor || "#ffffff";
+    ctx.textBaseline = "top";
+    const textX = pad + textOffsetX;
+    let textY = headerY + textOffsetY;
 
-  textY += Math.max(10, Math.round(format.subheadlineSize * 0.5));
-  ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
-  const subLines = wrapLines(ctx, banner.subheadline || "Krátké doplnění hodnoty.", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
-  subLines.forEach((line) => {
-    ctx.fillText(line, textX, textY);
-    textY += format.subheadlineSize * 1.32;
-  });
+    if (hasHeadline) {
+      ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
+      const headlineLines = wrapLines(ctx, banner.headline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
+      headlineLines.forEach((line) => {
+        ctx.fillText(line, textX, textY);
+        textY += format.headlineSize * 1.12;
+      });
+    }
+
+    if (hasSubheadline) {
+      textY += hasHeadline ? Math.max(10, Math.round(format.subheadlineSize * 0.5)) : 0;
+      ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
+      const subLines = wrapLines(ctx, banner.subheadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
+      subLines.forEach((line) => {
+        ctx.fillText(line, textX, textY);
+        textY += format.subheadlineSize * 1.32;
+      });
+    }
+  }
 
   const ctaText = banner.ctaText || "Zjistit více";
   ctx.font = `700 ${format.ctaSize}px Inter, Arial, sans-serif`;

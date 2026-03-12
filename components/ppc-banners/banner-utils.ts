@@ -34,9 +34,9 @@ export function computeChecklist(banner: Banner): BannerChecklist {
   const ctaContrast = contrastRatio(banner.ctaBg, banner.ctaTextColor);
   return {
     hasBrandUrl: Boolean((banner.brandUrl || "").trim()),
-    hasHeadline: Boolean((banner.headline || "").trim()),
-    hasSubheadline: Boolean((banner.subheadline || "").trim()),
-    hasLogo: Boolean((banner.logoUrl || "").trim()),
+    hasHeadline: true,
+    hasSubheadline: true,
+    hasLogo: true,
     hasBackground: Boolean((banner.bgImageUrl || "").trim()) || banner.bgMode === "generate",
     hasMinFormats: (banner.formats?.length || 0) >= 2,
     contrastTextOk: textContrast >= 4.5,

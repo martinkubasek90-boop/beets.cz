@@ -265,7 +265,7 @@ export function PropertyPanel({
               </label>
               <div className="space-y-2">
                 <Label className="text-xs">Velikost loga: {(format.logoScale || 1).toFixed(2)}x</Label>
-                <Input type="range" min={0.6} max={2.4} step={0.05} value={format.logoScale || 1} onChange={(e) => onFormatChange("logoScale", Number(e.target.value))} />
+                <Input type="range" min={0.4} max={12} step={0.1} value={format.logoScale || 1} onChange={(e) => onFormatChange("logoScale", Number(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun X: {format.logoOffsetX || 0}px</Label>
@@ -363,7 +363,7 @@ export function PropertyPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Zoom pozadí: {Math.round(Number(banner.bgScale || 100))}%</Label>
-                <Input type="range" min={60} max={220} value={Number(banner.bgScale || 100)} onChange={(e) => onBannerChange("bgScale", Number(e.target.value))} />
+                <Input type="range" min={10} max={260} value={Number(banner.bgScale || 100)} onChange={(e) => onBannerChange("bgScale", Number(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Pozice X: {Math.round(Number(banner.bgPositionX || 50))}%</Label>
