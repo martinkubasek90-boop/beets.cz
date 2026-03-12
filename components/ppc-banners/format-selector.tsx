@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import type { BannerFormat } from "@/components/ppc-banners/types";
+import { PRESET_FORMATS, type BannerFormat } from "@/components/ppc-banners/types";
 
 export function FormatSelector({
   formats,
@@ -16,6 +16,8 @@ export function FormatSelector({
   onAdd: (id: string) => void;
   onRemove: (idx: number) => void;
 }) {
+  const selectedIds = new Set(formats.map((format) => format.id));
+
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Formáty</div>
@@ -37,15 +39,21 @@ export function FormatSelector({
         ))}
       </div>
       <div className="space-y-2">
-        <Button onClick={() => onAdd("1200x628")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
-          + Meta 1200x628
-        </Button>
-        <Button onClick={() => onAdd("1080x1080")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
-          + Square 1080x1080
-        </Button>
-        <Button onClick={() => onAdd("1080x1920")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
-          + Story 1080x1920
-        </Button>
+        {PRESET_FORMATS.map((preset) => {
+          const alreadyAdded = selectedIds.has(preset.id);
+          return (
+            <Button
+              key={preset.id}
+              onClick={() => onAdd(preset.id)}
+              disabled={alreadyAdded}
+              variant="outline"
+              className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300"
+            >
+              {alreadyAdded ? "✓ " : "+ "}
+              {preset.name}
+            </Button>
+          );
+        })}
       </div>
     </div>
   );

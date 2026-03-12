@@ -111,6 +111,16 @@ export function PpcBannerEditorClient() {
     });
   };
 
+  const onFormatPatch = (changes: Partial<BannerFormat>) => {
+    setSaved(false);
+    setBanner((prev) => {
+      if (!prev) return prev;
+      const nextFormats = [...prev.formats];
+      nextFormats[activeFormatIndex] = { ...nextFormats[activeFormatIndex], ...changes };
+      return { ...prev, formats: nextFormats };
+    });
+  };
+
   const onAddFormat = (id: string) => {
     setBanner((prev) => {
       if (!prev) return prev;
@@ -256,7 +266,7 @@ export function PpcBannerEditorClient() {
               backgroundSize: "20px 20px",
             }}
           />
-          <BannerCanvas banner={banner} format={activeFormat} />
+          <BannerCanvas banner={banner} format={activeFormat} editable onFormatPatch={onFormatPatch} />
         </div>
 
         <div className="flex w-80 shrink-0 flex-col overflow-hidden border-l border-slate-200/80 bg-white/85 backdrop-blur">
