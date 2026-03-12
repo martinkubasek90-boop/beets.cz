@@ -101,7 +101,7 @@ export function PpcBannerEditorClient() {
     setBanner((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
-  const onFormatChange = (field: keyof BannerFormat, value: number) => {
+  const onFormatChange = (field: keyof BannerFormat, value: string | number | boolean) => {
     setSaved(false);
     setBanner((prev) => {
       if (!prev) return prev;

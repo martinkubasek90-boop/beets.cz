@@ -26,7 +26,7 @@ export function PropertyPanel({
   banner: Banner;
   format?: BannerFormat;
   onBannerChange: (field: keyof Banner, value: string) => void;
-  onFormatChange: (field: keyof BannerFormat, value: number) => void;
+  onFormatChange: (field: keyof BannerFormat, value: string | number | boolean) => void;
 }) {
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
@@ -232,6 +232,71 @@ export function PropertyPanel({
       </div>
       {format ? (
         <>
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Posun a velikosti prvků</p>
+            <div className="space-y-2">
+              <Label className="text-xs">Velikost loga: {format.logoScale.toFixed(2)}x</Label>
+              <Input type="range" min={0.6} max={2.2} step={0.05} value={format.logoScale} onChange={(e) => onFormatChange("logoScale", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun textu X: {format.textOffsetX}px</Label>
+              <Input type="range" min={-320} max={320} step={2} value={format.textOffsetX} onChange={(e) => onFormatChange("textOffsetX", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun textu Y: {format.textOffsetY}px</Label>
+              <Input type="range" min={-320} max={320} step={2} value={format.textOffsetY} onChange={(e) => onFormatChange("textOffsetY", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun loga X: {format.logoOffsetX}px</Label>
+              <Input type="range" min={-260} max={260} step={2} value={format.logoOffsetX} onChange={(e) => onFormatChange("logoOffsetX", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun loga Y: {format.logoOffsetY}px</Label>
+              <Input type="range" min={-260} max={260} step={2} value={format.logoOffsetY} onChange={(e) => onFormatChange("logoOffsetY", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun CTA X: {format.ctaOffsetX}px</Label>
+              <Input type="range" min={-260} max={260} step={2} value={format.ctaOffsetX} onChange={(e) => onFormatChange("ctaOffsetX", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Posun CTA Y: {format.ctaOffsetY}px</Label>
+              <Input type="range" min={-260} max={260} step={2} value={format.ctaOffsetY} onChange={(e) => onFormatChange("ctaOffsetY", Number(e.target.value))} />
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Barevný obrazec</p>
+            <label className="flex items-center justify-between text-xs text-slate-700">
+              <span>Zapnout obrazec</span>
+              <input type="checkbox" checked={format.shapeEnabled} onChange={(e) => onFormatChange("shapeEnabled", e.target.checked)} />
+            </label>
+            <Label className="text-xs">Tvar</Label>
+            <select value={format.shapeType} onChange={(e) => onFormatChange("shapeType", e.target.value)} className="h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800">
+              <option value="circle">Kruh</option>
+              <option value="rect">Obdélník</option>
+            </select>
+            <div className="space-y-2">
+              <Label className="text-xs">Barva</Label>
+              <Input type="color" value={format.shapeColor} onChange={(e) => onFormatChange("shapeColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Opacity: {format.shapeOpacity}%</Label>
+              <Input type="range" min={0} max={100} value={format.shapeOpacity} onChange={(e) => onFormatChange("shapeOpacity", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Pozice X: {format.shapeX}%</Label>
+              <Input type="range" min={0} max={100} value={format.shapeX} onChange={(e) => onFormatChange("shapeX", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Pozice Y: {format.shapeY}%</Label>
+              <Input type="range" min={0} max={100} value={format.shapeY} onChange={(e) => onFormatChange("shapeY", Number(e.target.value))} />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Velikost: {format.shapeSize}%</Label>
+              <Input type="range" min={4} max={80} value={format.shapeSize} onChange={(e) => onFormatChange("shapeSize", Number(e.target.value))} />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label className="text-xs">Velikost headline: {format.headlineSize}px</Label>
             <Input

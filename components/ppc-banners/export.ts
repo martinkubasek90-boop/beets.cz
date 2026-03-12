@@ -112,6 +112,13 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
 
   const pad = format.padding;
   const maxWidth = canvas.width - pad * 2;
+  const logoScale = Math.max(0.5, Math.min(2.4, format.logoScale || 1));
+  const logoOffsetX = format.logoOffsetX || 0;
+  const logoOffsetY = format.logoOffsetY || 0;
+  const textOffsetX = format.textOffsetX || 0;
+  const textOffsetY = format.textOffsetY || 0;
+  const ctaOffsetX = format.ctaOffsetX || 0;
+  const ctaOffsetY = format.ctaOffsetY || 0;
 
   if (bgSrc) {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -121,45 +128,66 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  let headerY = pad;
+  if (format.shapeEnabled) {
+    const minSide = Math.min(canvas.width, canvas.height);
+    const shapeSize = Math.round(minSide * ((format.shapeSize || 24) / 100));
+    const shapeX = Math.round(canvas.width * ((format.shapeX || 78) / 100) - shapeSize / 2);
+    const shapeY = Math.round(canvas.height * ((format.shapeY || 22) / 100) - shapeSize / 2);
+    ctx.globalAlpha = Math.max(0, Math.min(1, (format.shapeOpacity || 0) / 100));
+    ctx.fillStyle = format.shapeColor || "#06B6D4";
+    if (format.shapeType === "rect") {
+      roundedRectPath(ctx, shapeX, shapeY, shapeSize, shapeSize, Math.round(shapeSize * 0.15));
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(shapeX + shapeSize / 2, shapeY + shapeSize / 2, shapeSize / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  let headerY = pad + logoOffsetY;
   const logoSrc = await resolveImageSource(banner.logoUrl);
   if (logoSrc) {
     try {
       const logo = await loadImage(logoSrc);
       const maxLogoH = Math.max(28, Math.round(canvas.height * 0.07));
-      const scale = maxLogoH / logo.height;
+      const scale = (maxLogoH / logo.height) * logoScale;
       const w = logo.width * scale;
       const h = logo.height * scale;
-      ctx.drawImage(logo, pad, headerY, w, h);
+      const logoX = pad + logoOffsetX;
+      ctx.drawImage(logo, logoX, headerY, w, h);
       ctx.font = "700 24px Inter, Arial, sans-serif";
       ctx.fillStyle = banner.textColor || "#ffffff";
       ctx.textBaseline = "middle";
-      ctx.fillText(banner.brandName || "", pad + w + 14, headerY + h / 2);
+      ctx.fillText(banner.brandName || "", logoX + w + 14, headerY + h / 2);
       headerY += h + 18;
     } catch {}
   } else {
     ctx.font = "700 24px Inter, Arial, sans-serif";
     ctx.fillStyle = banner.textColor || "#ffffff";
     ctx.textBaseline = "top";
-    ctx.fillText((banner.brandName || "Brand").toUpperCase(), pad, headerY);
+    ctx.fillText((banner.brandName || "Brand").toUpperCase(), pad + logoOffsetX, headerY);
     headerY += 38;
   }
 
   ctx.fillStyle = banner.textColor || "#ffffff";
   ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
   ctx.textBaseline = "top";
-  const headlineLines = wrapLines(ctx, banner.headline || "Silný headline", maxWidth, format.layout === "vertical" ? 3 : 2);
-  let textY = headerY;
+  const textX = pad + textOffsetX;
+  const headlineLines = wrapLines(ctx, banner.headline || "Silný headline", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
+  let textY = headerY + textOffsetY;
   headlineLines.forEach((line) => {
-    ctx.fillText(line, pad, textY);
+    ctx.fillText(line, textX, textY);
     textY += format.headlineSize * 1.12;
   });
 
   textY += Math.max(10, Math.round(format.subheadlineSize * 0.5));
   ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
-  const subLines = wrapLines(ctx, banner.subheadline || "Krátké doplnění hodnoty.", maxWidth, format.layout === "vertical" ? 4 : 3);
+  const subLines = wrapLines(ctx, banner.subheadline || "Krátké doplnění hodnoty.", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
   subLines.forEach((line) => {
-    ctx.fillText(line, pad, textY);
+    ctx.fillText(line, textX, textY);
     textY += format.subheadlineSize * 1.32;
   });
 
@@ -169,8 +197,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctaPadY = Math.round(format.ctaSize * 0.6);
   const ctaW = Math.round(ctx.measureText(ctaText).width + ctaPadX * 2);
   const ctaH = Math.round(format.ctaSize + ctaPadY * 2);
-  const ctaX = pad;
-  const ctaY = canvas.height - pad - ctaH;
+  const ctaX = pad + ctaOffsetX;
+  const ctaY = canvas.height - pad - ctaH + ctaOffsetY;
   ctx.fillStyle = banner.ctaBg || "#facc15";
   roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, Math.round(ctaH * 0.28));
   ctx.fill();

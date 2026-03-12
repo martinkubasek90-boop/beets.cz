@@ -1,6 +1,6 @@
 "use client";
 
-import type { Banner, BannerGoal, BannerSnapshot, BannerStatus, BrandKit } from "@/components/ppc-banners/types";
+import { PRESET_FORMATS, type Banner, type BannerFormat, type BannerGoal, type BannerSnapshot, type BannerStatus, type BrandKit } from "@/components/ppc-banners/types";
 
 const BANNERS_KEY = "ppc_banners_v1";
 const BRAND_KIT_KEY = "ppc_brand_kit_v1";
@@ -16,11 +16,36 @@ function safeParse(input: string) {
 function withDefaults(banner: Banner): Banner {
   const goal: BannerGoal = banner.goal || "traffic";
   const status: BannerStatus = banner.status || "draft";
+  const normalizedFormats = (banner.formats || []).map((format) => withFormatDefaults(format));
   return {
     ...banner,
     goal,
     status,
+    formats: normalizedFormats.length ? normalizedFormats : [withFormatDefaults(PRESET_FORMATS[0])],
     versions: Array.isArray(banner.versions) ? banner.versions : [],
+  };
+}
+
+function withFormatDefaults(format: BannerFormat): BannerFormat {
+  const preset = PRESET_FORMATS.find((item) => item.id === format.id);
+  const fallback = preset || PRESET_FORMATS[0];
+  return {
+    ...fallback,
+    ...format,
+    logoScale: typeof format.logoScale === "number" ? format.logoScale : 1,
+    textOffsetX: typeof format.textOffsetX === "number" ? format.textOffsetX : 0,
+    textOffsetY: typeof format.textOffsetY === "number" ? format.textOffsetY : 0,
+    logoOffsetX: typeof format.logoOffsetX === "number" ? format.logoOffsetX : 0,
+    logoOffsetY: typeof format.logoOffsetY === "number" ? format.logoOffsetY : 0,
+    ctaOffsetX: typeof format.ctaOffsetX === "number" ? format.ctaOffsetX : 0,
+    ctaOffsetY: typeof format.ctaOffsetY === "number" ? format.ctaOffsetY : 0,
+    shapeEnabled: typeof format.shapeEnabled === "boolean" ? format.shapeEnabled : false,
+    shapeType: format.shapeType === "rect" ? "rect" : "circle",
+    shapeColor: format.shapeColor || "#06B6D4",
+    shapeOpacity: typeof format.shapeOpacity === "number" ? format.shapeOpacity : 26,
+    shapeX: typeof format.shapeX === "number" ? format.shapeX : 78,
+    shapeY: typeof format.shapeY === "number" ? format.shapeY : 22,
+    shapeSize: typeof format.shapeSize === "number" ? format.shapeSize : 24,
   };
 }
 
