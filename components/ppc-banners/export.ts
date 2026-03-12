@@ -123,11 +123,15 @@ function fitSize(width: number, height: number, maxWidth: number, maxHeight: num
 }
 
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
+  const pixelScale = 2;
+  const viewW = format.width;
+  const viewH = format.height;
   const canvas = document.createElement("canvas");
-  canvas.width = format.width;
-  canvas.height = format.height;
+  canvas.width = viewW * pixelScale;
+  canvas.height = viewH * pixelScale;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
+  ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
 
   const resolvedHeadline = format.headline ?? banner.headline;
   const resolvedSubheadline = format.subheadline ?? banner.subheadline;
@@ -147,20 +151,20 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctaAlignY = format.ctaAlignY || "bottom";
 
   ctx.fillStyle = resolvedBgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, viewW, viewH);
 
   const bgSrc = await resolveImageSource(resolvedBgImageUrl);
   if (bgSrc) {
     try {
       const bg = await loadImage(bgSrc);
-      const coverScale = Math.max(canvas.width / bg.width, canvas.height / bg.height);
+      const coverScale = Math.max(viewW / bg.width, viewH / bg.height);
       const scaleFactor = (typeof resolvedBgScale === "number" ? Math.max(10, Math.min(260, resolvedBgScale)) : 100) / 100;
       const drawW = bg.width * coverScale * scaleFactor;
       const drawH = bg.height * coverScale * scaleFactor;
       const posX = typeof resolvedBgPositionX === "number" ? Math.max(0, Math.min(100, resolvedBgPositionX)) : 50;
       const posY = typeof resolvedBgPositionY === "number" ? Math.max(0, Math.min(100, resolvedBgPositionY)) : 50;
-      const x = (canvas.width - drawW) * (posX / 100);
-      const y = (canvas.height - drawH) * (posY / 100);
+      const x = (viewW - drawW) * (posX / 100);
+      const y = (viewH - drawH) * (posY / 100);
       ctx.drawImage(bg, x, y, drawW, drawH);
     } catch {}
   }
@@ -173,22 +177,22 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const textOffsetY = format.textOffsetY || 0;
   const ctaOffsetX = format.ctaOffsetX || 0;
   const ctaOffsetY = format.ctaOffsetY || 0;
-  const boxW = canvas.width;
-  const boxH = canvas.height;
+  const boxW = viewW;
+  const boxH = viewH;
 
   if (bgSrc) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, viewH);
     gradient.addColorStop(0, "rgba(2,6,23,0.24)");
     gradient.addColorStop(1, "rgba(2,6,23,0.45)");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, viewW, viewH);
   }
 
   if (format.shapeEnabled) {
-    const minSide = Math.min(canvas.width, canvas.height);
+    const minSide = Math.min(viewW, viewH);
     const shapeSize = Math.round(minSide * ((format.shapeSize || 24) / 100));
-    const shapeX = Math.round(canvas.width * ((format.shapeX || 78) / 100) - shapeSize / 2);
-    const shapeY = Math.round(canvas.height * ((format.shapeY || 22) / 100) - shapeSize / 2);
+    const shapeX = Math.round(viewW * ((format.shapeX || 78) / 100) - shapeSize / 2);
+    const shapeY = Math.round(viewH * ((format.shapeY || 22) / 100) - shapeSize / 2);
     ctx.globalAlpha = Math.max(0, Math.min(1, (format.shapeOpacity || 0) / 100));
     ctx.fillStyle = format.shapeColor || "#06B6D4";
     if (format.shapeType === "rect") {
@@ -306,6 +310,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, Math.round(ctaH * 0.28));
   ctx.fill();
   ctx.fillStyle = banner.ctaTextColor || "#111827";
+  ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.fillText(ctaText, ctaX + ctaPadX, ctaY + ctaH / 2);
 
