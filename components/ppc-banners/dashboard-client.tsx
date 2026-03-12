@@ -89,7 +89,7 @@ export function PpcBannersDashboardClient() {
             </div>
             <div className="flex gap-2">
               <Link href="/">
-                <Button variant="outline" className="border-slate-300 bg-white/70 hover:bg-white">Domů</Button>
+                <Button variant="outline" className="border-slate-300 bg-white/70 text-slate-700 hover:bg-white disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">Domů</Button>
               </Link>
               <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700 shadow-lg shadow-cyan-500/30">
                 <Plus className="mr-2 h-4 w-4" />

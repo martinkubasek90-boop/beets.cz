@@ -223,7 +223,7 @@ export function CreateBannerWizard({
                 <Label className="text-slate-700">URL webu</Label>
                 <div className="flex gap-2">
                   <Input value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://beets.cz" />
-                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={hydrateFromUrl} disabled={loadingMetadata}>
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300" onClick={hydrateFromUrl} disabled={loadingMetadata}>
                     {loadingMetadata ? <Loader2 className="h-4 w-4 animate-spin" /> : "Načíst"}
                   </Button>
                 </div>
@@ -241,10 +241,10 @@ export function CreateBannerWizard({
                     <option value="sale">Prodej (sale)</option>
                     <option value="remarketing">Remarketing</option>
                   </select>
-                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={() => applyGoalTemplate(goal)}>
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300" onClick={() => applyGoalTemplate(goal)}>
                     Šablona textů
                   </Button>
-                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={storeBrandKit}>
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300" onClick={storeBrandKit}>
                     Uložit brand kit
                   </Button>
                 </div>
@@ -316,7 +316,7 @@ export function CreateBannerWizard({
                 <Label className="text-slate-700">Prompt pro AI pozadí (free tier)</Label>
                 <div className="flex gap-2">
                   <Input value={bgPrompt} onChange={(e) => setBgPrompt(e.target.value)} className="border-slate-200 bg-white" placeholder="např. clean modern abstract gradient for fintech ad banner" />
-                  <Button type="button" onClick={generateBackground} disabled={generatingBg || !bgPrompt.trim()} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700">
+                  <Button type="button" onClick={generateBackground} disabled={generatingBg || !bgPrompt.trim()} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:from-slate-200 disabled:to-slate-200">
                     {generatingBg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -374,7 +374,7 @@ export function CreateBannerWizard({
 
         </div>
         <div className="mt-6 flex shrink-0 justify-end gap-2 border-t border-slate-200/70 p-5 sm:p-6">
-          <Button variant="outline" onClick={onClose} className="border-slate-300 bg-white/80 text-slate-700 hover:bg-white">Zrušit</Button>
+          <Button variant="outline" onClick={onClose} className="border-slate-300 bg-white/80 text-slate-700 hover:bg-white disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">Zrušit</Button>
           <Button onClick={create} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700">Vytvořit banner</Button>
         </div>
       </div>

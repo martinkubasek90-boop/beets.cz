@@ -37,13 +37,13 @@ export function FormatSelector({
         ))}
       </div>
       <div className="space-y-2">
-        <Button onClick={() => onAdd("1200x628")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
+        <Button onClick={() => onAdd("1200x628")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
           + Meta 1200x628
         </Button>
-        <Button onClick={() => onAdd("1080x1080")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
+        <Button onClick={() => onAdd("1080x1080")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
           + Square 1080x1080
         </Button>
-        <Button onClick={() => onAdd("1080x1920")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
+        <Button onClick={() => onAdd("1080x1920")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300">
           + Story 1080x1920
         </Button>
       </div>
