@@ -34,8 +34,17 @@ export function BannerCanvas({
           className="flex h-full w-full flex-col justify-between"
           style={{ padding, background: banner.bgImageUrl ? "linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.42))" : undefined }}
         >
-          <div className="text-xs font-bold uppercase tracking-wide" style={{ color: banner.textColor }}>
-            {banner.brandName || "Vaše značka"}
+          <div className="flex items-center gap-2">
+            {banner.logoUrl ? (
+              <img
+                src={banner.logoUrl}
+                alt="Logo"
+                className="max-h-8 w-auto max-w-[130px] rounded object-contain"
+              />
+            ) : null}
+            <div className="text-xs font-bold uppercase tracking-wide" style={{ color: banner.textColor }}>
+              {banner.brandName || "Vaše značka"}
+            </div>
           </div>
           <div>
             <h2
@@ -69,4 +78,3 @@ export function BannerCanvas({
     </div>
   );
 }
-

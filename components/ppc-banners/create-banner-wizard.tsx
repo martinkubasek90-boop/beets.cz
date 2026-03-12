@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,15 @@ import { PRESET_FORMATS } from "@/components/ppc-banners/types";
 
 function uid() {
   return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export function CreateBannerWizard({
@@ -31,7 +41,12 @@ export function CreateBannerWizard({
   const [textColor, setTextColor] = useState("#FFFFFF");
   const [ctaBg, setCtaBg] = useState("#FACC15");
   const [ctaTextColor, setCtaTextColor] = useState("#111827");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bgImageUrl, setBgImageUrl] = useState("");
+  const [bgPrompt, setBgPrompt] = useState("");
   const [selectedFormatIds, setSelectedFormatIds] = useState<string[]>(["1200x628", "1080x1080"]);
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [generatingBg, setGeneratingBg] = useState(false);
 
   const selectedFormats = useMemo<BannerFormat[]>(
     () => PRESET_FORMATS.filter((item) => selectedFormatIds.includes(item.id)),
@@ -55,8 +70,11 @@ export function CreateBannerWizard({
       ctaText: ctaText.trim() || "Zjistit více",
       brandName: brandName.trim() || "BEETS.CZ",
       brandUrl: brandUrl.trim(),
-      bgMode: "none",
+      logoUrl: logoUrl.trim() || undefined,
+      bgMode: bgImageUrl ? "upload" : bgPrompt ? "generate" : "none",
       bgColor,
+      bgImageUrl: bgImageUrl || undefined,
+      bgPrompt: bgPrompt || undefined,
       textColor,
       ctaBg,
       ctaTextColor,
@@ -66,6 +84,60 @@ export function CreateBannerWizard({
       createdAt: now,
     });
     onClose();
+  };
+
+  const hydrateFromUrl = async () => {
+    const input = brandUrl.trim();
+    if (!input) return;
+    setLoadingMetadata(true);
+    try {
+      const response = await fetch(`/api/ppc-banners/metadata?url=${encodeURIComponent(input)}`, {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Metadata se nepodařilo načíst.");
+      if (data.brandName) setBrandName(data.brandName);
+      if (data.headline && !headline) setHeadline(data.headline);
+      if (data.subheadline && !subheadline) setSubheadline(data.subheadline);
+      if (data.brandUrl) setBrandUrl(data.brandUrl);
+      if (data.logoUrl && !logoUrl) setLogoUrl(data.logoUrl);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingMetadata(false);
+    }
+  };
+
+  const onLogoUpload = async (file: File | null) => {
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    setLogoUrl(dataUrl);
+  };
+
+  const onBgUpload = async (file: File | null) => {
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    setBgImageUrl(dataUrl);
+  };
+
+  const generateBackground = async () => {
+    const prompt = bgPrompt.trim();
+    if (!prompt) return;
+    setGeneratingBg(true);
+    try {
+      const response = await fetch("/api/ppc-banners/generate-background", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, width: 1536, height: 1024 }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.error || "Generování pozadí selhalo.");
+      if (data.imageUrl) setBgImageUrl(data.imageUrl);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setGeneratingBg(false);
+    }
   };
 
   return (
@@ -93,7 +165,12 @@ export function CreateBannerWizard({
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-slate-700">URL webu</Label>
-                <Input value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://beets.cz" />
+                <div className="flex gap-2">
+                  <Input value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://beets.cz" />
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={hydrateFromUrl} disabled={loadingMetadata}>
+                    {loadingMetadata ? <Loader2 className="h-4 w-4 animate-spin" /> : "Načíst"}
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-slate-700">Headline</Label>
@@ -106,6 +183,20 @@ export function CreateBannerWizard({
               <div className="space-y-2">
                 <Label className="text-slate-700">CTA</Label>
                 <Input value={ctaText} onChange={(e) => setCtaText(e.target.value)} className="border-slate-200 bg-white" />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-700">Logo URL</Label>
+                <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../logo.png" />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-slate-700">Nahrát logo</Label>
+                <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <Upload className="h-4 w-4" />
+                  Vybrat soubor
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => void onLogoUpload(e.target.files?.[0] || null)} />
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -129,16 +220,43 @@ export function CreateBannerWizard({
                   <Input type="color" value={ctaTextColor} onChange={(e) => setCtaTextColor(e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
                 </div>
               </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-slate-700">Pozadí URL (image)</Label>
+                <Input value={bgImageUrl} onChange={(e) => setBgImageUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../background.jpg" />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-slate-700">Nahrát pozadí</Label>
+                <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <Upload className="h-4 w-4" />
+                  Vybrat obrázek
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => void onBgUpload(e.target.files?.[0] || null)} />
+                </label>
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-slate-700">Prompt pro AI pozadí (free tier)</Label>
+                <div className="flex gap-2">
+                  <Input value={bgPrompt} onChange={(e) => setBgPrompt(e.target.value)} className="border-slate-200 bg-white" placeholder="např. clean modern abstract gradient for fintech ad banner" />
+                  <Button type="button" onClick={generateBackground} disabled={generatingBg || !bgPrompt.trim()} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700">
+                    {generatingBg ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Živý náhled stylu</p>
-              <div className="rounded-xl p-4" style={{ backgroundColor: bgColor }}>
-                <p className="text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: textColor }}>
-                  {brandName || "BEETS.CZ"}
-                </p>
+              <div className="rounded-xl bg-cover bg-center p-4" style={{ backgroundColor: bgColor, backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined }}>
+                <div className="mb-2 flex items-center gap-2">
+                  {logoUrl ? <img src={logoUrl} alt="Logo" className="h-6 w-auto max-w-[100px] object-contain" /> : null}
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: textColor }}>
+                    {brandName || "BEETS.CZ"}
+                  </p>
+                </div>
                 <p className="mt-2 text-lg font-bold leading-tight" style={{ color: textColor }}>
                   {headline || "Váš headline se zobrazí tady"}
                 </p>

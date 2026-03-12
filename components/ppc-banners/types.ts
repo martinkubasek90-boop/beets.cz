@@ -20,6 +20,7 @@ export type Banner = {
   ctaText: string;
   brandName: string;
   brandUrl: string;
+  logoUrl?: string;
   bgMode: "none" | "upload" | "generate";
   bgColor: string;
   bgImageUrl?: string;
@@ -43,4 +44,3 @@ export const PRESET_FORMATS: BannerFormat[] = [
   { id: "300x600", name: "Half-page 300x600", width: 300, height: 600, layout: "vertical", headlineSize: 42, subheadlineSize: 22, ctaSize: 18, padding: 26 },
   { id: "160x600", name: "Skyscraper 160x600", width: 160, height: 600, layout: "vertical", headlineSize: 30, subheadlineSize: 16, ctaSize: 13, padding: 16 },
 ];
-
