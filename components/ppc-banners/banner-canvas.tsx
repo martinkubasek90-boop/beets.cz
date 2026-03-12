@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from "react";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
 
@@ -178,7 +178,7 @@ export function BannerCanvas({
     };
   };
 
-  const onResizeWheel = (target: ResizeTarget, event: ReactMouseEvent) => {
+  const onResizeWheel = (target: ResizeTarget, event: ReactWheelEvent) => {
     if (!editable || !onFormatPatch) return;
     event.preventDefault();
     event.stopPropagation();
