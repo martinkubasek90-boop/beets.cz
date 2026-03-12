@@ -1,6 +1,7 @@
 "use client";
 
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
+import { toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
 
 export function BannerCanvas({
   banner,
@@ -16,6 +17,7 @@ export function BannerCanvas({
   const headlineSize = Math.max(12, Math.round(format.headlineSize * scale));
   const subheadlineSize = Math.max(10, Math.round(format.subheadlineSize * scale));
   const ctaSize = Math.max(10, Math.round(format.ctaSize * scale));
+  const bgPreviewUrl = toPreviewImageUrl(banner.bgImageUrl);
 
   return (
     <div className="relative z-10 flex h-full items-center justify-center p-6">
@@ -25,14 +27,14 @@ export function BannerCanvas({
           width: `${Math.round(format.width * scale)}px`,
           height: `${Math.round(format.height * scale)}px`,
           backgroundColor: banner.bgColor,
-          backgroundImage: banner.bgImageUrl ? `url(${banner.bgImageUrl})` : undefined,
+          backgroundImage: bgPreviewUrl ? `url("${bgPreviewUrl}")` : undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
         <div
           className="flex h-full w-full flex-col justify-between"
-          style={{ padding, background: banner.bgImageUrl ? "linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.42))" : undefined }}
+          style={{ padding, background: bgPreviewUrl ? "linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.42))" : undefined }}
         >
           <div className="flex items-center gap-2">
             {banner.logoUrl ? (

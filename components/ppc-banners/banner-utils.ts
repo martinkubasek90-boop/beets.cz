@@ -145,3 +145,29 @@ export function decodeSharePayload(value: string): Banner | null {
     return null;
   }
 }
+
+export function normalizeImageUrl(value?: string) {
+  if (!value) return "";
+  let next = value.trim();
+  if ((next.startsWith('"') && next.endsWith('"')) || (next.startsWith("'") && next.endsWith("'"))) {
+    next = next.slice(1, -1).trim();
+  }
+  next = next.replace(/['"]+$/g, "").trim();
+  return next;
+}
+
+export function toPreviewImageUrl(value?: string) {
+  const normalized = normalizeImageUrl(value);
+  if (!normalized) return "";
+  if (
+    normalized.startsWith("data:") ||
+    normalized.startsWith("blob:") ||
+    normalized.startsWith("/api/ppc-banners/image-proxy")
+  ) {
+    return normalized;
+  }
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+    return `/api/ppc-banners/image-proxy?url=${encodeURIComponent(normalized)}`;
+  }
+  return normalized;
+}

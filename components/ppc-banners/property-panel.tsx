@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2, Sparkles, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { computeChecklist, contrastRatio } from "@/components/ppc-banners/banner-utils";
+import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components/ppc-banners/banner-utils";
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
@@ -80,7 +80,7 @@ export function PropertyPanel({
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Generování pozadí selhalo.");
       if (data.imageUrl) {
-        onBannerChange("bgImageUrl", data.imageUrl);
+        onBannerChange("bgImageUrl", normalizeImageUrl(data.imageUrl));
         onBannerChange("bgMode", "generate");
       }
     } catch (error) {
@@ -211,7 +211,7 @@ export function PropertyPanel({
       </div>
       <div className="space-y-2">
         <Label className="text-xs text-slate-600">Pozadí URL</Label>
-        <Input value={banner.bgImageUrl || ""} onChange={(e) => onBannerChange("bgImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../bg.jpg" />
+        <Input value={banner.bgImageUrl || ""} onChange={(e) => onBannerChange("bgImageUrl", normalizeImageUrl(e.target.value))} className="border-slate-200 bg-white" placeholder="https://.../bg.jpg" />
       </div>
       <div className="space-y-2">
         <Label className="text-xs text-slate-600">Nahrát pozadí</Label>

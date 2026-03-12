@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { PRESET_FORMATS } from "@/components/ppc-banners/types";
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
+import { normalizeImageUrl, toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
 
 function uid() {
   return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -187,13 +188,14 @@ export function CreateBannerWizard({
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Generování pozadí selhalo.");
-      if (data.imageUrl) setBgImageUrl(data.imageUrl);
+      if (data.imageUrl) setBgImageUrl(normalizeImageUrl(data.imageUrl));
     } catch (error) {
       console.error(error);
     } finally {
       setGeneratingBg(false);
     }
   };
+  const bgPreviewUrl = toPreviewImageUrl(bgImageUrl);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/55 p-3 backdrop-blur-sm">
@@ -300,7 +302,7 @@ export function CreateBannerWizard({
 
               <div className="space-y-2 md:col-span-2">
                 <Label className="text-slate-700">Pozadí URL (image)</Label>
-                <Input value={bgImageUrl} onChange={(e) => setBgImageUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../background.jpg" />
+                <Input value={bgImageUrl} onChange={(e) => setBgImageUrl(normalizeImageUrl(e.target.value))} className="border-slate-200 bg-white" placeholder="https://.../background.jpg" />
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -327,7 +329,7 @@ export function CreateBannerWizard({
           <div className="space-y-4 min-w-0">
             <div className="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Živý náhled stylu</p>
-              <div className="rounded-xl bg-cover bg-center p-4" style={{ backgroundColor: bgColor, backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined }}>
+              <div className="rounded-xl bg-cover bg-center p-4" style={{ backgroundColor: bgColor, backgroundImage: bgPreviewUrl ? `url("${bgPreviewUrl}")` : undefined }}>
                 <div className="mb-2 flex items-center gap-2">
                   {logoUrl ? <img src={logoUrl} alt="Logo" className="h-6 w-auto max-w-[100px] object-contain" /> : null}
                   <p className="text-xs font-semibold uppercase tracking-wide opacity-90" style={{ color: textColor }}>
