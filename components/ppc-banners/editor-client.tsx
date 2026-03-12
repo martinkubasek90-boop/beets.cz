@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Download, Loader2, Save, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, Archive, Check, Download, History, Loader2, Save, Settings, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getBannerById, upsertBanner } from "@/components/ppc-banners/storage";
+import { applySnapshot, getBannerById, makeSnapshot, upsertBanner } from "@/components/ppc-banners/storage";
 import { PRESET_FORMATS, type Banner, type BannerFormat } from "@/components/ppc-banners/types";
 import { BannerCanvas } from "@/components/ppc-banners/banner-canvas";
 import { FormatSelector } from "@/components/ppc-banners/format-selector";
 import { PropertyPanel } from "@/components/ppc-banners/property-panel";
 import { AIAssistant } from "@/components/ppc-banners/ai-assistant";
-import { exportBannerPng } from "@/components/ppc-banners/export";
+import { exportBannerPng, exportBannerZip } from "@/components/ppc-banners/export";
+import { computeChecklist, encodeSharePayload, isChecklistComplete } from "@/components/ppc-banners/banner-utils";
 
 export function PpcBannerEditorClient() {
   const router = useRouter();
@@ -23,38 +24,85 @@ export function PpcBannerEditorClient() {
   const [activeFormatIndex, setActiveFormatIndex] = useState(0);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [autosaveTick, setAutosaveTick] = useState(0);
   const [tab, setTab] = useState<"properties" | "ai">("properties");
+
+  const initDoneRef = useRef(false);
 
   useEffect(() => {
     if (!bannerId) return;
     const loaded = getBannerById(bannerId);
     if (!loaded) return;
-    setBanner(loaded);
-    setActiveFormatIndex(loaded.activeFormatIndex || 0);
+    const checklist = computeChecklist(loaded);
+    const normalized: Banner = {
+      ...loaded,
+      checklist,
+      status: loaded.status === "ready" && !isChecklistComplete(checklist) ? "draft" : loaded.status || "draft",
+      versions: loaded.versions || [],
+      goal: loaded.goal || "traffic",
+    };
+    setBanner(normalized);
+    setActiveFormatIndex(normalized.activeFormatIndex || 0);
+    initDoneRef.current = true;
   }, [bannerId]);
 
   const activeFormat = useMemo(() => banner?.formats?.[activeFormatIndex], [banner, activeFormatIndex]);
+  const checklist = useMemo(() => (banner ? computeChecklist(banner) : null), [banner]);
 
-  const save = () => {
+  const persist = (options?: { createVersion?: boolean; label?: string; autosave?: boolean }) => {
     if (!banner) return;
     setSaving(true);
+    const nextChecklist = computeChecklist(banner);
+    const complete = isChecklistComplete(nextChecklist);
+    const now = new Date().toISOString();
+
     const next: Banner = {
       ...banner,
       activeFormatIndex,
-      updatedAt: new Date().toISOString(),
+      checklist: nextChecklist,
+      status: complete ? banner.status || "ready" : "draft",
+      autosavedAt: options?.autosave ? now : banner.autosavedAt,
+      updatedAt: now,
+      versions: banner.versions || [],
     };
+
+    if (options?.createVersion) {
+      const version = {
+        id: `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+        label: options.label || "Ruční verze",
+        savedAt: now,
+        snapshot: makeSnapshot(next),
+      };
+      next.versions = [version, ...(next.versions || [])].slice(0, 20);
+    }
+
     upsertBanner(next);
     setBanner(next);
     setSaving(false);
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 1600);
+    if (!options?.autosave) {
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 1600);
+    } else {
+      setAutosaveTick((prev) => prev + 1);
+    }
   };
 
+  useEffect(() => {
+    if (!banner || !initDoneRef.current) return;
+    const timer = window.setTimeout(() => {
+      persist({ autosave: true });
+    }, 900);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [banner, activeFormatIndex]);
+
   const onBannerChange = (field: keyof Banner, value: string) => {
+    setSaved(false);
     setBanner((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
   const onFormatChange = (field: keyof BannerFormat, value: number) => {
+    setSaved(false);
     setBanner((prev) => {
       if (!prev) return prev;
       const nextFormats = [...prev.formats];
@@ -103,6 +151,43 @@ export function PpcBannerEditorClient() {
     }
   };
 
+  const onExportZip = async () => {
+    if (!banner) return;
+    try {
+      await exportBannerZip(banner);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const onCopyShareLink = async () => {
+    if (!banner) return;
+    const encoded = encodeSharePayload(banner);
+    const format = banner.formats[activeFormatIndex];
+    const url = `${window.location.origin}/ppc-banners/preview?data=${encodeURIComponent(encoded)}${format ? `&format=${encodeURIComponent(format.id)}` : ""}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 1400);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const onRestoreVersion = (versionId: string) => {
+    setBanner((prev) => {
+      if (!prev) return prev;
+      const version = (prev.versions || []).find((item) => item.id === versionId);
+      if (!version) return prev;
+      const restored = applySnapshot(prev, version.snapshot);
+      return {
+        ...restored,
+        versions: prev.versions,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+  };
+
   if (!banner) {
     return (
       <div className="flex h-screen items-center justify-center bg-[radial-gradient(800px_500px_at_20%_-20%,#d9f5ef_0%,#f8fafc_55%,#eef2ff_100%)]">
@@ -129,13 +214,29 @@ export function PpcBannerEditorClient() {
           </Link>
           <div className="h-5 w-px bg-slate-200" />
           <Input value={banner.name} onChange={(e) => onBannerChange("name", e.target.value)} className="h-8 w-56 border-none bg-transparent shadow-none text-sm font-semibold focus-visible:ring-1" />
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${banner.status === "ready" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            {banner.status}
+          </span>
+          <span key={autosaveTick} className="text-[11px] text-slate-500">Autosave aktivní</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
+          <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Download className="mr-1.5 h-3.5 w-3.5" />
-            Export PNG
+            PNG
           </Button>
-          <Button onClick={save} size="sm" disabled={saving} className={saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"}>
+          <Button onClick={onExportZip} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <Archive className="mr-1.5 h-3.5 w-3.5" />
+            ZIP
+          </Button>
+          <Button onClick={onCopyShareLink} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <Share2 className="mr-1.5 h-3.5 w-3.5" />
+            Sdílet
+          </Button>
+          <Button onClick={() => persist({ createVersion: true, label: "Ruční verze" })} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <History className="mr-1.5 h-3.5 w-3.5" />
+            Uložit verzi
+          </Button>
+          <Button onClick={() => persist()} size="sm" disabled={saving} className={saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"}>
             {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
             {saved ? "Uloženo" : "Uložit"}
           </Button>
@@ -159,7 +260,43 @@ export function PpcBannerEditorClient() {
         </div>
 
         <div className="flex w-80 shrink-0 flex-col overflow-hidden border-l border-slate-200/80 bg-white/85 backdrop-blur">
-          <div className="m-3 flex rounded-lg bg-slate-100 p-1">
+          <div className="m-3 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Checklist</p>
+            <div className="mt-2 space-y-1">
+              {checklist ? Object.entries(checklist).map(([key, ok]) => (
+                <div key={key} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600">{key}</span>
+                  <span className={ok ? "text-emerald-600" : "text-red-600"}>{ok ? "OK" : "Chybí"}</span>
+                </div>
+              )) : null}
+            </div>
+            <Button
+              size="sm"
+              className="mt-2 w-full bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700"
+              onClick={() => onBannerChange("status", isChecklistComplete(checklist || computeChecklist(banner)) ? "ready" : "draft")}
+            >
+              Označit jako {isChecklistComplete(checklist || computeChecklist(banner)) ? "Ready" : "Draft"}
+            </Button>
+          </div>
+
+          <div className="mx-3 mb-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Historie verzí</p>
+            <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">
+              {(banner.versions || []).slice(0, 8).map((version) => (
+                <button
+                  key={version.id}
+                  type="button"
+                  onClick={() => onRestoreVersion(version.id)}
+                  className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-left text-[11px] text-slate-700 hover:border-cyan-300"
+                >
+                  <div className="font-semibold">{version.label}</div>
+                  <div className="text-slate-500">{new Date(version.savedAt).toLocaleString("cs-CZ")}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="m-3 mt-0 flex rounded-lg bg-slate-100 p-1">
             <button type="button" onClick={() => setTab("properties")} className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${tab === "properties" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>
               <Settings className="h-3.5 w-3.5" />
               Vlastnosti

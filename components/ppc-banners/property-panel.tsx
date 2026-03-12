@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Loader2, Sparkles, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { computeChecklist, contrastRatio } from "@/components/ppc-banners/banner-utils";
+import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
 function fileToDataUrl(file: File) {
@@ -28,6 +30,9 @@ export function PropertyPanel({
 }) {
   const [loadingMeta, setLoadingMeta] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
+  const checklist = computeChecklist(banner);
+  const textContrast = contrastRatio(banner.bgColor, banner.textColor).toFixed(2);
+  const ctaContrast = contrastRatio(banner.ctaBg, banner.ctaTextColor).toFixed(2);
 
   const hydrateFromUrl = async () => {
     if (!banner.brandUrl) return;
@@ -85,8 +90,63 @@ export function PropertyPanel({
     }
   };
 
+  const persistBrandKit = () => {
+    saveBrandKit({
+      brandName: banner.brandName,
+      brandUrl: banner.brandUrl,
+      logoUrl: banner.logoUrl,
+      bgColor: banner.bgColor,
+      textColor: banner.textColor,
+      ctaBg: banner.ctaBg,
+      ctaTextColor: banner.ctaTextColor,
+      updatedAt: new Date().toISOString(),
+    });
+  };
+
+  const applyBrandKit = () => {
+    const brandKit = getBrandKit();
+    if (!brandKit) return;
+    onBannerChange("brandName", brandKit.brandName || banner.brandName);
+    onBannerChange("brandUrl", brandKit.brandUrl || banner.brandUrl);
+    onBannerChange("logoUrl", brandKit.logoUrl || "");
+    onBannerChange("bgColor", brandKit.bgColor || banner.bgColor);
+    onBannerChange("textColor", brandKit.textColor || banner.textColor);
+    onBannerChange("ctaBg", brandKit.ctaBg || banner.ctaBg);
+    onBannerChange("ctaTextColor", brandKit.ctaTextColor || banner.ctaTextColor);
+  };
+
   return (
     <div className="space-y-4 p-3">
+      <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <Label className="text-xs text-slate-600">Cíl kampaně</Label>
+        <select
+          value={banner.goal}
+          onChange={(e) => onBannerChange("goal", e.target.value)}
+          className="h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800"
+        >
+          <option value="traffic">Návštěvnost</option>
+          <option value="leads">Poptávky</option>
+          <option value="sale">Prodej</option>
+          <option value="remarketing">Remarketing</option>
+        </select>
+        <Label className="text-xs text-slate-600">Stav</Label>
+        <select
+          value={banner.status}
+          onChange={(e) => onBannerChange("status", e.target.value)}
+          className="h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-800"
+        >
+          <option value="draft">Draft</option>
+          <option value="ready">Ready</option>
+        </select>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={persistBrandKit} className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            Uložit brand kit
+          </button>
+          <button type="button" onClick={applyBrandKit} className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            Použít brand kit
+          </button>
+        </div>
+      </div>
       <div className="space-y-2">
         <Label className="text-xs text-slate-600">URL webu</Label>
         <div className="flex gap-2">
@@ -139,6 +199,15 @@ export function PropertyPanel({
           <Label className="text-xs text-slate-600">CTA text</Label>
           <Input type="color" value={banner.ctaTextColor} onChange={(e) => onBannerChange("ctaTextColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
+      </div>
+      <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Kontrola kontrastu</p>
+        <p className={`text-xs ${checklist.contrastTextOk ? "text-emerald-700" : "text-red-600"}`}>
+          Text vs BG: {textContrast}:1 {checklist.contrastTextOk ? "OK" : "(min. 4.5 doporučeno)"}
+        </p>
+        <p className={`text-xs ${checklist.contrastCtaOk ? "text-emerald-700" : "text-red-600"}`}>
+          CTA text vs CTA BG: {ctaContrast}:1 {checklist.contrastCtaOk ? "OK" : "(min. 4.5 doporučeno)"}
+        </p>
       </div>
       <div className="space-y-2">
         <Label className="text-xs text-slate-600">Pozadí URL</Label>

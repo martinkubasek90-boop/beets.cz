@@ -76,7 +76,18 @@ function downloadDataUrl(dataUrl: string, filename: string) {
   link.remove();
 }
 
-export async function exportBannerPng(banner: Banner, format: BannerFormat) {
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
   const canvas = document.createElement("canvas");
   canvas.width = format.width;
   canvas.height = format.height;
@@ -167,7 +178,31 @@ export async function exportBannerPng(banner: Banner, format: BannerFormat) {
   ctx.textBaseline = "middle";
   ctx.fillText(ctaText, ctaX + ctaPadX, ctaY + ctaH / 2);
 
-  const dataUrl = canvas.toDataURL("image/png");
+  return canvas.toDataURL("image/png");
+}
+
+export async function exportBannerPng(banner: Banner, format: BannerFormat) {
+  const dataUrl = await renderBannerPngDataUrl(banner, format);
   const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
   downloadDataUrl(dataUrl, `${safeName}_${format.width}x${format.height}.png`);
+}
+
+export async function exportBannerZip(banner: Banner) {
+  const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
+  const files = await Promise.all(
+    (banner.formats || []).map(async (format) => ({
+      name: `${safeName}_${format.width}x${format.height}.png`,
+      dataUrl: await renderBannerPngDataUrl(banner, format),
+    })),
+  );
+  const response = await fetch("/api/ppc-banners/export-zip", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: safeName, files }),
+  });
+  if (!response.ok) {
+    throw new Error("ZIP export selhal.");
+  }
+  const blob = await response.blob();
+  downloadBlob(blob, `${safeName}_all-formats.zip`);
 }

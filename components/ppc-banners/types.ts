@@ -1,4 +1,6 @@
 export type BannerLayout = "horizontal" | "vertical" | "square";
+export type BannerGoal = "traffic" | "leads" | "sale" | "remarketing";
+export type BannerStatus = "draft" | "ready";
 
 export type BannerFormat = {
   id: string;
@@ -10,6 +12,56 @@ export type BannerFormat = {
   subheadlineSize: number;
   ctaSize: number;
   padding: number;
+};
+
+export type BannerSnapshot = {
+  name: string;
+  headline: string;
+  subheadline: string;
+  ctaText: string;
+  brandName: string;
+  brandUrl: string;
+  logoUrl?: string;
+  bgMode: "none" | "upload" | "generate";
+  bgColor: string;
+  bgImageUrl?: string;
+  bgPrompt?: string;
+  textColor: string;
+  ctaBg: string;
+  ctaTextColor: string;
+  formats: BannerFormat[];
+  activeFormatIndex: number;
+  goal: BannerGoal;
+  status: BannerStatus;
+};
+
+export type BannerVersion = {
+  id: string;
+  label: string;
+  savedAt: string;
+  snapshot: BannerSnapshot;
+};
+
+export type BannerChecklist = {
+  hasBrandUrl: boolean;
+  hasHeadline: boolean;
+  hasSubheadline: boolean;
+  hasLogo: boolean;
+  hasBackground: boolean;
+  hasMinFormats: boolean;
+  contrastTextOk: boolean;
+  contrastCtaOk: boolean;
+};
+
+export type BrandKit = {
+  brandName: string;
+  brandUrl: string;
+  logoUrl?: string;
+  bgColor: string;
+  textColor: string;
+  ctaBg: string;
+  ctaTextColor: string;
+  updatedAt: string;
 };
 
 export type Banner = {
@@ -30,6 +82,12 @@ export type Banner = {
   ctaTextColor: string;
   formats: BannerFormat[];
   activeFormatIndex: number;
+  goal: BannerGoal;
+  status: BannerStatus;
+  checklist?: BannerChecklist;
+  versions?: BannerVersion[];
+  shareToken?: string;
+  autosavedAt?: string;
   updatedAt: string;
   createdAt: string;
 };

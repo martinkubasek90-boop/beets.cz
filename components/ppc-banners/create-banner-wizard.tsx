@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, Sparkles, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { PRESET_FORMATS } from "@/components/ppc-banners/types";
+import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 
 function uid() {
   return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -45,6 +46,7 @@ export function CreateBannerWizard({
   const [bgImageUrl, setBgImageUrl] = useState("");
   const [bgPrompt, setBgPrompt] = useState("");
   const [selectedFormatIds, setSelectedFormatIds] = useState<string[]>(["1200x628", "1080x1080"]);
+  const [goal, setGoal] = useState<Banner["goal"]>("traffic");
   const [loadingMetadata, setLoadingMetadata] = useState(false);
   const [generatingBg, setGeneratingBg] = useState(false);
 
@@ -52,6 +54,19 @@ export function CreateBannerWizard({
     () => PRESET_FORMATS.filter((item) => selectedFormatIds.includes(item.id)),
     [selectedFormatIds],
   );
+
+  useEffect(() => {
+    if (!open) return;
+    const brandKit = getBrandKit();
+    if (!brandKit) return;
+    setBrandName(brandKit.brandName || "BEETS.CZ");
+    setBrandUrl(brandKit.brandUrl || "");
+    setLogoUrl(brandKit.logoUrl || "");
+    setBgColor(brandKit.bgColor || "#0F172A");
+    setTextColor(brandKit.textColor || "#FFFFFF");
+    setCtaBg(brandKit.ctaBg || "#FACC15");
+    setCtaTextColor(brandKit.ctaTextColor || "#111827");
+  }, [open]);
 
   if (!open) return null;
 
@@ -80,10 +95,50 @@ export function CreateBannerWizard({
       ctaTextColor,
       formats,
       activeFormatIndex: 0,
+      goal,
+      status: "draft",
       updatedAt: now,
       createdAt: now,
     });
     onClose();
+  };
+
+  const applyGoalTemplate = (nextGoal: Banner["goal"]) => {
+    setGoal(nextGoal);
+    if (nextGoal === "traffic") {
+      setHeadline("Získejte víc kliknutí na vaši nabídku");
+      setSubheadline("Jasná hodnota, silný vizuál a rychlá cesta na web.");
+      setCtaText("Zjistit více");
+      return;
+    }
+    if (nextGoal === "leads") {
+      setHeadline("Poptávka během minuty");
+      setSubheadline("Vyplňte krátký formulář a my navrhneme řešení na míru.");
+      setCtaText("Chci nabídku");
+      return;
+    }
+    if (nextGoal === "sale") {
+      setHeadline("Akční nabídka připravená k objednání");
+      setSubheadline("Vyberte produkt a dokončete nákup bez čekání.");
+      setCtaText("Nakoupit teď");
+      return;
+    }
+    setHeadline("Vraťte se k výběru, který vás zaujal");
+    setSubheadline("Máte vybráno? Dokončete objednávku ještě dnes.");
+    setCtaText("Dokončit výběr");
+  };
+
+  const storeBrandKit = () => {
+    saveBrandKit({
+      brandName: brandName.trim() || "BEETS.CZ",
+      brandUrl: brandUrl.trim(),
+      logoUrl: logoUrl.trim() || undefined,
+      bgColor,
+      textColor,
+      ctaBg,
+      ctaTextColor,
+      updatedAt: new Date().toISOString(),
+    });
   };
 
   const hydrateFromUrl = async () => {
@@ -169,6 +224,27 @@ export function CreateBannerWizard({
                   <Input value={brandUrl} onChange={(e) => setBrandUrl(e.target.value)} className="border-slate-200 bg-white" placeholder="https://beets.cz" />
                   <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={hydrateFromUrl} disabled={loadingMetadata}>
                     {loadingMetadata ? <Loader2 className="h-4 w-4 animate-spin" /> : "Načíst"}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-slate-700">Cíl kampaně</Label>
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                  <select
+                    value={goal}
+                    onChange={(e) => applyGoalTemplate(e.target.value as Banner["goal"])}
+                    className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
+                  >
+                    <option value="traffic">Návštěvnost (traffic)</option>
+                    <option value="leads">Poptávky (leads)</option>
+                    <option value="sale">Prodej (sale)</option>
+                    <option value="remarketing">Remarketing</option>
+                  </select>
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={() => applyGoalTemplate(goal)}>
+                    Šablona textů
+                  </Button>
+                  <Button type="button" variant="outline" className="border-slate-300 bg-white hover:bg-slate-50" onClick={storeBrandKit}>
+                    Uložit brand kit
                   </Button>
                 </div>
               </div>

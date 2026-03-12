@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Download } from "lucide-react";
+import { Archive, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Banner } from "@/components/ppc-banners/types";
 
@@ -10,11 +10,13 @@ export function BannerCard({
   onDelete,
   onDuplicate,
   onExport,
+  onExportZip,
 }: {
   banner: Banner;
   onDelete: (id: string) => void;
   onDuplicate: (banner: Banner) => void;
   onExport: (banner: Banner) => void;
+  onExportZip: (banner: Banner) => void;
 }) {
   const preview = banner.formats?.[0];
   return (
@@ -35,18 +37,27 @@ export function BannerCard({
         </div>
       </div>
       <div className="space-y-2 p-3">
-        <p className="truncate text-sm font-semibold text-slate-800">{banner.name}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="truncate text-sm font-semibold text-slate-800">{banner.name}</p>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${banner.status === "ready" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+            {banner.status === "ready" ? "Ready" : "Draft"}
+          </span>
+        </div>
         <p className="text-[11px] text-slate-500">
           {preview ? `${preview.width}x${preview.height}` : "Formát nevybrán"} • {new Date(banner.updatedAt).toLocaleString("cs-CZ")}
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/ppc-banners/editor?id=${encodeURIComponent(banner.id)}`} className="flex-1">
             <Button className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700" size="sm">Upravit</Button>
           </Link>
-          <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
-          <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100" onClick={() => onExport(banner)}>
+          <Button variant="outline" size="sm" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
+          <Button variant="outline" size="sm" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExport(banner)}>
             <Download className="h-3.5 w-3.5" />
             Export
+          </Button>
+          <Button variant="outline" size="sm" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExportZip(banner)}>
+            <Archive className="h-3.5 w-3.5" />
+            ZIP
           </Button>
           <Button variant="outline" size="sm" className="border-red-500 bg-white text-red-600 hover:bg-red-50" onClick={() => onDelete(banner.id)}>Smazat</Button>
         </div>
