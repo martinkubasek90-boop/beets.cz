@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { PpcBannerEditorClient } from "@/components/ppc-banners/editor-client";
 
 export const metadata = {
@@ -5,6 +6,15 @@ export const metadata = {
 };
 
 export default function PpcBannersEditorPage() {
-  return <PpcBannerEditorClient />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
+          Načítám editor…
+        </div>
+      }
+    >
+      <PpcBannerEditorClient />
+    </Suspense>
+  );
 }
-
