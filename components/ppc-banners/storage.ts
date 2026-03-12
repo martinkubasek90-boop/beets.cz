@@ -21,6 +21,7 @@ function withDefaults(banner: Banner): Banner {
     ...banner,
     goal,
     status,
+    logoTransparentBg: Boolean(banner.logoTransparentBg),
     formats: normalizedFormats.length ? normalizedFormats : [withFormatDefaults(PRESET_FORMATS[0])],
     versions: Array.isArray(banner.versions) ? banner.versions : [],
   };
@@ -101,6 +102,7 @@ export function makeSnapshot(banner: Banner): BannerSnapshot {
     brandName: banner.brandName,
     brandUrl: banner.brandUrl,
     logoUrl: banner.logoUrl,
+    logoTransparentBg: banner.logoTransparentBg,
     bgMode: banner.bgMode,
     bgColor: banner.bgColor,
     bgImageUrl: banner.bgImageUrl,

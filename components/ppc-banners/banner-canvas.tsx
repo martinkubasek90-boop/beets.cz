@@ -83,6 +83,40 @@ function applyStep(value: number, delta: number, min: number, max: number) {
 
 const LOGO_SCALE_MIN = 0.4;
 const LOGO_SCALE_MAX = 12;
+const CENTER_SNAP_PX = 6;
+
+function loadImageElement(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function makeLogoTransparent(src: string) {
+  const img = await loadImageElement(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return src;
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = data.data;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    const avg = (r + g + b) / 3;
+    if (avg > 238 && r > 228 && g > 228 && b > 228) {
+      pixels[i + 3] = 0;
+    }
+  }
+  ctx.putImageData(data, 0, 0);
+  return canvas.toDataURL("image/png");
+}
 
 export function BannerCanvas({
   banner,
@@ -98,6 +132,7 @@ export function BannerCanvas({
   const [selected, setSelected] = useState<DragTarget | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const resizeRef = useRef<ResizeState | null>(null);
+  const [logoPreviewSrc, setLogoPreviewSrc] = useState<string>("");
   const resolvedFormat = format ?? FALLBACK_FORMAT;
 
   const scale = Math.min(1, 760 / resolvedFormat.width, 560 / resolvedFormat.height);
@@ -156,6 +191,8 @@ export function BannerCanvas({
   const hasLogo = Boolean((banner.logoUrl || "").trim());
   const hasHeadline = Boolean((banner.headline || "").trim());
   const hasSubheadline = Boolean((banner.subheadline || "").trim());
+  const hasLogoTransparent = Boolean(banner.logoTransparentBg);
+  const logoRawPreviewSrc = banner.logoUrl ? toPreviewImageUrl(banner.logoUrl) : "";
 
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
@@ -331,6 +368,53 @@ export function BannerCanvas({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [editable, patchSize, sizeTarget]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!hasLogo || !logoRawPreviewSrc) {
+        if (!cancelled) setLogoPreviewSrc("");
+        return;
+      }
+      if (!hasLogoTransparent) {
+        if (!cancelled) setLogoPreviewSrc(logoRawPreviewSrc);
+        return;
+      }
+      try {
+        const transparent = await makeLogoTransparent(logoRawPreviewSrc);
+        if (!cancelled) setLogoPreviewSrc(transparent);
+      } catch {
+        if (!cancelled) setLogoPreviewSrc(logoRawPreviewSrc);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasLogo, hasLogoTransparent, logoRawPreviewSrc]);
+
+  const selectedCenterX =
+    selected === "logo"
+      ? logoLeft + logoW / 2
+      : selected === "text"
+        ? textLeft + textW / 2
+        : selected === "cta"
+          ? ctaLeft + estimatedCtaW / 2
+          : selected === "shape"
+            ? shapeLeft + shapeSizePx / 2
+            : null;
+  const selectedCenterY =
+    selected === "logo"
+      ? logoTop + logoH / 2
+      : selected === "text"
+        ? textTop
+        : selected === "cta"
+          ? ctaTop + estimatedCtaH / 2
+          : selected === "shape"
+            ? shapeTop + shapeSizePx / 2
+            : null;
+  const showCenterX = selectedCenterX !== null && Math.abs(selectedCenterX - boxW / 2) <= CENTER_SNAP_PX;
+  const showCenterY = selectedCenterY !== null && Math.abs(selectedCenterY - boxH / 2) <= CENTER_SNAP_PX;
+
   if (!format) return null;
 
   return (
@@ -340,10 +424,11 @@ export function BannerCanvas({
         style={{
           width: `${boxW}px`,
           height: `${boxH}px`,
-          backgroundColor: banner.bgColor,
+          backgroundColor: bgPreviewUrl ? "#ffffff" : banner.bgColor,
           backgroundImage: bgPreviewUrl ? `url("${bgPreviewUrl}")` : undefined,
           backgroundSize: bgPreviewUrl ? `${bgScale}%` : "cover",
           backgroundPosition: `${bgPositionX}% ${bgPositionY}%`,
+          backgroundRepeat: "no-repeat",
         }}
       >
         {resolvedFormat.shapeEnabled ? (
@@ -376,8 +461,8 @@ export function BannerCanvas({
           className="relative h-full w-full"
           style={{ padding, background: bgPreviewUrl ? "linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.42))" : undefined }}
         >
-          {editable ? <div className="absolute right-2 top-2 rounded bg-slate-900/70 px-2 py-1 text-[10px] text-white">Drag: logo / text / CTA / shape</div> : null}
-          {editable && sizeTarget ? <div className="absolute left-2 top-2 z-20 rounded-md bg-slate-900/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">Resize: táhni rohový bod, nebo kolečko myši</div> : null}
+          {editable && showCenterX ? <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[120] w-px -translate-x-1/2 bg-cyan-300/90" /> : null}
+          {editable && showCenterY ? <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[120] h-px -translate-y-1/2 bg-cyan-300/90" /> : null}
 
           {hasLogo ? (
             <div
@@ -387,7 +472,7 @@ export function BannerCanvas({
               onWheel={(event) => onResizeWheel("logo", event)}
             >
               <img
-                src={banner.logoUrl}
+                src={logoPreviewSrc || banner.logoUrl}
                 alt="Logo"
                 className="w-auto rounded object-contain"
                 style={{

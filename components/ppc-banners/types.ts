@@ -47,6 +47,7 @@ export type BannerSnapshot = {
   brandName: string;
   brandUrl: string;
   logoUrl?: string;
+  logoTransparentBg?: boolean;
   bgMode: "none" | "upload" | "generate";
   bgColor: string;
   bgImageUrl?: string;
@@ -101,6 +102,7 @@ export type Banner = {
   brandName: string;
   brandUrl: string;
   logoUrl?: string;
+  logoTransparentBg?: boolean;
   bgMode: "none" | "upload" | "generate";
   bgColor: string;
   bgImageUrl?: string;

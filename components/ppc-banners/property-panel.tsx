@@ -263,6 +263,10 @@ export function PropertyPanel({
                 Vybrat logo
                 <input type="file" className="hidden" accept="image/*" onChange={(e) => void onLogoUpload(e.target.files?.[0] || null)} />
               </label>
+              <label className="flex items-center justify-between rounded-md border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700">
+                <span>Transparentní pozadí loga</span>
+                <input type="checkbox" checked={Boolean(banner.logoTransparentBg)} onChange={(e) => onBannerChange("logoTransparentBg", e.target.checked)} />
+              </label>
               <div className="space-y-2">
                 <Label className="text-xs">Velikost loga: {(format.logoScale || 1).toFixed(2)}x</Label>
                 <Input type="range" min={0.4} max={12} step={0.1} value={format.logoScale || 1} onChange={(e) => onFormatChange("logoScale", Number(e.target.value))} />

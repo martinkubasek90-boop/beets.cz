@@ -27,6 +27,29 @@ function loadImage(src: string) {
   });
 }
 
+async function makeLogoTransparentForExport(src: string) {
+  const img = await loadImage(src);
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return src;
+  ctx.drawImage(img, 0, 0);
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = data.data;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    const avg = (r + g + b) / 3;
+    if (avg > 238 && r > 228 && g > 228 && b > 228) {
+      pixels[i + 3] = 0;
+    }
+  }
+  ctx.putImageData(data, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
 async function toDataUrlFromProxy(url: string) {
   const response = await fetch(`/api/ppc-banners/image-proxy?url=${encodeURIComponent(url)}`);
   if (!response.ok) throw new Error("Image proxy failed.");
@@ -97,7 +120,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
 
-  ctx.fillStyle = banner.bgColor || "#0f172a";
+  ctx.fillStyle = banner.bgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const bgSrc = await resolveImageSource(banner.bgImageUrl);
@@ -154,7 +177,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   let headerY = pad + logoOffsetY;
-  const logoSrc = await resolveImageSource(banner.logoUrl);
+  const logoSrcRaw = await resolveImageSource(banner.logoUrl);
+  const logoSrc = banner.logoTransparentBg && logoSrcRaw ? await makeLogoTransparentForExport(logoSrcRaw) : logoSrcRaw;
   if (logoSrc) {
     try {
       const logo = await loadImage(logoSrc);
