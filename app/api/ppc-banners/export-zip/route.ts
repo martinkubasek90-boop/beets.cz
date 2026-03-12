@@ -54,8 +54,9 @@ export async function POST(request: Request) {
       data: dataUrlToBuffer(file.dataUrl),
     }));
     const zipBuffer = await zipToBuffer(files);
+    const zipBytes = new Uint8Array(zipBuffer);
     const baseName = sanitizeName(body.name || "banner");
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(zipBytes, {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
