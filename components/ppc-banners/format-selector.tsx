@@ -18,13 +18,13 @@ export function FormatSelector({
 }) {
   return (
     <div className="space-y-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Formáty</div>
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Formáty</div>
       <div className="space-y-2">
         {formats.map((format, idx) => (
-          <div key={`${format.id}-${idx}`} className={`rounded-lg border p-2 ${idx === activeIndex ? "border-slate-900 bg-slate-50" : "border-slate-200 bg-white"}`}>
+          <div key={`${format.id}-${idx}`} className={`rounded-xl border p-2.5 ${idx === activeIndex ? "border-cyan-400 bg-cyan-50/80 shadow-sm" : "border-slate-200 bg-white"}`}>
             <button type="button" onClick={() => onSelect(idx)} className="w-full text-left">
               <p className="text-xs font-semibold text-slate-800">{format.name}</p>
-              <p className="text-[11px] text-slate-500">
+              <p className={`text-[11px] ${idx === activeIndex ? "text-cyan-700" : "text-slate-500"}`}>
                 {format.width}x{format.height}
               </p>
             </button>
@@ -37,17 +37,16 @@ export function FormatSelector({
         ))}
       </div>
       <div className="space-y-2">
-        <Button onClick={() => onAdd("1200x628")} variant="outline" className="w-full justify-start text-xs">
+        <Button onClick={() => onAdd("1200x628")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
           + Meta 1200x628
         </Button>
-        <Button onClick={() => onAdd("1080x1080")} variant="outline" className="w-full justify-start text-xs">
+        <Button onClick={() => onAdd("1080x1080")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
           + Square 1080x1080
         </Button>
-        <Button onClick={() => onAdd("1080x1920")} variant="outline" className="w-full justify-start text-xs">
+        <Button onClick={() => onAdd("1080x1920")} variant="outline" className="w-full justify-start border-slate-300 bg-white text-xs hover:bg-slate-50">
           + Story 1080x1920
         </Button>
       </div>
     </div>
   );
 }
-

@@ -60,24 +60,24 @@ export function AIAssistant({
 
   return (
     <div className="space-y-3 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">AI Asistent (rychlé akce)</p>
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">AI Asistent (rychlé akce)</p>
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="outline" className="text-xs" onClick={() => applyPreset("direct")}>Přímé sdělení</Button>
-        <Button variant="outline" className="text-xs" onClick={() => applyPreset("urgent")}>Urgence</Button>
-        <Button variant="outline" className="text-xs" onClick={() => applyPreset("premium")}>Premium</Button>
-        <Button variant="outline" className="text-xs" onClick={() => applyPreset("simple")}>Jednoduše</Button>
+        <Button variant="outline" className="border-slate-300 bg-white text-xs hover:bg-slate-50" onClick={() => applyPreset("direct")}>Přímé sdělení</Button>
+        <Button variant="outline" className="border-slate-300 bg-white text-xs hover:bg-slate-50" onClick={() => applyPreset("urgent")}>Urgence</Button>
+        <Button variant="outline" className="border-slate-300 bg-white text-xs hover:bg-slate-50" onClick={() => applyPreset("premium")}>Premium</Button>
+        <Button variant="outline" className="border-slate-300 bg-white text-xs hover:bg-slate-50" onClick={() => applyPreset("simple")}>Jednoduše</Button>
       </div>
       <div className="space-y-2">
         <Input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          className="border-slate-200 bg-white"
           placeholder="Napište instrukci, např. více technicky..."
         />
-        <Button onClick={applyPrompt} className="w-full text-xs">
+        <Button onClick={applyPrompt} className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 text-xs text-white hover:from-emerald-700 hover:to-cyan-700">
           Použít prompt
         </Button>
       </div>
     </div>
   );
 }
-

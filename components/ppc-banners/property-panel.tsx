@@ -18,35 +18,35 @@ export function PropertyPanel({
   return (
     <div className="space-y-4 p-3">
       <div className="space-y-2">
-        <Label className="text-xs">Headline</Label>
-        <Input value={banner.headline} onChange={(e) => onBannerChange("headline", e.target.value)} />
+        <Label className="text-xs text-slate-600">Headline</Label>
+        <Input value={banner.headline} onChange={(e) => onBannerChange("headline", e.target.value)} className="border-slate-200 bg-white" />
       </div>
       <div className="space-y-2">
-        <Label className="text-xs">Subheadline</Label>
-        <Input value={banner.subheadline} onChange={(e) => onBannerChange("subheadline", e.target.value)} />
+        <Label className="text-xs text-slate-600">Subheadline</Label>
+        <Input value={banner.subheadline} onChange={(e) => onBannerChange("subheadline", e.target.value)} className="border-slate-200 bg-white" />
       </div>
       <div className="space-y-2">
-        <Label className="text-xs">CTA text</Label>
-        <Input value={banner.ctaText} onChange={(e) => onBannerChange("ctaText", e.target.value)} />
+        <Label className="text-xs text-slate-600">CTA text</Label>
+        <Input value={banner.ctaText} onChange={(e) => onBannerChange("ctaText", e.target.value)} className="border-slate-200 bg-white" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label className="text-xs">Barva pozadí</Label>
-          <Input type="color" value={banner.bgColor} onChange={(e) => onBannerChange("bgColor", e.target.value)} />
+          <Label className="text-xs text-slate-600">Barva pozadí</Label>
+          <Input type="color" value={banner.bgColor} onChange={(e) => onBannerChange("bgColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">Barva textu</Label>
-          <Input type="color" value={banner.textColor} onChange={(e) => onBannerChange("textColor", e.target.value)} />
+          <Label className="text-xs text-slate-600">Barva textu</Label>
+          <Input type="color" value={banner.textColor} onChange={(e) => onBannerChange("textColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
-          <Label className="text-xs">CTA pozadí</Label>
-          <Input type="color" value={banner.ctaBg} onChange={(e) => onBannerChange("ctaBg", e.target.value)} />
+          <Label className="text-xs text-slate-600">CTA pozadí</Label>
+          <Input type="color" value={banner.ctaBg} onChange={(e) => onBannerChange("ctaBg", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs">CTA text</Label>
-          <Input type="color" value={banner.ctaTextColor} onChange={(e) => onBannerChange("ctaTextColor", e.target.value)} />
+          <Label className="text-xs text-slate-600">CTA text</Label>
+          <Input type="color" value={banner.ctaTextColor} onChange={(e) => onBannerChange("ctaTextColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
       </div>
       {format ? (
@@ -86,4 +86,3 @@ export function PropertyPanel({
     </div>
   );
 }
-

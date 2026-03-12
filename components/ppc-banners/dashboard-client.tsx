@@ -54,24 +54,25 @@ export function PpcBannersDashboardClient() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-6">
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-lg shadow-blue-500/20">
+    <div className="min-h-screen bg-[radial-gradient(1200px_700px_at_10%_-10%,#d9f5ef_0%,#f8fafc_45%,#eef2ff_100%)] font-['Space_Grotesk',sans-serif]">
+      <div className="border-b border-slate-200/70 bg-white/85 backdrop-blur">
+        <div className="mx-auto max-w-7xl px-6 py-7">
+          <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 shadow-lg shadow-cyan-500/30">
                 <LayoutGrid className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">PPC Banner Studio</h1>
-                <p className="text-sm text-slate-500">Vytvářejte bannery s AI asistentem</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">BEETS Creative Suite</p>
+                <h1 className="text-2xl font-bold leading-tight text-slate-900">PPC Banner Studio</h1>
+                <p className="text-sm text-slate-600">Navrhujte výkonné bannery rychle, konzistentně a bez chaosu.</p>
               </div>
             </div>
             <div className="flex gap-2">
               <Link href="/">
-                <Button variant="outline">Domů</Button>
+                <Button variant="outline" className="border-slate-300 bg-white/70 hover:bg-white">Domů</Button>
               </Link>
-              <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700">
+              <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700 shadow-lg shadow-cyan-500/30">
                 <Plus className="mr-2 h-4 w-4" />
                 Nový banner
               </Button>
@@ -81,24 +82,26 @@ export function PpcBannersDashboardClient() {
       </div>
 
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <div className="relative mb-8 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} className="h-10 bg-white pl-10" placeholder="Hledat bannery..." />
+        <div className="mb-8 rounded-2xl border border-white/70 bg-white/70 p-4 shadow-sm backdrop-blur sm:p-5">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 border-slate-200/90 bg-white pl-10" placeholder="Hledat bannery podle názvu nebo headline..." />
+          </div>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
-              <Sparkles className="h-7 w-7 text-slate-400" />
+          <div className="rounded-2xl border border-white/80 bg-white/80 py-20 text-center shadow-sm backdrop-blur">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-cyan-100">
+              <Sparkles className="h-7 w-7 text-cyan-700" />
             </div>
-            <h3 className="mb-1 text-lg font-semibold text-slate-700">
+            <h3 className="mb-1 text-lg font-semibold text-slate-800">
               {search ? "Žádné výsledky" : "Zatím žádné bannery"}
             </h3>
-            <p className="mb-6 text-sm text-slate-500">
+            <p className="mb-6 text-sm text-slate-600">
               {search ? "Zkuste jiný hledaný výraz" : "Vytvořte svůj první PPC banner"}
             </p>
             {!search ? (
-              <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-blue-600 to-violet-600">
+              <Button onClick={() => setWizardOpen(true)} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700">
                 <Plus className="mr-2 h-4 w-4" />
                 Vytvořit banner
               </Button>
