@@ -196,9 +196,9 @@ export function CreateBannerWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm">
-      <div className="w-full max-w-5xl rounded-3xl border border-white/70 bg-[linear-gradient(160deg,#f8fafc_0%,#f1f5f9_65%,#ecfeff_100%)] p-5 shadow-2xl sm:p-6">
-        <div className="mb-5 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 bg-slate-950/55 p-3 backdrop-blur-sm">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/70 bg-[linear-gradient(160deg,#f8fafc_0%,#f1f5f9_65%,#ecfeff_100%)] shadow-2xl">
+        <div className="mb-5 flex shrink-0 items-center justify-between p-5 pb-0 sm:p-6 sm:pb-0">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-700">New Campaign Asset</p>
             <h3 className="text-xl font-bold text-slate-900">Vytvořit PPC banner</h3>
@@ -207,8 +207,9 @@ export function CreateBannerWizard({
           <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Zavřít</button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.45fr_0.95fr]">
-          <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
+        <div className="flex-1 overflow-y-auto px-5 pb-5 sm:px-6 sm:pb-6">
+        <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
+          <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm min-w-0">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label className="text-slate-700">Název</Label>
@@ -227,9 +228,9 @@ export function CreateBannerWizard({
                   </Button>
                 </div>
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-2 min-w-0">
                 <Label className="text-slate-700">Cíl kampaně</Label>
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                   <select
                     value={goal}
                     onChange={(e) => applyGoalTemplate(e.target.value as Banner["goal"])}
@@ -311,7 +312,7 @@ export function CreateBannerWizard({
                 </label>
               </div>
 
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2 md:col-span-2 min-w-0">
                 <Label className="text-slate-700">Prompt pro AI pozadí (free tier)</Label>
                 <div className="flex gap-2">
                   <Input value={bgPrompt} onChange={(e) => setBgPrompt(e.target.value)} className="border-slate-200 bg-white" placeholder="např. clean modern abstract gradient for fintech ad banner" />
@@ -323,7 +324,7 @@ export function CreateBannerWizard({
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             <div className="rounded-2xl border border-cyan-200/70 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-4 shadow-sm">
               <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">Živý náhled stylu</p>
               <div className="rounded-xl bg-cover bg-center p-4" style={{ backgroundColor: bgColor, backgroundImage: bgImageUrl ? `url(${bgImageUrl})` : undefined }}>
@@ -371,7 +372,8 @@ export function CreateBannerWizard({
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        </div>
+        <div className="mt-6 flex shrink-0 justify-end gap-2 border-t border-slate-200/70 p-5 sm:p-6">
           <Button variant="outline" onClick={onClose} className="border-slate-300 bg-white/80 text-slate-700 hover:bg-white">Zrušit</Button>
           <Button onClick={create} className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700">Vytvořit banner</Button>
         </div>
