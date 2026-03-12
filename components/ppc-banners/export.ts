@@ -113,6 +113,15 @@ function downloadBlob(blob: Blob, filename: string) {
 const LOGO_SCALE_MIN = 0.4;
 const LOGO_SCALE_MAX = 12;
 
+function fitSize(width: number, height: number, maxWidth: number, maxHeight: number) {
+  if (!width || !height || !maxWidth || !maxHeight) return { width: 0, height: 0 };
+  const ratio = Math.min(maxWidth / width, maxHeight / height);
+  return {
+    width: Math.max(1, Math.round(width * ratio)),
+    height: Math.max(1, Math.round(height * ratio)),
+  };
+}
+
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
   const canvas = document.createElement("canvas");
   canvas.width = format.width;
@@ -129,6 +138,13 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const resolvedBgPositionX = typeof format.bgPositionX === "number" ? format.bgPositionX : banner.bgPositionX;
   const resolvedBgPositionY = typeof format.bgPositionY === "number" ? format.bgPositionY : banner.bgPositionY;
   const resolvedSubheadline2Size = format.subheadline2Size || format.subheadlineSize;
+  const logoAlignX = format.logoAlignX || "left";
+  const logoAlignY = format.logoAlignY || "top";
+  const textAlignX = format.textAlignX || "left";
+  const textAlignY = format.textAlignY || "center";
+  const textContentAlign = format.textContentAlign || "left";
+  const ctaAlignX = format.ctaAlignX || "left";
+  const ctaAlignY = format.ctaAlignY || "bottom";
 
   ctx.fillStyle = resolvedBgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -150,7 +166,6 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   const pad = format.padding;
-  const maxWidth = canvas.width - pad * 2;
   const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, format.logoScale || 1));
   const logoOffsetX = format.logoOffsetX || 0;
   const logoOffsetY = format.logoOffsetY || 0;
@@ -158,6 +173,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const textOffsetY = format.textOffsetY || 0;
   const ctaOffsetX = format.ctaOffsetX || 0;
   const ctaOffsetY = format.ctaOffsetY || 0;
+  const boxW = canvas.width;
+  const boxH = canvas.height;
 
   if (bgSrc) {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -186,19 +203,21 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.globalAlpha = 1;
   }
 
-  let headerY = pad + logoOffsetY;
   const logoSrcRaw = await resolveImageSource(banner.logoUrl);
   const logoSrc = banner.logoTransparentBg && logoSrcRaw ? await makeLogoTransparentForExport(logoSrcRaw) : logoSrcRaw;
   if (logoSrc) {
     try {
       const logo = await loadImage(logoSrc);
-      const maxLogoH = Math.max(28, Math.round(canvas.height * 0.07));
-      const scale = (maxLogoH / logo.height) * logoScale;
-      const w = logo.width * scale;
-      const h = logo.height * scale;
-      const logoX = pad + logoOffsetX;
-      ctx.drawImage(logo, logoX, headerY, w, h);
-      headerY += h + 18;
+      const maxLogoW = Math.round(130 * logoScale);
+      const maxLogoH = Math.round(32 * logoScale);
+      const { width: logoW, height: logoH } = fitSize(logo.width, logo.height, maxLogoW, maxLogoH);
+      const logoBaseX =
+        logoAlignX === "left" ? pad : logoAlignX === "center" ? Math.round((boxW - logoW) / 2) : boxW - pad - logoW;
+      const logoBaseY =
+        logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - pad - logoH;
+      const logoX = logoBaseX + logoOffsetX;
+      const logoY = logoBaseY + logoOffsetY;
+      ctx.drawImage(logo, logoX, logoY, logoW, logoH);
     } catch {}
   }
 
@@ -206,39 +225,68 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
   const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
   if (hasHeadline || hasSubheadline || hasSubheadline2) {
+    const textW = Math.max(120, boxW - pad * 2 - 10);
+    const textBaseX =
+      textAlignX === "left" ? pad : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - pad - textW;
+    const textBaseY =
+      textAlignY === "top"
+        ? pad + 80
+        : textAlignY === "center"
+          ? Math.round(boxH * 0.37)
+          : boxH - pad - 140;
+    const textLeft = textBaseX + textOffsetX;
+    const textAnchorY = textBaseY + textOffsetY;
+    const textX =
+      textContentAlign === "left" ? textLeft : textContentAlign === "center" ? textLeft + textW / 2 : textLeft + textW;
+    ctx.textAlign = textContentAlign as CanvasTextAlign;
     ctx.fillStyle = banner.textColor || "#ffffff";
     ctx.textBaseline = "top";
-    const textX = pad + textOffsetX;
-    let textY = headerY + textOffsetY;
+    const linesToDraw: Array<{ text: string; size: number; weight: string; lineHeight: number; gapBefore: number }> = [];
 
     if (hasHeadline) {
       ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
-      const headlineLines = wrapLines(ctx, resolvedHeadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
+      const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
-        ctx.fillText(line, textX, textY);
-        textY += format.headlineSize * 1.12;
+        linesToDraw.push({ text: line, size: format.headlineSize, weight: "800", lineHeight: format.headlineSize * 1.12, gapBefore: 0 });
       });
     }
 
     if (hasSubheadline) {
-      textY += hasHeadline ? Math.max(10, Math.round(format.subheadlineSize * 0.5)) : 0;
       ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
-      const subLines = wrapLines(ctx, resolvedSubheadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
+      const subLines = wrapLines(ctx, resolvedSubheadline || "", textW, format.layout === "vertical" ? 4 : 3);
       subLines.forEach((line) => {
-        ctx.fillText(line, textX, textY);
-        textY += format.subheadlineSize * 1.32;
+        linesToDraw.push({
+          text: line,
+          size: format.subheadlineSize,
+          weight: "500",
+          lineHeight: format.subheadlineSize * 1.32,
+          gapBefore: linesToDraw.length ? Math.max(10, Math.round(format.subheadlineSize * 0.5)) : 0,
+        });
       });
     }
 
     if (hasSubheadline2) {
-      textY += hasHeadline || hasSubheadline ? Math.max(8, Math.round(resolvedSubheadline2Size * 0.45)) : 0;
       ctx.font = `500 ${resolvedSubheadline2Size}px Inter, Arial, sans-serif`;
-      const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
+      const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", textW, format.layout === "vertical" ? 4 : 3);
       sub2Lines.forEach((line) => {
-        ctx.fillText(line, textX, textY);
-        textY += resolvedSubheadline2Size * 1.32;
+        linesToDraw.push({
+          text: line,
+          size: resolvedSubheadline2Size,
+          weight: "500",
+          lineHeight: resolvedSubheadline2Size * 1.32,
+          gapBefore: linesToDraw.length ? Math.max(8, Math.round(resolvedSubheadline2Size * 0.45)) : 0,
+        });
       });
     }
+
+    const totalHeight = linesToDraw.reduce((acc, item) => acc + item.gapBefore + item.lineHeight, 0);
+    let textY = textAnchorY - totalHeight / 2;
+    linesToDraw.forEach((item) => {
+      textY += item.gapBefore;
+      ctx.font = `${item.weight} ${item.size}px Inter, Arial, sans-serif`;
+      ctx.fillText(item.text, textX, textY);
+      textY += item.lineHeight;
+    });
   }
 
   const ctaText = resolvedCtaText || "Zjistit více";
@@ -247,8 +295,14 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctaPadY = Math.round(format.ctaSize * 0.6);
   const ctaW = Math.round(ctx.measureText(ctaText).width + ctaPadX * 2);
   const ctaH = Math.round(format.ctaSize + ctaPadY * 2);
-  const ctaX = pad + ctaOffsetX;
-  const ctaY = canvas.height - pad - ctaH + ctaOffsetY;
+  const estimatedCtaW = Math.round((ctaText || "Zjistit více").length * format.ctaSize * 0.55 + 32);
+  const estimatedCtaH = Math.round(format.ctaSize + 20);
+  const ctaBaseX =
+    ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - pad - estimatedCtaW;
+  const ctaBaseY =
+    ctaAlignY === "top" ? pad : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - pad - estimatedCtaH;
+  const ctaX = ctaBaseX + ctaOffsetX;
+  const ctaY = ctaBaseY + ctaOffsetY;
   ctx.fillStyle = banner.ctaBg || "#facc15";
   roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, Math.round(ctaH * 0.28));
   ctx.fill();
