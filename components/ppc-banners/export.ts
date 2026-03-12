@@ -122,6 +122,10 @@ function fitSize(width: number, height: number, maxWidth: number, maxHeight: num
   };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
   const pixelScale = 2;
   const viewW = format.width;
@@ -132,6 +136,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
   ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   const resolvedHeadline = format.headline ?? banner.headline;
   const resolvedSubheadline = format.subheadline ?? banner.subheadline;
@@ -221,7 +227,9 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
         logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - pad - logoH;
       const logoX = logoBaseX + logoOffsetX;
       const logoY = logoBaseY + logoOffsetY;
-      ctx.drawImage(logo, logoX, logoY, logoW, logoH);
+      const safeLogoX = clamp(logoX, 0, Math.max(0, boxW - logoW));
+      const safeLogoY = clamp(logoY, 0, Math.max(0, boxH - logoH));
+      ctx.drawImage(logo, safeLogoX, safeLogoY, logoW, logoH);
     } catch {}
   }
 
@@ -284,35 +292,40 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     const totalHeight = linesToDraw.reduce((acc, item) => acc + item.gapBefore + item.lineHeight, 0);
-    let textY = textAnchorY - totalHeight / 2;
+    const minTextY = 0;
+    const maxTextY = Math.max(minTextY, boxH - totalHeight);
+    let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
     linesToDraw.forEach((item) => {
       textY += item.gapBefore;
       ctx.font = `${item.weight} ${item.size}px Inter, Arial, sans-serif`;
-      ctx.fillText(item.text, textX, textY);
+      ctx.fillText(item.text, Math.round(textX), Math.round(textY));
       textY += item.lineHeight;
     });
   }
 
   const ctaText = resolvedCtaText || "Zjistit více";
   ctx.font = `700 ${format.ctaSize}px Inter, Arial, sans-serif`;
-  const estimatedCtaW = Math.round((ctaText || "Zjistit více").length * format.ctaSize * 0.55 + 32);
-  const estimatedCtaH = Math.round(format.ctaSize + 20);
-  const ctaW = estimatedCtaW;
-  const ctaH = estimatedCtaH;
+  const ctaMetrics = ctx.measureText(ctaText);
+  const ctaTextH = Math.max(
+    format.ctaSize,
+    Math.round((ctaMetrics.actualBoundingBoxAscent || 0) + (ctaMetrics.actualBoundingBoxDescent || 0)),
+  );
+  const ctaW = Math.round(ctaMetrics.width + 32);
+  const ctaH = Math.round(ctaTextH + 16);
   const ctaPadX = 16;
   const ctaBaseX =
-    ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - pad - estimatedCtaW;
+    ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - pad - ctaW;
   const ctaBaseY =
-    ctaAlignY === "top" ? pad : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - pad - estimatedCtaH;
-  const ctaX = ctaBaseX + ctaOffsetX;
-  const ctaY = ctaBaseY + ctaOffsetY;
+    ctaAlignY === "top" ? pad : ctaAlignY === "center" ? Math.round((boxH - ctaH) / 2) : boxH - pad - ctaH;
+  const ctaX = clamp(ctaBaseX + ctaOffsetX, 0, Math.max(0, boxW - ctaW));
+  const ctaY = clamp(ctaBaseY + ctaOffsetY, 0, Math.max(0, boxH - ctaH));
   ctx.fillStyle = banner.ctaBg || "#facc15";
-  roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, Math.round(ctaH * 0.28));
+  roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, 8);
   ctx.fill();
   ctx.fillStyle = banner.ctaTextColor || "#111827";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(ctaText, ctaX + ctaPadX, ctaY + ctaH / 2);
+  ctx.fillText(ctaText, Math.round(ctaX + ctaPadX), Math.round(ctaY + ctaH / 2));
 
   return canvas.toDataURL("image/png");
 }
