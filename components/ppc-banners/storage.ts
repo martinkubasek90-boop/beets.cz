@@ -58,6 +58,7 @@ function withFormatDefaults(format: BannerFormat): BannerFormat {
     zText: typeof format.zText === "number" ? format.zText : 30,
     zCta: typeof format.zCta === "number" ? format.zCta : 50,
     zShape: typeof format.zShape === "number" ? format.zShape : 10,
+    subheadline2Size: typeof format.subheadline2Size === "number" ? format.subheadline2Size : format.subheadlineSize || fallback.subheadlineSize,
   };
 }
 

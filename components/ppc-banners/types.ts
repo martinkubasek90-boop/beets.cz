@@ -37,6 +37,15 @@ export type BannerFormat = {
   zText?: number;
   zCta?: number;
   zShape?: number;
+  headline?: string;
+  subheadline?: string;
+  subheadline2?: string;
+  subheadline2Size?: number;
+  ctaText?: string;
+  bgImageUrl?: string;
+  bgScale?: number;
+  bgPositionX?: number;
+  bgPositionY?: number;
 };
 
 export type BannerSnapshot = {

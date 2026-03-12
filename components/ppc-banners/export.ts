@@ -120,19 +120,29 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
 
-  ctx.fillStyle = banner.bgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
+  const resolvedHeadline = format.headline ?? banner.headline;
+  const resolvedSubheadline = format.subheadline ?? banner.subheadline;
+  const resolvedSubheadline2 = format.subheadline2 ?? "";
+  const resolvedCtaText = format.ctaText ?? banner.ctaText;
+  const resolvedBgImageUrl = format.bgImageUrl ?? banner.bgImageUrl;
+  const resolvedBgScale = typeof format.bgScale === "number" ? format.bgScale : banner.bgScale;
+  const resolvedBgPositionX = typeof format.bgPositionX === "number" ? format.bgPositionX : banner.bgPositionX;
+  const resolvedBgPositionY = typeof format.bgPositionY === "number" ? format.bgPositionY : banner.bgPositionY;
+  const resolvedSubheadline2Size = format.subheadline2Size || format.subheadlineSize;
+
+  ctx.fillStyle = resolvedBgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const bgSrc = await resolveImageSource(banner.bgImageUrl);
+  const bgSrc = await resolveImageSource(resolvedBgImageUrl);
   if (bgSrc) {
     try {
       const bg = await loadImage(bgSrc);
       const coverScale = Math.max(canvas.width / bg.width, canvas.height / bg.height);
-      const scaleFactor = (typeof banner.bgScale === "number" ? Math.max(10, Math.min(260, banner.bgScale)) : 100) / 100;
+      const scaleFactor = (typeof resolvedBgScale === "number" ? Math.max(10, Math.min(260, resolvedBgScale)) : 100) / 100;
       const drawW = bg.width * coverScale * scaleFactor;
       const drawH = bg.height * coverScale * scaleFactor;
-      const posX = typeof banner.bgPositionX === "number" ? Math.max(0, Math.min(100, banner.bgPositionX)) : 50;
-      const posY = typeof banner.bgPositionY === "number" ? Math.max(0, Math.min(100, banner.bgPositionY)) : 50;
+      const posX = typeof resolvedBgPositionX === "number" ? Math.max(0, Math.min(100, resolvedBgPositionX)) : 50;
+      const posY = typeof resolvedBgPositionY === "number" ? Math.max(0, Math.min(100, resolvedBgPositionY)) : 50;
       const x = (canvas.width - drawW) * (posX / 100);
       const y = (canvas.height - drawH) * (posY / 100);
       ctx.drawImage(bg, x, y, drawW, drawH);
@@ -192,9 +202,10 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     } catch {}
   }
 
-  const hasHeadline = Boolean((banner.headline || "").trim());
-  const hasSubheadline = Boolean((banner.subheadline || "").trim());
-  if (hasHeadline || hasSubheadline) {
+  const hasHeadline = Boolean((resolvedHeadline || "").trim());
+  const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
+  const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
+  if (hasHeadline || hasSubheadline || hasSubheadline2) {
     ctx.fillStyle = banner.textColor || "#ffffff";
     ctx.textBaseline = "top";
     const textX = pad + textOffsetX;
@@ -202,7 +213,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
 
     if (hasHeadline) {
       ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
-      const headlineLines = wrapLines(ctx, banner.headline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
+      const headlineLines = wrapLines(ctx, resolvedHeadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
         ctx.fillText(line, textX, textY);
         textY += format.headlineSize * 1.12;
@@ -212,15 +223,25 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     if (hasSubheadline) {
       textY += hasHeadline ? Math.max(10, Math.round(format.subheadlineSize * 0.5)) : 0;
       ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
-      const subLines = wrapLines(ctx, banner.subheadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
+      const subLines = wrapLines(ctx, resolvedSubheadline || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
       subLines.forEach((line) => {
         ctx.fillText(line, textX, textY);
         textY += format.subheadlineSize * 1.32;
       });
     }
+
+    if (hasSubheadline2) {
+      textY += hasHeadline || hasSubheadline ? Math.max(8, Math.round(resolvedSubheadline2Size * 0.45)) : 0;
+      ctx.font = `500 ${resolvedSubheadline2Size}px Inter, Arial, sans-serif`;
+      const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", Math.max(120, maxWidth - Math.abs(textOffsetX)), format.layout === "vertical" ? 4 : 3);
+      sub2Lines.forEach((line) => {
+        ctx.fillText(line, textX, textY);
+        textY += resolvedSubheadline2Size * 1.32;
+      });
+    }
   }
 
-  const ctaText = banner.ctaText || "Zjistit více";
+  const ctaText = resolvedCtaText || "Zjistit více";
   ctx.font = `700 ${format.ctaSize}px Inter, Arial, sans-serif`;
   const ctaPadX = Math.round(format.ctaSize * 0.9);
   const ctaPadY = Math.round(format.ctaSize * 0.6);

@@ -32,6 +32,7 @@ type ResizeState = {
     logoScale: number;
     headlineSize: number;
     subheadlineSize: number;
+    subheadline2Size: number;
     shapeSize: number;
   };
 };
@@ -139,6 +140,7 @@ export function BannerCanvas({
   const padding = Math.max(8, Math.round(resolvedFormat.padding * scale));
   const headlineSize = Math.max(12, Math.round(resolvedFormat.headlineSize * scale));
   const subheadlineSize = Math.max(10, Math.round(resolvedFormat.subheadlineSize * scale));
+  const subheadline2Size = Math.max(10, Math.round((resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize) * scale));
   const ctaSize = Math.max(10, Math.round(resolvedFormat.ctaSize * scale));
   const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, resolvedFormat.logoScale || 1));
   const logoOffsetX = Math.round((resolvedFormat.logoOffsetX || 0) * scale);
@@ -147,10 +149,15 @@ export function BannerCanvas({
   const textOffsetY = Math.round((resolvedFormat.textOffsetY || 0) * scale);
   const ctaOffsetX = Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
   const ctaOffsetY = Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
-  const bgPreviewUrl = toPreviewImageUrl(banner.bgImageUrl);
-  const bgScale = clamp(typeof banner.bgScale === "number" ? banner.bgScale : 100, 10, 260);
-  const bgPositionX = clamp(typeof banner.bgPositionX === "number" ? banner.bgPositionX : 50, 0, 100);
-  const bgPositionY = clamp(typeof banner.bgPositionY === "number" ? banner.bgPositionY : 50, 0, 100);
+  const resolvedHeadline = resolvedFormat.headline ?? banner.headline;
+  const resolvedSubheadline = resolvedFormat.subheadline ?? banner.subheadline;
+  const resolvedSubheadline2 = resolvedFormat.subheadline2 ?? "";
+  const resolvedCtaText = resolvedFormat.ctaText ?? banner.ctaText;
+  const resolvedBgImageUrl = resolvedFormat.bgImageUrl ?? banner.bgImageUrl;
+  const bgPreviewUrl = toPreviewImageUrl(resolvedBgImageUrl);
+  const bgScale = clamp(typeof resolvedFormat.bgScale === "number" ? resolvedFormat.bgScale : typeof banner.bgScale === "number" ? banner.bgScale : 100, 10, 260);
+  const bgPositionX = clamp(typeof resolvedFormat.bgPositionX === "number" ? resolvedFormat.bgPositionX : typeof banner.bgPositionX === "number" ? banner.bgPositionX : 50, 0, 100);
+  const bgPositionY = clamp(typeof resolvedFormat.bgPositionY === "number" ? resolvedFormat.bgPositionY : typeof banner.bgPositionY === "number" ? banner.bgPositionY : 50, 0, 100);
   const boxW = Math.round(resolvedFormat.width * scale);
   const boxH = Math.round(resolvedFormat.height * scale);
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
@@ -182,15 +189,16 @@ export function BannerCanvas({
   const textLeft = textBaseX + textOffsetX;
   const textTop = textBaseY + textOffsetY;
 
-  const estimatedCtaW = Math.round((banner.ctaText || "Zjistit více").length * ctaSize * 0.55 + 32);
+  const estimatedCtaW = Math.round((resolvedCtaText || "Zjistit více").length * ctaSize * 0.55 + 32);
   const estimatedCtaH = Math.round(ctaSize + 20);
   const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - padding - estimatedCtaW;
   const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - padding - estimatedCtaH;
   const ctaLeft = ctaBaseX + ctaOffsetX;
   const ctaTop = ctaBaseY + ctaOffsetY;
   const hasLogo = Boolean((banner.logoUrl || "").trim());
-  const hasHeadline = Boolean((banner.headline || "").trim());
-  const hasSubheadline = Boolean((banner.subheadline || "").trim());
+  const hasHeadline = Boolean((resolvedHeadline || "").trim());
+  const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
+  const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
   const hasLogoTransparent = Boolean(banner.logoTransparentBg);
   const logoRawPreviewSrc = banner.logoUrl ? toPreviewImageUrl(banner.logoUrl) : "";
 
@@ -200,9 +208,11 @@ export function BannerCanvas({
       if (target === "text") {
         const nextHeadline = applyStep(resolvedFormat.headlineSize || 56, direction * 4, 16, 180);
         const nextSubheadline = applyStep(resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96);
+        const nextSubheadline2 = applyStep(resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96);
         onFormatPatch({
           headlineSize: Math.round(nextHeadline),
           subheadlineSize: Math.round(nextSubheadline),
+          subheadline2Size: Math.round(nextSubheadline2),
         });
         return;
       }
@@ -223,6 +233,7 @@ export function BannerCanvas({
       resolvedFormat.logoScale,
       resolvedFormat.shapeSize,
       resolvedFormat.subheadlineSize,
+      resolvedFormat.subheadline2Size,
     ],
   );
 
@@ -261,6 +272,7 @@ export function BannerCanvas({
         logoScale: resolvedFormat.logoScale || 1,
         headlineSize: resolvedFormat.headlineSize || 56,
         subheadlineSize: resolvedFormat.subheadlineSize || 28,
+        subheadline2Size: resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28,
         shapeSize: resolvedFormat.shapeSize || 24,
       },
     };
@@ -290,9 +302,11 @@ export function BannerCanvas({
         if (resizeState.target === "text") {
           const nextHeadline = applyStep(resizeState.origin.headlineSize, dragDelta * 1.1, 16, 180);
           const nextSubheadline = applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 96);
+          const nextSubheadline2 = applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 96);
           onFormatPatch({
             headlineSize: Math.round(nextHeadline),
             subheadlineSize: Math.round(nextSubheadline),
+            subheadline2Size: Math.round(nextSubheadline2),
           });
           return;
         }
@@ -491,7 +505,7 @@ export function BannerCanvas({
             </div>
           ) : null}
 
-          {hasHeadline || hasSubheadline ? (
+          {hasHeadline || hasSubheadline || hasSubheadline2 ? (
             <div
               className={`absolute ${editable ? "cursor-move" : ""} ${selected === "text" ? "ring-2 ring-cyan-300" : ""}`}
               style={{
@@ -507,12 +521,17 @@ export function BannerCanvas({
             >
               {hasHeadline ? (
                 <h2 className="font-extrabold leading-[1.05]" style={{ color: banner.textColor, fontSize: `${headlineSize}px` }}>
-                  {banner.headline}
+                  {resolvedHeadline}
                 </h2>
               ) : null}
               {hasSubheadline ? (
                 <p className={`${hasHeadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadlineSize}px` }}>
-                  {banner.subheadline}
+                  {resolvedSubheadline}
+                </p>
+              ) : null}
+              {hasSubheadline2 ? (
+                <p className={`${hasHeadline || hasSubheadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadline2Size}px` }}>
+                  {resolvedSubheadline2}
                 </p>
               ) : null}
               {editable && selected === "text" ? (
@@ -540,7 +559,7 @@ export function BannerCanvas({
                 fontSize: `${ctaSize}px`,
               }}
             >
-              {banner.ctaText || "Zjistit více"}
+              {resolvedCtaText || "Zjistit více"}
             </button>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
-type LayerId = "logo" | "headline" | "description" | "cta" | "background";
+type LayerId = "logo" | "headline" | "description" | "description2" | "cta" | "background";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -78,8 +78,8 @@ export function PropertyPanel({
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Metadata se nepodařilo načíst.");
       if (data.brandName) onBannerChange("brandName", data.brandName);
-      if (data.headline && !banner.headline) onBannerChange("headline", data.headline);
-      if (data.subheadline && !banner.subheadline) onBannerChange("subheadline", data.subheadline);
+      if (data.headline && !(format?.headline || banner.headline)) onFormatChange("headline", data.headline);
+      if (data.subheadline && !(format?.subheadline || banner.subheadline)) onFormatChange("subheadline", data.subheadline);
       if (data.logoUrl && !banner.logoUrl) onBannerChange("logoUrl", data.logoUrl);
     } catch (error) {
       console.error(error);
@@ -97,7 +97,7 @@ export function PropertyPanel({
   const onBgUpload = async (file: File | null) => {
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
-    onBannerChange("bgImageUrl", dataUrl);
+    onFormatChange("bgImageUrl", dataUrl);
     onBannerChange("bgMode", "upload");
   };
 
@@ -114,7 +114,7 @@ export function PropertyPanel({
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Generování pozadí selhalo.");
       if (data.imageUrl) {
-        onBannerChange("bgImageUrl", normalizeImageUrl(data.imageUrl));
+        onFormatChange("bgImageUrl", normalizeImageUrl(data.imageUrl));
         onBannerChange("bgMode", "generate");
       }
     } catch (error) {
@@ -156,7 +156,16 @@ export function PropertyPanel({
   const textContentAlign = format?.textContentAlign || "left";
   const ctaAlignX = format?.ctaAlignX || "left";
   const ctaAlignY = format?.ctaAlignY || "bottom";
-  const currentLayerKey = activeLayer === "logo" ? "logo" : activeLayer === "cta" ? "cta" : activeLayer === "headline" || activeLayer === "description" ? "text" : "background";
+  const currentLayerKey =
+    activeLayer === "logo" ? "logo" : activeLayer === "cta" ? "cta" : activeLayer === "headline" || activeLayer === "description" || activeLayer === "description2" ? "text" : "background";
+  const headlineValue = format?.headline ?? banner.headline;
+  const subheadlineValue = format?.subheadline ?? banner.subheadline;
+  const subheadline2Value = format?.subheadline2 ?? "";
+  const ctaValue = format?.ctaText ?? banner.ctaText;
+  const bgImageValue = format?.bgImageUrl ?? banner.bgImageUrl ?? "";
+  const bgScaleValue = Number(format?.bgScale ?? banner.bgScale ?? 100);
+  const bgPositionXValue = Number(format?.bgPositionX ?? banner.bgPositionX ?? 50);
+  const bgPositionYValue = Number(format?.bgPositionY ?? banner.bgPositionY ?? 50);
   const zMap = {
     logo: typeof format?.zLogo === "number" ? format.zLogo : 40,
     text: typeof format?.zText === "number" ? format.zText : 30,
@@ -214,8 +223,9 @@ export function PropertyPanel({
             ["logo", "1. Logo"],
             ["headline", "2. Nadpis"],
             ["description", "3. Popis"],
-            ["cta", "4. CTA"],
-            ["background", "5. Background foto"],
+            ["description2", "4. POPIS 2"],
+            ["cta", "5. CTA"],
+            ["background", "6. Background foto"],
           ] as const).map(([id, label]) => (
             <button
               key={id}
@@ -287,7 +297,7 @@ export function PropertyPanel({
           {activeLayer === "headline" ? (
             <>
               <Label className="text-xs text-slate-600">Text nadpisu</Label>
-              <Input value={banner.headline} onChange={(e) => onBannerChange("headline", e.target.value)} className="border-slate-200 bg-white" />
+              <Input value={headlineValue} onChange={(e) => onFormatChange("headline", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost headline: {format.headlineSize}px</Label>
                 <Input type="range" min={16} max={180} value={format.headlineSize} onChange={(e) => onFormatChange("headlineSize", Number(e.target.value))} />
@@ -309,7 +319,7 @@ export function PropertyPanel({
           {activeLayer === "description" ? (
             <>
               <Label className="text-xs text-slate-600">Text popisu</Label>
-              <Input value={banner.subheadline} onChange={(e) => onBannerChange("subheadline", e.target.value)} className="border-slate-200 bg-white" />
+              <Input value={subheadlineValue} onChange={(e) => onFormatChange("subheadline", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost popisu: {format.subheadlineSize}px</Label>
                 <Input type="range" min={12} max={96} value={format.subheadlineSize} onChange={(e) => onFormatChange("subheadlineSize", Number(e.target.value))} />
@@ -318,10 +328,22 @@ export function PropertyPanel({
             </>
           ) : null}
 
+          {activeLayer === "description2" ? (
+            <>
+              <Label className="text-xs text-slate-600">Text POPIS 2</Label>
+              <Input value={subheadline2Value} onChange={(e) => onFormatChange("subheadline2", e.target.value)} className="border-slate-200 bg-white" />
+              <div className="space-y-2">
+                <Label className="text-xs">Velikost POPIS 2: {format.subheadline2Size || format.subheadlineSize}px</Label>
+                <Input type="range" min={12} max={96} value={format.subheadline2Size || format.subheadlineSize} onChange={(e) => onFormatChange("subheadline2Size", Number(e.target.value))} />
+              </div>
+              <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
+            </>
+          ) : null}
+
           {activeLayer === "cta" ? (
             <>
               <Label className="text-xs text-slate-600">CTA text</Label>
-              <Input value={banner.ctaText} onChange={(e) => onBannerChange("ctaText", e.target.value)} className="border-slate-200 bg-white" />
+              <Input value={ctaValue} onChange={(e) => onFormatChange("ctaText", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost CTA: {format.ctaSize}px</Label>
                 <Input type="range" min={10} max={60} value={format.ctaSize} onChange={(e) => onFormatChange("ctaSize", Number(e.target.value))} />
@@ -352,7 +374,7 @@ export function PropertyPanel({
           {activeLayer === "background" ? (
             <>
               <Label className="text-xs text-slate-600">Pozadí URL</Label>
-              <Input value={banner.bgImageUrl || ""} onChange={(e) => onBannerChange("bgImageUrl", normalizeImageUrl(e.target.value))} className="border-slate-200 bg-white" placeholder="https://.../bg.jpg" />
+              <Input value={bgImageValue} onChange={(e) => onFormatChange("bgImageUrl", normalizeImageUrl(e.target.value))} className="border-slate-200 bg-white" placeholder="https://.../bg.jpg" />
               <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
                 <Upload className="h-3.5 w-3.5" />
                 Vybrat obrázek
@@ -366,16 +388,16 @@ export function PropertyPanel({
                 </button>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Zoom pozadí: {Math.round(Number(banner.bgScale || 100))}%</Label>
-                <Input type="range" min={10} max={260} value={Number(banner.bgScale || 100)} onChange={(e) => onBannerChange("bgScale", Number(e.target.value))} />
+                <Label className="text-xs">Zoom pozadí: {Math.round(bgScaleValue)}%</Label>
+                <Input type="range" min={10} max={260} value={bgScaleValue} onChange={(e) => onFormatChange("bgScale", Number(e.target.value))} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Pozice X: {Math.round(Number(banner.bgPositionX || 50))}%</Label>
-                <Input type="range" min={0} max={100} value={Number(banner.bgPositionX || 50)} onChange={(e) => onBannerChange("bgPositionX", Number(e.target.value))} />
+                <Label className="text-xs">Pozice X: {Math.round(bgPositionXValue)}%</Label>
+                <Input type="range" min={0} max={100} value={bgPositionXValue} onChange={(e) => onFormatChange("bgPositionX", Number(e.target.value))} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Pozice Y: {Math.round(Number(banner.bgPositionY || 50))}%</Label>
-                <Input type="range" min={0} max={100} value={Number(banner.bgPositionY || 50)} onChange={(e) => onBannerChange("bgPositionY", Number(e.target.value))} />
+                <Label className="text-xs">Pozice Y: {Math.round(bgPositionYValue)}%</Label>
+                <Input type="range" min={0} max={100} value={bgPositionYValue} onChange={(e) => onFormatChange("bgPositionY", Number(e.target.value))} />
               </div>
             </>
           ) : null}
