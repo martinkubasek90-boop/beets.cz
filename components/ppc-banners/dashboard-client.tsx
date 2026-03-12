@@ -9,6 +9,7 @@ import { BannerCard } from "@/components/ppc-banners/banner-card";
 import { CreateBannerWizard } from "@/components/ppc-banners/create-banner-wizard";
 import { deleteBanner, listBanners, upsertBanner } from "@/components/ppc-banners/storage";
 import type { Banner } from "@/components/ppc-banners/types";
+import { exportBannerPng } from "@/components/ppc-banners/export";
 
 export function PpcBannersDashboardClient() {
   const [search, setSearch] = useState("");
@@ -51,6 +52,16 @@ export function PpcBannersDashboardClient() {
   const onCreate = (banner: Banner) => {
     upsertBanner(banner);
     setRefreshKey((prev) => prev + 1);
+  };
+
+  const onExport = async (banner: Banner) => {
+    const target = banner.formats?.[0];
+    if (!target) return;
+    try {
+      await exportBannerPng(banner, target);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
@@ -110,7 +121,7 @@ export function PpcBannersDashboardClient() {
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((banner) => (
-              <BannerCard key={banner.id} banner={banner} onDelete={onDelete} onDuplicate={onDuplicate} />
+              <BannerCard key={banner.id} banner={banner} onDelete={onDelete} onDuplicate={onDuplicate} onExport={onExport} />
             ))}
           </div>
         )}

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Loader2, Save, Settings, Sparkles } from "lucide-react";
+import { ArrowLeft, Check, Download, Loader2, Save, Settings, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBannerById, upsertBanner } from "@/components/ppc-banners/storage";
@@ -12,6 +12,7 @@ import { BannerCanvas } from "@/components/ppc-banners/banner-canvas";
 import { FormatSelector } from "@/components/ppc-banners/format-selector";
 import { PropertyPanel } from "@/components/ppc-banners/property-panel";
 import { AIAssistant } from "@/components/ppc-banners/ai-assistant";
+import { exportBannerPng } from "@/components/ppc-banners/export";
 
 export function PpcBannerEditorClient() {
   const router = useRouter();
@@ -93,6 +94,15 @@ export function PpcBannerEditorClient() {
     });
   };
 
+  const onExportCurrent = async () => {
+    if (!banner || !activeFormat) return;
+    try {
+      await exportBannerPng(banner, activeFormat);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   if (!banner) {
     return (
       <div className="flex h-screen items-center justify-center bg-[radial-gradient(800px_500px_at_20%_-20%,#d9f5ef_0%,#f8fafc_55%,#eef2ff_100%)]">
@@ -120,10 +130,16 @@ export function PpcBannerEditorClient() {
           <div className="h-5 w-px bg-slate-200" />
           <Input value={banner.name} onChange={(e) => onBannerChange("name", e.target.value)} className="h-8 w-56 border-none bg-transparent shadow-none text-sm font-semibold focus-visible:ring-1" />
         </div>
-        <Button onClick={save} size="sm" disabled={saving} className={saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"}>
-          {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
-          {saved ? "Uloženo" : "Uložit"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            Export PNG
+          </Button>
+          <Button onClick={save} size="sm" disabled={saving} className={saved ? "bg-emerald-600 hover:bg-emerald-700" : "bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700"}>
+            {saving ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : saved ? <Check className="mr-1.5 h-3.5 w-3.5" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
+            {saved ? "Uloženo" : "Uložit"}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden">

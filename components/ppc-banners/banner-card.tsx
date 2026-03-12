@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Banner } from "@/components/ppc-banners/types";
 
@@ -8,10 +9,12 @@ export function BannerCard({
   banner,
   onDelete,
   onDuplicate,
+  onExport,
 }: {
   banner: Banner;
   onDelete: (id: string) => void;
   onDuplicate: (banner: Banner) => void;
+  onExport: (banner: Banner) => void;
 }) {
   const preview = banner.formats?.[0];
   return (
@@ -40,8 +43,12 @@ export function BannerCard({
           <Link href={`/ppc-banners/editor?id=${encodeURIComponent(banner.id)}`} className="flex-1">
             <Button className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700" size="sm">Upravit</Button>
           </Link>
-          <Button variant="outline" size="sm" className="border-slate-300 hover:bg-slate-50" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
-          <Button variant="outline" size="sm" className="text-red-600" onClick={() => onDelete(banner.id)}>Smazat</Button>
+          <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
+          <Button variant="outline" size="sm" className="border-slate-300 bg-white text-slate-700 hover:bg-slate-100" onClick={() => onExport(banner)}>
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </Button>
+          <Button variant="outline" size="sm" className="border-red-500 bg-white text-red-600 hover:bg-red-50" onClick={() => onDelete(banner.id)}>Smazat</Button>
         </div>
       </div>
     </div>
