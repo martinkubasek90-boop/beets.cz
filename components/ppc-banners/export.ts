@@ -291,12 +291,11 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
 
   const ctaText = resolvedCtaText || "Zjistit více";
   ctx.font = `700 ${format.ctaSize}px Inter, Arial, sans-serif`;
-  const ctaPadX = Math.round(format.ctaSize * 0.9);
-  const ctaPadY = Math.round(format.ctaSize * 0.6);
-  const ctaW = Math.round(ctx.measureText(ctaText).width + ctaPadX * 2);
-  const ctaH = Math.round(format.ctaSize + ctaPadY * 2);
   const estimatedCtaW = Math.round((ctaText || "Zjistit více").length * format.ctaSize * 0.55 + 32);
   const estimatedCtaH = Math.round(format.ctaSize + 20);
+  const ctaW = estimatedCtaW;
+  const ctaH = estimatedCtaH;
+  const ctaPadX = 16;
   const ctaBaseX =
     ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - pad - estimatedCtaW;
   const ctaBaseY =
