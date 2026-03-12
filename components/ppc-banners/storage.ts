@@ -53,6 +53,10 @@ function withFormatDefaults(format: BannerFormat): BannerFormat {
     textContentAlign: format.textContentAlign || "left",
     ctaAlignX: format.ctaAlignX || "left",
     ctaAlignY: format.ctaAlignY || "bottom",
+    zLogo: typeof format.zLogo === "number" ? format.zLogo : 40,
+    zText: typeof format.zText === "number" ? format.zText : 30,
+    zCta: typeof format.zCta === "number" ? format.zCta : 50,
+    zShape: typeof format.zShape === "number" ? format.zShape : 10,
   };
 }
 

@@ -33,6 +33,10 @@ export type BannerFormat = {
   textContentAlign?: "left" | "center" | "right";
   ctaAlignX?: "left" | "center" | "right";
   ctaAlignY?: "top" | "center" | "bottom";
+  zLogo?: number;
+  zText?: number;
+  zCta?: number;
+  zShape?: number;
 };
 
 export type BannerSnapshot = {

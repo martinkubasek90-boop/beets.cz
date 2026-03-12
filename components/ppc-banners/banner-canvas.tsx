@@ -59,6 +59,17 @@ const FALLBACK_FORMAT: BannerFormat = {
   shapeX: 78,
   shapeY: 22,
   shapeSize: 24,
+  logoAlignX: "left",
+  logoAlignY: "top",
+  textAlignX: "left",
+  textAlignY: "center",
+  textContentAlign: "left",
+  ctaAlignX: "left",
+  ctaAlignY: "bottom",
+  zLogo: 40,
+  zText: 30,
+  zCta: 50,
+  zShape: 10,
   padding: 56,
 };
 
@@ -115,6 +126,10 @@ export function BannerCanvas({
   const textContentAlign = resolvedFormat.textContentAlign || "left";
   const ctaAlignX = resolvedFormat.ctaAlignX || "left";
   const ctaAlignY = resolvedFormat.ctaAlignY || "bottom";
+  const zLogo = typeof resolvedFormat.zLogo === "number" ? resolvedFormat.zLogo : 40;
+  const zText = typeof resolvedFormat.zText === "number" ? resolvedFormat.zText : 30;
+  const zCta = typeof resolvedFormat.zCta === "number" ? resolvedFormat.zCta : 50;
+  const zShape = typeof resolvedFormat.zShape === "number" ? resolvedFormat.zShape : 10;
 
   const logoW = Math.round(130 * scale * logoScale);
   const logoH = Math.round(32 * scale * logoScale);
@@ -331,6 +346,7 @@ export function BannerCanvas({
             onMouseDown={(event) => startDrag("shape", event)}
             onWheel={(event) => onResizeWheel("shape", event)}
             style={{
+              zIndex: zShape,
               left: `${shapeLeft}px`,
               top: `${shapeTop}px`,
               width: `${shapeSizePx}px`,
@@ -359,7 +375,7 @@ export function BannerCanvas({
 
           <div
             className={`absolute flex items-center gap-2 ${editable ? "cursor-move" : ""} ${selected === "logo" ? "ring-2 ring-cyan-300" : ""} ${editable ? "relative" : ""}`}
-            style={{ left: `${logoLeft}px`, top: `${logoTop}px` }}
+            style={{ left: `${logoLeft}px`, top: `${logoTop}px`, zIndex: zLogo }}
             onMouseDown={(event) => startDrag("logo", event)}
             onWheel={(event) => onResizeWheel("logo", event)}
           >
@@ -392,6 +408,7 @@ export function BannerCanvas({
               width: `${textW}px`,
               transform: "translateY(-50%)",
               textAlign: textContentAlign,
+              zIndex: zText,
             }}
             onMouseDown={(event) => startDrag("text", event)}
             onWheel={(event) => onResizeWheel("text", event)}
@@ -414,7 +431,7 @@ export function BannerCanvas({
 
           <div
             className={`absolute ${editable ? "cursor-move" : ""} ${selected === "cta" ? "ring-2 ring-cyan-300" : ""}`}
-            style={{ left: `${ctaLeft}px`, top: `${ctaTop}px` }}
+            style={{ left: `${ctaLeft}px`, top: `${ctaTop}px`, zIndex: zCta }}
             onMouseDown={(event) => startDrag("cta", event)}
           >
             <button

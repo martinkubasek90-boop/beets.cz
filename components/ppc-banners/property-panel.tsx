@@ -156,6 +156,36 @@ export function PropertyPanel({
   const textContentAlign = format?.textContentAlign || "left";
   const ctaAlignX = format?.ctaAlignX || "left";
   const ctaAlignY = format?.ctaAlignY || "bottom";
+  const currentLayerKey = activeLayer === "logo" ? "logo" : activeLayer === "cta" ? "cta" : activeLayer === "headline" || activeLayer === "description" ? "text" : "background";
+  const zMap = {
+    logo: typeof format?.zLogo === "number" ? format.zLogo : 40,
+    text: typeof format?.zText === "number" ? format.zText : 30,
+    cta: typeof format?.zCta === "number" ? format.zCta : 50,
+  } as const;
+  const orderedLayers = Object.entries(zMap)
+    .sort((a, b) => a[1] - b[1])
+    .map(([key]) => key as "logo" | "text" | "cta");
+  const currentOrderIndex = currentLayerKey === "background" ? -1 : orderedLayers.indexOf(currentLayerKey as "logo" | "text" | "cta");
+
+  const applyLayerOrder = (order: Array<"logo" | "text" | "cta">) => {
+    order.forEach((layer, idx) => {
+      const z = 10 + idx * 10;
+      if (layer === "logo") onFormatChange("zLogo", z);
+      if (layer === "text") onFormatChange("zText", z);
+      if (layer === "cta") onFormatChange("zCta", z);
+    });
+  };
+
+  const moveLayer = (direction: -1 | 1) => {
+    if (currentLayerKey === "background" || currentOrderIndex < 0) return;
+    const nextIndex = currentOrderIndex + direction;
+    if (nextIndex < 0 || nextIndex >= orderedLayers.length) return;
+    const nextOrder = [...orderedLayers];
+    const currentLayer = nextOrder[currentOrderIndex];
+    nextOrder[currentOrderIndex] = nextOrder[nextIndex];
+    nextOrder[nextIndex] = currentLayer;
+    applyLayerOrder(nextOrder);
+  };
 
   return (
     <div className="space-y-4 p-3">
@@ -197,6 +227,29 @@ export function PropertyPanel({
             </button>
           ))}
         </div>
+        {currentLayerKey !== "background" ? (
+          <div className="mt-2 space-y-2 border-t border-slate-200 pt-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Pořadí vrstvy</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => moveLayer(-1)}
+                disabled={currentOrderIndex <= 0}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                Posunout dozadu
+              </button>
+              <button
+                type="button"
+                onClick={() => moveLayer(1)}
+                disabled={currentOrderIndex < 0 || currentOrderIndex >= orderedLayers.length - 1}
+                className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:bg-slate-200 disabled:text-slate-500"
+              >
+                Posunout dopředu
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       {format ? (
