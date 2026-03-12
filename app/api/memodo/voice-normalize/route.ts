@@ -19,6 +19,22 @@ type VoiceNormalizeResponse = {
 
 let openaiClient: OpenAI | null = null;
 
+const VOICE_EXPLICIT_REPLACEMENTS: Array<[string, string]> = [
+  ["pylon ted", "pylontech"],
+  ["pylon tec", "pylontech"],
+  ["pylon tek", "pylontech"],
+  ["pilon tech", "pylontech"],
+  ["pilonteh", "pylontech"],
+  ["dynes", "dyness"],
+  ["diness", "dyness"],
+  ["dines", "dyness"],
+  ["good vy", "goodwe"],
+  ["good ví", "goodwe"],
+  ["good wi", "goodwe"],
+  ["sangrow", "sungrow"],
+  ["sun grow", "sungrow"],
+];
+
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY || process.env.LLM_API_KEY;
   if (!apiKey) return null;
@@ -32,6 +48,96 @@ function getOpenAIClient() {
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+function normalizeVoiceText(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function levenshteinDistance(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const matrix: number[][] = Array.from({ length: a.length + 1 }, () => Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+function replaceWholePhrase(value: string, phrase: string, target: string) {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(new RegExp(`\\b${escaped}\\b`, "g"), target);
+}
+
+function brandDistanceThreshold(brand: string) {
+  return Math.max(1, Math.floor(brand.length * 0.34));
+}
+
+function closestBrand(token: string, brands: string[]) {
+  let best = token;
+  let bestDistance = Number.MAX_SAFE_INTEGER;
+  for (const brand of brands) {
+    const d = levenshteinDistance(token, brand);
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = brand;
+    }
+  }
+  return { brand: best, distance: bestDistance };
+}
+
+function applyVoiceCorrections(text: string, brands: string[]) {
+  if (!text.trim()) return "";
+  const effectiveBrands = brands.length ? brands : ["dyness", "pylontech", "goodwe", "sungrow"];
+  let normalized = normalizeVoiceText(text);
+  for (const [from, to] of VOICE_EXPLICIT_REPLACEMENTS) {
+    normalized = replaceWholePhrase(normalized, from, to);
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  const merged: string[] = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const current = tokens[i];
+    const next = tokens[i + 1];
+    if (!next) {
+      merged.push(current);
+      continue;
+    }
+    const combined = `${current}${next}`;
+    const bestPair = closestBrand(combined, effectiveBrands);
+    const pairThreshold = Math.max(2, brandDistanceThreshold(bestPair.brand));
+    if (bestPair.distance <= pairThreshold) {
+      merged.push(bestPair.brand);
+      i += 1;
+      continue;
+    }
+    merged.push(current);
+  }
+
+  const corrected = merged.map((token) => {
+    if (token.length < 3) return token;
+    const best = closestBrand(token, effectiveBrands);
+    const threshold = brandDistanceThreshold(best.brand);
+    if (best.distance <= threshold) return best.brand;
+    return token;
+  });
+  return corrected.join(" ").trim();
 }
 
 function isPriceIntent(text: string) {
@@ -51,8 +157,9 @@ function cleanupPriceQuery(text: string) {
   );
 }
 
-function fallbackNormalize(text: string): VoiceNormalizeResponse {
-  const normalizedText = normalizeWhitespace(text);
+function fallbackNormalize(text: string, brands: string[]): VoiceNormalizeResponse {
+  const corrected = applyVoiceCorrections(text, brands);
+  const normalizedText = normalizeWhitespace(corrected || text);
   const isPrice = isPriceIntent(normalizedText);
   const priceQuery = isPrice ? cleanupPriceQuery(normalizedText) : "";
   const searchQuery = normalizeWhitespace(priceQuery || normalizedText);
@@ -86,7 +193,7 @@ function tryParseJsonObject(input: string) {
 }
 
 function sanitizeLlmOutput(raw: Record<string, unknown> | null, originalText: string): VoiceNormalizeResponse {
-  const fallback = fallbackNormalize(originalText);
+  const fallback = fallbackNormalize(originalText, []);
   if (!raw) return fallback;
 
   const normalizedText =
@@ -126,14 +233,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Missing text." }, { status: 400 });
   }
 
+  const products = await getMemodoProducts().catch(() => []);
+  const brandHints = Array.from(
+    new Set(products.map((item) => normalizeVoiceText(item.brand || "")).filter(Boolean)),
+  );
+  const correctedInput = applyVoiceCorrections(text, brandHints);
+
   const client = getOpenAIClient();
   if (!client) {
-    return NextResponse.json(fallbackNormalize(text));
+    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints));
   }
 
   try {
-    const products = await getMemodoProducts();
-    const brandHints = Array.from(
+    const brandHintsDisplay = Array.from(
       new Set(products.map((item) => (item.brand || "").trim()).filter(Boolean)),
     )
       .sort((a, b) => a.localeCompare(b, "cs"))
@@ -153,10 +265,10 @@ export async function POST(request: Request) {
       "4) Oprav překlepy značek a modelů podle hintů.",
       "5) Nevymýšlej nové produkty.",
       "",
-      `Brand hints: ${brandHints.join(", ")}`,
+      `Brand hints: ${brandHintsDisplay.join(", ")}`,
       `Model hints: ${modelHints.join(" | ")}`,
       "",
-      `Vstupní přepis: "${text}"`,
+      `Vstupní přepis: "${correctedInput || text}"`,
       "",
       "Vrať POUZE JSON ve tvaru:",
       '{"normalizedText":"...","searchQuery":"...","priceQuery":"...","isPriceIntent":true}',
@@ -173,9 +285,19 @@ export async function POST(request: Request) {
     });
 
     const parsed = tryParseJsonObject(response.output_text || "");
-    return NextResponse.json(sanitizeLlmOutput(parsed, text));
+    const sanitized = sanitizeLlmOutput(parsed, correctedInput || text);
+    const normalizedText = applyVoiceCorrections(sanitized.normalizedText, brandHints);
+    const searchQuery = applyVoiceCorrections(sanitized.searchQuery || normalizedText, brandHints);
+    const priceQuery = sanitized.isPriceIntent
+      ? applyVoiceCorrections(sanitized.priceQuery || cleanupPriceQuery(normalizedText), brandHints)
+      : "";
+    return NextResponse.json({
+      ...sanitized,
+      normalizedText: normalizedText || sanitized.normalizedText,
+      searchQuery: searchQuery || sanitized.searchQuery,
+      priceQuery,
+    } satisfies VoiceNormalizeResponse);
   } catch {
-    return NextResponse.json(fallbackNormalize(text));
+    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints));
   }
 }
-

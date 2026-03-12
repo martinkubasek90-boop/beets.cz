@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import type { Product } from "@/lib/memodo-data";
+import { trackMemodoEvent } from "@/lib/memodo-analytics";
 
 type ProductsResponse = {
   ok: boolean;
@@ -85,6 +86,22 @@ const VOICE_BRAND_HINTS = [
   "ja",
 ];
 
+const VOICE_EXPLICIT_REPLACEMENTS: Array<[string, string]> = [
+  ["pylon ted", "pylontech"],
+  ["pylon tec", "pylontech"],
+  ["pylon tek", "pylontech"],
+  ["pilon tech", "pylontech"],
+  ["pilonteh", "pylontech"],
+  ["dynes", "dyness"],
+  ["diness", "dyness"],
+  ["dines", "dyness"],
+  ["good vy", "goodwe"],
+  ["good ví", "goodwe"],
+  ["good wi", "goodwe"],
+  ["sangrow", "sungrow"],
+  ["sun grow", "sungrow"],
+];
+
 function normalizeVoiceText(value: string) {
   return value
     .toLowerCase()
@@ -115,20 +132,59 @@ function levenshteinDistance(a: string, b: string) {
   return matrix[a.length][b.length];
 }
 
-function correctVoiceBrands(value: string) {
-  const tokens = normalizeVoiceText(value).split(" ").filter(Boolean);
-  const corrected = tokens.map((token) => {
-    if (token.length < 3) return token;
-    let best = token;
-    let bestDistance = Number.MAX_SAFE_INTEGER;
-    for (const brand of VOICE_BRAND_HINTS) {
-      const d = levenshteinDistance(token, brand);
-      if (d < bestDistance) {
-        bestDistance = d;
-        best = brand;
-      }
+function replaceWholePhrase(value: string, phrase: string, target: string) {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(new RegExp(`\\b${escaped}\\b`, "g"), target);
+}
+
+function brandDistanceThreshold(brand: string) {
+  return Math.max(1, Math.floor(brand.length * 0.34));
+}
+
+function closestBrand(token: string) {
+  let best = token;
+  let bestDistance = Number.MAX_SAFE_INTEGER;
+  for (const brand of VOICE_BRAND_HINTS) {
+    const d = levenshteinDistance(token, brand);
+    if (d < bestDistance) {
+      bestDistance = d;
+      best = brand;
     }
-    if (bestDistance <= 2) return best;
+  }
+  return { brand: best, distance: bestDistance };
+}
+
+function correctVoiceBrands(value: string) {
+  let normalized = normalizeVoiceText(value);
+  for (const [from, to] of VOICE_EXPLICIT_REPLACEMENTS) {
+    normalized = replaceWholePhrase(normalized, from, to);
+  }
+
+  const tokens = normalized.split(" ").filter(Boolean);
+  const merged: string[] = [];
+  for (let i = 0; i < tokens.length; i += 1) {
+    const current = tokens[i];
+    const next = tokens[i + 1];
+    if (!next) {
+      merged.push(current);
+      continue;
+    }
+    const combined = `${current}${next}`;
+    const bestPair = closestBrand(combined);
+    const pairThreshold = Math.max(2, brandDistanceThreshold(bestPair.brand));
+    if (bestPair.distance <= pairThreshold) {
+      merged.push(bestPair.brand);
+      i += 1;
+      continue;
+    }
+    merged.push(current);
+  }
+
+  const corrected = merged.map((token) => {
+    if (token.length < 3) return token;
+    const best = closestBrand(token);
+    const threshold = brandDistanceThreshold(best.brand);
+    if (best.distance <= threshold) return best.brand;
     return token;
   });
   return corrected.join(" ").trim();
@@ -144,6 +200,10 @@ function extractSpeechCandidates(transcript: string) {
   const correctedCompact = correctVoiceBrands(compact);
 
   return Array.from(new Set([normalized, corrected, compact, correctedCompact].filter((item) => item.length >= 2)));
+}
+
+function clipEventText(value: string, max = 120) {
+  return value.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 export function MemodoHeaderSearch() {
@@ -296,9 +356,22 @@ export function MemodoHeaderSearch() {
     const searchInput = normalized?.searchQuery || effectiveText;
     const candidates = extractSpeechCandidates(searchInput);
     const priceIntent = normalized?.isPriceIntent ?? isPriceIntent(effectiveText);
+    trackMemodoEvent("memodo_voice_normalized", {
+      transcript_raw: clipEventText(transcript, 160),
+      normalized_text: clipEventText(effectiveText, 160),
+      search_query: clipEventText(searchInput, 120),
+      provider: normalized?.provider || "client_fallback",
+      is_price_intent: priceIntent,
+      candidate_count: candidates.length,
+    });
 
     if (!priceIntent) {
       const primary = candidates[0] || searchInput || effectiveText;
+      trackMemodoEvent("memodo_voice_search_submit", {
+        transcript_raw: clipEventText(transcript, 120),
+        final_query: clipEventText(primary, 120),
+        provider: normalized?.provider || "client_fallback",
+      });
       router.push(`/Memodo/katalog?q=${encodeURIComponent(primary)}`);
       setOpen(false);
       setVoiceAnswer(null);
@@ -321,6 +394,11 @@ export function MemodoHeaderSearch() {
 
       if (!matchedProducts.length) {
         const text = "Nenašel jsem odpovídající produkt.";
+        trackMemodoEvent("memodo_voice_price_no_match", {
+          transcript_raw: clipEventText(transcript, 120),
+          search_query: clipEventText(searchInput, 120),
+          provider: normalized?.provider || "client_fallback",
+        });
         setVoiceAnswer({ text });
         speak(text);
         return;
@@ -336,16 +414,31 @@ export function MemodoHeaderSearch() {
 
       if (!canSeePrices || typeof candidate.price !== "number") {
         const text = "Váš e-mail není ověřen pro zobrazení cen. Ukazuji produkt bez ceny.";
+        trackMemodoEvent("memodo_voice_price_result", {
+          transcript_raw: clipEventText(transcript, 120),
+          product_id: candidate.id,
+          has_price: false,
+          can_see_prices: canSeePrices,
+        });
         setVoiceAnswer({ text, product: candidate });
         speak(text);
         return;
       }
 
       const text = `Cena produktu ${candidate.name} je ${candidate.price.toLocaleString("cs-CZ")} korun bez DPH.`;
+      trackMemodoEvent("memodo_voice_price_result", {
+        transcript_raw: clipEventText(transcript, 120),
+        product_id: candidate.id,
+        has_price: true,
+        can_see_prices: canSeePrices,
+      });
       setVoiceAnswer({ text, product: candidate });
       speak(text);
     } catch {
       const text = "Nepodařilo se načíst cenu produktu.";
+      trackMemodoEvent("memodo_voice_price_error", {
+        transcript_raw: clipEventText(transcript, 120),
+      });
       setVoiceAnswer({ text });
       speak(text);
     }
