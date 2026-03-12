@@ -28,6 +28,7 @@ type VoiceNormalizeResponse = {
   normalizedText: string;
   searchQuery: string;
   priceQuery: string;
+  alternatives?: string[];
   isPriceIntent: boolean;
   provider: "llm" | "fallback";
 };
@@ -354,7 +355,8 @@ export function MemodoHeaderSearch() {
     setDebounced(effectiveText);
 
     const searchInput = normalized?.searchQuery || effectiveText;
-    const candidates = extractSpeechCandidates(searchInput);
+    const serverAlternatives = (normalized?.alternatives || []).map((item) => item.trim()).filter(Boolean);
+    const candidates = Array.from(new Set([...serverAlternatives, ...extractSpeechCandidates(searchInput)]));
     const priceIntent = normalized?.isPriceIntent ?? isPriceIntent(effectiveText);
     trackMemodoEvent("memodo_voice_normalized", {
       transcript_raw: clipEventText(transcript, 160),
@@ -363,6 +365,7 @@ export function MemodoHeaderSearch() {
       provider: normalized?.provider || "client_fallback",
       is_price_intent: priceIntent,
       candidate_count: candidates.length,
+      used_server_alternatives: serverAlternatives.length > 0,
     });
 
     if (!priceIntent) {

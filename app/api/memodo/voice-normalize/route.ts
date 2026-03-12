@@ -13,6 +13,7 @@ type VoiceNormalizeResponse = {
   normalizedText: string;
   searchQuery: string;
   priceQuery: string;
+  alternatives?: string[];
   isPriceIntent: boolean;
   provider: "llm" | "fallback";
 };
@@ -60,6 +61,10 @@ function normalizeVoiceText(value: string) {
     .trim();
 }
 
+function compactToken(value: string) {
+  return normalizeVoiceText(value).replace(/[^a-z0-9]/g, "");
+}
+
 function levenshteinDistance(a: string, b: string) {
   if (a === b) return 0;
   if (!a.length) return b.length;
@@ -83,6 +88,40 @@ function levenshteinDistance(a: string, b: string) {
 function replaceWholePhrase(value: string, phrase: string, target: string) {
   const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return value.replace(new RegExp(`\\b${escaped}\\b`, "g"), target);
+}
+
+function toBigrams(value: string) {
+  if (value.length < 2) return [value];
+  const out: string[] = [];
+  for (let i = 0; i < value.length - 1; i += 1) out.push(value.slice(i, i + 2));
+  return out;
+}
+
+function diceSimilarity(a: string, b: string) {
+  if (!a || !b) return 0;
+  const aBigrams = toBigrams(a);
+  const bBigrams = toBigrams(b);
+  const bCounts = new Map<string, number>();
+  for (const gram of bBigrams) bCounts.set(gram, (bCounts.get(gram) || 0) + 1);
+  let overlap = 0;
+  for (const gram of aBigrams) {
+    const count = bCounts.get(gram) || 0;
+    if (count > 0) {
+      overlap += 1;
+      bCounts.set(gram, count - 1);
+    }
+  }
+  return (2 * overlap) / (aBigrams.length + bBigrams.length);
+}
+
+function fuzzySimilarity(a: string, b: string) {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const distance = levenshteinDistance(a, b);
+  const maxLen = Math.max(a.length, b.length);
+  const levScore = maxLen ? 1 - distance / maxLen : 0;
+  const diceScore = diceSimilarity(a, b);
+  return Math.max(0, Math.min(1, levScore * 0.6 + diceScore * 0.4));
 }
 
 function brandDistanceThreshold(brand: string) {
@@ -140,6 +179,101 @@ function applyVoiceCorrections(text: string, brands: string[]) {
   return corrected.join(" ").trim();
 }
 
+function extractModelTerms(products: Array<{ name?: string; art_number?: string }>) {
+  const terms = new Set<string>();
+  const importantWords = new Set([
+    "force",
+    "tower",
+    "lynx",
+    "sbh",
+    "wifi",
+    "modulem",
+    "modul",
+    "pro",
+  ]);
+  for (const item of products) {
+    const name = normalizeVoiceText(item.name || "");
+    const sku = normalizeVoiceText(item.art_number || "");
+    if (sku.length >= 3) terms.add(sku);
+    if (!name) continue;
+    const tokens = name.split(" ").filter((token) => token.length >= 2).slice(0, 8);
+    for (const token of tokens) {
+      if (/\d/.test(token) || importantWords.has(token)) terms.add(token);
+    }
+    for (let i = 0; i < tokens.length - 1; i += 1) {
+      const phrase = `${tokens[i]} ${tokens[i + 1]}`.trim();
+      if (/\d/.test(phrase) || importantWords.has(tokens[i]) || importantWords.has(tokens[i + 1])) {
+        terms.add(phrase);
+      }
+    }
+  }
+  return Array.from(terms).slice(0, 300);
+}
+
+function applyModelCorrections(text: string, modelTerms: string[]) {
+  if (!text) return text;
+  const terms = modelTerms.filter(Boolean);
+  if (!terms.length) return text;
+
+  const tokens = normalizeVoiceText(text).split(" ").filter(Boolean);
+  if (!tokens.length) return text;
+  const corrected: string[] = [];
+  let i = 0;
+
+  while (i < tokens.length) {
+    let replaced = false;
+    for (let span = 3; span >= 1; span -= 1) {
+      if (i + span > tokens.length) continue;
+      const phrase = tokens.slice(i, i + span).join(" ");
+      if (span === 1 && phrase.length < 4) continue;
+      const phraseCompact = compactToken(phrase);
+
+      let best = phrase;
+      let bestScore = 0;
+      for (const term of terms) {
+        const score = Math.max(
+          fuzzySimilarity(phrase, term),
+          fuzzySimilarity(phraseCompact, compactToken(term)),
+        );
+        if (score > bestScore) {
+          bestScore = score;
+          best = term;
+        }
+      }
+
+      const threshold = span >= 2 ? 0.78 : 0.86;
+      if (bestScore >= threshold) {
+        corrected.push(best);
+        i += span;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) {
+      corrected.push(tokens[i]);
+      i += 1;
+    }
+  }
+
+  return normalizeWhitespace(corrected.join(" "));
+}
+
+function buildSearchAlternatives(input: string, corrected: string) {
+  const normalized = normalizeWhitespace(normalizeVoiceText(input));
+  const correctedNormalized = normalizeWhitespace(normalizeVoiceText(corrected));
+  const compactNormalized = normalized
+    .replace(/\b(chci|prosim|potrebuju|hledam|dej|ukaz|jaka|je|cena|kolik|stoji)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const compactCorrected = correctedNormalized
+    .replace(/\b(chci|prosim|potrebuju|hledam|dej|ukaz|jaka|je|cena|kolik|stoji)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return Array.from(
+    new Set([correctedNormalized, compactCorrected, normalized, compactNormalized].filter((item) => item.length >= 2)),
+  ).slice(0, 8);
+}
+
 function isPriceIntent(text: string) {
   const normalized = text.toLowerCase();
   return /(jak[aá]\s+je\s+cena|kolik\s+stoj[ií]|za\s+kolik|cena)/.test(normalized);
@@ -157,18 +291,21 @@ function cleanupPriceQuery(text: string) {
   );
 }
 
-function fallbackNormalize(text: string, brands: string[]): VoiceNormalizeResponse {
-  const corrected = applyVoiceCorrections(text, brands);
+function fallbackNormalize(text: string, brands: string[], modelTerms: string[]): VoiceNormalizeResponse {
+  const correctedBrand = applyVoiceCorrections(text, brands);
+  const corrected = applyModelCorrections(correctedBrand, modelTerms);
   const normalizedText = normalizeWhitespace(corrected || text);
   const isPrice = isPriceIntent(normalizedText);
   const priceQuery = isPrice ? cleanupPriceQuery(normalizedText) : "";
   const searchQuery = normalizeWhitespace(priceQuery || normalizedText);
+  const alternatives = buildSearchAlternatives(text, searchQuery);
 
   return {
     ok: true,
     normalizedText,
     searchQuery,
     priceQuery,
+    alternatives,
     isPriceIntent: isPrice,
     provider: "fallback",
   };
@@ -193,7 +330,7 @@ function tryParseJsonObject(input: string) {
 }
 
 function sanitizeLlmOutput(raw: Record<string, unknown> | null, originalText: string): VoiceNormalizeResponse {
-  const fallback = fallbackNormalize(originalText, []);
+  const fallback = fallbackNormalize(originalText, [], []);
   if (!raw) return fallback;
 
   const normalizedText =
@@ -221,6 +358,7 @@ function sanitizeLlmOutput(raw: Record<string, unknown> | null, originalText: st
     normalizedText,
     searchQuery: searchQuery || fallback.searchQuery,
     priceQuery: isPrice ? priceQuery || fallback.priceQuery : "",
+    alternatives: fallback.alternatives,
     isPriceIntent: isPrice,
     provider: "llm",
   };
@@ -237,11 +375,12 @@ export async function POST(request: Request) {
   const brandHints = Array.from(
     new Set(products.map((item) => normalizeVoiceText(item.brand || "")).filter(Boolean)),
   );
-  const correctedInput = applyVoiceCorrections(text, brandHints);
+  const modelTerms = extractModelTerms(products);
+  const correctedInput = applyModelCorrections(applyVoiceCorrections(text, brandHints), modelTerms);
 
   const client = getOpenAIClient();
   if (!client) {
-    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints));
+    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints, modelTerms));
   }
 
   try {
@@ -286,18 +425,26 @@ export async function POST(request: Request) {
 
     const parsed = tryParseJsonObject(response.output_text || "");
     const sanitized = sanitizeLlmOutput(parsed, correctedInput || text);
-    const normalizedText = applyVoiceCorrections(sanitized.normalizedText, brandHints);
-    const searchQuery = applyVoiceCorrections(sanitized.searchQuery || normalizedText, brandHints);
+    const normalizedText = applyModelCorrections(applyVoiceCorrections(sanitized.normalizedText, brandHints), modelTerms);
+    const searchQuery = applyModelCorrections(
+      applyVoiceCorrections(sanitized.searchQuery || normalizedText, brandHints),
+      modelTerms,
+    );
     const priceQuery = sanitized.isPriceIntent
-      ? applyVoiceCorrections(sanitized.priceQuery || cleanupPriceQuery(normalizedText), brandHints)
+      ? applyModelCorrections(
+          applyVoiceCorrections(sanitized.priceQuery || cleanupPriceQuery(normalizedText), brandHints),
+          modelTerms,
+        )
       : "";
+    const alternatives = buildSearchAlternatives(text, searchQuery || normalizedText);
     return NextResponse.json({
       ...sanitized,
       normalizedText: normalizedText || sanitized.normalizedText,
       searchQuery: searchQuery || sanitized.searchQuery,
       priceQuery,
+      alternatives,
     } satisfies VoiceNormalizeResponse);
   } catch {
-    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints));
+    return NextResponse.json(fallbackNormalize(correctedInput || text, brandHints, modelTerms));
   }
 }
