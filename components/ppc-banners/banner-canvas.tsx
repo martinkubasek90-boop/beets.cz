@@ -99,12 +99,42 @@ export function BannerCanvas({
   const ctaOffsetX = Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
   const ctaOffsetY = Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
   const bgPreviewUrl = toPreviewImageUrl(banner.bgImageUrl);
+  const bgScale = clamp(typeof banner.bgScale === "number" ? banner.bgScale : 100, 60, 220);
+  const bgPositionX = clamp(typeof banner.bgPositionX === "number" ? banner.bgPositionX : 50, 0, 100);
+  const bgPositionY = clamp(typeof banner.bgPositionY === "number" ? banner.bgPositionY : 50, 0, 100);
   const boxW = Math.round(resolvedFormat.width * scale);
   const boxH = Math.round(resolvedFormat.height * scale);
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
   const shapeLeft = Math.round(boxW * ((resolvedFormat.shapeX || 78) / 100) - shapeSizePx / 2);
   const shapeTop = Math.round(boxH * ((resolvedFormat.shapeY || 22) / 100) - shapeSizePx / 2);
   const sizeTarget = selected === "text" || selected === "logo" || selected === "shape" ? selected : null;
+  const logoAlignX = resolvedFormat.logoAlignX || "left";
+  const logoAlignY = resolvedFormat.logoAlignY || "top";
+  const textAlignX = resolvedFormat.textAlignX || "left";
+  const textAlignY = resolvedFormat.textAlignY || "center";
+  const textContentAlign = resolvedFormat.textContentAlign || "left";
+  const ctaAlignX = resolvedFormat.ctaAlignX || "left";
+  const ctaAlignY = resolvedFormat.ctaAlignY || "bottom";
+
+  const logoW = Math.round(130 * scale * logoScale);
+  const logoH = Math.round(32 * scale * logoScale);
+  const logoBaseX = logoAlignX === "left" ? padding : logoAlignX === "center" ? Math.round((boxW - logoW) / 2) : boxW - padding - logoW;
+  const logoBaseY = logoAlignY === "top" ? padding : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - padding - logoH;
+  const logoLeft = logoBaseX + logoOffsetX;
+  const logoTop = logoBaseY + logoOffsetY;
+
+  const textW = Math.max(120, boxW - padding * 2 - 10);
+  const textBaseX = textAlignX === "left" ? padding : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - padding - textW;
+  const textBaseY = textAlignY === "top" ? padding + Math.round(80 * scale) : textAlignY === "center" ? Math.round(boxH * 0.37) : boxH - padding - Math.round(140 * scale);
+  const textLeft = textBaseX + textOffsetX;
+  const textTop = textBaseY + textOffsetY;
+
+  const estimatedCtaW = Math.round((banner.ctaText || "Zjistit více").length * ctaSize * 0.55 + 32);
+  const estimatedCtaH = Math.round(ctaSize + 20);
+  const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - padding - estimatedCtaW;
+  const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - padding - estimatedCtaH;
+  const ctaLeft = ctaBaseX + ctaOffsetX;
+  const ctaTop = ctaBaseY + ctaOffsetY;
 
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
@@ -291,8 +321,8 @@ export function BannerCanvas({
           height: `${boxH}px`,
           backgroundColor: banner.bgColor,
           backgroundImage: bgPreviewUrl ? `url("${bgPreviewUrl}")` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
+          backgroundSize: bgPreviewUrl ? `${bgScale}%` : "cover",
+          backgroundPosition: `${bgPositionX}% ${bgPositionY}%`,
         }}
       >
         {resolvedFormat.shapeEnabled ? (
@@ -329,7 +359,7 @@ export function BannerCanvas({
 
           <div
             className={`absolute flex items-center gap-2 ${editable ? "cursor-move" : ""} ${selected === "logo" ? "ring-2 ring-cyan-300" : ""} ${editable ? "relative" : ""}`}
-            style={{ left: `${padding + logoOffsetX}px`, top: `${padding + logoOffsetY}px` }}
+            style={{ left: `${logoLeft}px`, top: `${logoTop}px` }}
             onMouseDown={(event) => startDrag("logo", event)}
             onWheel={(event) => onResizeWheel("logo", event)}
           >
@@ -344,9 +374,6 @@ export function BannerCanvas({
                 }}
               />
             ) : null}
-            <div className="text-xs font-bold uppercase tracking-wide" style={{ color: banner.textColor }}>
-              {banner.brandName || "Vaše značka"}
-            </div>
             {editable && selected === "logo" ? (
               <button
                 type="button"
@@ -360,10 +387,11 @@ export function BannerCanvas({
           <div
             className={`absolute ${editable ? "cursor-move" : ""} ${selected === "text" ? "ring-2 ring-cyan-300" : ""}`}
             style={{
-              left: `${padding + textOffsetX}px`,
-              top: `${Math.round(boxH * 0.37) + textOffsetY}px`,
-              width: `${Math.max(120, boxW - padding * 2 - 10)}px`,
+              left: `${textLeft}px`,
+              top: `${textTop}px`,
+              width: `${textW}px`,
               transform: "translateY(-50%)",
+              textAlign: textContentAlign,
             }}
             onMouseDown={(event) => startDrag("text", event)}
             onWheel={(event) => onResizeWheel("text", event)}
@@ -386,7 +414,7 @@ export function BannerCanvas({
 
           <div
             className={`absolute ${editable ? "cursor-move" : ""} ${selected === "cta" ? "ring-2 ring-cyan-300" : ""}`}
-            style={{ left: `${padding + ctaOffsetX}px`, bottom: `${padding - ctaOffsetY}px` }}
+            style={{ left: `${ctaLeft}px`, top: `${ctaTop}px` }}
             onMouseDown={(event) => startDrag("cta", event)}
           >
             <button

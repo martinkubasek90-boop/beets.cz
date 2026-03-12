@@ -26,6 +26,13 @@ export type BannerFormat = {
   shapeY: number;
   shapeSize: number;
   padding: number;
+  logoAlignX?: "left" | "center" | "right";
+  logoAlignY?: "top" | "center" | "bottom";
+  textAlignX?: "left" | "center" | "right";
+  textAlignY?: "top" | "center" | "bottom";
+  textContentAlign?: "left" | "center" | "right";
+  ctaAlignX?: "left" | "center" | "right";
+  ctaAlignY?: "top" | "center" | "bottom";
 };
 
 export type BannerSnapshot = {
@@ -40,6 +47,9 @@ export type BannerSnapshot = {
   bgColor: string;
   bgImageUrl?: string;
   bgPrompt?: string;
+  bgPositionX?: number;
+  bgPositionY?: number;
+  bgScale?: number;
   textColor: string;
   ctaBg: string;
   ctaTextColor: string;
@@ -91,6 +101,9 @@ export type Banner = {
   bgColor: string;
   bgImageUrl?: string;
   bgPrompt?: string;
+  bgPositionX?: number;
+  bgPositionY?: number;
+  bgScale?: number;
   textColor: string;
   ctaBg: string;
   ctaTextColor: string;

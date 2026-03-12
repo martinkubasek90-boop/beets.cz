@@ -46,6 +46,13 @@ function withFormatDefaults(format: BannerFormat): BannerFormat {
     shapeX: typeof format.shapeX === "number" ? format.shapeX : 78,
     shapeY: typeof format.shapeY === "number" ? format.shapeY : 22,
     shapeSize: typeof format.shapeSize === "number" ? format.shapeSize : 24,
+    logoAlignX: format.logoAlignX || "left",
+    logoAlignY: format.logoAlignY || "top",
+    textAlignX: format.textAlignX || "left",
+    textAlignY: format.textAlignY || "center",
+    textContentAlign: format.textContentAlign || "left",
+    ctaAlignX: format.ctaAlignX || "left",
+    ctaAlignY: format.ctaAlignY || "bottom",
   };
 }
 
@@ -94,6 +101,9 @@ export function makeSnapshot(banner: Banner): BannerSnapshot {
     bgColor: banner.bgColor,
     bgImageUrl: banner.bgImageUrl,
     bgPrompt: banner.bgPrompt,
+    bgPositionX: banner.bgPositionX,
+    bgPositionY: banner.bgPositionY,
+    bgScale: banner.bgScale,
     textColor: banner.textColor,
     ctaBg: banner.ctaBg,
     ctaTextColor: banner.ctaTextColor,

@@ -96,7 +96,7 @@ export function PpcBannerEditorClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [banner, activeFormatIndex]);
 
-  const onBannerChange = (field: keyof Banner, value: string) => {
+  const onBannerChange = (field: keyof Banner, value: string | number | boolean) => {
     setSaved(false);
     setBanner((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
