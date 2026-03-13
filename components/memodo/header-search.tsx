@@ -554,6 +554,10 @@ export function MemodoHeaderSearch() {
 
   const emptyHint = useMemo(() => debounced.length >= 2 && !loading && results.length === 0, [debounced, loading, results.length]);
 
+  if (isCatalogPage) {
+    return null;
+  }
+
   return (
     <div className="relative">
       <form
@@ -609,7 +613,7 @@ export function MemodoHeaderSearch() {
         </div>
       ) : null}
 
-      {!isCatalogPage && open ? (
+      {open ? (
         <div className="absolute left-0 right-0 top-[56px] z-30 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
           {loading ? <p className="px-4 py-3 text-xs text-gray-500">Vyhledávám...</p> : null}
           {!loading && results.length > 0 ? (

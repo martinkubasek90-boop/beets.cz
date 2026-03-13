@@ -74,17 +74,15 @@ export function MemodoPriceEmailGate() {
     }
   };
 
+  const shouldShowInlineStatus = canSeePrices === false && !loading;
+
   return (
     <>
-      {canSeePrices !== null && !loading ? (
+      {shouldShowInlineStatus ? (
         <div
-          className={`rounded-xl border px-3 py-2 text-xs ${
-            canSeePrices ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
+          className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
         >
-          {canSeePrices
-            ? "Děkujeme, váš e-mail známe a můžeme tedy ukázat ceny."
-            : "Váš e-mail aktuálně neznáme a proto ukážeme vše kromě cen."}
+          Váš e-mail aktuálně neznáme a proto ukážeme vše kromě cen.
           {knownEmail ? <span className="ml-1 font-semibold">{knownEmail}</span> : null}
           <button
             type="button"
