@@ -178,14 +178,6 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
 
   const boxH = model.boxH;
 
-  if (bgSrc) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, viewH);
-    gradient.addColorStop(0, "rgba(2,6,23,0.24)");
-    gradient.addColorStop(1, "rgba(2,6,23,0.45)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, viewW, viewH);
-  }
-
   if (format.shapeEnabled) {
     const minSide = Math.min(viewW, viewH);
     const shapeSize = Math.round(minSide * ((format.shapeSize || 24) / 100));

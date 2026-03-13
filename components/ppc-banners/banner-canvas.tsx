@@ -507,7 +507,7 @@ export function BannerCanvas({
         ) : null}
         <div
           className="relative h-full w-full"
-          style={{ padding, background: bgPreviewUrl ? "linear-gradient(180deg, rgba(2,6,23,0.25), rgba(2,6,23,0.42))" : undefined }}
+          style={{ padding }}
         >
           {editable && showCenterX ? <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[120] w-px -translate-x-1/2 bg-cyan-300/90" /> : null}
           {editable && showCenterY ? <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[120] h-px -translate-y-1/2 bg-cyan-300/90" /> : null}
