@@ -81,7 +81,8 @@ function applyStep(value: number, delta: number, min: number, max: number) {
 
 const LOGO_SCALE_MIN = 0.4;
 const LOGO_SCALE_MAX = 12;
-const CENTER_SNAP_PX = 6;
+const CENTER_MAGNET_PX = 8;
+const CENTER_GUIDE_EPS = 0.5;
 
 function loadImageElement(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -174,6 +175,12 @@ export function BannerCanvas({
   const estimatedCtaH = model.ctaH;
   const ctaLeft = model.ctaLeft;
   const ctaTop = model.ctaTop;
+  const logoBaseLeft = logoLeft - Math.round((resolvedFormat.logoOffsetX || 0) * scale);
+  const logoBaseTop = logoTop - Math.round((resolvedFormat.logoOffsetY || 0) * scale);
+  const textBaseLeft = textLeft - Math.round((resolvedFormat.textOffsetX || 0) * scale);
+  const textBaseTop = textTop - Math.round((resolvedFormat.textOffsetY || 0) * scale);
+  const ctaBaseLeft = ctaLeft - Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
+  const ctaBaseTop = ctaTop - Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
   const hasLogo = Boolean((banner.logoUrl || "").trim());
   const hasHeadline = Boolean((resolvedHeadline || "").trim());
   const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
@@ -300,25 +307,49 @@ export function BannerCanvas({
       const dy = (event.clientY - state.startY) / scale;
 
       if (state.target === "logo") {
+        let nextOffsetX = state.origin.logoOffsetX + dx;
+        let nextOffsetY = state.origin.logoOffsetY + dy;
+        const nextCenterX = logoBaseLeft + Math.round(nextOffsetX * scale) + logoW / 2;
+        const nextCenterY = logoBaseTop + Math.round(nextOffsetY * scale) + logoH / 2;
+        const centerDiffX = boxW / 2 - nextCenterX;
+        const centerDiffY = boxH / 2 - nextCenterY;
+        if (Math.abs(centerDiffX) <= CENTER_MAGNET_PX) nextOffsetX += centerDiffX / scale;
+        if (Math.abs(centerDiffY) <= CENTER_MAGNET_PX) nextOffsetY += centerDiffY / scale;
         onFormatPatch({
-          logoOffsetX: Math.round(state.origin.logoOffsetX + dx),
-          logoOffsetY: Math.round(state.origin.logoOffsetY + dy),
+          logoOffsetX: Math.round(nextOffsetX),
+          logoOffsetY: Math.round(nextOffsetY),
         });
         return;
       }
 
       if (state.target === "text") {
+        let nextOffsetX = state.origin.textOffsetX + dx;
+        let nextOffsetY = state.origin.textOffsetY + dy;
+        const nextCenterX = textBaseLeft + Math.round(nextOffsetX * scale) + textW / 2;
+        const nextCenterY = textBaseTop + Math.round(nextOffsetY * scale);
+        const centerDiffX = boxW / 2 - nextCenterX;
+        const centerDiffY = boxH / 2 - nextCenterY;
+        if (Math.abs(centerDiffX) <= CENTER_MAGNET_PX) nextOffsetX += centerDiffX / scale;
+        if (Math.abs(centerDiffY) <= CENTER_MAGNET_PX) nextOffsetY += centerDiffY / scale;
         onFormatPatch({
-          textOffsetX: Math.round(state.origin.textOffsetX + dx),
-          textOffsetY: Math.round(state.origin.textOffsetY + dy),
+          textOffsetX: Math.round(nextOffsetX),
+          textOffsetY: Math.round(nextOffsetY),
         });
         return;
       }
 
       if (state.target === "cta") {
+        let nextOffsetX = state.origin.ctaOffsetX + dx;
+        let nextOffsetY = state.origin.ctaOffsetY + dy;
+        const nextCenterX = ctaBaseLeft + Math.round(nextOffsetX * scale) + estimatedCtaW / 2;
+        const nextCenterY = ctaBaseTop + Math.round(nextOffsetY * scale) + estimatedCtaH / 2;
+        const centerDiffX = boxW / 2 - nextCenterX;
+        const centerDiffY = boxH / 2 - nextCenterY;
+        if (Math.abs(centerDiffX) <= CENTER_MAGNET_PX) nextOffsetX += centerDiffX / scale;
+        if (Math.abs(centerDiffY) <= CENTER_MAGNET_PX) nextOffsetY += centerDiffY / scale;
         onFormatPatch({
-          ctaOffsetX: Math.round(state.origin.ctaOffsetX + dx),
-          ctaOffsetY: Math.round(state.origin.ctaOffsetY + dy),
+          ctaOffsetX: Math.round(nextOffsetX),
+          ctaOffsetY: Math.round(nextOffsetY),
         });
         return;
       }
@@ -326,7 +357,11 @@ export function BannerCanvas({
       if (state.target === "shape") {
         const nextShapeX = clamp(state.origin.shapeX + (dx / resolvedFormat.width) * 100, 0, 100);
         const nextShapeY = clamp(state.origin.shapeY + (dy / resolvedFormat.height) * 100, 0, 100);
-        onFormatPatch({ shapeX: Math.round(nextShapeX), shapeY: Math.round(nextShapeY) });
+        const centerPxX = boxW * (nextShapeX / 100);
+        const centerPxY = boxH * (nextShapeY / 100);
+        const snapX = Math.abs(centerPxX - boxW / 2) <= CENTER_MAGNET_PX ? 50 : nextShapeX;
+        const snapY = Math.abs(centerPxY - boxH / 2) <= CENTER_MAGNET_PX ? 50 : nextShapeY;
+        onFormatPatch({ shapeX: Math.round(snapX), shapeY: Math.round(snapY) });
       }
     };
 
@@ -342,7 +377,26 @@ export function BannerCanvas({
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
-  }, [editable, onFormatPatch, resolvedFormat.height, resolvedFormat.width, scale]);
+  }, [
+    boxH,
+    boxW,
+    ctaBaseLeft,
+    ctaBaseTop,
+    editable,
+    estimatedCtaH,
+    estimatedCtaW,
+    logoBaseLeft,
+    logoBaseTop,
+    logoH,
+    logoW,
+    onFormatPatch,
+    resolvedFormat.height,
+    resolvedFormat.width,
+    scale,
+    textBaseLeft,
+    textBaseTop,
+    textW,
+  ]);
 
   useEffect(() => {
     if (!editable || !sizeTarget) return;
@@ -405,8 +459,8 @@ export function BannerCanvas({
           : selected === "shape"
             ? shapeTop + shapeSizePx / 2
             : null;
-  const showCenterX = selectedCenterX !== null && Math.abs(selectedCenterX - boxW / 2) <= CENTER_SNAP_PX;
-  const showCenterY = selectedCenterY !== null && Math.abs(selectedCenterY - boxH / 2) <= CENTER_SNAP_PX;
+  const showCenterX = selectedCenterX !== null && Math.abs(selectedCenterX - boxW / 2) <= CENTER_GUIDE_EPS;
+  const showCenterY = selectedCenterY !== null && Math.abs(selectedCenterY - boxH / 2) <= CENTER_GUIDE_EPS;
 
   if (!format) return null;
 

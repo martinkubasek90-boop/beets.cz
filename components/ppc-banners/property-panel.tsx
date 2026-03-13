@@ -49,6 +49,41 @@ function AlignButtons<T extends string>({
   );
 }
 
+function RangeWithCenter({
+  min,
+  max,
+  step,
+  value,
+  onChange,
+  center,
+}: {
+  min: number;
+  max: number;
+  step?: number;
+  value: number;
+  onChange: (next: number) => void;
+  center?: number;
+}) {
+  const centerValue = typeof center === "number" ? center : (min + max) / 2;
+  const safeCenter = Math.max(min, Math.min(max, centerValue));
+  const centerPct = max === min ? 50 : ((safeCenter - min) / (max - min)) * 100;
+  return (
+    <div className="space-y-1">
+      <div className="relative">
+        <Input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+        <span className="pointer-events-none absolute inset-y-0" style={{ left: `calc(${centerPct}% - 0.5px)` }}>
+          <span className="absolute top-1/2 h-4 w-px -translate-y-1/2 bg-cyan-500/80" />
+        </span>
+      </div>
+      <div className="flex justify-between text-[10px] text-slate-400">
+        <span>{min}</span>
+        <span>střed {safeCenter}</span>
+        <span>{max}</span>
+      </div>
+    </div>
+  );
+}
+
 export function PropertyPanel({
   banner,
   format,
@@ -279,15 +314,15 @@ export function PropertyPanel({
               </label>
               <div className="space-y-2">
                 <Label className="text-xs">Velikost loga: {(format.logoScale || 1).toFixed(2)}x</Label>
-                <Input type="range" min={0.4} max={12} step={0.1} value={format.logoScale || 1} onChange={(e) => onFormatChange("logoScale", Number(e.target.value))} />
+                <RangeWithCenter min={0.4} max={12} step={0.1} value={format.logoScale || 1} onChange={(v) => onFormatChange("logoScale", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun X: {format.logoOffsetX || 0}px</Label>
-                <Input type="range" min={-320} max={320} step={2} value={format.logoOffsetX || 0} onChange={(e) => onFormatChange("logoOffsetX", Number(e.target.value))} />
+                <RangeWithCenter min={-320} max={320} step={2} value={format.logoOffsetX || 0} onChange={(v) => onFormatChange("logoOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun Y: {format.logoOffsetY || 0}px</Label>
-                <Input type="range" min={-320} max={320} step={2} value={format.logoOffsetY || 0} onChange={(e) => onFormatChange("logoOffsetY", Number(e.target.value))} />
+                <RangeWithCenter min={-320} max={320} step={2} value={format.logoOffsetY || 0} onChange={(v) => onFormatChange("logoOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání X" value={logoAlignX} onChange={(v) => onFormatChange("logoAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání Y" value={logoAlignY} onChange={(v) => onFormatChange("logoAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -300,15 +335,15 @@ export function PropertyPanel({
               <Input value={headlineValue} onChange={(e) => onFormatChange("headline", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost headline: {format.headlineSize}px</Label>
-                <Input type="range" min={16} max={180} value={format.headlineSize} onChange={(e) => onFormatChange("headlineSize", Number(e.target.value))} />
+                <RangeWithCenter min={16} max={180} value={format.headlineSize} onChange={(v) => onFormatChange("headlineSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun bloku X: {format.textOffsetX || 0}px</Label>
-                <Input type="range" min={-360} max={360} step={2} value={format.textOffsetX || 0} onChange={(e) => onFormatChange("textOffsetX", Number(e.target.value))} />
+                <RangeWithCenter min={-360} max={360} step={2} value={format.textOffsetX || 0} onChange={(v) => onFormatChange("textOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun bloku Y: {format.textOffsetY || 0}px</Label>
-                <Input type="range" min={-360} max={360} step={2} value={format.textOffsetY || 0} onChange={(e) => onFormatChange("textOffsetY", Number(e.target.value))} />
+                <RangeWithCenter min={-360} max={360} step={2} value={format.textOffsetY || 0} onChange={(v) => onFormatChange("textOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání bloku X" value={textAlignX} onChange={(v) => onFormatChange("textAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání bloku Y" value={textAlignY} onChange={(v) => onFormatChange("textAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -322,7 +357,7 @@ export function PropertyPanel({
               <Input value={subheadlineValue} onChange={(e) => onFormatChange("subheadline", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost popisu: {format.subheadlineSize}px</Label>
-                <Input type="range" min={12} max={96} value={format.subheadlineSize} onChange={(e) => onFormatChange("subheadlineSize", Number(e.target.value))} />
+                <RangeWithCenter min={12} max={96} value={format.subheadlineSize} onChange={(v) => onFormatChange("subheadlineSize", v)} />
               </div>
               <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
             </>
@@ -334,7 +369,7 @@ export function PropertyPanel({
               <Input value={subheadline2Value} onChange={(e) => onFormatChange("subheadline2", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost POPIS 2: {format.subheadline2Size || format.subheadlineSize}px</Label>
-                <Input type="range" min={12} max={96} value={format.subheadline2Size || format.subheadlineSize} onChange={(e) => onFormatChange("subheadline2Size", Number(e.target.value))} />
+                <RangeWithCenter min={12} max={96} value={format.subheadline2Size || format.subheadlineSize} onChange={(v) => onFormatChange("subheadline2Size", v)} />
               </div>
               <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
             </>
@@ -346,15 +381,15 @@ export function PropertyPanel({
               <Input value={ctaValue} onChange={(e) => onFormatChange("ctaText", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost CTA: {format.ctaSize}px</Label>
-                <Input type="range" min={10} max={60} value={format.ctaSize} onChange={(e) => onFormatChange("ctaSize", Number(e.target.value))} />
+                <RangeWithCenter min={10} max={60} value={format.ctaSize} onChange={(v) => onFormatChange("ctaSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun CTA X: {format.ctaOffsetX || 0}px</Label>
-                <Input type="range" min={-320} max={320} step={2} value={format.ctaOffsetX || 0} onChange={(e) => onFormatChange("ctaOffsetX", Number(e.target.value))} />
+                <RangeWithCenter min={-320} max={320} step={2} value={format.ctaOffsetX || 0} onChange={(v) => onFormatChange("ctaOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun CTA Y: {format.ctaOffsetY || 0}px</Label>
-                <Input type="range" min={-320} max={320} step={2} value={format.ctaOffsetY || 0} onChange={(e) => onFormatChange("ctaOffsetY", Number(e.target.value))} />
+                <RangeWithCenter min={-320} max={320} step={2} value={format.ctaOffsetY || 0} onChange={(v) => onFormatChange("ctaOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání CTA X" value={ctaAlignX} onChange={(v) => onFormatChange("ctaAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání CTA Y" value={ctaAlignY} onChange={(v) => onFormatChange("ctaAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -389,15 +424,15 @@ export function PropertyPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Zoom pozadí: {Math.round(bgScaleValue)}%</Label>
-                <Input type="range" min={10} max={260} value={bgScaleValue} onChange={(e) => onFormatChange("bgScale", Number(e.target.value))} />
+                <RangeWithCenter min={10} max={260} value={bgScaleValue} onChange={(v) => onFormatChange("bgScale", v)} center={100} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Pozice X: {Math.round(bgPositionXValue)}%</Label>
-                <Input type="range" min={0} max={100} value={bgPositionXValue} onChange={(e) => onFormatChange("bgPositionX", Number(e.target.value))} />
+                <RangeWithCenter min={0} max={100} value={bgPositionXValue} onChange={(v) => onFormatChange("bgPositionX", v)} center={50} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Pozice Y: {Math.round(bgPositionYValue)}%</Label>
-                <Input type="range" min={0} max={100} value={bgPositionYValue} onChange={(e) => onFormatChange("bgPositionY", Number(e.target.value))} />
+                <RangeWithCenter min={0} max={100} value={bgPositionYValue} onChange={(v) => onFormatChange("bgPositionY", v)} center={50} />
               </div>
             </>
           ) : null}
