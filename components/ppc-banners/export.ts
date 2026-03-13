@@ -1,7 +1,7 @@
 "use client";
 
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
-import { computeBannerRenderModel } from "@/components/ppc-banners/render-model";
+import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -154,8 +154,6 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const resolvedBgPositionX = model.bgPositionX;
   const resolvedBgPositionY = model.bgPositionY;
   const resolvedSubheadline2Size = model.subheadline2Size;
-  const logoAlignX = format.logoAlignX || "left";
-  const logoAlignY = format.logoAlignY || "top";
   const textContentAlign = format.textContentAlign || "left";
   await ensureFontsLoaded(format.headlineSize, format.subheadlineSize, format.ctaSize);
 
@@ -178,10 +176,6 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     } catch {}
   }
 
-  const pad = model.padding;
-  const logoOffsetX = format.logoOffsetX || 0;
-  const logoOffsetY = format.logoOffsetY || 0;
-  const boxW = model.boxW;
   const boxH = model.boxH;
 
   if (bgSrc) {
@@ -219,14 +213,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     try {
       const logo = await loadImage(logoSrc);
       const { width: logoDrawW, height: logoDrawH } = fitSize(logo.width, logo.height, logoBoxW, logoBoxH);
-      const logoBaseX =
-        logoAlignX === "left" ? pad : logoAlignX === "center" ? Math.round((boxW - logoBoxW) / 2) : boxW - pad - logoBoxW;
-      const logoBaseY =
-        logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoBoxH) / 2) : boxH - pad - logoBoxH;
-      const logoX = logoBaseX + logoOffsetX;
-      const logoY = logoBaseY + logoOffsetY;
-      const drawX = logoX + Math.round((logoBoxW - logoDrawW) / 2);
-      const drawY = logoY + Math.round((logoBoxH - logoDrawH) / 2);
+      const drawX = model.logoLeft + Math.round((logoBoxW - logoDrawW) / 2);
+      const drawY = model.logoTop + Math.round((logoBoxH - logoDrawH) / 2);
       ctx.drawImage(logo, drawX, drawY, logoDrawW, logoDrawH);
     } catch {}
   }
@@ -282,7 +270,9 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     const totalHeight = linesToDraw.reduce((acc, item) => acc + item.gapBefore + item.lineHeight, 0);
-    let textY = textAnchorY - totalHeight / 2;
+    const minTextY = 0;
+    const maxTextY = Math.max(minTextY, boxH - totalHeight);
+    let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
     linesToDraw.forEach((item) => {
       textY += item.gapBefore;
       ctx.font = `${item.weight} ${item.size}px "Space Grotesk", Inter, Arial, sans-serif`;
