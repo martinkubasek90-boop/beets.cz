@@ -43,12 +43,12 @@ type ResizeState = {
 const FALLBACK_FORMAT: BannerFormat = {
   id: "fallback",
   name: "Fallback",
-  width: 1200,
-  height: 628,
+  width: 2400,
+  height: 1256,
   layout: "horizontal",
-  headlineSize: 72,
-  subheadlineSize: 32,
-  ctaSize: 28,
+  headlineSize: 144,
+  subheadlineSize: 64,
+  ctaSize: 56,
   logoScale: 1,
   textOffsetX: 0,
   textOffsetY: 0,
@@ -74,7 +74,7 @@ const FALLBACK_FORMAT: BannerFormat = {
   zText: 30,
   zCta: 50,
   zShape: 10,
-  padding: 56,
+  padding: 112,
 };
 
 function applyStep(value: number, delta: number, min: number, max: number) {
