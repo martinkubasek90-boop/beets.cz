@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Product } from "@/lib/memodo-data";
-import { trackMemodoEvent } from "@/lib/memodo-analytics";
+import { getMemodoExperimentVariant, trackMemodoEvent } from "@/lib/memodo-analytics";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 
 const interestOptions = [
@@ -188,10 +188,12 @@ export default function MemodoInquiryPage() {
     e.preventDefault();
     setError("");
     setSending(true);
+    const variant = getMemodoExperimentVariant();
     trackMemodoEvent("memodo_submit_inquiry_attempt", {
       has_product_id: Boolean(form.product_id),
       has_phone: Boolean(form.phone),
       has_company: Boolean(form.company),
+      variant,
     });
     try {
       const contact_name = `${form.first_name} ${form.last_name}`.trim();
@@ -243,12 +245,17 @@ export default function MemodoInquiryPage() {
       }
       if (normalizedFormEmail) await refreshHistoryMeta(normalizedFormEmail);
 
-      trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id) });
+      trackMemodoEvent("memodo_submit_inquiry_success", { has_product_id: Boolean(form.product_id), variant });
+      trackMemodoEvent("memodo_funnel_step", {
+        step: "inquiry_submit",
+        has_product_id: Boolean(form.product_id),
+        variant,
+      });
       setNotice("Poptávka byla odeslána.");
       setSubmitted(true);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Nepodařilo se odeslat poptávku.";
-      trackMemodoEvent("memodo_submit_inquiry_error");
+      trackMemodoEvent("memodo_submit_inquiry_error", { variant });
       setError(message);
     } finally {
       setSending(false);

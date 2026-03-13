@@ -6,7 +6,7 @@ import { ChevronDown, ChevronUp, Package, Search, SlidersHorizontal, X } from "l
 import { Input } from "@/components/ui/input";
 import { MemodoProductCard } from "@/components/memodo/product-card";
 import { categoryLabels, type Product } from "@/lib/memodo-data";
-import { trackMemodoEvent } from "@/lib/memodo-analytics";
+import { getMemodoExperimentVariant, trackMemodoEvent } from "@/lib/memodo-analytics";
 import { MemodoViewTracker } from "@/components/memodo/mobile-ux";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,7 @@ type ApiResponse = {
 };
 
 const PAGE_SIZE = 40;
+const CATALOG_STATE_KEY = "memodo_catalog_state_v2";
 const quickCategoryChips = [
   { value: "", label: "Vše" },
   { value: "stridace", label: "Střídače" },
@@ -54,6 +55,66 @@ export function MemodoCatalogPageClient({
   const [showAllViewed, setShowAllViewed] = useState(false);
 
   const trimmedSearch = debouncedSearch.trim();
+  const hasActiveFilters = Boolean(category || inStockOnly || promoOnly || search.trim());
+
+  const activeFilterChips = [
+    category
+      ? {
+          key: "category",
+          label: `Kategorie: ${categoryLabels[category as keyof typeof categoryLabels] || category}`,
+          clear: () => setCategory(""),
+        }
+      : null,
+    inStockOnly
+      ? {
+          key: "in_stock",
+          label: "Jen skladem",
+          clear: () => setInStockOnly(false),
+        }
+      : null,
+    promoOnly
+      ? {
+          key: "promo",
+          label: "Jen akce",
+          clear: () => setPromoOnly(false),
+        }
+      : null,
+    search.trim()
+      ? {
+          key: "search",
+          label: `Hledání: ${search.trim()}`,
+          clear: () => setSearch(""),
+        }
+      : null,
+  ].filter(Boolean) as Array<{ key: string; label: string; clear: () => void }>;
+
+  const resetAllFilters = () => {
+    setCategory("");
+    setInStockOnly(false);
+    setPromoOnly(false);
+    setSearch("");
+  };
+
+  useEffect(() => {
+    const raw = window.sessionStorage.getItem(CATALOG_STATE_KEY);
+    if (!raw) return;
+    try {
+      const state = JSON.parse(raw) as {
+        search?: string;
+        category?: string;
+        inStockOnly?: boolean;
+        promoOnly?: boolean;
+        sortBy?: "popular" | "price_asc" | "price_desc" | "name";
+      };
+      if (!initialSearch && state.search) setSearch(state.search);
+      if (!initialCategory && state.category) setCategory(state.category);
+      if (typeof state.inStockOnly === "boolean") setInStockOnly(state.inStockOnly);
+      if (typeof state.promoOnly === "boolean") setPromoOnly(state.promoOnly);
+      if (state.sortBy) setSortBy(state.sortBy);
+    } catch {
+      // Ignore broken session payload.
+    }
+  }, [initialCategory, initialSearch]);
 
   useEffect(() => {
     trackMemodoEvent("memodo_catalog_filter_change", {
@@ -71,9 +132,22 @@ export function MemodoCatalogPageClient({
   }, [search]);
 
   useEffect(() => {
+    const state = {
+      search,
+      category,
+      inStockOnly,
+      promoOnly,
+      sortBy,
+    };
+    window.sessionStorage.setItem(CATALOG_STATE_KEY, JSON.stringify(state));
+  }, [search, category, inStockOnly, promoOnly, sortBy]);
+
+  useEffect(() => {
     const q = debouncedSearch.trim();
     if (q.length < 2) return;
+    const variant = getMemodoExperimentVariant();
     trackMemodoEvent("memodo_funnel_search", { query_length: q.length, query: q.slice(0, 80) });
+    trackMemodoEvent("memodo_funnel_step", { step: "search", query: q.slice(0, 120), variant });
 
     const key = "memodo_recent_searches_v1";
     setRecentSearches((prev) => {
@@ -272,16 +346,47 @@ export function MemodoCatalogPageClient({
             </div>
             <button
               type="button"
-              onClick={() => {
-                setCategory("");
-                setInStockOnly(false);
-                setPromoOnly(false);
-                setSearch("");
-              }}
+              onClick={resetAllFilters}
               className="min-h-[38px] rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
             >
               Reset filtrů
             </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="sticky top-[196px] z-10 -mx-1 rounded-xl border border-gray-200 bg-white/90 px-3 py-2 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-gray-700">
+            {requiresSearch && trimmedSearch.length < 2
+              ? "Napiš alespoň 2 znaky"
+              : loading
+                ? "Načítám…"
+                : `${total} produktů`}
+          </p>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={resetAllFilters}
+              className="text-[11px] font-semibold text-gray-500 underline"
+            >
+              Vyčistit vše
+            </button>
+          ) : null}
+        </div>
+        {activeFilterChips.length > 0 ? (
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-0.5">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={`active-${chip.key}`}
+                type="button"
+                onClick={chip.clear}
+                className="inline-flex min-h-[28px] items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 text-[11px] font-semibold whitespace-nowrap text-slate-700"
+              >
+                {chip.label}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
           </div>
         ) : null}
       </div>
@@ -307,13 +412,25 @@ export function MemodoCatalogPageClient({
         </div>
       ) : null}
 
-      <p className="text-xs text-gray-400">
-        {requiresSearch && trimmedSearch.length < 2
-          ? "Napiš alespoň 2 znaky do fulltextu pro zobrazení produktů."
-          : loading
-            ? "Načítám produkty..."
-            : `${total} produktů`}
-      </p>
+      {activeFilterChips.length > 0 ? (
+        <div>
+          <p className="mb-1 text-[11px] font-semibold text-gray-500">Aktivní filtry</p>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={`content-active-${chip.key}`}
+                type="button"
+                onClick={chip.clear}
+                className="inline-flex min-h-[32px] items-center gap-1 rounded-full border border-gray-200 bg-white px-3 text-[11px] font-semibold whitespace-nowrap text-gray-700"
+              >
+                {chip.label}
+                <X className="h-3 w-3 text-gray-500" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {!trimmedSearch && recentSearches.length > 0 ? (
         <div>
           <div className="mb-1 flex items-center justify-between">
@@ -379,15 +496,58 @@ export function MemodoCatalogPageClient({
       ) : loading ? (
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="h-64 animate-pulse rounded-2xl bg-gray-100" />
+            <div key={idx} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="aspect-square animate-pulse bg-gray-100" />
+              <div className="space-y-2 p-3">
+                <div className="h-2.5 w-16 animate-pulse rounded bg-gray-100" />
+                <div className="h-3.5 w-full animate-pulse rounded bg-gray-100" />
+                <div className="h-3.5 w-4/5 animate-pulse rounded bg-gray-100" />
+                <div className="mt-2 h-9 animate-pulse rounded-xl bg-gray-100" />
+              </div>
+            </div>
           ))}
         </div>
       ) : (
         <div className="rounded-2xl border border-gray-100 bg-white px-4 py-10 text-center">
           <Package className="mx-auto h-12 w-12 text-gray-200" />
           <p className="mt-3 text-sm font-semibold text-gray-700">Žádné produkty pro tento dotaz</p>
-          <p className="mt-1 text-xs text-gray-500">Zkus změnit filtr, nebo napiš AI rádci co hledáš.</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {inStockOnly
+              ? "Nenašli jsme produkty skladem. Zkuste vypnout filtr Jen skladem."
+              : promoOnly
+                ? "Nenašli jsme akční produkty. Zkuste vypnout filtr Jen akce."
+                : category
+                  ? "V této kategorii nyní nic neodpovídá dotazu."
+                  : "Zkus změnit filtr, nebo napiš AI rádci co hledáš."}
+          </p>
           <div className="mt-4 flex flex-wrap justify-center gap-2">
+            {inStockOnly ? (
+              <button
+                type="button"
+                onClick={() => setInStockOnly(false)}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+              >
+                Vypnout Jen skladem
+              </button>
+            ) : null}
+            {promoOnly ? (
+              <button
+                type="button"
+                onClick={() => setPromoOnly(false)}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+              >
+                Vypnout Jen akce
+              </button>
+            ) : null}
+            {category ? (
+              <button
+                type="button"
+                onClick={() => setCategory("")}
+                className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-700"
+              >
+                Všechny kategorie
+              </button>
+            ) : null}
             {quickCategoryChips
               .filter((chip) => chip.value)
               .map((chip) => (

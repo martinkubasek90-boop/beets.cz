@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Package, Tag } from "lucide-react";
 import { Product, categoryLabels } from "@/lib/memodo-data";
-import { trackMemodoEvent } from "@/lib/memodo-analytics";
+import { getMemodoExperimentVariant, trackMemodoEvent } from "@/lib/memodo-analytics";
 
 function rememberViewedProduct(product: Product) {
   if (typeof window === "undefined") return;
@@ -29,10 +29,18 @@ export function MemodoProductCard({ product }: { product: Product }) {
       href={`/Memodo/produkt/${product.id}`}
       onClick={() => {
         rememberViewedProduct(product);
+        const variant = getMemodoExperimentVariant();
         trackMemodoEvent("memodo_open_product_detail", {
           product_id: product.id,
           category: product.category,
           promo: Boolean(product.is_promo),
+          variant,
+        });
+        trackMemodoEvent("memodo_funnel_step", {
+          step: "open_product",
+          product_id: product.id,
+          category: product.category,
+          variant,
         });
       }}
       className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition-all duration-300 hover:border-[#FFE500] hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/40"

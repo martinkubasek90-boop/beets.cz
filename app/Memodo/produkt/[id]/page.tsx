@@ -36,6 +36,12 @@ export default async function MemodoProductDetailPage({
   const recommendedBattery =
     allProducts.find((item) => item.category === "baterie" && item.in_stock && item.brand === product.brand) ||
     allProducts.find((item) => item.category === "baterie" && item.in_stock);
+  const primaryInquiryHref = `/Memodo/poptavka?product=${product.id}`;
+  const secondarySetHref = recommendedBattery
+    ? `/Memodo/poptavka?product=${product.id}&set=${recommendedBattery.id}&prefill=${encodeURIComponent(
+        `Doporučený set:\n- Střídač: ${product.name}\n- Baterie: ${recommendedBattery.name}`,
+      )}`
+    : "";
 
   const specs = product.specifications || {};
 
@@ -124,12 +130,12 @@ export default async function MemodoProductDetailPage({
         ) : null}
       </div>
 
-      <Link href={`/Memodo/poptavka?product=${product.id}`}>
+      <Link href={primaryInquiryHref}>
         <Button className="w-full rounded-xl bg-[#FFE500] py-6 text-base font-bold text-black hover:bg-yellow-400">
-          <FileText className="mr-2 h-5 w-5" /> Poptat tento produkt
+          <FileText className="mr-2 h-5 w-5" /> Poptat nabídku
         </Button>
       </Link>
-      <p className="-mt-3 text-center text-xs text-gray-500">Bez závazku. Odpovíme obvykle do 2 hodin.</p>
+      <p className="-mt-3 text-center text-xs text-gray-500">Bez závazku. Odpovíme obvykle do 2 hodin v pracovní době.</p>
 
       {recommendedBattery ? (
         <div className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -140,13 +146,9 @@ export default async function MemodoProductDetailPage({
           <p className="mt-1 text-xs text-gray-600">
             {product.name} + {recommendedBattery.name}
           </p>
-          <Link
-            href={`/Memodo/poptavka?product=${product.id}&set=${recommendedBattery.id}&prefill=${encodeURIComponent(
-              `Doporučený set:\n- Střídač: ${product.name}\n- Baterie: ${recommendedBattery.name}`,
-            )}`}
-          >
-            <Button className="mt-3 w-full rounded-xl bg-slate-900 py-5 text-sm font-bold text-white hover:bg-slate-800">
-              <FileText className="mr-2 h-4 w-4" /> Poptat tento set
+          <Link href={secondarySetHref}>
+            <Button variant="outline" className="mt-3 w-full rounded-xl border-slate-300 bg-slate-50 py-5 text-sm font-bold text-slate-800 hover:bg-slate-100">
+              <FileText className="mr-2 h-4 w-4" /> Poptat doporučený set
             </Button>
           </Link>
         </div>
