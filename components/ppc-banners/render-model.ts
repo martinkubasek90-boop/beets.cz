@@ -65,16 +65,16 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const logoH = Math.round(32 * scale * logoScale);
   const logoBaseX = logoAlignX === "left" ? padding : logoAlignX === "center" ? Math.round((boxW - logoW) / 2) : boxW - padding - logoW;
   const logoBaseY = logoAlignY === "top" ? padding : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - padding - logoH;
-  const logoLeft = clamp(logoBaseX + logoOffsetX, 0, Math.max(0, boxW - logoW));
-  const logoTop = clamp(logoBaseY + logoOffsetY, 0, Math.max(0, boxH - logoH));
+  const logoLeft = logoBaseX + logoOffsetX;
+  const logoTop = logoBaseY + logoOffsetY;
 
   const textAlignX = format.textAlignX || "left";
   const textAlignY = format.textAlignY || "center";
   const textW = Math.max(120, boxW - padding * 2 - 10);
   const textBaseX = textAlignX === "left" ? padding : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - padding - textW;
   const textBaseY = textAlignY === "top" ? padding + Math.round(80 * scale) : textAlignY === "center" ? Math.round(boxH * 0.37) : boxH - padding - Math.round(140 * scale);
-  const textLeft = clamp(textBaseX + textOffsetX, 0, Math.max(0, boxW - textW));
-  const textTop = clamp(textBaseY + textOffsetY, 0, boxH);
+  const textLeft = textBaseX + textOffsetX;
+  const textTop = textBaseY + textOffsetY;
 
   const ctaAlignX = format.ctaAlignX || "left";
   const ctaAlignY = format.ctaAlignY || "bottom";
@@ -82,8 +82,8 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const ctaH = Math.round(ctaSize + 20);
   const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - padding - ctaW;
   const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - ctaH) / 2) : boxH - padding - ctaH;
-  const ctaLeft = clamp(ctaBaseX + ctaOffsetX, 0, Math.max(0, boxW - ctaW));
-  const ctaTop = clamp(ctaBaseY + ctaOffsetY, 0, Math.max(0, boxH - ctaH));
+  const ctaLeft = ctaBaseX + ctaOffsetX;
+  const ctaTop = ctaBaseY + ctaOffsetY;
 
   return {
     boxW,
