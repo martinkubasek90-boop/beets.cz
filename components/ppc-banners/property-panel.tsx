@@ -201,6 +201,10 @@ export function PropertyPanel({
   const bgScaleValue = Number(format?.bgScale ?? banner.bgScale ?? 100);
   const bgPositionXValue = Number(format?.bgPositionX ?? banner.bgPositionX ?? 50);
   const bgPositionYValue = Number(format?.bgPositionY ?? banner.bgPositionY ?? 50);
+  const formatWidth = Math.max(1, format?.width ?? 1200);
+  const formatHeight = Math.max(1, format?.height ?? 628);
+  const offsetRangeX = Math.max(320, Math.round(formatWidth * 1.25));
+  const offsetRangeY = Math.max(320, Math.round(formatHeight * 1.25));
   const zMap = {
     logo: typeof format?.zLogo === "number" ? format.zLogo : 40,
     text: typeof format?.zText === "number" ? format.zText : 30,
@@ -318,11 +322,11 @@ export function PropertyPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun X: {format.logoOffsetX || 0}px</Label>
-                <RangeWithCenter min={-320} max={320} step={2} value={format.logoOffsetX || 0} onChange={(v) => onFormatChange("logoOffsetX", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.logoOffsetX || 0} onChange={(v) => onFormatChange("logoOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun Y: {format.logoOffsetY || 0}px</Label>
-                <RangeWithCenter min={-320} max={320} step={2} value={format.logoOffsetY || 0} onChange={(v) => onFormatChange("logoOffsetY", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.logoOffsetY || 0} onChange={(v) => onFormatChange("logoOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání X" value={logoAlignX} onChange={(v) => onFormatChange("logoAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání Y" value={logoAlignY} onChange={(v) => onFormatChange("logoAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -339,11 +343,11 @@ export function PropertyPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun bloku X: {format.textOffsetX || 0}px</Label>
-                <RangeWithCenter min={-360} max={360} step={2} value={format.textOffsetX || 0} onChange={(v) => onFormatChange("textOffsetX", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.textOffsetX || 0} onChange={(v) => onFormatChange("textOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun bloku Y: {format.textOffsetY || 0}px</Label>
-                <RangeWithCenter min={-360} max={360} step={2} value={format.textOffsetY || 0} onChange={(v) => onFormatChange("textOffsetY", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.textOffsetY || 0} onChange={(v) => onFormatChange("textOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání bloku X" value={textAlignX} onChange={(v) => onFormatChange("textAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání bloku Y" value={textAlignY} onChange={(v) => onFormatChange("textAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -385,11 +389,11 @@ export function PropertyPanel({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun CTA X: {format.ctaOffsetX || 0}px</Label>
-                <RangeWithCenter min={-320} max={320} step={2} value={format.ctaOffsetX || 0} onChange={(v) => onFormatChange("ctaOffsetX", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.ctaOffsetX || 0} onChange={(v) => onFormatChange("ctaOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun CTA Y: {format.ctaOffsetY || 0}px</Label>
-                <RangeWithCenter min={-320} max={320} step={2} value={format.ctaOffsetY || 0} onChange={(v) => onFormatChange("ctaOffsetY", v)} center={0} />
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.ctaOffsetY || 0} onChange={(v) => onFormatChange("ctaOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání CTA X" value={ctaAlignX} onChange={(v) => onFormatChange("ctaAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání CTA Y" value={ctaAlignY} onChange={(v) => onFormatChange("ctaAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
