@@ -1,7 +1,7 @@
 "use client";
 
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
-import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
+import { computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -227,9 +227,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       const logoY = logoBaseY + logoOffsetY;
       const drawX = logoX + Math.round((logoBoxW - logoDrawW) / 2);
       const drawY = logoY + Math.round((logoBoxH - logoDrawH) / 2);
-      const safeLogoX = clamp(drawX, 0, Math.max(0, boxW - logoDrawW));
-      const safeLogoY = clamp(drawY, 0, Math.max(0, boxH - logoDrawH));
-      ctx.drawImage(logo, safeLogoX, safeLogoY, logoDrawW, logoDrawH);
+      ctx.drawImage(logo, drawX, drawY, logoDrawW, logoDrawH);
     } catch {}
   }
 
@@ -284,9 +282,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     const totalHeight = linesToDraw.reduce((acc, item) => acc + item.gapBefore + item.lineHeight, 0);
-    const minTextY = 0;
-    const maxTextY = Math.max(minTextY, boxH - totalHeight);
-    let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
+    let textY = textAnchorY - totalHeight / 2;
     linesToDraw.forEach((item) => {
       textY += item.gapBefore;
       ctx.font = `${item.weight} ${item.size}px "Space Grotesk", Inter, Arial, sans-serif`;
@@ -301,8 +297,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctaW = model.ctaW;
   const ctaH = model.ctaH;
   const ctaPadX = 16;
-  const ctaX = clamp(model.ctaLeft, 0, Math.max(0, boxW - ctaW));
-  const ctaY = clamp(model.ctaTop, 0, Math.max(0, boxH - ctaH));
+  const ctaX = model.ctaLeft;
+  const ctaY = model.ctaTop;
   ctx.fillStyle = banner.ctaBg || "#facc15";
   ctx.fillRect(ctaX, ctaY, ctaW, ctaH);
   ctx.fillStyle = banner.ctaTextColor || "#111827";
