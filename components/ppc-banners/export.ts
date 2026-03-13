@@ -225,23 +225,23 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.globalAlpha = 1;
   }
 
+  const logoBoxW = Math.round(130 * logoScale);
+  const logoBoxH = Math.round(32 * logoScale);
   const logoSrcRaw = await resolveImageSource(banner.logoUrl);
   const logoSrc = banner.logoTransparentBg && logoSrcRaw ? await makeLogoTransparentForExport(logoSrcRaw) : logoSrcRaw;
   if (logoSrc) {
     try {
       const logo = await loadImage(logoSrc);
-      const maxLogoW = Math.round(130 * logoScale);
-      const maxLogoH = Math.round(32 * logoScale);
-      const { width: logoW, height: logoH } = fitSize(logo.width, logo.height, maxLogoW, maxLogoH);
+      const { width: logoDrawW, height: logoDrawH } = fitSize(logo.width, logo.height, logoBoxW, logoBoxH);
       const logoBaseX =
-        logoAlignX === "left" ? pad : logoAlignX === "center" ? Math.round((boxW - logoW) / 2) : boxW - pad - logoW;
+        logoAlignX === "left" ? pad : logoAlignX === "center" ? Math.round((boxW - logoBoxW) / 2) : boxW - pad - logoBoxW;
       const logoBaseY =
-        logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - pad - logoH;
+        logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoBoxH) / 2) : boxH - pad - logoBoxH;
       const logoX = logoBaseX + logoOffsetX;
       const logoY = logoBaseY + logoOffsetY;
-      const safeLogoX = clamp(logoX, 0, Math.max(0, boxW - logoW));
-      const safeLogoY = clamp(logoY, 0, Math.max(0, boxH - logoH));
-      ctx.drawImage(logo, safeLogoX, safeLogoY, logoW, logoH);
+      const safeLogoX = clamp(logoX, 0, Math.max(0, boxW - logoDrawW));
+      const safeLogoY = clamp(logoY, 0, Math.max(0, boxH - logoDrawH));
+      ctx.drawImage(logo, safeLogoX, safeLogoY, logoDrawW, logoDrawH);
     } catch {}
   }
 
@@ -271,7 +271,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       ctx.font = `800 ${format.headlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
       const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
-        linesToDraw.push({ text: line, size: format.headlineSize, weight: "800", lineHeight: format.headlineSize * 1.12, gapBefore: 0 });
+        linesToDraw.push({ text: line, size: format.headlineSize, weight: "800", lineHeight: format.headlineSize * 1.05, gapBefore: 0 });
       });
     }
 
@@ -283,8 +283,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
           text: line,
           size: format.subheadlineSize,
           weight: "500",
-          lineHeight: format.subheadlineSize * 1.32,
-          gapBefore: linesToDraw.length ? Math.max(10, Math.round(format.subheadlineSize * 0.5)) : 0,
+          lineHeight: format.subheadlineSize * 1.5,
+          gapBefore: linesToDraw.length ? 8 : 0,
         });
       });
     }
@@ -297,8 +297,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
           text: line,
           size: resolvedSubheadline2Size,
           weight: "500",
-          lineHeight: resolvedSubheadline2Size * 1.32,
-          gapBefore: linesToDraw.length ? Math.max(8, Math.round(resolvedSubheadline2Size * 0.45)) : 0,
+          lineHeight: resolvedSubheadline2Size * 1.5,
+          gapBefore: linesToDraw.length ? 8 : 0,
         });
       });
     }
