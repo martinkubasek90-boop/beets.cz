@@ -1,22 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { PRESET_FORMATS, type BannerFormat } from "@/components/ppc-banners/types";
+import { Input } from "@/components/ui/input";
+import { PRESET_FORMATS, makeCustomFormat, type BannerFormat } from "@/components/ppc-banners/types";
 
 export function FormatSelector({
   formats,
   activeIndex,
   onSelect,
   onAdd,
+  onAddCustom,
   onRemove,
 }: {
   formats: BannerFormat[];
   activeIndex: number;
   onSelect: (idx: number) => void;
   onAdd: (id: string) => void;
+  onAddCustom: (format: BannerFormat) => void;
   onRemove: (idx: number) => void;
 }) {
   const selectedIds = new Set(formats.map((format) => format.id));
+  const [customWidth, setCustomWidth] = useState("1080");
+  const [customHeight, setCustomHeight] = useState("1080");
+
+  const addCustomFormat = () => {
+    const width = Number(customWidth);
+    const height = Number(customHeight);
+    if (!Number.isFinite(width) || !Number.isFinite(height)) return;
+    onAddCustom(makeCustomFormat(width, height));
+  };
 
   return (
     <div className="space-y-3">
@@ -54,6 +67,33 @@ export function FormatSelector({
             </Button>
           );
         })}
+      </div>
+      <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-2.5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Vlastní rozměr</p>
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            value={customWidth}
+            onChange={(e) => setCustomWidth(e.target.value.replace(/[^\d]/g, ""))}
+            className="h-8 border-slate-300 bg-white text-xs"
+            placeholder="Šířka"
+            inputMode="numeric"
+          />
+          <Input
+            value={customHeight}
+            onChange={(e) => setCustomHeight(e.target.value.replace(/[^\d]/g, ""))}
+            className="h-8 border-slate-300 bg-white text-xs"
+            placeholder="Výška"
+            inputMode="numeric"
+          />
+        </div>
+        <Button
+          onClick={addCustomFormat}
+          variant="outline"
+          className="h-8 w-full justify-center border-slate-300 bg-white text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-500 disabled:border-slate-300"
+          disabled={!customWidth || !customHeight}
+        >
+          + Přidat vlastní
+        </Button>
       </div>
     </div>
   );

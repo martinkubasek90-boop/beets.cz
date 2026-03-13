@@ -144,3 +144,40 @@ export const PRESET_FORMATS: BannerFormat[] = [
   { id: "300x600", name: "Half-page 300x600", width: 300, height: 600, layout: "vertical", headlineSize: 42, subheadlineSize: 22, ctaSize: 18, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 26 },
   { id: "160x600", name: "Skyscraper 160x600", width: 160, height: 600, layout: "vertical", headlineSize: 30, subheadlineSize: 16, ctaSize: 13, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 16 },
 ];
+
+export function makeCustomFormat(width: number, height: number): BannerFormat {
+  const w = Math.max(64, Math.round(width));
+  const h = Math.max(64, Math.round(height));
+  const ratio = h / w;
+  const layout: BannerLayout = ratio > 1.2 ? "vertical" : ratio < 0.85 ? "horizontal" : "square";
+
+  const base = PRESET_FORMATS[0];
+  const scale = Math.max(0.35, Math.min(2.2, Math.min(w / base.width, h / base.height)));
+  const headlineSize = Math.max(16, Math.round(base.headlineSize * scale));
+  const subheadlineSize = Math.max(12, Math.round(base.subheadlineSize * scale));
+  const ctaSize = Math.max(10, Math.round(base.ctaSize * scale));
+  const padding = Math.max(12, Math.round(base.padding * scale));
+  const stamp = Date.now().toString(36).slice(-5);
+
+  return {
+    ...base,
+    id: `custom-${w}x${h}-${stamp}`,
+    name: `Custom ${w}x${h}`,
+    width: w,
+    height: h,
+    layout,
+    headlineSize,
+    subheadlineSize,
+    subheadline2Size: subheadlineSize,
+    ctaSize,
+    padding,
+    logoScale: 1,
+    textOffsetX: 0,
+    textOffsetY: 0,
+    logoOffsetX: 0,
+    logoOffsetY: 0,
+    ctaOffsetX: 0,
+    ctaOffsetY: 0,
+    shapeEnabled: false,
+  };
+}

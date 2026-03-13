@@ -131,6 +131,13 @@ export function PpcBannerEditorClient() {
     });
   };
 
+  const onAddCustomFormat = (format: BannerFormat) => {
+    setBanner((prev) => {
+      if (!prev) return prev;
+      return { ...prev, formats: [...prev.formats, format] };
+    });
+  };
+
   const onRemoveFormat = (idx: number) => {
     setBanner((prev) => {
       if (!prev) return prev;
@@ -255,7 +262,14 @@ export function PpcBannerEditorClient() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="hidden w-60 shrink-0 overflow-y-auto border-r border-slate-200/80 bg-white/85 p-3 backdrop-blur md:block">
-          <FormatSelector formats={banner.formats} activeIndex={activeFormatIndex} onSelect={setActiveFormatIndex} onAdd={onAddFormat} onRemove={onRemoveFormat} />
+          <FormatSelector
+            formats={banner.formats}
+            activeIndex={activeFormatIndex}
+            onSelect={setActiveFormatIndex}
+            onAdd={onAddFormat}
+            onAddCustom={onAddCustomFormat}
+            onRemove={onRemoveFormat}
+          />
         </div>
 
         <div className="relative flex-1 overflow-hidden bg-slate-100/60">

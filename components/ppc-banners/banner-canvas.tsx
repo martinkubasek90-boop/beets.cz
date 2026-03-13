@@ -170,6 +170,7 @@ export function BannerCanvas({
   const textW = model.textW;
   const textLeft = model.textLeft;
   const textTop = model.textTop;
+  const textGap = Math.max(2, Math.round(8 * scale));
 
   const estimatedCtaW = model.ctaW;
   const estimatedCtaH = model.ctaH;
@@ -558,12 +559,28 @@ export function BannerCanvas({
                 </h2>
               ) : null}
               {hasSubheadline ? (
-                <p className={`${hasHeadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadlineSize}px`, lineHeight: "1.5" }}>
+                <p
+                  className="font-medium"
+                  style={{
+                    marginTop: hasHeadline ? `${textGap}px` : undefined,
+                    color: banner.textColor,
+                    fontSize: `${subheadlineSize}px`,
+                    lineHeight: "1.5",
+                  }}
+                >
                   {resolvedSubheadline}
                 </p>
               ) : null}
               {hasSubheadline2 ? (
-                <p className={`${hasHeadline || hasSubheadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadline2Size}px`, lineHeight: "1.5" }}>
+                <p
+                  className="font-medium"
+                  style={{
+                    marginTop: hasHeadline || hasSubheadline ? `${textGap}px` : undefined,
+                    color: banner.textColor,
+                    fontSize: `${subheadline2Size}px`,
+                    lineHeight: "1.5",
+                  }}
+                >
                   {resolvedSubheadline2}
                 </p>
               ) : null}
