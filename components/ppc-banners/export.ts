@@ -126,6 +126,17 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, ctaSize: number) {
+  if (typeof document === "undefined" || !("fonts" in document)) return;
+  try {
+    await Promise.all([
+      document.fonts.load(`800 ${headlineSize}px "Space Grotesk"`),
+      document.fonts.load(`500 ${subheadlineSize}px "Space Grotesk"`),
+      document.fonts.load(`700 ${ctaSize}px "Space Grotesk"`),
+    ]);
+  } catch {}
+}
+
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
   const pixelScale = 2;
   const viewW = format.width;
@@ -155,6 +166,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const textContentAlign = format.textContentAlign || "left";
   const ctaAlignX = format.ctaAlignX || "left";
   const ctaAlignY = format.ctaAlignY || "bottom";
+  await ensureFontsLoaded(format.headlineSize, format.subheadlineSize, format.ctaSize);
 
   ctx.fillStyle = resolvedBgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
   ctx.fillRect(0, 0, viewW, viewH);
@@ -256,7 +268,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     const linesToDraw: Array<{ text: string; size: number; weight: string; lineHeight: number; gapBefore: number }> = [];
 
     if (hasHeadline) {
-      ctx.font = `800 ${format.headlineSize}px Inter, Arial, sans-serif`;
+      ctx.font = `800 ${format.headlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
       const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
         linesToDraw.push({ text: line, size: format.headlineSize, weight: "800", lineHeight: format.headlineSize * 1.12, gapBefore: 0 });
@@ -264,7 +276,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     if (hasSubheadline) {
-      ctx.font = `500 ${format.subheadlineSize}px Inter, Arial, sans-serif`;
+      ctx.font = `500 ${format.subheadlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
       const subLines = wrapLines(ctx, resolvedSubheadline || "", textW, format.layout === "vertical" ? 4 : 3);
       subLines.forEach((line) => {
         linesToDraw.push({
@@ -278,7 +290,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     if (hasSubheadline2) {
-      ctx.font = `500 ${resolvedSubheadline2Size}px Inter, Arial, sans-serif`;
+      ctx.font = `500 ${resolvedSubheadline2Size}px "Space Grotesk", Inter, Arial, sans-serif`;
       const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", textW, format.layout === "vertical" ? 4 : 3);
       sub2Lines.forEach((line) => {
         linesToDraw.push({
@@ -297,21 +309,17 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
     linesToDraw.forEach((item) => {
       textY += item.gapBefore;
-      ctx.font = `${item.weight} ${item.size}px Inter, Arial, sans-serif`;
+      ctx.font = `${item.weight} ${item.size}px "Space Grotesk", Inter, Arial, sans-serif`;
       ctx.fillText(item.text, Math.round(textX), Math.round(textY));
       textY += item.lineHeight;
     });
+    ctx.textAlign = "left";
   }
 
   const ctaText = resolvedCtaText || "Zjistit více";
-  ctx.font = `700 ${format.ctaSize}px Inter, Arial, sans-serif`;
-  const ctaMetrics = ctx.measureText(ctaText);
-  const ctaTextH = Math.max(
-    format.ctaSize,
-    Math.round((ctaMetrics.actualBoundingBoxAscent || 0) + (ctaMetrics.actualBoundingBoxDescent || 0)),
-  );
-  const ctaW = Math.round(ctaMetrics.width + 32);
-  const ctaH = Math.round(ctaTextH + 16);
+  ctx.font = `700 ${format.ctaSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+  const ctaW = Math.round((ctaText || "Zjistit více").length * format.ctaSize * 0.55 + 32);
+  const ctaH = Math.round(format.ctaSize + 20);
   const ctaPadX = 16;
   const ctaBaseX =
     ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - pad - ctaW;
