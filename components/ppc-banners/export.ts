@@ -134,19 +134,20 @@ async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, 
 }
 
 export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat, outputScale = 1) {
-  const supersample = 2;
   const viewW = format.width;
   const viewH = format.height;
   const safeOutputScale = clamp(outputScale, 0.1, 1);
   const targetW = Math.max(1, Math.round(viewW * safeOutputScale));
   const targetH = Math.max(1, Math.round(viewH * safeOutputScale));
+  // Keep approx 2x sampling over target size, but avoid excessive 4x+ downscale blur for 50% exports.
+  const renderScale = clamp(2 * safeOutputScale, 1, 2);
 
   const workCanvas = document.createElement("canvas");
-  workCanvas.width = viewW * supersample;
-  workCanvas.height = viewH * supersample;
+  workCanvas.width = Math.max(1, Math.round(viewW * renderScale));
+  workCanvas.height = Math.max(1, Math.round(viewH * renderScale));
   const ctx = workCanvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
-  ctx.setTransform(supersample, 0, 0, supersample, 0, 0);
+  ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
