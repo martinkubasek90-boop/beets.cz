@@ -26,6 +26,7 @@ export function PpcBannerEditorClient() {
   const [saving, setSaving] = useState(false);
   const [autosaveTick, setAutosaveTick] = useState(0);
   const [tab, setTab] = useState<"properties" | "ai">("properties");
+  const [exportScale, setExportScale] = useState<1 | 0.75 | 0.5 | 0.25>(1);
 
   const initDoneRef = useRef(false);
 
@@ -48,6 +49,12 @@ export function PpcBannerEditorClient() {
 
   const activeFormat = useMemo(() => banner?.formats?.[activeFormatIndex], [banner, activeFormatIndex]);
   const checklist = useMemo(() => (banner ? computeChecklist(banner) : null), [banner]);
+  const exportTargetSize = useMemo(() => {
+    if (!activeFormat) return null;
+    const w = Math.max(1, Math.round(activeFormat.width * exportScale));
+    const h = Math.max(1, Math.round(activeFormat.height * exportScale));
+    return { w, h };
+  }, [activeFormat, exportScale]);
 
   const persist = (options?: { createVersion?: boolean; label?: string; autosave?: boolean }) => {
     if (!banner) return;
@@ -162,7 +169,7 @@ export function PpcBannerEditorClient() {
   const onExportCurrent = async () => {
     if (!banner || !activeFormat) return;
     try {
-      await exportBannerPng(banner, activeFormat);
+      await exportBannerPng(banner, activeFormat, exportScale);
     } catch (error) {
       console.error(error);
     }
@@ -171,7 +178,7 @@ export function PpcBannerEditorClient() {
   const onExportZip = async () => {
     if (!banner) return;
     try {
-      await exportBannerZip(banner);
+      await exportBannerZip(banner, exportScale);
     } catch (error) {
       console.error(error);
     }
@@ -237,6 +244,24 @@ export function PpcBannerEditorClient() {
           <span key={autosaveTick} className="text-[11px] text-slate-500">Autosave aktivní</span>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-md border border-slate-300 bg-slate-100 p-1">
+            {[1, 0.75, 0.5, 0.25].map((scale) => (
+              <button
+                key={scale}
+                type="button"
+                onClick={() => setExportScale(scale as 1 | 0.75 | 0.5 | 0.25)}
+                className={`rounded px-2 py-0.5 text-[11px] font-semibold ${exportScale === scale ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:bg-slate-200"}`}
+                title={`Export ${Math.round(scale * 100)}%`}
+              >
+                {Math.round(scale * 100)}%
+              </button>
+            ))}
+          </div>
+          {exportTargetSize ? (
+            <span className="text-[11px] text-slate-600">
+              export: {exportTargetSize.w}x{exportTargetSize.h}
+            </span>
+          ) : null}
           <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Download className="mr-1.5 h-3.5 w-3.5" />
             PNG

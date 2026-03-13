@@ -133,16 +133,20 @@ async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, 
   } catch {}
 }
 
-export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat) {
-  const pixelScale = 2;
+export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat, outputScale = 1) {
+  const supersample = 2;
   const viewW = format.width;
   const viewH = format.height;
-  const canvas = document.createElement("canvas");
-  canvas.width = viewW * pixelScale;
-  canvas.height = viewH * pixelScale;
-  const ctx = canvas.getContext("2d");
+  const safeOutputScale = clamp(outputScale, 0.1, 1);
+  const targetW = Math.max(1, Math.round(viewW * safeOutputScale));
+  const targetH = Math.max(1, Math.round(viewH * safeOutputScale));
+
+  const workCanvas = document.createElement("canvas");
+  workCanvas.width = viewW * supersample;
+  workCanvas.height = viewH * supersample;
+  const ctx = workCanvas.getContext("2d");
   if (!ctx) throw new Error("Canvas is not available.");
-  ctx.setTransform(pixelScale, 0, 0, pixelScale, 0, 0);
+  ctx.setTransform(supersample, 0, 0, supersample, 0, 0);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
@@ -293,21 +297,45 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   ctx.textBaseline = "middle";
   ctx.fillText(ctaText, Math.round(ctaX + ctaPadX), Math.round(ctaY + ctaH / 2));
 
-  return canvas.toDataURL("image/png");
+  if (targetW === viewW && targetH === viewH) {
+    const outputCanvas = document.createElement("canvas");
+    outputCanvas.width = targetW;
+    outputCanvas.height = targetH;
+    const outputCtx = outputCanvas.getContext("2d");
+    if (!outputCtx) throw new Error("Output canvas is not available.");
+    outputCtx.imageSmoothingEnabled = true;
+    outputCtx.imageSmoothingQuality = "high";
+    outputCtx.drawImage(workCanvas, 0, 0, targetW, targetH);
+    return outputCanvas.toDataURL("image/png");
+  }
+
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = targetW;
+  outputCanvas.height = targetH;
+  const outputCtx = outputCanvas.getContext("2d");
+  if (!outputCtx) throw new Error("Output canvas is not available.");
+  outputCtx.imageSmoothingEnabled = true;
+  outputCtx.imageSmoothingQuality = "high";
+  outputCtx.drawImage(workCanvas, 0, 0, targetW, targetH);
+  return outputCanvas.toDataURL("image/png");
 }
 
-export async function exportBannerPng(banner: Banner, format: BannerFormat) {
-  const dataUrl = await renderBannerPngDataUrl(banner, format);
+export async function exportBannerPng(banner: Banner, format: BannerFormat, outputScale = 1) {
+  const safeOutputScale = clamp(outputScale, 0.1, 1);
+  const dataUrl = await renderBannerPngDataUrl(banner, format, safeOutputScale);
   const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
-  downloadDataUrl(dataUrl, `${safeName}_${format.width}x${format.height}.png`);
+  const outW = Math.max(1, Math.round(format.width * safeOutputScale));
+  const outH = Math.max(1, Math.round(format.height * safeOutputScale));
+  downloadDataUrl(dataUrl, `${safeName}_${outW}x${outH}.png`);
 }
 
-export async function exportBannerZip(banner: Banner) {
+export async function exportBannerZip(banner: Banner, outputScale = 1) {
+  const safeOutputScale = clamp(outputScale, 0.1, 1);
   const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
   const files = await Promise.all(
     (banner.formats || []).map(async (format) => ({
-      name: `${safeName}_${format.width}x${format.height}.png`,
-      dataUrl: await renderBannerPngDataUrl(banner, format),
+      name: `${safeName}_${Math.max(1, Math.round(format.width * safeOutputScale))}x${Math.max(1, Math.round(format.height * safeOutputScale))}.png`,
+      dataUrl: await renderBannerPngDataUrl(banner, format, safeOutputScale),
     })),
   );
   const response = await fetch("/api/ppc-banners/export-zip", {
