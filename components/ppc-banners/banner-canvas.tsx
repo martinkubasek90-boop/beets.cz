@@ -585,7 +585,7 @@ export function BannerCanvas({
           >
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-lg font-bold"
+              className="inline-flex items-center justify-center font-bold"
               style={{
                 backgroundColor: banner.ctaBg,
                 color: banner.ctaTextColor,

@@ -304,8 +304,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const ctaX = clamp(model.ctaLeft, 0, Math.max(0, boxW - ctaW));
   const ctaY = clamp(model.ctaTop, 0, Math.max(0, boxH - ctaH));
   ctx.fillStyle = banner.ctaBg || "#facc15";
-  roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, 8);
-  ctx.fill();
+  ctx.fillRect(ctaX, ctaY, ctaW, ctaH);
   ctx.fillStyle = banner.ctaTextColor || "#111827";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
