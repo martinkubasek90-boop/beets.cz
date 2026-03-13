@@ -164,10 +164,10 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   if (bgSrc) {
     try {
       const bg = await loadImage(bgSrc);
-      const coverScale = Math.max(viewW / bg.width, viewH / bg.height);
+      // Match preview exactly: CSS background-size: `${bgScale}%` (width-based), no-repeat.
       const scaleFactor = (typeof resolvedBgScale === "number" ? Math.max(10, Math.min(260, resolvedBgScale)) : 100) / 100;
-      const drawW = bg.width * coverScale * scaleFactor;
-      const drawH = bg.height * coverScale * scaleFactor;
+      const drawW = viewW * scaleFactor;
+      const drawH = drawW * (bg.height / bg.width);
       const posX = typeof resolvedBgPositionX === "number" ? Math.max(0, Math.min(100, resolvedBgPositionX)) : 50;
       const posY = typeof resolvedBgPositionY === "number" ? Math.max(0, Math.min(100, resolvedBgPositionY)) : 50;
       const x = (viewW - drawW) * (posX / 100);
