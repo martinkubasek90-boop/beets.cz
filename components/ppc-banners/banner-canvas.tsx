@@ -507,10 +507,7 @@ export function BannerCanvas({
             ) : null}
           </div>
         ) : null}
-        <div
-          className="relative h-full w-full"
-          style={{ padding }}
-        >
+        <div className="relative h-full w-full">
           {editable && showCenterX ? <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[120] w-px -translate-x-1/2 bg-cyan-300/90" /> : null}
           {editable && showCenterY ? <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[120] h-px -translate-y-1/2 bg-cyan-300/90" /> : null}
 
@@ -564,6 +561,7 @@ export function BannerCanvas({
                     fontSize: `${headlineSize}px`,
                     lineHeight: "1.05",
                     fontFamily: BANNER_FONT_STACK,
+                    margin: 0,
                   }}
                 >
                   {resolvedHeadline}
@@ -578,6 +576,7 @@ export function BannerCanvas({
                     fontSize: `${subheadlineSize}px`,
                     lineHeight: "1.5",
                     fontFamily: BANNER_FONT_STACK,
+                    margin: 0,
                   }}
                 >
                   {resolvedSubheadline}
@@ -592,6 +591,7 @@ export function BannerCanvas({
                     fontSize: `${subheadline2Size}px`,
                     lineHeight: "1.5",
                     fontFamily: BANNER_FONT_STACK,
+                    margin: 0,
                   }}
                 >
                   {resolvedSubheadline2}
