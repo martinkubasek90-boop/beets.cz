@@ -1,6 +1,7 @@
 "use client";
 
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
+import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -110,9 +111,6 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-const LOGO_SCALE_MIN = 0.4;
-const LOGO_SCALE_MAX = 12;
-
 function fitSize(width: number, height: number, maxWidth: number, maxHeight: number) {
   if (!width || !height || !maxWidth || !maxHeight) return { width: 0, height: 0 };
   const ratio = Math.min(maxWidth / width, maxHeight / height);
@@ -120,10 +118,6 @@ function fitSize(width: number, height: number, maxWidth: number, maxHeight: num
     width: Math.max(1, Math.round(width * ratio)),
     height: Math.max(1, Math.round(height * ratio)),
   };
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
 }
 
 async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, ctaSize: number) {
@@ -150,22 +144,19 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  const resolvedHeadline = format.headline ?? banner.headline;
-  const resolvedSubheadline = format.subheadline ?? banner.subheadline;
-  const resolvedSubheadline2 = format.subheadline2 ?? "";
-  const resolvedCtaText = format.ctaText ?? banner.ctaText;
-  const resolvedBgImageUrl = format.bgImageUrl ?? banner.bgImageUrl;
-  const resolvedBgScale = typeof format.bgScale === "number" ? format.bgScale : banner.bgScale;
-  const resolvedBgPositionX = typeof format.bgPositionX === "number" ? format.bgPositionX : banner.bgPositionX;
-  const resolvedBgPositionY = typeof format.bgPositionY === "number" ? format.bgPositionY : banner.bgPositionY;
-  const resolvedSubheadline2Size = format.subheadline2Size || format.subheadlineSize;
+  const model = computeBannerRenderModel(banner, format, 1);
+  const resolvedHeadline = model.resolvedHeadline;
+  const resolvedSubheadline = model.resolvedSubheadline;
+  const resolvedSubheadline2 = model.resolvedSubheadline2;
+  const resolvedCtaText = model.resolvedCtaText;
+  const resolvedBgImageUrl = model.resolvedBgImageUrl;
+  const resolvedBgScale = model.bgScale;
+  const resolvedBgPositionX = model.bgPositionX;
+  const resolvedBgPositionY = model.bgPositionY;
+  const resolvedSubheadline2Size = model.subheadline2Size;
   const logoAlignX = format.logoAlignX || "left";
   const logoAlignY = format.logoAlignY || "top";
-  const textAlignX = format.textAlignX || "left";
-  const textAlignY = format.textAlignY || "center";
   const textContentAlign = format.textContentAlign || "left";
-  const ctaAlignX = format.ctaAlignX || "left";
-  const ctaAlignY = format.ctaAlignY || "bottom";
   await ensureFontsLoaded(format.headlineSize, format.subheadlineSize, format.ctaSize);
 
   ctx.fillStyle = resolvedBgImageUrl ? "#ffffff" : banner.bgColor || "#0f172a";
@@ -187,16 +178,11 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     } catch {}
   }
 
-  const pad = format.padding;
-  const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, format.logoScale || 1));
+  const pad = model.padding;
   const logoOffsetX = format.logoOffsetX || 0;
   const logoOffsetY = format.logoOffsetY || 0;
-  const textOffsetX = format.textOffsetX || 0;
-  const textOffsetY = format.textOffsetY || 0;
-  const ctaOffsetX = format.ctaOffsetX || 0;
-  const ctaOffsetY = format.ctaOffsetY || 0;
-  const boxW = viewW;
-  const boxH = viewH;
+  const boxW = model.boxW;
+  const boxH = model.boxH;
 
   if (bgSrc) {
     const gradient = ctx.createLinearGradient(0, 0, 0, viewH);
@@ -225,8 +211,8 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.globalAlpha = 1;
   }
 
-  const logoBoxW = Math.round(130 * logoScale);
-  const logoBoxH = Math.round(32 * logoScale);
+  const logoBoxW = model.logoW;
+  const logoBoxH = model.logoH;
   const logoSrcRaw = await resolveImageSource(banner.logoUrl);
   const logoSrc = banner.logoTransparentBg && logoSrcRaw ? await makeLogoTransparentForExport(logoSrcRaw) : logoSrcRaw;
   if (logoSrc) {
@@ -239,8 +225,10 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
         logoAlignY === "top" ? pad : logoAlignY === "center" ? Math.round((boxH - logoBoxH) / 2) : boxH - pad - logoBoxH;
       const logoX = logoBaseX + logoOffsetX;
       const logoY = logoBaseY + logoOffsetY;
-      const safeLogoX = clamp(logoX, 0, Math.max(0, boxW - logoDrawW));
-      const safeLogoY = clamp(logoY, 0, Math.max(0, boxH - logoDrawH));
+      const drawX = logoX + Math.round((logoBoxW - logoDrawW) / 2);
+      const drawY = logoY + Math.round((logoBoxH - logoDrawH) / 2);
+      const safeLogoX = clamp(drawX, 0, Math.max(0, boxW - logoDrawW));
+      const safeLogoY = clamp(drawY, 0, Math.max(0, boxH - logoDrawH));
       ctx.drawImage(logo, safeLogoX, safeLogoY, logoDrawW, logoDrawH);
     } catch {}
   }
@@ -249,17 +237,9 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
   const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
   if (hasHeadline || hasSubheadline || hasSubheadline2) {
-    const textW = Math.max(120, boxW - pad * 2 - 10);
-    const textBaseX =
-      textAlignX === "left" ? pad : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - pad - textW;
-    const textBaseY =
-      textAlignY === "top"
-        ? pad + 80
-        : textAlignY === "center"
-          ? Math.round(boxH * 0.37)
-          : boxH - pad - 140;
-    const textLeft = textBaseX + textOffsetX;
-    const textAnchorY = textBaseY + textOffsetY;
+    const textW = model.textW;
+    const textLeft = model.textLeft;
+    const textAnchorY = model.textTop;
     const textX =
       textContentAlign === "left" ? textLeft : textContentAlign === "center" ? textLeft + textW / 2 : textLeft + textW;
     ctx.textAlign = textContentAlign as CanvasTextAlign;
@@ -268,22 +248,22 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     const linesToDraw: Array<{ text: string; size: number; weight: string; lineHeight: number; gapBefore: number }> = [];
 
     if (hasHeadline) {
-      ctx.font = `800 ${format.headlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `800 ${model.headlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
       const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
-        linesToDraw.push({ text: line, size: format.headlineSize, weight: "800", lineHeight: format.headlineSize * 1.05, gapBefore: 0 });
+        linesToDraw.push({ text: line, size: model.headlineSize, weight: "800", lineHeight: model.headlineSize * 1.05, gapBefore: 0 });
       });
     }
 
     if (hasSubheadline) {
-      ctx.font = `500 ${format.subheadlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `500 ${model.subheadlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
       const subLines = wrapLines(ctx, resolvedSubheadline || "", textW, format.layout === "vertical" ? 4 : 3);
       subLines.forEach((line) => {
         linesToDraw.push({
           text: line,
-          size: format.subheadlineSize,
+          size: model.subheadlineSize,
           weight: "500",
-          lineHeight: format.subheadlineSize * 1.5,
+          lineHeight: model.subheadlineSize * 1.5,
           gapBefore: linesToDraw.length ? 8 : 0,
         });
       });
@@ -317,16 +297,12 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   const ctaText = resolvedCtaText || "Zjistit více";
-  ctx.font = `700 ${format.ctaSize}px "Space Grotesk", Inter, Arial, sans-serif`;
-  const ctaW = Math.round((ctaText || "Zjistit více").length * format.ctaSize * 0.55 + 32);
-  const ctaH = Math.round(format.ctaSize + 20);
+  ctx.font = `700 ${model.ctaSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+  const ctaW = model.ctaW;
+  const ctaH = model.ctaH;
   const ctaPadX = 16;
-  const ctaBaseX =
-    ctaAlignX === "left" ? pad : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - pad - ctaW;
-  const ctaBaseY =
-    ctaAlignY === "top" ? pad : ctaAlignY === "center" ? Math.round((boxH - ctaH) / 2) : boxH - pad - ctaH;
-  const ctaX = clamp(ctaBaseX + ctaOffsetX, 0, Math.max(0, boxW - ctaW));
-  const ctaY = clamp(ctaBaseY + ctaOffsetY, 0, Math.max(0, boxH - ctaH));
+  const ctaX = clamp(model.ctaLeft, 0, Math.max(0, boxW - ctaW));
+  const ctaY = clamp(model.ctaTop, 0, Math.max(0, boxH - ctaH));
   ctx.fillStyle = banner.ctaBg || "#facc15";
   roundedRectPath(ctx, ctaX, ctaY, ctaW, ctaH, 8);
   ctx.fill();

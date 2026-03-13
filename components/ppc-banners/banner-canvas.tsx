@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from "react";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
+import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
 type DragTarget = "logo" | "text" | "cta" | "shape";
 type ResizeTarget = "logo" | "text" | "shape";
@@ -74,10 +75,6 @@ const FALLBACK_FORMAT: BannerFormat = {
   padding: 56,
 };
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
 function applyStep(value: number, delta: number, min: number, max: number) {
   return clamp(Number((value + delta).toFixed(2)), min, max);
 }
@@ -137,64 +134,46 @@ export function BannerCanvas({
   const resolvedFormat = format ?? FALLBACK_FORMAT;
 
   const scale = Math.min(1, 760 / resolvedFormat.width, 560 / resolvedFormat.height);
-  const padding = Math.max(8, Math.round(resolvedFormat.padding * scale));
-  const headlineSize = Math.max(12, Math.round(resolvedFormat.headlineSize * scale));
-  const subheadlineSize = Math.max(10, Math.round(resolvedFormat.subheadlineSize * scale));
-  const subheadline2Size = Math.max(10, Math.round((resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize) * scale));
-  const ctaSize = Math.max(10, Math.round(resolvedFormat.ctaSize * scale));
-  const logoScale = Math.max(LOGO_SCALE_MIN, Math.min(LOGO_SCALE_MAX, resolvedFormat.logoScale || 1));
-  const logoOffsetX = Math.round((resolvedFormat.logoOffsetX || 0) * scale);
-  const logoOffsetY = Math.round((resolvedFormat.logoOffsetY || 0) * scale);
-  const textOffsetX = Math.round((resolvedFormat.textOffsetX || 0) * scale);
-  const textOffsetY = Math.round((resolvedFormat.textOffsetY || 0) * scale);
-  const ctaOffsetX = Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
-  const ctaOffsetY = Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
-  const resolvedHeadline = resolvedFormat.headline ?? banner.headline;
-  const resolvedSubheadline = resolvedFormat.subheadline ?? banner.subheadline;
-  const resolvedSubheadline2 = resolvedFormat.subheadline2 ?? "";
-  const resolvedCtaText = resolvedFormat.ctaText ?? banner.ctaText;
-  const resolvedBgImageUrl = resolvedFormat.bgImageUrl ?? banner.bgImageUrl;
+  const model = computeBannerRenderModel(banner, resolvedFormat, scale);
+  const padding = model.padding;
+  const headlineSize = model.headlineSize;
+  const subheadlineSize = model.subheadlineSize;
+  const subheadline2Size = model.subheadline2Size;
+  const ctaSize = model.ctaSize;
+  const resolvedHeadline = model.resolvedHeadline;
+  const resolvedSubheadline = model.resolvedSubheadline;
+  const resolvedSubheadline2 = model.resolvedSubheadline2;
+  const resolvedCtaText = model.resolvedCtaText;
+  const resolvedBgImageUrl = model.resolvedBgImageUrl;
   const bgPreviewUrl = toPreviewImageUrl(resolvedBgImageUrl);
-  const bgScale = clamp(typeof resolvedFormat.bgScale === "number" ? resolvedFormat.bgScale : typeof banner.bgScale === "number" ? banner.bgScale : 100, 10, 260);
-  const bgPositionX = clamp(typeof resolvedFormat.bgPositionX === "number" ? resolvedFormat.bgPositionX : typeof banner.bgPositionX === "number" ? banner.bgPositionX : 50, 0, 100);
-  const bgPositionY = clamp(typeof resolvedFormat.bgPositionY === "number" ? resolvedFormat.bgPositionY : typeof banner.bgPositionY === "number" ? banner.bgPositionY : 50, 0, 100);
-  const boxW = Math.round(resolvedFormat.width * scale);
-  const boxH = Math.round(resolvedFormat.height * scale);
+  const bgScale = model.bgScale;
+  const bgPositionX = model.bgPositionX;
+  const bgPositionY = model.bgPositionY;
+  const boxW = model.boxW;
+  const boxH = model.boxH;
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
   const shapeLeft = Math.round(boxW * ((resolvedFormat.shapeX || 78) / 100) - shapeSizePx / 2);
   const shapeTop = Math.round(boxH * ((resolvedFormat.shapeY || 22) / 100) - shapeSizePx / 2);
   const sizeTarget = selected === "text" || selected === "logo" || selected === "shape" ? selected : null;
-  const logoAlignX = resolvedFormat.logoAlignX || "left";
-  const logoAlignY = resolvedFormat.logoAlignY || "top";
-  const textAlignX = resolvedFormat.textAlignX || "left";
-  const textAlignY = resolvedFormat.textAlignY || "center";
   const textContentAlign = resolvedFormat.textContentAlign || "left";
-  const ctaAlignX = resolvedFormat.ctaAlignX || "left";
-  const ctaAlignY = resolvedFormat.ctaAlignY || "bottom";
   const zLogo = typeof resolvedFormat.zLogo === "number" ? resolvedFormat.zLogo : 40;
   const zText = typeof resolvedFormat.zText === "number" ? resolvedFormat.zText : 30;
   const zCta = typeof resolvedFormat.zCta === "number" ? resolvedFormat.zCta : 50;
   const zShape = typeof resolvedFormat.zShape === "number" ? resolvedFormat.zShape : 10;
 
-  const logoW = Math.round(130 * scale * logoScale);
-  const logoH = Math.round(32 * scale * logoScale);
-  const logoBaseX = logoAlignX === "left" ? padding : logoAlignX === "center" ? Math.round((boxW - logoW) / 2) : boxW - padding - logoW;
-  const logoBaseY = logoAlignY === "top" ? padding : logoAlignY === "center" ? Math.round((boxH - logoH) / 2) : boxH - padding - logoH;
-  const logoLeft = logoBaseX + logoOffsetX;
-  const logoTop = logoBaseY + logoOffsetY;
+  const logoW = model.logoW;
+  const logoH = model.logoH;
+  const logoLeft = model.logoLeft;
+  const logoTop = model.logoTop;
 
-  const textW = Math.max(120, boxW - padding * 2 - 10);
-  const textBaseX = textAlignX === "left" ? padding : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - padding - textW;
-  const textBaseY = textAlignY === "top" ? padding + Math.round(80 * scale) : textAlignY === "center" ? Math.round(boxH * 0.37) : boxH - padding - Math.round(140 * scale);
-  const textLeft = textBaseX + textOffsetX;
-  const textTop = textBaseY + textOffsetY;
+  const textW = model.textW;
+  const textLeft = model.textLeft;
+  const textTop = model.textTop;
 
-  const estimatedCtaW = Math.round((resolvedCtaText || "Zjistit více").length * ctaSize * 0.55 + 32);
-  const estimatedCtaH = Math.round(ctaSize + 20);
-  const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - estimatedCtaW) / 2) : boxW - padding - estimatedCtaW;
-  const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - estimatedCtaH) / 2) : boxH - padding - estimatedCtaH;
-  const ctaLeft = ctaBaseX + ctaOffsetX;
-  const ctaTop = ctaBaseY + ctaOffsetY;
+  const estimatedCtaW = model.ctaW;
+  const estimatedCtaH = model.ctaH;
+  const ctaLeft = model.ctaLeft;
+  const ctaTop = model.ctaTop;
   const hasLogo = Boolean((banner.logoUrl || "").trim());
   const hasHeadline = Boolean((resolvedHeadline || "").trim());
   const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
@@ -488,10 +467,10 @@ export function BannerCanvas({
               <img
                 src={logoPreviewSrc || banner.logoUrl}
                 alt="Logo"
-                className="w-auto rounded object-contain"
+                className="rounded object-contain object-center"
                 style={{
-                  maxHeight: `${Math.round(32 * scale * logoScale)}px`,
-                  maxWidth: `${Math.round(130 * scale * logoScale)}px`,
+                  width: `${logoW}px`,
+                  height: `${logoH}px`,
                 }}
               />
               {editable && selected === "logo" ? (
@@ -520,17 +499,17 @@ export function BannerCanvas({
               onWheel={(event) => onResizeWheel("text", event)}
             >
               {hasHeadline ? (
-                <h2 className="font-extrabold leading-[1.05]" style={{ color: banner.textColor, fontSize: `${headlineSize}px` }}>
+                <h2 className="font-extrabold" style={{ color: banner.textColor, fontSize: `${headlineSize}px`, lineHeight: "1.05" }}>
                   {resolvedHeadline}
                 </h2>
               ) : null}
               {hasSubheadline ? (
-                <p className={`${hasHeadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadlineSize}px` }}>
+                <p className={`${hasHeadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadlineSize}px`, lineHeight: "1.5" }}>
                   {resolvedSubheadline}
                 </p>
               ) : null}
               {hasSubheadline2 ? (
-                <p className={`${hasHeadline || hasSubheadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadline2Size}px` }}>
+                <p className={`${hasHeadline || hasSubheadline ? "mt-2" : ""} font-medium`} style={{ color: banner.textColor, fontSize: `${subheadline2Size}px`, lineHeight: "1.5" }}>
                   {resolvedSubheadline2}
                 </p>
               ) : null}
@@ -552,11 +531,13 @@ export function BannerCanvas({
           >
             <button
               type="button"
-              className="rounded-lg px-4 py-2 font-bold"
+              className="inline-flex items-center justify-center rounded-lg font-bold"
               style={{
                 backgroundColor: banner.ctaBg,
                 color: banner.ctaTextColor,
                 fontSize: `${ctaSize}px`,
+                width: `${estimatedCtaW}px`,
+                height: `${estimatedCtaH}px`,
               }}
             >
               {resolvedCtaText || "Zjistit více"}
