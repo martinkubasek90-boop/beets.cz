@@ -6,6 +6,8 @@ import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
 import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
+const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
+
 type DragTarget = "logo" | "text" | "cta" | "shape";
 type ResizeTarget = "logo" | "text" | "shape";
 
@@ -522,10 +524,11 @@ export function BannerCanvas({
               <img
                 src={logoPreviewSrc || banner.logoUrl}
                 alt="Logo"
-                className="rounded object-contain object-center"
+                className="object-contain object-center"
                 style={{
                   width: `${logoW}px`,
                   height: `${logoH}px`,
+                  display: "block",
                 }}
               />
               {editable && selected === "logo" ? (
@@ -554,7 +557,15 @@ export function BannerCanvas({
               onWheel={(event) => onResizeWheel("text", event)}
             >
               {hasHeadline ? (
-                <h2 className="font-extrabold" style={{ color: banner.textColor, fontSize: `${headlineSize}px`, lineHeight: "1.05" }}>
+                <h2
+                  className="font-extrabold"
+                  style={{
+                    color: banner.textColor,
+                    fontSize: `${headlineSize}px`,
+                    lineHeight: "1.05",
+                    fontFamily: BANNER_FONT_STACK,
+                  }}
+                >
                   {resolvedHeadline}
                 </h2>
               ) : null}
@@ -566,6 +577,7 @@ export function BannerCanvas({
                     color: banner.textColor,
                     fontSize: `${subheadlineSize}px`,
                     lineHeight: "1.5",
+                    fontFamily: BANNER_FONT_STACK,
                   }}
                 >
                   {resolvedSubheadline}
@@ -579,6 +591,7 @@ export function BannerCanvas({
                     color: banner.textColor,
                     fontSize: `${subheadline2Size}px`,
                     lineHeight: "1.5",
+                    fontFamily: BANNER_FONT_STACK,
                   }}
                 >
                   {resolvedSubheadline2}
@@ -609,6 +622,14 @@ export function BannerCanvas({
                 fontSize: `${ctaSize}px`,
                 width: `${estimatedCtaW}px`,
                 height: `${estimatedCtaH}px`,
+                border: 0,
+                borderRadius: 0,
+                padding: 0,
+                margin: 0,
+                lineHeight: "1",
+                fontFamily: BANNER_FONT_STACK,
+                appearance: "none",
+                WebkitAppearance: "none",
               }}
             >
               {resolvedCtaText || "Zjistit více"}

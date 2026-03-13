@@ -3,6 +3,8 @@
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
+const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
+
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
   ctx.beginPath();
@@ -124,9 +126,9 @@ async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, 
   if (typeof document === "undefined" || !("fonts" in document)) return;
   try {
     await Promise.all([
-      document.fonts.load(`800 ${headlineSize}px "Space Grotesk"`),
-      document.fonts.load(`500 ${subheadlineSize}px "Space Grotesk"`),
-      document.fonts.load(`700 ${ctaSize}px "Space Grotesk"`),
+      document.fonts.load(`800 ${headlineSize}px ${BANNER_FONT_STACK}`),
+      document.fonts.load(`500 ${subheadlineSize}px ${BANNER_FONT_STACK}`),
+      document.fonts.load(`700 ${ctaSize}px ${BANNER_FONT_STACK}`),
     ]);
   } catch {}
 }
@@ -206,9 +208,11 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       const logo = await loadImage(logoSrc);
       // Match preview exactly: <img width/height + object-fit: contain + object-position: center.
       const fitted = fitSize(logo.width, logo.height, logoBoxW, logoBoxH);
-      const drawX = model.logoLeft + (logoBoxW - fitted.width) / 2;
-      const drawY = model.logoTop + (logoBoxH - fitted.height) / 2;
-      ctx.drawImage(logo, drawX, drawY, fitted.width, fitted.height);
+      const drawW = Math.round(fitted.width);
+      const drawH = Math.round(fitted.height);
+      const drawX = Math.round(model.logoLeft + (logoBoxW - drawW) / 2);
+      const drawY = Math.round(model.logoTop + (logoBoxH - drawH) / 2);
+      ctx.drawImage(logo, drawX, drawY, drawW, drawH);
     } catch {}
   }
 
@@ -227,7 +231,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     const linesToDraw: Array<{ text: string; size: number; weight: string; lineHeight: number; gapBefore: number }> = [];
 
     if (hasHeadline) {
-      ctx.font = `800 ${model.headlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `800 ${model.headlineSize}px ${BANNER_FONT_STACK}`;
       const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
       headlineLines.forEach((line) => {
         linesToDraw.push({ text: line, size: model.headlineSize, weight: "800", lineHeight: model.headlineSize * 1.05, gapBefore: 0 });
@@ -235,7 +239,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     if (hasSubheadline) {
-      ctx.font = `500 ${model.subheadlineSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `500 ${model.subheadlineSize}px ${BANNER_FONT_STACK}`;
       const subLines = wrapLines(ctx, resolvedSubheadline || "", textW, format.layout === "vertical" ? 4 : 3);
       subLines.forEach((line) => {
         linesToDraw.push({
@@ -249,7 +253,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     }
 
     if (hasSubheadline2) {
-      ctx.font = `500 ${resolvedSubheadline2Size}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `500 ${resolvedSubheadline2Size}px ${BANNER_FONT_STACK}`;
       const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", textW, format.layout === "vertical" ? 4 : 3);
       sub2Lines.forEach((line) => {
         linesToDraw.push({
@@ -268,7 +272,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
     linesToDraw.forEach((item) => {
       textY += item.gapBefore;
-      ctx.font = `${item.weight} ${item.size}px "Space Grotesk", Inter, Arial, sans-serif`;
+      ctx.font = `${item.weight} ${item.size}px ${BANNER_FONT_STACK}`;
       ctx.fillText(item.text, Math.round(textX), Math.round(textY));
       textY += item.lineHeight;
     });
@@ -276,7 +280,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   const ctaText = resolvedCtaText || "Zjistit více";
-  ctx.font = `700 ${model.ctaSize}px "Space Grotesk", Inter, Arial, sans-serif`;
+  ctx.font = `700 ${model.ctaSize}px ${BANNER_FONT_STACK}`;
   const ctaW = model.ctaW;
   const ctaH = model.ctaH;
   const ctaPadX = 16;
