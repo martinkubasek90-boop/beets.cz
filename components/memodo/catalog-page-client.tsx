@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Package, Search, SlidersHorizontal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Package, Search, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { MemodoProductCard } from "@/components/memodo/product-card";
 import { categoryLabels, type Product } from "@/lib/memodo-data";
@@ -49,6 +49,9 @@ export function MemodoCatalogPageClient({
   const [reloadKey, setReloadKey] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<Array<{ id: string; name: string }>>([]);
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialCategory));
+  const [showAllRecent, setShowAllRecent] = useState(false);
+  const [showAllViewed, setShowAllViewed] = useState(false);
 
   const trimmedSearch = debouncedSearch.trim();
 
@@ -195,55 +198,22 @@ export function MemodoCatalogPageClient({
           ) : null}
         </div>
 
-        <div className="mt-2 flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 flex-shrink-0 text-gray-400" />
-          <div className="grid w-full grid-cols-2 gap-2">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700"
-            >
-              <option value="">Kategorie</option>
-              {Object.entries(categoryLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700"
-            >
-              <option value="popular">Doporučené</option>
-              <option value="price_asc">Nejlevnější</option>
-              <option value="price_desc">Nejdražší</option>
-              <option value="name">A-Z</option>
-            </select>
-          </div>
-        </div>
-
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          {quickCategoryChips.map((chip) => (
-            <button
-              key={chip.label}
-              type="button"
-              onClick={() => setCategory(chip.value)}
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
-                category === chip.value
-                  ? "bg-slate-900 text-white"
-                  : "border border-gray-200 bg-white text-gray-600"
-              } min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
-            >
-              {chip.label}
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((prev) => !prev)}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700"
+          >
+            <SlidersHorizontal className="h-4 w-4 text-gray-500" />
+            Filtry
+            {filtersOpen ? <ChevronUp className="h-4 w-4 text-gray-500" /> : <ChevronDown className="h-4 w-4 text-gray-500" />}
+          </button>
           <button
             type="button"
             onClick={() => setInStockOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
               inStockOnly ? "bg-green-100 text-green-700" : "border border-gray-200 bg-white text-gray-600"
-            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
+            } min-h-[40px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
           >
             Jen skladem
           </button>
@@ -252,23 +222,68 @@ export function MemodoCatalogPageClient({
             onClick={() => setPromoOnly((prev) => !prev)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
               promoOnly ? "bg-yellow-100 text-yellow-700" : "border border-gray-200 bg-white text-gray-600"
-            } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
+            } min-h-[40px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
           >
             Jen akce
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setCategory("");
-              setInStockOnly(false);
-              setPromoOnly(false);
-              setSearch("");
-            }}
-            className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
-          >
-            Reset
-          </button>
         </div>
+
+        {filtersOpen ? (
+          <div className="mt-2 space-y-2 rounded-xl border border-gray-200 bg-white p-2">
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700"
+              >
+                <option value="">Kategorie</option>
+                {Object.entries(categoryLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700"
+              >
+                <option value="popular">Doporučené</option>
+                <option value="price_asc">Nejlevnější</option>
+                <option value="price_desc">Nejdražší</option>
+                <option value="name">A-Z</option>
+              </select>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {quickCategoryChips.map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => setCategory(chip.value)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold ${
+                    category === chip.value
+                      ? "bg-slate-900 text-white"
+                      : "border border-gray-200 bg-white text-gray-600"
+                  } min-h-[38px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCategory("");
+                setInStockOnly(false);
+                setPromoOnly(false);
+                setSearch("");
+              }}
+              className="min-h-[38px] rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-[11px] font-semibold text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+            >
+              Reset filtrů
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {error ? (
@@ -301,14 +316,25 @@ export function MemodoCatalogPageClient({
       </p>
       {!trimmedSearch && recentSearches.length > 0 ? (
         <div>
-          <p className="mb-1 text-[11px] font-semibold text-gray-500">Nedávná hledání</p>
-          <div className="flex flex-wrap gap-2">
-            {recentSearches.slice(0, 5).map((item) => (
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-gray-500">Nedávná hledání</p>
+            {recentSearches.length > 4 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllRecent((prev) => !prev)}
+                className="text-[11px] font-semibold text-gray-500 underline"
+              >
+                {showAllRecent ? "Méně" : "Více"}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {(showAllRecent ? recentSearches : recentSearches.slice(0, 4)).map((item) => (
               <button
                 key={`recent-${item}`}
                 type="button"
                 onClick={() => setSearch(item)}
-                className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                className="min-h-[36px] whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
               >
                 {item}
               </button>
@@ -318,13 +344,24 @@ export function MemodoCatalogPageClient({
       ) : null}
       {!trimmedSearch && recentlyViewed.length > 0 ? (
         <div>
-          <p className="mb-1 text-[11px] font-semibold text-gray-500">Naposledy prohlížené</p>
-          <div className="flex flex-wrap gap-2">
-            {recentlyViewed.slice(0, 4).map((item) => (
+          <div className="mb-1 flex items-center justify-between">
+            <p className="text-[11px] font-semibold text-gray-500">Naposledy prohlížené</p>
+            {recentlyViewed.length > 4 ? (
+              <button
+                type="button"
+                onClick={() => setShowAllViewed((prev) => !prev)}
+                className="text-[11px] font-semibold text-gray-500 underline"
+              >
+                {showAllViewed ? "Méně" : "Více"}
+              </button>
+            ) : null}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {(showAllViewed ? recentlyViewed : recentlyViewed.slice(0, 4)).map((item) => (
               <Link
                 key={`viewed-${item.id}`}
                 href={`/Memodo/produkt/${item.id}`}
-                className="min-h-[44px] rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                className="min-h-[36px] whitespace-nowrap rounded-full border border-gray-200 bg-white px-3 py-1 text-[11px] font-semibold text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
               >
                 {item.name}
               </Link>
