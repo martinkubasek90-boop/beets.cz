@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Archive, Check, Download, History, Loader2, Save, Settings, Share2, Sparkles } from "lucide-react";
+import { ArrowLeft, Archive, Check, Copy, Download, History, Loader2, Save, Settings, Share2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { applySnapshot, getBannerById, makeSnapshot, upsertBanner } from "@/components/ppc-banners/storage";
@@ -12,7 +12,7 @@ import { BannerCanvas } from "@/components/ppc-banners/banner-canvas";
 import { FormatSelector } from "@/components/ppc-banners/format-selector";
 import { PropertyPanel } from "@/components/ppc-banners/property-panel";
 import { AIAssistant } from "@/components/ppc-banners/ai-assistant";
-import { exportBannerPng, exportBannerZip } from "@/components/ppc-banners/export";
+import { exportBannerPng, exportBannerZip, getExportFileName } from "@/components/ppc-banners/export";
 import { computeChecklist, encodeSharePayload, isChecklistComplete } from "@/components/ppc-banners/banner-utils";
 
 export function PpcBannerEditorClient() {
@@ -27,6 +27,7 @@ export function PpcBannerEditorClient() {
   const [autosaveTick, setAutosaveTick] = useState(0);
   const [tab, setTab] = useState<"properties" | "ai">("properties");
   const [exportScale, setExportScale] = useState<1 | 0.75 | 0.5 | 0.25>(1);
+  const [emailHtmlCopied, setEmailHtmlCopied] = useState(false);
 
   const initDoneRef = useRef(false);
 
@@ -184,6 +185,25 @@ export function PpcBannerEditorClient() {
     }
   };
 
+  const onExportEmailRetina = async () => {
+    if (!banner || !activeFormat) return;
+    try {
+      await exportBannerPng(banner, activeFormat, 1);
+      const retinaW = activeFormat.width;
+      const retinaH = activeFormat.height;
+      const displayW = Math.max(1, Math.round(retinaW / 2));
+      const displayH = Math.max(1, Math.round(retinaH / 2));
+      const filename = getExportFileName(banner.name || "banner", retinaW, retinaH);
+      const alt = (banner.name || "banner").replace(/"/g, "&quot;");
+      const html = `<img src="${filename}" alt="${alt}" width="${displayW}" height="${displayH}" style="display:block;width:${displayW}px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />`;
+      await navigator.clipboard.writeText(html);
+      setEmailHtmlCopied(true);
+      window.setTimeout(() => setEmailHtmlCopied(false), 1800);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const onCopyShareLink = async () => {
     if (!banner) return;
     const encoded = encodeSharePayload(banner);
@@ -269,6 +289,10 @@ export function PpcBannerEditorClient() {
           <Button onClick={onExportZip} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Archive className="mr-1.5 h-3.5 w-3.5" />
             ZIP
+          </Button>
+          <Button onClick={onExportEmailRetina} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <Copy className="mr-1.5 h-3.5 w-3.5" />
+            {emailHtmlCopied ? "HTML zkopírováno" : "Email Retina"}
           </Button>
           <Button onClick={onCopyShareLink} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Share2 className="mr-1.5 h-3.5 w-3.5" />

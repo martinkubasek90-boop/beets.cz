@@ -320,13 +320,17 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   return outputCanvas.toDataURL("image/png");
 }
 
+export function getExportFileName(bannerName: string, width: number, height: number) {
+  const safeName = (bannerName || "banner").replace(/[^\w\-]+/g, "_");
+  return `${safeName}_${width}x${height}.png`;
+}
+
 export async function exportBannerPng(banner: Banner, format: BannerFormat, outputScale = 1) {
   const safeOutputScale = clamp(outputScale, 0.1, 1);
   const dataUrl = await renderBannerPngDataUrl(banner, format, safeOutputScale);
-  const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
   const outW = Math.max(1, Math.round(format.width * safeOutputScale));
   const outH = Math.max(1, Math.round(format.height * safeOutputScale));
-  downloadDataUrl(dataUrl, `${safeName}_${outW}x${outH}.png`);
+  downloadDataUrl(dataUrl, getExportFileName(banner.name || "banner", outW, outH));
 }
 
 export async function exportBannerZip(banner: Banner, outputScale = 1) {
