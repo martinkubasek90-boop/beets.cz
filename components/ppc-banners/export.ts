@@ -115,8 +115,8 @@ function fitSize(width: number, height: number, maxWidth: number, maxHeight: num
   if (!width || !height || !maxWidth || !maxHeight) return { width: 0, height: 0 };
   const ratio = Math.min(maxWidth / width, maxHeight / height);
   return {
-    width: Math.max(1, Math.round(width * ratio)),
-    height: Math.max(1, Math.round(height * ratio)),
+    width: Math.max(1, width * ratio),
+    height: Math.max(1, height * ratio),
   };
 }
 
@@ -204,10 +204,11 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   if (logoSrc) {
     try {
       const logo = await loadImage(logoSrc);
-      const { width: logoDrawW, height: logoDrawH } = fitSize(logo.width, logo.height, logoBoxW, logoBoxH);
-      const drawX = model.logoLeft + Math.round((logoBoxW - logoDrawW) / 2);
-      const drawY = model.logoTop + Math.round((logoBoxH - logoDrawH) / 2);
-      ctx.drawImage(logo, drawX, drawY, logoDrawW, logoDrawH);
+      // Match preview exactly: <img width/height + object-fit: contain + object-position: center.
+      const fitted = fitSize(logo.width, logo.height, logoBoxW, logoBoxH);
+      const drawX = model.logoLeft + (logoBoxW - fitted.width) / 2;
+      const drawY = model.logoTop + (logoBoxH - fitted.height) / 2;
+      ctx.drawImage(logo, drawX, drawY, fitted.width, fitted.height);
     } catch {}
   }
 
