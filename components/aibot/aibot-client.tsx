@@ -31,6 +31,11 @@ type ChatResponse = {
   actions?: string[];
 };
 
+type IntegrationStatus = {
+  label: string;
+  enabled: boolean;
+};
+
 declare global {
   interface Window {
     webkitSpeechRecognition?: new () => SpeechRecognition;
@@ -78,6 +83,13 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef("");
+  const integrationStatuses: IntegrationStatus[] = [
+    { label: "Gmail", enabled: featureState.integrations.gmail },
+    { label: "Asana", enabled: featureState.integrations.asana },
+    { label: "HubSpot", enabled: featureState.integrations.hubspot },
+    { label: "Google Analytics", enabled: featureState.integrations.analytics },
+    { label: "Google Ads", enabled: featureState.integrations.ads },
+  ];
 
   useEffect(() => {
     if (!featureState.voiceEnabled) return;
@@ -296,13 +308,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur">
               <p className="text-sm uppercase tracking-[0.24em] text-white/45">Integrace</p>
               <div className="mt-4 grid gap-3">
-                {[
-                  ["Gmail", featureState.integrations.gmail],
-                  ["Asana", featureState.integrations.asana],
-                  ["HubSpot", featureState.integrations.hubspot],
-                  ["Google Analytics", featureState.integrations.analytics],
-                  ["Google Ads", featureState.integrations.ads],
-                ].map(([label, enabled]) => (
+                {integrationStatuses.map(({ label, enabled }) => (
                   <div
                     key={label}
                     className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3"
