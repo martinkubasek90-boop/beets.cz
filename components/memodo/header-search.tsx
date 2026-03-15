@@ -457,7 +457,7 @@ export function MemodoHeaderSearch() {
       return;
     }
 
-    const recognition = new Recognition();
+    const recognition = new Recognition() as SpeechRecognitionLike;
     recognition.lang = "cs-CZ";
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
