@@ -93,6 +93,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [handsFreeEnabled, setHandsFreeEnabled] = useState(false);
+  const [awaitingCommand, setAwaitingCommand] = useState(false);
   const [listeningMode, setListeningMode] = useState<RecognitionMode>("off");
   const [voiceStatus, setVoiceStatus] = useState(
     "Klikni na mikrofon, nebo zapni hands-free a řekni Břéťo.",
@@ -274,12 +275,9 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         const normalized = normalizeSpeech(transcript);
         const wokeByWakeWord = normalized.includes(WAKE_WORD);
         if (isConversationWindowOpen() || wokeByWakeWord) {
+          setAwaitingCommand(true);
           if (wokeByWakeWord) {
             setVoiceStatus("Co potřebuješ?");
-            setMessages((current) => [
-              ...current,
-              { role: "assistant", text: "Co potřebuješ?" },
-            ]);
           }
           suppressWakeRestartRef.current = true;
           stopRecognition();
@@ -325,9 +323,11 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       if (mode === "command") {
         const transcript = transcriptRef.current.trim();
         if (transcript) {
+          setAwaitingCommand(false);
           setVoiceStatus("Odesílám hlasový požadavek.");
           void sendMessageRef.current?.(transcript, "voice");
         } else if (handsFreeEnabledRef.current) {
+          setAwaitingCommand(false);
           setVoiceStatus("Neslyším požadavek. Řekni znovu Břéťo.");
           window.setTimeout(() => startRecognition("wake"), 250);
         }
@@ -352,6 +352,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
     setPending(true);
     setError(null);
+    setAwaitingCommand(false);
     setMessages((current) => [...current, { role: "user", text: trimmed }]);
     setValue("");
 
@@ -407,6 +408,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       if (mode === "voice" && handsFreeEnabledRef.current) {
         setVoiceStatus("Hlasový požadavek selhal. Řekni znovu Břéťo.");
         closeConversationWindow();
+        setAwaitingCommand(false);
         window.setTimeout(() => startRecognition("wake"), 250);
       }
     } finally {
@@ -460,6 +462,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       setHandsFreeEnabled(false);
       suppressWakeRestartRef.current = false;
       closeConversationWindow();
+      setAwaitingCommand(false);
       stopRecognition();
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -473,6 +476,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
     setHandsFreeEnabled(true);
     closeConversationWindow();
+    setAwaitingCommand(false);
     stopRecognition();
     startRecognition("wake");
   }
@@ -546,6 +550,11 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
                     <p className="whitespace-pre-wrap text-sm leading-6">{message.text}</p>
                   </div>
                 ))}
+                {awaitingCommand ? (
+                  <div className="max-w-[90%] rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/90">
+                    <p className="whitespace-pre-wrap text-sm leading-6">Co potřebuješ?</p>
+                  </div>
+                ) : null}
               </div>
 
               <p className="mt-3 text-sm text-white/60">
