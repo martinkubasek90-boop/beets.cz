@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getAIBotAdminConfig } from "@/lib/aibot-admin-config";
 
 type AIBotWebhookResponse = {
   reply?: string;
@@ -8,9 +9,12 @@ type AIBotWebhookResponse = {
   actions?: string[];
 };
 
-function getWebhookConfig() {
-  const url = process.env.N8N_AIBOT_WEBHOOK_URL;
-  const token = process.env.N8N_AIBOT_WEBHOOK_TOKEN;
+async function getWebhookConfig() {
+  const adminConfig = await getAIBotAdminConfig().catch(() => null);
+  const url =
+    adminConfig?.n8n.webhookUrl || process.env.N8N_AIBOT_WEBHOOK_URL;
+  const token =
+    adminConfig?.n8n.webhookToken || process.env.N8N_AIBOT_WEBHOOK_TOKEN;
 
   if (!url) {
     throw new Error("N8N_AIBOT_WEBHOOK_URL is not configured.");
@@ -37,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { url, token } = getWebhookConfig();
+    const { url, token } = await getWebhookConfig();
     const response = await fetch(url, {
       method: "POST",
       headers: {
