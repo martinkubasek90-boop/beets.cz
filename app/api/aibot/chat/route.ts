@@ -30,10 +30,39 @@ function sanitizeAssistantReply(reply: string) {
 
 function resolveClaudeModel(model: string | undefined) {
   const normalized = (model || "").trim();
-  if (!normalized || normalized === "claude-3-7-sonnet-latest") {
+  if (
+    !normalized ||
+    normalized === "claude-3-7-sonnet-latest" ||
+    normalized === "claude-sonnet-4-20250514"
+  ) {
     return "claude-sonnet-4-6";
   }
   return normalized;
+}
+
+function shouldUseWebSearch(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    /\bkdo je\b/,
+    /\bco je\b/,
+    /\bjak(y|é|a|á)\b/,
+    /\bkolik\b/,
+    /\bkdy\b/,
+    /\bkde\b/,
+    /\baktu(a|á)ln/i,
+    /\bdnes\b/,
+    /\bted\b/,
+    /\bnejnov/i,
+    /\bstarosta\b/,
+    /\bprim(a|á)tor\b/,
+    /\bprezident\b/,
+    /\bministr\b/,
+    /\bředitel\b/,
+    /\breditel\b/,
+    /\bceo\b/,
+    /\bhlavn[ií] m[eě]sto\b/i,
+  ].some((pattern) => pattern.test(normalized));
 }
 
 async function getWebhookConfig() {
@@ -53,37 +82,57 @@ async function getWebhookConfig() {
 async function callClaudeDirect(message: string, sessionId: string) {
   const adminConfig = await getAIBotAdminConfig();
   const apiKey = adminConfig.anthropic.apiKey || process.env.ANTHROPIC_API_KEY;
+  const model = resolveClaudeModel(adminConfig.anthropic.model);
+  const useWebSearch = shouldUseWebSearch(message);
 
   if (!apiKey) {
     throw new Error("Anthropic API key is not configured.");
   }
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: resolveClaudeModel(adminConfig.anthropic.model),
-      max_tokens: 1200,
-      system:
-        `${adminConfig.assistant.systemPrompt || "Jsi osobní executive assistant pro Martina Kubáska a BEETS.CZ."} Odpovídej česky, stručně a prakticky. Bez emoji, bez markdownu, bez hvězdiček, bez odrážek, bez zbytečné omáčky. Na jednoduché faktické dotazy odpověz jen samotným výsledkem nebo jednou krátkou větou.`,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `Session: ${sessionId}\n\nUser request: ${message}`,
-            },
-          ],
-        },
-      ],
-    }),
-    cache: "no-store",
-  });
+  async function requestAnthropic(enableWebSearch: boolean) {
+    return fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1200,
+        system:
+          `${adminConfig.assistant.systemPrompt || "Jsi osobní executive assistant pro Martina Kubáska a BEETS.CZ."} Odpovídej česky, stručně a prakticky. Bez emoji, bez markdownu, bez hvězdiček, bez odrážek, bez zbytečné omáčky. Na jednoduché faktické dotazy odpověz jen samotným výsledkem nebo jednou krátkou větou.`,
+        ...(enableWebSearch
+          ? {
+              tools: [
+                {
+                  type: "web_search_20260209",
+                  name: "web_search",
+                  max_uses: 3,
+                },
+              ],
+            }
+          : {}),
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `${enableWebSearch ? "Použij web search, pokud je potřeba pro aktuální nebo ověřitelná fakta.\n\n" : ""}Session: ${sessionId}\n\nUser request: ${message}`,
+              },
+            ],
+          },
+        ],
+      }),
+      cache: "no-store",
+    });
+  }
+
+  let response = await requestAnthropic(useWebSearch);
+  if (!response.ok && useWebSearch) {
+    response = await requestAnthropic(false);
+  }
 
   const payload = (await response.json().catch(() => ({}))) as
     | AnthropicMessageResponse
