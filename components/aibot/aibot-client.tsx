@@ -50,6 +50,7 @@ declare global {
     continuous: boolean;
     interimResults: boolean;
     lang: string;
+    onstart: (() => void) | null;
     onresult: ((event: SpeechRecognitionEvent) => void) | null;
     onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
@@ -99,6 +100,8 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const listeningModeRef = useRef<RecognitionMode>("off");
   const handsFreeEnabledRef = useRef(false);
+  const recognitionActiveRef = useRef(false);
+  const suppressWakeRestartRef = useRef(false);
   const sendMessageRef = useRef<
     ((message: string, mode: "text" | "voice") => Promise<void>) | null
   >(null);
@@ -137,6 +140,9 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     const recognition = recognitionRef.current;
     if (!recognition) {
       setError("Tento prohlížeč nepodporuje SpeechRecognition API.");
+      return;
+    }
+    if (recognitionActiveRef.current) {
       return;
     }
 
@@ -185,6 +191,9 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     const recognition = new Recognition();
     recognition.lang = "cs-CZ";
     recognition.interimResults = true;
+    recognition.onstart = () => {
+      recognitionActiveRef.current = true;
+    };
 
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
@@ -199,6 +208,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         const normalized = normalizeSpeech(transcript);
         if (normalized.includes(WAKE_WORD)) {
           setVoiceStatus("Břéťo slyším. Co potřebuješ?");
+          suppressWakeRestartRef.current = true;
           stopRecognition();
           speakReply("Co potřebuješ?", () => {
             window.setTimeout(() => startRecognition("command"), 150);
@@ -211,17 +221,23 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     };
 
     recognition.onerror = (event) => {
+      recognitionActiveRef.current = false;
       setListeningMode("off");
       listeningModeRef.current = "off";
       setError(`Hlasové rozpoznání selhalo: ${event.error}`);
     };
 
     recognition.onend = () => {
+      recognitionActiveRef.current = false;
       const mode = listeningModeRef.current;
       setListeningMode("off");
       listeningModeRef.current = "off";
 
       if (mode === "wake" && handsFreeEnabledRef.current) {
+        if (suppressWakeRestartRef.current) {
+          suppressWakeRestartRef.current = false;
+          return;
+        }
         window.setTimeout(() => startRecognition("wake"), 250);
         return;
       }
@@ -245,6 +261,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
     return () => {
       stopRecognition();
+      recognitionActiveRef.current = false;
       recognitionRef.current = null;
     };
   }, [featureState.voiceEnabled]);
@@ -363,6 +380,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
     if (handsFreeEnabled) {
       setHandsFreeEnabled(false);
+      suppressWakeRestartRef.current = false;
       stopRecognition();
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
