@@ -103,6 +103,8 @@ export function makeSnapshot(banner: Banner): BannerSnapshot {
     brandName: banner.brandName,
     brandUrl: banner.brandUrl,
     logoUrl: banner.logoUrl,
+    qrImageUrl: banner.qrImageUrl,
+    overlayIcon: banner.overlayIcon,
     logoTransparentBg: banner.logoTransparentBg,
     bgMode: banner.bgMode,
     bgColor: banner.bgColor,

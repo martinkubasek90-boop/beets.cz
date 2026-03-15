@@ -184,6 +184,17 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   const boxH = model.boxH;
+  const qrFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.19, 56, 220));
+  const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
+  const qrImageSize = qrFrameSize - qrPadding * 2;
+  const qrLeft = viewW - model.padding - qrFrameSize;
+  const qrTop = viewH - model.padding - qrFrameSize;
+  const overlayIcon = (banner.overlayIcon || "").trim();
+  const hasOverlayIcon = Boolean(overlayIcon);
+  const iconFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.13, 44, 160));
+  const iconLeft = model.padding;
+  const iconTop = model.padding;
+  const iconFontSize = Math.round(iconFrameSize * 0.48);
 
   if (format.shapeEnabled) {
     const minSide = Math.min(viewW, viewH);
@@ -219,6 +230,42 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       const drawY = Math.round(model.logoTop + (logoBoxH - drawH) / 2);
       ctx.drawImage(logo, drawX, drawY, drawW, drawH);
     } catch {}
+  }
+
+  const qrSrc = await resolveImageSource(banner.qrImageUrl);
+  if (qrSrc) {
+    try {
+      const qr = await loadImage(qrSrc);
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 2;
+      roundedRectPath(ctx, qrLeft, qrTop, qrFrameSize, qrFrameSize, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      const fitted = fitSize(qr.width, qr.height, qrImageSize, qrImageSize);
+      const drawW = Math.round(fitted.width);
+      const drawH = Math.round(fitted.height);
+      const drawX = Math.round(qrLeft + qrPadding + (qrImageSize - drawW) / 2);
+      const drawY = Math.round(qrTop + qrPadding + (qrImageSize - drawH) / 2);
+      ctx.drawImage(qr, drawX, drawY, drawW, drawH);
+    } catch {}
+  }
+
+  if (hasOverlayIcon) {
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 2;
+    roundedRectPath(ctx, iconLeft, iconTop, iconFrameSize, iconFrameSize, 18);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = `800 ${iconFontSize}px ${BANNER_FONT_STACK}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(overlayIcon, Math.round(iconLeft + iconFrameSize / 2), Math.round(iconTop + iconFrameSize / 2));
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
   }
 
   const hasHeadline = Boolean((resolvedHeadline || "").trim());

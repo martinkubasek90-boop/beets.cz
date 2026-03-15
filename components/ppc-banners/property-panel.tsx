@@ -19,6 +19,8 @@ function fileToDataUrl(file: File) {
   });
 }
 
+const ICON_PRESETS = ["", "→", "↗", "➜", "➔", "↑", "☎", "✉", "★", "✓"] as const;
+
 function AlignButtons<T extends string>({
   label,
   value,
@@ -134,6 +136,12 @@ export function PropertyPanel({
     const dataUrl = await fileToDataUrl(file);
     onFormatChange("bgImageUrl", dataUrl);
     onBannerChange("bgMode", "upload");
+  };
+
+  const onQrUpload = async (file: File | null) => {
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    onBannerChange("qrImageUrl", dataUrl);
   };
 
   const generateBackground = async () => {
@@ -452,6 +460,55 @@ export function PropertyPanel({
           <Label className="text-xs text-slate-600">Barva textu</Label>
           <Input type="color" value={banner.textColor} onChange={(e) => onBannerChange("textColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Dalsi obrazek</p>
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-600">QR kod URL</Label>
+          <Input value={banner.qrImageUrl || ""} onChange={(e) => onBannerChange("qrImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../qr.jpg" />
+        </div>
+        <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
+          <Upload className="h-3.5 w-3.5" />
+          Vybrat QR obrazek
+          <input type="file" className="hidden" accept="image/*" onChange={(e) => void onQrUpload(e.target.files?.[0] || null)} />
+        </label>
+        {banner.qrImageUrl ? (
+          <button
+            type="button"
+            onClick={() => onBannerChange("qrImageUrl", "")}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Odebrat QR obrazek
+          </button>
+        ) : null}
+        <p className="text-[11px] text-slate-500">QR se vykresli do praveho dolniho rohu a bude i v exportu.</p>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Ikona nebo sipka</p>
+        <div className="grid grid-cols-5 gap-2">
+          {ICON_PRESETS.map((icon) => (
+            <button
+              key={icon || "none"}
+              type="button"
+              onClick={() => onBannerChange("overlayIcon", icon)}
+              className={`flex h-10 items-center justify-center rounded-lg border text-base font-bold ${banner.overlayIcon === icon ? "border-cyan-500 bg-cyan-50 text-cyan-700" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}
+            >
+              {icon || "×"}
+            </button>
+          ))}
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-slate-600">Vlastni znak nebo ikona</Label>
+          <Input
+            value={banner.overlayIcon || ""}
+            onChange={(e) => onBannerChange("overlayIcon", e.target.value.slice(0, 2))}
+            className="border-slate-200 bg-white"
+            placeholder="napr. ↗"
+          />
+        </div>
+        <p className="text-[11px] text-slate-500">Ikona se vykresli do leveho horniho rohu a bude i v exportu.</p>
       </div>
 
       <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">

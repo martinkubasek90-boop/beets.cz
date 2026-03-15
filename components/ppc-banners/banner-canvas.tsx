@@ -190,6 +190,18 @@ export function BannerCanvas({
   const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
   const hasLogoTransparent = Boolean(banner.logoTransparentBg);
   const logoRawPreviewSrc = banner.logoUrl ? toPreviewImageUrl(banner.logoUrl) : "";
+  const qrPreviewSrc = banner.qrImageUrl ? toPreviewImageUrl(banner.qrImageUrl) : "";
+  const hasQr = Boolean(qrPreviewSrc);
+  const qrFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.19, 56, 220));
+  const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
+  const qrLeft = boxW - padding - qrFrameSize;
+  const qrTop = boxH - padding - qrFrameSize;
+  const overlayIcon = (banner.overlayIcon || "").trim();
+  const hasOverlayIcon = Boolean(overlayIcon);
+  const iconFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.13, 44, 160));
+  const iconLeft = padding;
+  const iconTop = padding;
+  const iconFontSize = Math.round(iconFrameSize * 0.48);
 
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
@@ -536,6 +548,45 @@ export function BannerCanvas({
                   onMouseDown={(event) => startResize("logo", event)}
                 />
               ) : null}
+            </div>
+          ) : null}
+
+          {hasQr ? (
+            <div
+              className="absolute overflow-hidden rounded-[10px] border border-white/70 bg-white/95 shadow-lg"
+              style={{
+                left: `${qrLeft}px`,
+                top: `${qrTop}px`,
+                width: `${qrFrameSize}px`,
+                height: `${qrFrameSize}px`,
+                padding: `${qrPadding}px`,
+                zIndex: Math.max(zLogo, zCta, zText) + 5,
+              }}
+            >
+              <img
+                src={qrPreviewSrc}
+                alt="QR"
+                className="h-full w-full object-contain"
+                draggable={false}
+              />
+            </div>
+          ) : null}
+
+          {hasOverlayIcon ? (
+            <div
+              className="absolute flex items-center justify-center rounded-[14px] border border-white/60 bg-black/45 text-white shadow-lg backdrop-blur-sm"
+              style={{
+                left: `${iconLeft}px`,
+                top: `${iconTop}px`,
+                width: `${iconFrameSize}px`,
+                height: `${iconFrameSize}px`,
+                fontSize: `${iconFontSize}px`,
+                lineHeight: "1",
+                fontFamily: BANNER_FONT_STACK,
+                zIndex: Math.max(zLogo, zCta, zText) + 4,
+              }}
+            >
+              <span>{overlayIcon}</span>
             </div>
           ) : null}
 
