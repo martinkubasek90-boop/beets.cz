@@ -75,7 +75,7 @@ export const defaultAIBotAdminConfig: AIBotAdminConfig = {
   },
   anthropic: {
     apiKey: "",
-    model: "claude-3-7-sonnet-latest",
+    model: "claude-sonnet-4-6",
   },
   integrations: {
     gmail: {

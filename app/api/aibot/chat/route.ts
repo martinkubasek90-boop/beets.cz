@@ -13,6 +13,14 @@ type AnthropicMessageResponse = {
   content?: Array<{ type?: string; text?: string }>;
 };
 
+function resolveClaudeModel(model: string | undefined) {
+  const normalized = (model || "").trim();
+  if (!normalized || normalized === "claude-3-7-sonnet-latest") {
+    return "claude-sonnet-4-6";
+  }
+  return normalized;
+}
+
 async function getWebhookConfig() {
   const adminConfig = await getAIBotAdminConfig().catch(() => null);
   const url =
@@ -43,7 +51,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: adminConfig.anthropic.model || "claude-3-7-sonnet-latest",
+      model: resolveClaudeModel(adminConfig.anthropic.model),
       max_tokens: 1200,
       system:
         adminConfig.assistant.systemPrompt ||
