@@ -13,6 +13,19 @@ type AnthropicMessageResponse = {
   content?: Array<{ type?: string; text?: string }>;
 };
 
+type GoogleTokenResponse = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type Ga4RunReportResponse = {
+  rows?: Array<{
+    dimensionValues?: Array<{ value?: string }>;
+    metricValues?: Array<{ value?: string }>;
+  }>;
+};
+
 function normalizeToolMentions(value: string) {
   let next = value;
 
@@ -90,6 +103,123 @@ function shouldUseWebSearch(message: string) {
   ].some((pattern) => pattern.test(normalized));
 }
 
+function shouldUseGa4(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    /\bga4\b/,
+    /\banalytics\b/,
+    /\bgoogle analytics\b/,
+    /\bn[aá]v[sš]t[eě]v/i,
+    /\bsessions?\b/i,
+    /\bu[žz]ivatel/i,
+    /\btraffic\b/i,
+    /\bkonverz/i,
+    /\bweb\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function getGa4DateRange(message: string) {
+  const normalized = message.toLowerCase();
+
+  if (/\bv[čc]era\b/.test(normalized)) {
+    return { startDate: "yesterday", endDate: "yesterday", label: "včera" };
+  }
+
+  if (/\bdnes\b/.test(normalized)) {
+    return { startDate: "today", endDate: "today", label: "dnes" };
+  }
+
+  if (/\bposledn[ií]ch?\s*7\b/.test(normalized) || /\btyden\b/.test(normalized)) {
+    return { startDate: "7daysAgo", endDate: "yesterday", label: "posledních 7 dní" };
+  }
+
+  return { startDate: "7daysAgo", endDate: "yesterday", label: "posledních 7 dní" };
+}
+
+async function getGoogleAccessToken() {
+  const adminConfig = await getAIBotAdminConfig();
+  const clientId = adminConfig.integrations.gmail.clientId;
+  const clientSecret = adminConfig.integrations.gmail.clientSecret;
+  const refreshToken = adminConfig.integrations.gmail.refreshToken;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+    grant_type: "refresh_token",
+  });
+
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body,
+    cache: "no-store",
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as GoogleTokenResponse;
+  if (!response.ok || !payload.access_token) {
+    return null;
+  }
+
+  return payload.access_token;
+}
+
+async function getGa4Summary(message: string) {
+  const adminConfig = await getAIBotAdminConfig();
+  const propertyId = adminConfig.integrations.ga4.propertyId;
+  if (!propertyId) return null;
+
+  const accessToken = await getGoogleAccessToken();
+  if (!accessToken) return null;
+
+  const range = getGa4DateRange(message);
+  const response = await fetch(
+    `https://analyticsdata.googleapis.com/v1beta/properties/${propertyId}:runReport`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        dateRanges: [
+          {
+            startDate: range.startDate,
+            endDate: range.endDate,
+          },
+        ],
+        metrics: [
+          { name: "sessions" },
+          { name: "activeUsers" },
+          { name: "screenPageViews" },
+          { name: "keyEvents" },
+        ],
+      }),
+      cache: "no-store",
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as Ga4RunReportResponse;
+  if (!response.ok || !payload.rows?.[0]?.metricValues) {
+    return null;
+  }
+
+  const values = payload.rows[0].metricValues || [];
+  const sessions = values[0]?.value || "0";
+  const activeUsers = values[1]?.value || "0";
+  const pageViews = values[2]?.value || "0";
+  const keyEvents = values[3]?.value || "0";
+
+  return `GA4 za ${range.label}: sessions ${sessions}, aktivní uživatelé ${activeUsers}, zobrazení stránek ${pageViews}, klíčové události ${keyEvents}.`;
+}
+
 async function getWebhookConfig() {
   const adminConfig = await getAIBotAdminConfig().catch(() => null);
   const url =
@@ -109,6 +239,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
   const apiKey = adminConfig.anthropic.apiKey || process.env.ANTHROPIC_API_KEY;
   const model = resolveClaudeModel(adminConfig.anthropic.model);
   const useWebSearch = shouldUseWebSearch(message);
+  const ga4Summary = shouldUseGa4(message) ? await getGa4Summary(message) : null;
 
   if (!apiKey) {
     throw new Error("Anthropic API key is not configured.");
@@ -146,7 +277,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
             content: [
               {
                 type: "text",
-                text: `${enableWebSearch ? "Použij web search, pokud je potřeba pro aktuální nebo ověřitelná fakta.\n\n" : ""}Session: ${sessionId}\n\nUser request: ${message}`,
+                text: `${enableWebSearch ? "Použij web search, pokud je potřeba pro aktuální nebo ověřitelná fakta.\n\n" : ""}${ga4Summary ? `Dostupný GA4 kontext: ${ga4Summary}\n\n` : ""}Session: ${sessionId}\n\nUser request: ${message}`,
               },
             ],
           },
