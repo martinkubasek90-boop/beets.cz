@@ -98,6 +98,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   );
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const preferredVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const listeningModeRef = useRef<RecognitionMode>("off");
   const handsFreeEnabledRef = useRef(false);
   const recognitionActiveRef = useRef(false);
@@ -105,6 +106,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const sendMessageRef = useRef<
     ((message: string, mode: "text" | "voice") => Promise<void>) | null
   >(null);
+  const speakReplyRef = useRef<((text: string, onend?: () => void) => void) | null>(null);
   const transcriptRef = useRef("");
   const integrationStatuses: IntegrationStatus[] = [
     { label: "Gmail", enabled: featureState.integrations.gmail },
@@ -114,15 +116,38 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     { label: "Google Ads", enabled: featureState.integrations.ads },
   ];
 
+  function updatePreferredVoice() {
+    if (!("speechSynthesis" in window)) {
+      preferredVoiceRef.current = null;
+      return;
+    }
+
+    const voices = window.speechSynthesis.getVoices();
+    preferredVoiceRef.current =
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("cs")) ||
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("sk")) ||
+      voices[0] ||
+      null;
+  }
+
   function speakReply(text: string, onend?: () => void) {
     if (!("speechSynthesis" in window)) {
+      setVoiceStatus("Prohlížeč nepodporuje hlasový výstup.");
       onend?.();
       return;
     }
 
+    updatePreferredVoice();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "cs-CZ";
+    if (preferredVoiceRef.current) {
+      utterance.voice = preferredVoiceRef.current;
+    }
     utterance.onend = () => onend?.();
+    utterance.onerror = () => {
+      setVoiceStatus("Hlasový výstup selhal v prohlížeči.");
+      onend?.();
+    };
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   }
@@ -180,6 +205,20 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   }, [handsFreeEnabled]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      return;
+    }
+
+    updatePreferredVoice();
+    const handleVoicesChanged = () => updatePreferredVoice();
+    window.speechSynthesis.addEventListener("voiceschanged", handleVoicesChanged);
+
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", handleVoicesChanged);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!featureState.voiceEnabled) return;
     const Recognition =
       typeof window !== "undefined"
@@ -210,7 +249,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
           setVoiceStatus("Břéťo slyším. Co potřebuješ?");
           suppressWakeRestartRef.current = true;
           stopRecognition();
-          speakReply("Co potřebuješ?", () => {
+          speakReplyRef.current?.("Co potřebuješ?", () => {
             window.setTimeout(() => startRecognition("command"), 150);
           });
         }
@@ -309,7 +348,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         { role: "assistant", text: assistantText || "Bez odpovědi." },
       ]);
 
-      if (mode === "voice") {
+      if (mode === "voice" || handsFreeEnabledRef.current) {
         setVoiceStatus("Asistent odpovídá hlasem.");
         speakReply(payload.reply, () => {
           if (!handsFreeEnabledRef.current) {
@@ -342,6 +381,10 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
   useEffect(() => {
     sendMessageRef.current = sendMessage;
+  });
+
+  useEffect(() => {
+    speakReplyRef.current = speakReply;
   });
 
   function handleVoiceToggle() {
