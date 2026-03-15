@@ -88,6 +88,16 @@ function normalizeSpeech(value: string) {
     .toLowerCase();
 }
 
+function matchesWakeWord(normalized: string) {
+  return [
+    /\bbreto\b/,
+    /\bberto\b/,
+    /\bbreta\b/,
+    /\bbreto prosim\b/,
+    /\bberto prosim\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
 export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const [messages, setMessages] = useState<ChatMessage[]>(defaultMessages);
   const [value, setValue] = useState("");
@@ -95,6 +105,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const [handsFreeEnabled, setHandsFreeEnabled] = useState(false);
   const [awaitingCommand, setAwaitingCommand] = useState(false);
   const [listeningMode, setListeningMode] = useState<RecognitionMode>("off");
+  const [wakeDebug, setWakeDebug] = useState("");
   const [voiceStatus, setVoiceStatus] = useState(
     "Klikni na mikrofon, nebo zapni hands-free a řekni Břéťo.",
   );
@@ -273,7 +284,8 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
       if (mode === "wake") {
         const normalized = normalizeSpeech(transcript);
-        const wokeByWakeWord = normalized.includes(WAKE_WORD);
+        setWakeDebug(transcript || "(ticho)");
+        const wokeByWakeWord = matchesWakeWord(normalized) || normalized.includes(WAKE_WORD);
         if (isConversationWindowOpen() || wokeByWakeWord) {
           setAwaitingCommand(true);
           if (wokeByWakeWord) {
@@ -324,6 +336,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         const transcript = transcriptRef.current.trim();
         if (transcript) {
           setAwaitingCommand(false);
+          setWakeDebug("");
           setVoiceStatus("Odesílám hlasový požadavek.");
           void sendMessageRef.current?.(transcript, "voice");
         } else if (handsFreeEnabledRef.current) {
@@ -463,6 +476,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       suppressWakeRestartRef.current = false;
       closeConversationWindow();
       setAwaitingCommand(false);
+      setWakeDebug("");
       stopRecognition();
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -477,6 +491,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     setHandsFreeEnabled(true);
     closeConversationWindow();
     setAwaitingCommand(false);
+    setWakeDebug("");
     stopRecognition();
     startRecognition("wake");
   }
@@ -563,6 +578,11 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
               <p className="mt-1 text-xs text-white/40">
                 Po probuzení zůstane hlasové okno asi 30 sekund otevřené. Pak je znovu potřeba říct Břéťo.
               </p>
+              {handsFreeEnabled ? (
+                <p className="mt-1 text-xs text-cyan-200/70">
+                  Wake debug: {wakeDebug || "čekám na Břéťo"}
+                </p>
+              ) : null}
 
               <div className="mt-4 flex gap-3">
                 <Input
