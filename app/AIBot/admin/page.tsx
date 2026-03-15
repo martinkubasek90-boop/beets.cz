@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   defaultAIBotAdminConfig,
   type AIBotAdminConfig,
 } from "@/lib/aibot-admin-config";
+
+const ADMIN_TOKEN_STORAGE_KEY = "aibot_admin_token_v1";
 
 const checklist = [
   "Claude API key",
@@ -72,6 +74,21 @@ export default function AIBotAdminPage() {
 
   const readiness = configStatus(config);
 
+  useEffect(() => {
+    const savedToken = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
+    if (savedToken) {
+      setAdminToken(savedToken);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!adminToken.trim()) {
+      window.localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      return;
+    }
+    window.localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, adminToken.trim());
+  }, [adminToken]);
+
   async function loadConfig() {
     setLoading(true);
     setStatus("");
@@ -123,6 +140,13 @@ export default function AIBotAdminPage() {
       setSaving(false);
     }
   }
+
+  useEffect(() => {
+    if (!adminToken.trim()) return;
+    void loadConfig();
+    // Re-load only when a token becomes available or changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adminToken]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
