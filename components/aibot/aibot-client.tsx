@@ -39,6 +39,7 @@ type IntegrationStatus = {
 type RecognitionMode = "off" | "manual" | "wake" | "command";
 
 const WAKE_WORD = "breto";
+const CONVERSATION_WINDOW_MS = 30000;
 
 declare global {
   interface Window {
@@ -104,6 +105,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const recognitionActiveRef = useRef(false);
   const speechActiveRef = useRef(false);
   const suppressWakeRestartRef = useRef(false);
+  const conversationDeadlineRef = useRef<number | null>(null);
   const sendMessageRef = useRef<
     ((message: string, mode: "text" | "voice") => Promise<void>) | null
   >(null);
@@ -129,6 +131,21 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       voices.find((voice) => voice.lang.toLowerCase().startsWith("sk")) ||
       voices[0] ||
       null;
+  }
+
+  function isConversationWindowOpen() {
+    return (
+      conversationDeadlineRef.current !== null &&
+      Date.now() < conversationDeadlineRef.current
+    );
+  }
+
+  function openConversationWindow() {
+    conversationDeadlineRef.current = Date.now() + CONVERSATION_WINDOW_MS;
+  }
+
+  function closeConversationWindow() {
+    conversationDeadlineRef.current = null;
   }
 
   function speakReply(text: string, onend?: () => void) {
@@ -255,7 +272,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
       if (mode === "wake") {
         const normalized = normalizeSpeech(transcript);
-        if (normalized.includes(WAKE_WORD)) {
+        if (isConversationWindowOpen() || normalized.includes(WAKE_WORD)) {
           setVoiceStatus("Břéťo slyším. Co potřebuješ?");
           suppressWakeRestartRef.current = true;
           stopRecognition();
@@ -362,13 +379,14 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       ]);
 
       if (mode === "voice" || handsFreeEnabledRef.current) {
+        openConversationWindow();
         setVoiceStatus("Asistent odpovídá hlasem.");
         speakReply(payload.reply, () => {
           if (!handsFreeEnabledRef.current) {
             setVoiceStatus("Hlasová odpověď dokončena.");
             return;
           }
-          setVoiceStatus("Hands-free běží. Řekni Břéťo.");
+          setVoiceStatus("Pokračuj bez Břéťa, nebo po chvilce znovu řekni Břéťo.");
           window.setTimeout(() => startRecognition("wake"), 250);
         });
       }
@@ -385,6 +403,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       ]);
       if (mode === "voice" && handsFreeEnabledRef.current) {
         setVoiceStatus("Hlasový požadavek selhal. Řekni znovu Břéťo.");
+        closeConversationWindow();
         window.setTimeout(() => startRecognition("wake"), 250);
       }
     } finally {
@@ -437,6 +456,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     if (handsFreeEnabled) {
       setHandsFreeEnabled(false);
       suppressWakeRestartRef.current = false;
+      closeConversationWindow();
       stopRecognition();
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -449,6 +469,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     }
 
     setHandsFreeEnabled(true);
+    closeConversationWindow();
     stopRecognition();
     startRecognition("wake");
   }
@@ -528,7 +549,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
                 {voiceStatus}
               </p>
               <p className="mt-1 text-xs text-white/40">
-                Wake word MVP funguje jen při otevřené kartě a povoleném mikrofonu.
+                Po probuzení zůstane hlasové okno asi 30 sekund otevřené. Pak je znovu potřeba říct Břéťo.
               </p>
 
               <div className="mt-4 flex gap-3">
