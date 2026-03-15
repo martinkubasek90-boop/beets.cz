@@ -71,7 +71,7 @@ declare global {
 const defaultMessages: ChatMessage[] = [
   {
     role: "system",
-    text: "Tohle je MVP rozhraní pro tvého 24/7 asistenta. Finální inteligence, integrace a akce poběží v n8n webhooku přes Claude.",
+    text: "Tohle je MVP rozhraní pro tvého 24/7 asistenta.",
   },
 ];
 
@@ -272,13 +272,24 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
       if (mode === "wake") {
         const normalized = normalizeSpeech(transcript);
-        if (isConversationWindowOpen() || normalized.includes(WAKE_WORD)) {
-          setVoiceStatus("Břéťo slyším. Co potřebuješ?");
+        const wokeByWakeWord = normalized.includes(WAKE_WORD);
+        if (isConversationWindowOpen() || wokeByWakeWord) {
+          if (wokeByWakeWord) {
+            setVoiceStatus("Co potřebuješ?");
+            setMessages((current) => [
+              ...current,
+              { role: "assistant", text: "Co potřebuješ?" },
+            ]);
+          }
           suppressWakeRestartRef.current = true;
           stopRecognition();
-          speakReplyRef.current?.("Co potřebuješ?", () => {
+          if (wokeByWakeWord) {
+            speakReplyRef.current?.("Co potřebuješ?", () => {
+              window.setTimeout(() => startRecognition("command"), 150);
+            });
+          } else {
             window.setTimeout(() => startRecognition("command"), 150);
-          });
+          }
         }
         return;
       }
@@ -363,15 +374,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         throw new Error(payload.error || "AIBot request failed.");
       }
 
-      const extras: string[] = [];
-      if (payload.actions?.length) {
-        extras.push(`Navržené akce: ${payload.actions.join(", ")}`);
-      }
-      if (payload.sources?.length) {
-        extras.push(`Zdroje: ${payload.sources.join(", ")}`);
-      }
-
-      const assistantText = [payload.reply, ...extras].filter(Boolean).join("\n\n");
+      const assistantText = payload.reply.trim();
 
       setMessages((current) => [
         ...current,

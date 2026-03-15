@@ -13,6 +13,21 @@ type AnthropicMessageResponse = {
   content?: Array<{ type?: string; text?: string }>;
 };
 
+function sanitizeAssistantReply(reply: string) {
+  const cleaned = reply
+    .replace(/\*\*/g, "")
+    .replace(/[_`#>-]/g, " ")
+    .replace(/[•▪◦]/g, " ")
+    .replace(
+      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu,
+      "",
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleaned;
+}
+
 function resolveClaudeModel(model: string | undefined) {
   const normalized = (model || "").trim();
   if (!normalized || normalized === "claude-3-7-sonnet-latest") {
@@ -54,8 +69,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
       model: resolveClaudeModel(adminConfig.anthropic.model),
       max_tokens: 1200,
       system:
-        adminConfig.assistant.systemPrompt ||
-        "Jsi osobní executive assistant pro Martina Kubáska a BEETS.CZ. Odpovídej česky, stručně a prakticky.",
+        `${adminConfig.assistant.systemPrompt || "Jsi osobní executive assistant pro Martina Kubáska a BEETS.CZ."} Odpovídej česky, stručně a prakticky. Bez emoji, bez markdownu, bez hvězdiček, bez odrážek, bez zbytečné omáčky. Na jednoduché faktické dotazy odpověz jen samotným výsledkem nebo jednou krátkou větou.`,
       messages: [
         {
           role: "user",
@@ -90,12 +104,14 @@ async function callClaudeDirect(message: string, sessionId: string) {
           .join("\n\n")
       : "";
 
-  if (!reply) {
+  const cleanedReply = sanitizeAssistantReply(reply);
+
+  if (!cleanedReply) {
     throw new Error("Claude returned no assistant reply.");
   }
 
   return {
-    reply,
+    reply: cleanedReply,
     actions: [] as string[],
     sources: ["claude-direct"],
   };
@@ -154,7 +170,9 @@ export async function POST(request: Request) {
         );
       }
 
-      const reply = parsed?.reply || parsed?.text || parsed?.output || "";
+      const reply = sanitizeAssistantReply(
+        parsed?.reply || parsed?.text || parsed?.output || "",
+      );
       if (!reply) {
         throw new Error("n8n webhook returned no assistant reply.");
       }
