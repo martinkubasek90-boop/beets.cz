@@ -89,14 +89,16 @@ async function callClaudeDirect(message: string, sessionId: string) {
     throw new Error("Anthropic API key is not configured.");
   }
 
+  const anthropicHeaders: HeadersInit = {
+    "content-type": "application/json",
+    "x-api-key": apiKey,
+    "anthropic-version": "2023-06-01",
+  };
+
   async function requestAnthropic(enableWebSearch: boolean) {
     return fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
+      headers: anthropicHeaders,
       body: JSON.stringify({
         model,
         max_tokens: 1200,
