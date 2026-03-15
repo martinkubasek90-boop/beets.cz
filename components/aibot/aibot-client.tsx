@@ -91,8 +91,10 @@ function normalizeSpeech(value: string) {
 function matchesWakeWord(normalized: string) {
   return [
     /\bbreto\b/,
+    /\bbret\b/,
     /\bberto\b/,
     /\bbreta\b/,
+    /\bbret prosim\b/,
     /\bbreto prosim\b/,
     /\bberto prosim\b/,
   ].some((pattern) => pattern.test(normalized));
