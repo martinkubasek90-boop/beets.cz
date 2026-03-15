@@ -1,0 +1,262 @@
+{
+  "name": "BEETS AIBot Campaign Watchdog",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { timezone: 'Europe/Prague', compareWindow: 'today_vs_yesterday', alertThresholds: { cpaSpikePercent: 30, roasDropPercent: 25, zeroConversionsAfterSpend: 1000 } } }];"
+      },
+      "id": "2",
+      "name": "Build Watchdog Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ads = $json.googleAdsSummary ?? {};\nconst ga4 = $json.ga4Summary ?? {};\nconst alerts = [];\nif (Array.isArray(ads.alerts)) alerts.push(...ads.alerts);\nif (Number(ads.spend || 0) >= 1000 && Number(ads.conversions || 0) === 0) alerts.push('High spend with zero conversions');\nif (Number(ads.cpaSpikePercent || 0) >= 30) alerts.push(`CPA spike ${ads.cpaSpikePercent}%`);\nif (Number(ads.roasDropPercent || 0) >= 25) alerts.push(`ROAS drop ${ads.roasDropPercent}%`);\nif (Number(ga4.conversionDropPercent || 0) >= 25) alerts.push(`GA4 conversion drop ${ga4.conversionDropPercent}%`);\nreturn [{ json: { ads, ga4, alerts, hasAlert: alerts.length > 0 } }];"
+      },
+      "id": "3",
+      "name": "Detect Anomalies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.hasAlert}}",
+              "operation": "true"
+            }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Has Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        980,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const system = 'Jsi marketing watchdog pro BEETS.CZ. Vysvětli stručně problém v kampaních, jeho pravděpodobnou příčinu a doporučený další krok. Odpověz česky.';\nreturn [{ json: { anthropicPayload: { model: 'claude-3-7-sonnet-latest', max_tokens: 700, system, messages: [{ role: 'user', content: [{ type: 'text', text: `Alerts: ${JSON.stringify($json.alerts)}\\n\\nGoogle Ads summary: ${JSON.stringify($json.ads, null, 2)}\\n\\nGA4 summary: ${JSON.stringify($json.ga4, null, 2)}` }] }] } } }];"
+      },
+      "id": "5",
+      "name": "Build Alert Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.anthropicPayload}}",
+        "options": {}
+      },
+      "id": "6",
+      "name": "Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = Array.isArray($json.content) ? $json.content.filter((item) => item.type === 'text').map((item) => item.text).join('\\n\\n') : 'Campaign alert';\nreturn [{ json: { alertText: text } }];"
+      },
+      "id": "7",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Email, Slack or Asana alert delivery here.', alertText: $json.alertText } }];"
+      },
+      "id": "8",
+      "name": "TODO Deliver Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1940,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Google Ads reporting here and return googleAdsSummary.' } }];"
+      },
+      "id": "9",
+      "name": "TODO Google Ads Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect GA4 reporting here and return ga4Summary.' } }];"
+      },
+      "id": "10",
+      "name": "TODO GA4 Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        60
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Watchdog Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Watchdog Context": {
+      "main": [
+        [
+          {
+            "node": "Detect Anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Anomalies": {
+      "main": [
+        [
+          {
+            "node": "Has Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Alert?": {
+      "main": [
+        [
+          {
+            "node": "Build Alert Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Alert Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "main": [
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "TODO Deliver Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Prague"
+  },
+  "active": false,
+  "versionId": "beets-aibot-campaign-watchdog-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "beets-aibot-campaign-watchdog"
+}

@@ -1,0 +1,243 @@
+{
+  "name": "BEETS AIBot Starter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aibot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        260,
+        300
+      ],
+      "webhookId": "beets-aibot"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.body ?? $json;\nconst message = typeof input.message === 'string' ? input.message.trim() : '';\nconst mode = input.mode === 'voice' ? 'voice' : 'text';\nconst sessionId = typeof input.sessionId === 'string' && input.sessionId.trim() ? input.sessionId.trim() : 'beets-aibot-session';\nif (!message) {\n  throw new Error('Missing message');\n}\nconst lowered = message.toLowerCase();\nconst requestedSources = {\n  email: /mail|email|e-mail|inbox|schranka/.test(lowered),\n  asana: /asana|ukol|úkol|task|projekt/.test(lowered),\n  hubspot: /hubspot|lead|deal|obchod/.test(lowered),\n  ga4: /analytics|ga4|návštěv|navstev|traffic|konverz/.test(lowered),\n  googleAds: /google ads|kampaň|kampan|ppc|cpc|roas/.test(lowered),\n};\nreturn [{ json: { message, mode, sessionId, requestedSources, autonomousMode: false } }];"
+      },
+      "id": "2",
+      "name": "Normalize Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst systemPrompt = `Jsi osobní executive assistant pro Martina Kubáska a BEETS.CZ. Odpovídej česky, stručně a prakticky. Nikdy si nevymýšlej čísla ani fakta, která nejsou v datech. Když data chybí, řekni to jasně. Pokud navrhuješ akce, vrať i krátké action IDs. Použij jen systémy, které byly skutečně dostupné.`;\nconst sourceSummary = Object.entries(data.requestedSources)\n  .filter(([, enabled]) => enabled)\n  .map(([name]) => name)\n  .join(', ') || 'none';\nconst externalContext = {\n  email: $json.emailSummary ?? null,\n  asana: $json.asanaSummary ?? null,\n  hubspot: $json.hubspotSummary ?? null,\n  ga4: $json.ga4Summary ?? null,\n  googleAds: $json.googleAdsSummary ?? null,\n};\nreturn [{\n  json: {\n    ...data,\n    anthropicPayload: {\n      model: 'claude-3-7-sonnet-latest',\n      max_tokens: 1200,\n      system: systemPrompt,\n      messages: [\n        {\n          role: 'user',\n          content: [\n            {\n              type: 'text',\n              text: `User request: ${data.message}\\n\\nRequested sources: ${sourceSummary}\\n\\nAvailable context JSON:\\n${JSON.stringify(externalContext, null, 2)}\\n\\nReturn a concise answer for the user. If an action is appropriate, include short action IDs in a section called ACTIONS at the end.`\n            }\n          ]\n        }\n      ]\n    }\n  }\n}];"
+      },
+      "id": "3",
+      "name": "Build Claude Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.anthropicPayload}}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = Array.isArray($json.content) ? $json.content : [];\nconst reply = content\n  .filter((item) => item.type === 'text')\n  .map((item) => item.text)\n  .join('\\n\\n')\n  .trim();\nconst actions = [];\nconst actionMatch = reply.match(/ACTIONS:\\s*([\\s\\S]*)$/i);\nif (actionMatch?.[1]) {\n  actionMatch[1]\n    .split(/\\n|,/)\n    .map((value) => value.trim().replace(/^[-*]\\s*/, ''))\n    .filter(Boolean)\n    .forEach((value) => actions.push(value));\n}\nreturn [{ json: { reply: reply || 'Claude returned no answer.', actions, sources: [] } }];"
+      },
+      "id": "5",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "6",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1490,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect a Gmail, IMAP or Microsoft Outlook node here. Produce a compact emailSummary object with unread count, urgent threads and draft suggestions.' } }];"
+      },
+      "id": "7",
+      "name": "TODO Email Collector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect an Asana node here. Return asanaSummary with urgent tasks, blocked tasks, due today and suggested new tasks.' } }];"
+      },
+      "id": "8",
+      "name": "TODO Asana Collector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect HubSpot contacts/deals/search nodes here. Return hubspotSummary with new leads, stale deals, hot deals and follow-up suggestions.' } }];"
+      },
+      "id": "9",
+      "name": "TODO HubSpot Collector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1210,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Google Analytics 4 reporting nodes here. Return ga4Summary with sessions, conversions, top channels and anomalies.' } }];"
+      },
+      "id": "10",
+      "name": "TODO GA4 Collector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Google Ads reporting nodes here. Return googleAdsSummary with campaign KPIs, spend, conversions, ROAS and alerts.' } }];"
+      },
+      "id": "11",
+      "name": "TODO Google Ads Collector",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1670,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Request": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Payload": {
+      "main": [
+        [
+          {
+            "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "versionId": "beets-aibot-starter-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "beets-aibot-starter"
+}

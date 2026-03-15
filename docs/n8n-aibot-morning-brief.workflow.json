@@ -1,0 +1,245 @@
+{
+  "name": "BEETS AIBot Morning Brief",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "1",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { period: 'yesterday', timezone: 'Europe/Prague', autonomousMode: false, target: 'email' } }];"
+      },
+      "id": "2",
+      "name": "Build Brief Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const system = 'Jsi ranní executive assistant pro BEETS.CZ. Připrav krátký ranní brief v češtině. Max 8 bodů. Uveď priority dne, leady, marketing a rizika.';\nreturn [{ json: { anthropicPayload: { model: 'claude-3-7-sonnet-latest', max_tokens: 1000, system, messages: [{ role: 'user', content: [{ type: 'text', text: 'Create a concise Czech morning brief from the collected summaries. If some data sources are missing, explicitly note that.' }] }] } } }];"
+      },
+      "id": "3",
+      "name": "Build Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.anthropicPayload}}",
+        "options": {}
+      },
+      "id": "4",
+      "name": "Claude",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = Array.isArray($json.content) ? $json.content : [];\nconst brief = content.filter((item) => item.type === 'text').map((item) => item.text).join('\\n\\n').trim();\nreturn [{ json: { subject: 'BEETS.CZ Morning Brief', brief } }];"
+      },
+      "id": "5",
+      "name": "Format Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Email, Telegram or Slack delivery here.', subject: $json.subject, brief: $json.brief } }];"
+      },
+      "id": "6",
+      "name": "TODO Deliver Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Gmail unread summary here.' } }];"
+      },
+      "id": "7",
+      "name": "TODO Gmail Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Asana daily priorities here.' } }];"
+      },
+      "id": "8",
+      "name": "TODO Asana Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect HubSpot lead and deal summary here.' } }];"
+      },
+      "id": "9",
+      "name": "TODO HubSpot Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect GA4 daily KPI summary here.' } }];"
+      },
+      "id": "10",
+      "name": "TODO GA4 Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { note: 'Connect Google Ads daily KPI summary here.' } }];"
+      },
+      "id": "11",
+      "name": "TODO Ads Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        80
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Brief Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Brief Context": {
+      "main": [
+        [
+          {
+            "node": "Build Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude": {
+      "main": [
+        [
+          {
+            "node": "Format Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Brief": {
+      "main": [
+        [
+          {
+            "node": "TODO Deliver Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Prague"
+  },
+  "active": false,
+  "versionId": "beets-aibot-morning-brief-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "beets-aibot-morning-brief"
+}
