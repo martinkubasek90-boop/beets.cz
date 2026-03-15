@@ -102,6 +102,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const listeningModeRef = useRef<RecognitionMode>("off");
   const handsFreeEnabledRef = useRef(false);
   const recognitionActiveRef = useRef(false);
+  const speechActiveRef = useRef(false);
   const suppressWakeRestartRef = useRef(false);
   const sendMessageRef = useRef<
     ((message: string, mode: "text" | "voice") => Promise<void>) | null
@@ -137,17 +138,26 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       return;
     }
 
+    stopRecognition();
     updatePreferredVoice();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "cs-CZ";
     if (preferredVoiceRef.current) {
       utterance.voice = preferredVoiceRef.current;
     }
-    utterance.onend = () => onend?.();
+    utterance.onstart = () => {
+      speechActiveRef.current = true;
+    };
+    utterance.onend = () => {
+      speechActiveRef.current = false;
+      onend?.();
+    };
     utterance.onerror = () => {
+      speechActiveRef.current = false;
       setVoiceStatus("Hlasový výstup selhal v prohlížeči.");
       onend?.();
     };
+    speechActiveRef.current = true;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   }
@@ -167,7 +177,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       setError("Tento prohlížeč nepodporuje SpeechRecognition API.");
       return;
     }
-    if (recognitionActiveRef.current) {
+    if (recognitionActiveRef.current || speechActiveRef.current) {
       return;
     }
 
@@ -275,6 +285,9 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       if (mode === "wake" && handsFreeEnabledRef.current) {
         if (suppressWakeRestartRef.current) {
           suppressWakeRestartRef.current = false;
+          return;
+        }
+        if (speechActiveRef.current) {
           return;
         }
         window.setTimeout(() => startRecognition("wake"), 250);
@@ -428,6 +441,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
+      speechActiveRef.current = false;
       setListeningMode("off");
       listeningModeRef.current = "off";
       setVoiceStatus("Hands-free je vypnuté.");
