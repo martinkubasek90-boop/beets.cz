@@ -13,6 +13,31 @@ type AnthropicMessageResponse = {
   content?: Array<{ type?: string; text?: string }>;
 };
 
+function normalizeToolMentions(value: string) {
+  let next = value;
+
+  const replacements: Array<[RegExp, string]> = [
+    [/\bhotspot\b/gi, "HubSpot"],
+    [/\bhard stop\b/gi, "HubSpot"],
+    [/\bhub spot\b/gi, "HubSpot"],
+    [/\bhab spot\b/gi, "HubSpot"],
+    [/\bg a 4\b/gi, "GA4"],
+    [/\bga 4\b/gi, "GA4"],
+    [/\bgé a čtyři\b/gi, "GA4"],
+    [/\bgoogle eds\b/gi, "Google Ads"],
+    [/\bgoogle adsy\b/gi, "Google Ads"],
+    [/\bgůgl eds\b/gi, "Google Ads"],
+    [/\bgmail\b/gi, "Gmail"],
+    [/\basana\b/gi, "Asana"],
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    next = next.replace(pattern, replacement);
+  }
+
+  return next.replace(/\s+/g, " ").trim();
+}
+
 function sanitizeAssistantReply(reply: string) {
   const cleaned = reply
     .replace(/\*\*/g, "")
@@ -172,7 +197,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const message =
-      typeof body?.message === "string" ? body.message.trim() : "";
+      typeof body?.message === "string"
+        ? normalizeToolMentions(body.message.trim())
+        : "";
     const mode = body?.mode === "voice" ? "voice" : "text";
     const sessionId =
       typeof body?.sessionId === "string" && body.sessionId.trim()

@@ -88,6 +88,31 @@ function normalizeSpeech(value: string) {
     .toLowerCase();
 }
 
+function normalizeToolMentions(value: string) {
+  let next = value;
+
+  const replacements: Array<[RegExp, string]> = [
+    [/\bhotspot\b/gi, "HubSpot"],
+    [/\bhard stop\b/gi, "HubSpot"],
+    [/\bhub spot\b/gi, "HubSpot"],
+    [/\bhab spot\b/gi, "HubSpot"],
+    [/\bg a 4\b/gi, "GA4"],
+    [/\bga 4\b/gi, "GA4"],
+    [/\bgé a čtyři\b/gi, "GA4"],
+    [/\bgoogle eds\b/gi, "Google Ads"],
+    [/\bgoogle adsy\b/gi, "Google Ads"],
+    [/\bgůgl eds\b/gi, "Google Ads"],
+    [/\bgmail\b/gi, "Gmail"],
+    [/\basana\b/gi, "Asana"],
+  ];
+
+  for (const [pattern, replacement] of replacements) {
+    next = next.replace(pattern, replacement);
+  }
+
+  return next.replace(/\s+/g, " ").trim();
+}
+
 function matchesWakeWord(normalized: string) {
   return [
     /\bbreto\b/,
@@ -362,7 +387,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   }, [featureState.voiceEnabled]);
 
   async function sendMessage(message: string, mode: "text" | "voice") {
-    const trimmed = message.trim();
+    const trimmed = normalizeToolMentions(message.trim());
     if (!trimmed || pending) return;
 
     setPending(true);
