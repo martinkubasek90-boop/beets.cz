@@ -8,6 +8,7 @@ import {
 } from "@/lib/aibot-admin-config";
 
 const ADMIN_TOKEN_STORAGE_KEY = "aibot_admin_token_v1";
+const ADMIN_CONFIG_STORAGE_KEY = "aibot_admin_config_v1";
 
 const checklist = [
   "Claude API key",
@@ -63,6 +64,7 @@ export default function AIBotAdminPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [hasLocalSnapshot, setHasLocalSnapshot] = useState(false);
 
   const headers = useMemo(() => {
     const next: Record<string, string> = { "Content-Type": "application/json" };
@@ -78,6 +80,16 @@ export default function AIBotAdminPage() {
     const savedToken = window.localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY);
     if (savedToken) {
       setAdminToken(savedToken);
+    }
+    const savedConfig = window.localStorage.getItem(ADMIN_CONFIG_STORAGE_KEY);
+    if (savedConfig) {
+      try {
+        const parsed = JSON.parse(savedConfig) as AIBotAdminConfig;
+        setConfig(parsed);
+        setHasLocalSnapshot(true);
+      } catch {
+        window.localStorage.removeItem(ADMIN_CONFIG_STORAGE_KEY);
+      }
     }
   }, []);
 
@@ -106,6 +118,11 @@ export default function AIBotAdminPage() {
         throw new Error(payload.error || "Načtení selhalo.");
       }
       setConfig(payload.config);
+      window.localStorage.setItem(
+        ADMIN_CONFIG_STORAGE_KEY,
+        JSON.stringify(payload.config),
+      );
+      setHasLocalSnapshot(true);
       setStatus("Konfigurace načtena.");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Načtení selhalo.";
@@ -132,6 +149,11 @@ export default function AIBotAdminPage() {
         throw new Error(payload.error || "Uložení selhalo.");
       }
       setConfig(payload.config);
+      window.localStorage.setItem(
+        ADMIN_CONFIG_STORAGE_KEY,
+        JSON.stringify(payload.config),
+      );
+      setHasLocalSnapshot(true);
       setStatus("AIBot konfigurace uložena.");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Uložení selhalo.";
@@ -142,11 +164,11 @@ export default function AIBotAdminPage() {
   }
 
   useEffect(() => {
-    if (!adminToken.trim()) return;
+    if (!adminToken.trim() || hasLocalSnapshot) return;
     void loadConfig();
     // Re-load only when a token becomes available or changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adminToken]);
+  }, [adminToken, hasLocalSnapshot]);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100">
