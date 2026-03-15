@@ -36,6 +36,10 @@ type IntegrationStatus = {
   enabled: boolean;
 };
 
+type RecognitionMode = "off" | "manual" | "wake" | "command";
+
+const WAKE_WORD = "breto";
+
 declare global {
   interface Window {
     webkitSpeechRecognition?: new () => SpeechRecognition;
@@ -75,13 +79,29 @@ function statusTone(enabled: boolean) {
     : "border-white/10 bg-white/5 text-white/55";
 }
 
+function normalizeSpeech(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 export function AIBotClient({ featureState }: { featureState: FeatureState }) {
   const [messages, setMessages] = useState<ChatMessage[]>(defaultMessages);
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
-  const [listening, setListening] = useState(false);
+  const [handsFreeEnabled, setHandsFreeEnabled] = useState(false);
+  const [listeningMode, setListeningMode] = useState<RecognitionMode>("off");
+  const [voiceStatus, setVoiceStatus] = useState(
+    "Klikni na mikrofon, nebo zapni hands-free a řekni Břéťo.",
+  );
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const listeningModeRef = useRef<RecognitionMode>("off");
+  const handsFreeEnabledRef = useRef(false);
+  const sendMessageRef = useRef<
+    ((message: string, mode: "text" | "voice") => Promise<void>) | null
+  >(null);
   const transcriptRef = useRef("");
   const integrationStatuses: IntegrationStatus[] = [
     { label: "Gmail", enabled: featureState.integrations.gmail },
@@ -90,6 +110,68 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
     { label: "Google Analytics", enabled: featureState.integrations.analytics },
     { label: "Google Ads", enabled: featureState.integrations.ads },
   ];
+
+  function speakReply(text: string, onend?: () => void) {
+    if (!("speechSynthesis" in window)) {
+      onend?.();
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "cs-CZ";
+    utterance.onend = () => onend?.();
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopRecognition() {
+    if (!recognitionRef.current) return;
+    try {
+      recognitionRef.current.stop();
+    } catch {
+      // Ignore invalid state when recognition is already stopped.
+    }
+  }
+
+  function startRecognition(mode: Exclude<RecognitionMode, "off">) {
+    const recognition = recognitionRef.current;
+    if (!recognition) {
+      setError("Tento prohlížeč nepodporuje SpeechRecognition API.");
+      return;
+    }
+
+    transcriptRef.current = "";
+    if (mode !== "wake") {
+      setValue("");
+    }
+    setError(null);
+    listeningModeRef.current = mode;
+    setListeningMode(mode);
+    recognition.lang = "cs-CZ";
+    recognition.interimResults = true;
+    recognition.continuous = mode === "wake";
+
+    try {
+      recognition.start();
+      setVoiceStatus(
+        mode === "wake"
+          ? "Hands-free běží. Řekni Břéťo."
+          : mode === "command"
+            ? "Poslouchám tvůj požadavek."
+            : "Mluvím s tebou přes mikrofon.",
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Mikrofon se nepodařilo spustit.";
+      setListeningMode("off");
+      listeningModeRef.current = "off";
+      setError(message);
+    }
+  }
+
+  useEffect(() => {
+    handsFreeEnabledRef.current = handsFreeEnabled;
+  }, [handsFreeEnabled]);
 
   useEffect(() => {
     if (!featureState.voiceEnabled) return;
@@ -102,7 +184,6 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
 
     const recognition = new Recognition();
     recognition.lang = "cs-CZ";
-    recognition.continuous = false;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
@@ -112,22 +193,58 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         .trim();
 
       transcriptRef.current = transcript;
+      const mode = listeningModeRef.current;
+
+      if (mode === "wake") {
+        const normalized = normalizeSpeech(transcript);
+        if (normalized.includes(WAKE_WORD)) {
+          setVoiceStatus("Břéťo slyším. Co potřebuješ?");
+          stopRecognition();
+          speakReply("Co potřebuješ?", () => {
+            window.setTimeout(() => startRecognition("command"), 150);
+          });
+        }
+        return;
+      }
+
       setValue(transcript);
     };
 
     recognition.onerror = (event) => {
-      setListening(false);
+      setListeningMode("off");
+      listeningModeRef.current = "off";
       setError(`Hlasové rozpoznání selhalo: ${event.error}`);
     };
 
     recognition.onend = () => {
-      setListening(false);
+      const mode = listeningModeRef.current;
+      setListeningMode("off");
+      listeningModeRef.current = "off";
+
+      if (mode === "wake" && handsFreeEnabledRef.current) {
+        window.setTimeout(() => startRecognition("wake"), 250);
+        return;
+      }
+
+      if (mode === "command") {
+        const transcript = transcriptRef.current.trim();
+        if (transcript) {
+          setVoiceStatus("Odesílám hlasový požadavek.");
+          void sendMessageRef.current?.(transcript, "voice");
+        } else if (handsFreeEnabledRef.current) {
+          setVoiceStatus("Neslyším požadavek. Řekni znovu Břéťo.");
+          window.setTimeout(() => startRecognition("wake"), 250);
+        }
+        return;
+      }
+
+      setVoiceStatus("Mikrofon je vypnutý.");
     };
 
     recognitionRef.current = recognition;
 
     return () => {
-      recognition.stop();
+      stopRecognition();
       recognitionRef.current = null;
     };
   }, [featureState.voiceEnabled]);
@@ -175,11 +292,16 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
         { role: "assistant", text: assistantText || "Bez odpovědi." },
       ]);
 
-      if (mode === "voice" && "speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(payload.reply);
-        utterance.lang = "cs-CZ";
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
+      if (mode === "voice") {
+        setVoiceStatus("Asistent odpovídá hlasem.");
+        speakReply(payload.reply, () => {
+          if (!handsFreeEnabledRef.current) {
+            setVoiceStatus("Hlasová odpověď dokončena.");
+            return;
+          }
+          setVoiceStatus("Hands-free běží. Řekni Břéťo.");
+          window.setTimeout(() => startRecognition("wake"), 250);
+        });
       }
     } catch (err) {
       const message =
@@ -192,10 +314,18 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
           text: `Backend zatím není plně připravený. ${message}`,
         },
       ]);
+      if (mode === "voice" && handsFreeEnabledRef.current) {
+        setVoiceStatus("Hlasový požadavek selhal. Řekni znovu Břéťo.");
+        window.setTimeout(() => startRecognition("wake"), 250);
+      }
     } finally {
       setPending(false);
     }
   }
+
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  });
 
   function handleVoiceToggle() {
     if (!recognitionRef.current) {
@@ -203,22 +333,49 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
       return;
     }
 
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
+    if (handsFreeEnabled) {
+      setError("Nejdřív vypni hands-free režim.");
       return;
     }
 
-    transcriptRef.current = "";
-    setError(null);
-    setListening(true);
-    recognitionRef.current.start();
+    if (listeningMode !== "off") {
+      stopRecognition();
+      setListeningMode("off");
+      listeningModeRef.current = "off";
+      setVoiceStatus("Mikrofon je vypnutý.");
+      return;
+    }
+
+    startRecognition("manual");
   }
 
   function handleVoiceSend() {
     const transcript = transcriptRef.current || value;
     if (!transcript.trim()) return;
     void sendMessage(transcript, "voice");
+  }
+
+  function handleHandsFreeToggle() {
+    if (!recognitionRef.current) {
+      setError("Tento prohlížeč nepodporuje SpeechRecognition API.");
+      return;
+    }
+
+    if (handsFreeEnabled) {
+      setHandsFreeEnabled(false);
+      stopRecognition();
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      setListeningMode("off");
+      listeningModeRef.current = "off";
+      setVoiceStatus("Hands-free je vypnuté.");
+      return;
+    }
+
+    setHandsFreeEnabled(true);
+    stopRecognition();
+    startRecognition("wake");
   }
 
   return (
@@ -254,9 +411,17 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
                     type="button"
                     variant="outline"
                     onClick={handleVoiceToggle}
+                    disabled={!featureState.voiceEnabled || handsFreeEnabled}
+                  >
+                    {listeningMode === "manual" ? "Zastavit mikrofon" : "Zapnout mikrofon"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={handsFreeEnabled ? "default" : "outline"}
+                    onClick={handleHandsFreeToggle}
                     disabled={!featureState.voiceEnabled}
                   >
-                    {listening ? "Zastavit mikrofon" : "Zapnout mikrofon"}
+                    {handsFreeEnabled ? "Vypnout hands-free" : "Hands-free: Břéťo"}
                   </Button>
                   <Button
                     type="button"
@@ -283,6 +448,13 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
                   </div>
                 ))}
               </div>
+
+              <p className="mt-3 text-sm text-white/60">
+                {voiceStatus}
+              </p>
+              <p className="mt-1 text-xs text-white/40">
+                Wake word MVP funguje jen při otevřené kartě a povoleném mikrofonu.
+              </p>
 
               <div className="mt-4 flex gap-3">
                 <Input
@@ -330,6 +502,7 @@ export function AIBotClient({ featureState }: { featureState: FeatureState }) {
                 <li>3. n8n workflow vytáhne data z tvých nástrojů.</li>
                 <li>4. Claude rozhodne, odpoví a případně spustí akce.</li>
                 <li>5. Web odpověď zobrazí nebo přečte hlasem.</li>
+                <li>6. Hands-free mód lokálně čeká na slovo `Břéťo` a pak otevře hlasový dotaz.</li>
               </ol>
             </div>
           </aside>
