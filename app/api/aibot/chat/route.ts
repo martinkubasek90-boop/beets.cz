@@ -26,6 +26,10 @@ type Ga4RunReportResponse = {
   }>;
 };
 
+type HubSpotSearchResponse = {
+  total?: number;
+};
+
 function normalizeToolMentions(value: string) {
   let next = value;
 
@@ -34,6 +38,8 @@ function normalizeToolMentions(value: string) {
     [/\bhard stop\b/gi, "HubSpot"],
     [/\bhub spot\b/gi, "HubSpot"],
     [/\bhab spot\b/gi, "HubSpot"],
+    [/\bhapp spot\b/gi, "HubSpot"],
+    [/\bhap spot\b/gi, "HubSpot"],
     [/\bg a 4\b/gi, "GA4"],
     [/\bga 4\b/gi, "GA4"],
     [/\bgé a čtyři\b/gi, "GA4"],
@@ -116,6 +122,20 @@ function shouldUseGa4(message: string) {
     /\btraffic\b/i,
     /\bkonverz/i,
     /\bweb\b/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function shouldUseHubSpot(message: string) {
+  const normalized = message.toLowerCase();
+
+  return [
+    /\bhubspot\b/,
+    /\bkontakt/i,
+    /\blead/i,
+    /\bdeal/i,
+    /\bobchod/i,
+    /\bfirm/i,
+    /\bspolecnost/i,
   ].some((pattern) => pattern.test(normalized));
 }
 
@@ -220,6 +240,51 @@ async function getGa4Summary(message: string) {
   return `GA4 za ${range.label}: sessions ${sessions}, aktivní uživatelé ${activeUsers}, zobrazení stránek ${pageViews}, klíčové události ${keyEvents}.`;
 }
 
+async function getHubSpotSummary(message: string) {
+  const adminConfig = await getAIBotAdminConfig();
+  const token = adminConfig.integrations.hubspot.privateAppToken;
+  if (!token) return null;
+
+  const normalized = message.toLowerCase();
+  const wantsDeals = /\bdeal/i.test(normalized) || /\bobchod/i.test(normalized);
+  const wantsCompanies = /\bfirm/i.test(normalized) || /\bspolecnost/i.test(normalized);
+
+  const objectType = wantsDeals
+    ? "deals"
+    : wantsCompanies
+      ? "companies"
+      : "contacts";
+  const label = wantsDeals
+    ? "dealů"
+    : wantsCompanies
+      ? "firem"
+      : "kontaktů";
+
+  const response = await fetch(
+    `https://api.hubapi.com/crm/v3/objects/${objectType}/search`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        limit: 1,
+        filterGroups: [],
+        properties: ["createdate"],
+      }),
+      cache: "no-store",
+    },
+  );
+
+  const payload = (await response.json().catch(() => ({}))) as HubSpotSearchResponse;
+  if (!response.ok || typeof payload.total !== "number") {
+    return null;
+  }
+
+  return `V HubSpotu je aktuálně ${payload.total} ${label}.`;
+}
+
 async function getWebhookConfig() {
   const adminConfig = await getAIBotAdminConfig().catch(() => null);
   const url =
@@ -240,6 +305,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
   const model = resolveClaudeModel(adminConfig.anthropic.model);
   const useWebSearch = shouldUseWebSearch(message);
   const ga4Summary = shouldUseGa4(message) ? await getGa4Summary(message) : null;
+  const hubspotSummary = shouldUseHubSpot(message) ? await getHubSpotSummary(message) : null;
 
   if (!apiKey) {
     throw new Error("Anthropic API key is not configured.");
@@ -277,7 +343,7 @@ async function callClaudeDirect(message: string, sessionId: string) {
             content: [
               {
                 type: "text",
-                text: `${enableWebSearch ? "Použij web search, pokud je potřeba pro aktuální nebo ověřitelná fakta.\n\n" : ""}${ga4Summary ? `Dostupný GA4 kontext: ${ga4Summary}\n\n` : ""}Session: ${sessionId}\n\nUser request: ${message}`,
+                text: `${enableWebSearch ? "Použij web search, pokud je potřeba pro aktuální nebo ověřitelná fakta.\n\n" : ""}${ga4Summary ? `Dostupný GA4 kontext: ${ga4Summary}\n\n` : ""}${hubspotSummary ? `Dostupný HubSpot kontext: ${hubspotSummary}\n\n` : ""}Session: ${sessionId}\n\nUser request: ${message}`,
               },
             ],
           },

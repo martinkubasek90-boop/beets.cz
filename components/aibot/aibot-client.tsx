@@ -96,6 +96,8 @@ function normalizeToolMentions(value: string) {
     [/\bhard stop\b/gi, "HubSpot"],
     [/\bhub spot\b/gi, "HubSpot"],
     [/\bhab spot\b/gi, "HubSpot"],
+    [/\bhapp spot\b/gi, "HubSpot"],
+    [/\bhap spot\b/gi, "HubSpot"],
     [/\bg a 4\b/gi, "GA4"],
     [/\bga 4\b/gi, "GA4"],
     [/\bgé a čtyři\b/gi, "GA4"],
