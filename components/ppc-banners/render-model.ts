@@ -8,6 +8,11 @@ export type BannerRenderModel = {
   boxW: number;
   boxH: number;
   padding: number;
+  guideAreaEnabled: boolean;
+  guideAreaLeft: number;
+  guideAreaTop: number;
+  guideAreaWidth: number;
+  guideAreaHeight: number;
   headlineSize: number;
   subheadlineSize: number;
   subheadline2Size: number;
@@ -68,6 +73,15 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
 
   const boxW = Math.round(format.width * scale);
   const boxH = Math.round(format.height * scale);
+  const guideAreaEnabled = Boolean(format.guideAreaEnabled);
+  const guideAreaX = clamp(typeof format.guideAreaX === "number" ? format.guideAreaX : 4, 0, 100);
+  const guideAreaY = clamp(typeof format.guideAreaY === "number" ? format.guideAreaY : 4, 0, 100);
+  const guideAreaWidthPct = clamp(typeof format.guideAreaWidth === "number" ? format.guideAreaWidth : 36, 5, 100);
+  const guideAreaHeightPct = clamp(typeof format.guideAreaHeight === "number" ? format.guideAreaHeight : 92, 5, 100);
+  const guideAreaLeft = Math.round((boxW * guideAreaX) / 100);
+  const guideAreaTop = Math.round((boxH * guideAreaY) / 100);
+  const guideAreaWidth = Math.max(40, Math.round((boxW * Math.min(guideAreaWidthPct, 100 - guideAreaX)) / 100));
+  const guideAreaHeight = Math.max(40, Math.round((boxH * Math.min(guideAreaHeightPct, 100 - guideAreaY)) / 100));
 
   const logoAlignX = format.logoAlignX || "left";
   const logoAlignY = format.logoAlignY || "top";
@@ -80,16 +94,36 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
 
   const textAlignX = format.textAlignX || "left";
   const textAlignY = format.textAlignY || "center";
-  const textW = Math.max(120, boxW - padding * 2 - 10);
-  const textBaseX = textAlignX === "left" ? padding : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - padding - textW;
-  const textBaseY = textAlignY === "top" ? padding + Math.round(80 * scale) : textAlignY === "center" ? Math.round(boxH * 0.37) : boxH - padding - Math.round(140 * scale);
+  const textW = guideAreaEnabled ? guideAreaWidth : Math.max(120, boxW - padding * 2 - 10);
+  const textBaseX = guideAreaEnabled
+    ? textAlignX === "left"
+      ? guideAreaLeft
+      : textAlignX === "center"
+        ? Math.round(guideAreaLeft + (guideAreaWidth - textW) / 2)
+        : guideAreaLeft + guideAreaWidth - textW
+    : textAlignX === "left"
+      ? padding
+      : textAlignX === "center"
+        ? Math.round((boxW - textW) / 2)
+        : boxW - padding - textW;
+  const textBaseY = guideAreaEnabled
+    ? textAlignY === "top"
+      ? guideAreaTop
+      : textAlignY === "center"
+        ? Math.round(guideAreaTop + guideAreaHeight * 0.28)
+        : guideAreaTop + guideAreaHeight - padding - Math.round(140 * scale)
+    : textAlignY === "top"
+      ? padding + Math.round(80 * scale)
+      : textAlignY === "center"
+        ? Math.round(boxH * 0.37)
+        : boxH - padding - Math.round(140 * scale);
   const headlineLeft = textBaseX + textOffsetX + Math.round((format.headlineOffsetX || 0) * scale);
   const headlineTop = textBaseY + textOffsetY + Math.round((format.headlineOffsetY || 0) * scale);
   const subheadlineLeft = textBaseX + textOffsetX + Math.round((format.subheadlineOffsetX || 0) * scale);
   const subheadlineTop = textBaseY + textOffsetY + Math.round(headlineSize * 1.35) + Math.round((format.subheadlineOffsetY || 0) * scale);
   const subheadline2Left = textBaseX + textOffsetX + Math.round((format.subheadline2OffsetX || 0) * scale);
   const subheadline2Top = textBaseY + textOffsetY + Math.round(headlineSize * 1.35 + subheadlineSize * 1.7) + Math.round((format.subheadline2OffsetY || 0) * scale);
-  const contactBaseY = boxH - padding - Math.round(contactSize * 2.2);
+  const contactBaseY = guideAreaEnabled ? guideAreaTop + guideAreaHeight - Math.round(contactSize * 2.2) : boxH - padding - Math.round(contactSize * 2.2);
   const contactLeft = textBaseX + Math.round((format.contactOffsetX || 0) * scale);
   const contactTop = contactBaseY + Math.round((format.contactOffsetY || 0) * scale);
 
@@ -108,6 +142,11 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
     boxW,
     boxH,
     padding,
+    guideAreaEnabled,
+    guideAreaLeft,
+    guideAreaTop,
+    guideAreaWidth,
+    guideAreaHeight,
     headlineSize,
     subheadlineSize,
     subheadline2Size,

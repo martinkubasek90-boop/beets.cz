@@ -64,6 +64,11 @@ export type BannerFormat = {
   bgScale?: number;
   bgPositionX?: number;
   bgPositionY?: number;
+  guideAreaEnabled?: boolean;
+  guideAreaX?: number;
+  guideAreaY?: number;
+  guideAreaWidth?: number;
+  guideAreaHeight?: number;
 };
 
 export type BannerSnapshot = {

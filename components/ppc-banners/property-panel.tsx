@@ -5,6 +5,7 @@ import { Loader2, Sparkles, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components/ppc-banners/banner-utils";
+import { computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
@@ -20,6 +21,10 @@ function fileToDataUrl(file: File) {
 }
 
 const ICON_PRESETS = ["", "→", "↗", "➜", "➔", "↑", "☎", "✉", "★", "✓"] as const;
+
+function countLines(text: string) {
+  return Math.max(1, text.split(/\r?\n/).length);
+}
 
 function AlignButtons<T extends string>({
   label,
@@ -266,6 +271,93 @@ export function PropertyPanel({
     applyLayerOrder(nextOrder);
   };
 
+  const alignTextLayersToGuideArea = () => {
+    if (!format) return;
+
+    const nextFormat: BannerFormat = {
+      ...format,
+      guideAreaEnabled: true,
+      textAlignX: "left",
+      textAlignY: "top",
+      textContentAlign: "center",
+      textOffsetX: 0,
+      textOffsetY: 0,
+      headlineOffsetX: 0,
+      subheadlineOffsetX: 0,
+      subheadline2OffsetX: 0,
+      contactOffsetX: 0,
+    };
+    const model = computeBannerRenderModel(banner, nextFormat, 1);
+    const areaTop = model.guideAreaTop;
+    const areaHeight = model.guideAreaHeight;
+    const visibleBlocks = [
+      {
+        key: "headlineOffsetY" as const,
+        text: headlineValue,
+        top: model.headlineTop,
+        baseTop: model.headlineTop,
+        height: countLines(headlineValue) * model.headlineSize * 1.05,
+      },
+      {
+        key: "subheadlineOffsetY" as const,
+        text: subheadlineValue,
+        top: model.subheadlineTop,
+        baseTop: model.subheadlineTop,
+        height: countLines(subheadlineValue) * model.subheadlineSize * 1.5,
+      },
+      {
+        key: "subheadline2OffsetY" as const,
+        text: subheadline2Value,
+        top: model.subheadline2Top,
+        baseTop: model.subheadline2Top,
+        height: countLines(subheadline2Value) * model.subheadline2Size * 1.5,
+      },
+      {
+        key: "contactOffsetY" as const,
+        text: contactValue,
+        top: model.contactTop,
+        baseTop: model.contactTop,
+        height: countLines(contactValue) * model.contactSize * 1.4,
+      },
+    ].filter((block) => block.text.trim());
+
+    nextFormat.headlineOffsetY = 0;
+    nextFormat.subheadlineOffsetY = 0;
+    nextFormat.subheadline2OffsetY = 0;
+    nextFormat.contactOffsetY = 0;
+
+    if (visibleBlocks.length) {
+      const firstTop = visibleBlocks[0].top;
+      const stackBottom = Math.max(...visibleBlocks.map((block) => block.top + block.height));
+      const stackHeight = stackBottom - firstTop;
+      const targetTop = Math.round(areaTop + Math.max(0, (areaHeight - stackHeight) / 2));
+      visibleBlocks.forEach((block) => {
+        nextFormat[block.key] = Math.round(targetTop + (block.top - firstTop) - block.baseTop);
+      });
+    }
+
+    (
+      [
+        "guideAreaEnabled",
+        "textAlignX",
+        "textAlignY",
+        "textContentAlign",
+        "textOffsetX",
+        "textOffsetY",
+        "headlineOffsetX",
+        "subheadlineOffsetX",
+        "subheadline2OffsetX",
+        "contactOffsetX",
+        "headlineOffsetY",
+        "subheadlineOffsetY",
+        "subheadline2OffsetY",
+        "contactOffsetY",
+      ] as const
+    ).forEach((key) => {
+      onFormatChange(key, nextFormat[key] as string | number | boolean);
+    });
+  };
+
   return (
     <div className="space-y-4 p-3">
       <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -335,6 +427,60 @@ export function PropertyPanel({
       </div>
 
       {format ? (
+        <>
+        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Zarovnávací oblast</p>
+            <label className="flex items-center gap-2 text-xs text-slate-700">
+              <input
+                type="checkbox"
+                checked={Boolean(format.guideAreaEnabled)}
+                onChange={(e) => onFormatChange("guideAreaEnabled", e.target.checked)}
+              />
+              Zapnout
+            </label>
+          </div>
+          <p className="text-xs leading-5 text-slate-500">Na plátně se zobrazí oblast, kterou můžeš myší posouvat a měnit její velikost. Texty pak jedním klikem vycentruješ doprostřed této části.</p>
+          <div className="space-y-2">
+            <Label className="text-xs">Oblast X: {Math.round(format.guideAreaX ?? 4)}%</Label>
+            <RangeWithCenter min={0} max={95} step={1} value={Math.round(format.guideAreaX ?? 4)} onChange={(v) => onFormatChange("guideAreaX", v)} center={50} />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Oblast Y: {Math.round(format.guideAreaY ?? 4)}%</Label>
+            <RangeWithCenter min={0} max={95} step={1} value={Math.round(format.guideAreaY ?? 4)} onChange={(v) => onFormatChange("guideAreaY", v)} center={50} />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Šířka oblasti: {Math.round(format.guideAreaWidth ?? 36)}%</Label>
+            <RangeWithCenter min={5} max={100 - Math.round(format.guideAreaX ?? 4)} step={1} value={Math.round(format.guideAreaWidth ?? 36)} onChange={(v) => onFormatChange("guideAreaWidth", v)} center={36} />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Výška oblasti: {Math.round(format.guideAreaHeight ?? 92)}%</Label>
+            <RangeWithCenter min={5} max={100 - Math.round(format.guideAreaY ?? 4)} step={1} value={Math.round(format.guideAreaHeight ?? 92)} onChange={(v) => onFormatChange("guideAreaHeight", v)} center={92} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onFormatChange("guideAreaEnabled", true);
+                onFormatChange("guideAreaX", 4);
+                onFormatChange("guideAreaY", 4);
+                onFormatChange("guideAreaWidth", 36);
+                onFormatChange("guideAreaHeight", 92);
+              }}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Levý panel
+            </button>
+            <button
+              type="button"
+              onClick={alignTextLayersToGuideArea}
+              className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 hover:bg-cyan-100"
+            >
+              Vycentrovat texty
+            </button>
+          </div>
+        </div>
+
         <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
           {activeLayer === "logo" ? (
             <>
@@ -560,6 +706,7 @@ export function PropertyPanel({
             </>
           ) : null}
         </div>
+        </>
       ) : null}
 
       <div className="grid grid-cols-2 gap-3">

@@ -8,14 +8,14 @@ import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render
 
 const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
 
-type DragTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta" | "shape";
-type ResizeTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "shape";
+type DragTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta" | "shape" | "guideArea";
+type ResizeTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "shape" | "guideArea";
 
 type DragState = {
   target: DragTarget;
   startX: number;
   startY: number;
-  origin: {
+    origin: {
     logoOffsetX: number;
     logoOffsetY: number;
     qrOffsetX: number;
@@ -30,9 +30,11 @@ type DragState = {
     contactOffsetY: number;
     ctaOffsetX: number;
     ctaOffsetY: number;
-    shapeX: number;
-    shapeY: number;
-  };
+      shapeX: number;
+      shapeY: number;
+      guideAreaX: number;
+      guideAreaY: number;
+    };
 };
 
 type ResizeState = {
@@ -47,6 +49,8 @@ type ResizeState = {
     subheadline2Size: number;
     contactSize: number;
     shapeSize: number;
+    guideAreaWidth: number;
+    guideAreaHeight: number;
   };
 };
 
@@ -85,6 +89,11 @@ const FALLBACK_FORMAT: BannerFormat = {
   shapeX: 78,
   shapeY: 22,
   shapeSize: 24,
+  guideAreaEnabled: false,
+  guideAreaX: 4,
+  guideAreaY: 4,
+  guideAreaWidth: 36,
+  guideAreaHeight: 92,
   logoAlignX: "left",
   logoAlignY: "top",
   textAlignX: "left",
@@ -185,6 +194,11 @@ export function BannerCanvas({
   const bgPositionY = model.bgPositionY;
   const boxW = model.boxW;
   const boxH = model.boxH;
+  const guideAreaEnabled = model.guideAreaEnabled;
+  const guideAreaLeft = model.guideAreaLeft;
+  const guideAreaTop = model.guideAreaTop;
+  const guideAreaWidth = model.guideAreaWidth;
+  const guideAreaHeight = model.guideAreaHeight;
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
   const shapeLeft = Math.round(boxW * ((resolvedFormat.shapeX || 78) / 100) - shapeSizePx / 2);
   const shapeTop = Math.round(boxH * ((resolvedFormat.shapeY || 22) / 100) - shapeSizePx / 2);
@@ -276,6 +290,13 @@ export function BannerCanvas({
         });
         return;
       }
+      if (target === "guideArea") {
+        onFormatPatch({
+          guideAreaWidth: Math.round(applyStep(resolvedFormat.guideAreaWidth || 36, direction * 2, 5, 100 - (resolvedFormat.guideAreaX || 4))),
+          guideAreaHeight: Math.round(applyStep(resolvedFormat.guideAreaHeight || 92, direction * 2, 5, 100 - (resolvedFormat.guideAreaY || 4))),
+        });
+        return;
+      }
       onFormatPatch({
         shapeSize: Math.round(applyStep(resolvedFormat.shapeSize || 24, direction * 2, 4, 120)),
       });
@@ -286,6 +307,10 @@ export function BannerCanvas({
       resolvedFormat.headlineSize,
       resolvedFormat.logoScale,
       resolvedFormat.contactSize,
+      resolvedFormat.guideAreaHeight,
+      resolvedFormat.guideAreaWidth,
+      resolvedFormat.guideAreaX,
+      resolvedFormat.guideAreaY,
       resolvedFormat.qrScale,
       resolvedFormat.shapeSize,
       resolvedFormat.subheadlineSize,
@@ -319,6 +344,8 @@ export function BannerCanvas({
           ctaOffsetY: resolvedFormat.ctaOffsetY || 0,
           shapeX: resolvedFormat.shapeX || 78,
           shapeY: resolvedFormat.shapeY || 22,
+          guideAreaX: resolvedFormat.guideAreaX || 4,
+          guideAreaY: resolvedFormat.guideAreaY || 4,
         },
     };
   };
@@ -340,6 +367,8 @@ export function BannerCanvas({
         subheadline2Size: resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28,
         contactSize: resolvedFormat.contactSize || resolvedFormat.subheadlineSize || 28,
         shapeSize: resolvedFormat.shapeSize || 24,
+        guideAreaWidth: resolvedFormat.guideAreaWidth || 36,
+        guideAreaHeight: resolvedFormat.guideAreaHeight || 92,
       },
     };
   };
@@ -374,6 +403,12 @@ export function BannerCanvas({
         if (resizeState.target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 144)) });
         if (resizeState.target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 144)) });
         if (resizeState.target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resizeState.origin.contactSize, dragDelta * 0.55, 12, 144)) });
+        if (resizeState.target === "guideArea") {
+          const nextWidth = clamp(resizeState.origin.guideAreaWidth + (dragDelta / resolvedFormat.width) * 100, 5, 100 - (resolvedFormat.guideAreaX || 4));
+          const nextHeight = clamp(resizeState.origin.guideAreaHeight + (dragDelta / resolvedFormat.height) * 100, 5, 100 - (resolvedFormat.guideAreaY || 4));
+          onFormatPatch({ guideAreaEnabled: true, guideAreaWidth: Math.round(nextWidth), guideAreaHeight: Math.round(nextHeight) });
+          return;
+        }
         const nextShapeSize = applyStep(resizeState.origin.shapeSize, dragDelta / 2.2, 4, 120);
         onFormatPatch({ shapeSize: Math.round(nextShapeSize) });
         return;
@@ -488,6 +523,15 @@ export function BannerCanvas({
         const snapX = Math.abs(centerPxX - boxW / 2) <= CENTER_MAGNET_PX ? 50 : nextShapeX;
         const snapY = Math.abs(centerPxY - boxH / 2) <= CENTER_MAGNET_PX ? 50 : nextShapeY;
         onFormatPatch({ shapeX: Math.round(snapX), shapeY: Math.round(snapY) });
+        return;
+      }
+
+      if (state.target === "guideArea") {
+        const currentWidth = resolvedFormat.guideAreaWidth || 36;
+        const currentHeight = resolvedFormat.guideAreaHeight || 92;
+        const nextGuideX = clamp(state.origin.guideAreaX + (dx / resolvedFormat.width) * 100, 0, 100 - currentWidth);
+        const nextGuideY = clamp(state.origin.guideAreaY + (dy / resolvedFormat.height) * 100, 0, 100 - currentHeight);
+        onFormatPatch({ guideAreaEnabled: true, guideAreaX: Math.round(nextGuideX), guideAreaY: Math.round(nextGuideY) });
       }
     };
 
@@ -524,6 +568,10 @@ export function BannerCanvas({
     qrBaseTop,
     qrFrameSize,
     resolvedFormat.height,
+    resolvedFormat.guideAreaHeight,
+    resolvedFormat.guideAreaWidth,
+    resolvedFormat.guideAreaX,
+    resolvedFormat.guideAreaY,
     resolvedFormat.width,
     scale,
     subheadline2BaseLeft,
@@ -589,6 +637,8 @@ export function BannerCanvas({
         ? contactLeft + textW / 2
         : selected === "cta"
           ? ctaLeft + estimatedCtaW / 2
+          : selected === "guideArea"
+            ? guideAreaLeft + guideAreaWidth / 2
           : selected === "shape"
             ? shapeLeft + shapeSizePx / 2
             : null;
@@ -607,6 +657,8 @@ export function BannerCanvas({
         ? contactTop
         : selected === "cta"
           ? ctaTop + estimatedCtaH / 2
+          : selected === "guideArea"
+            ? guideAreaTop + guideAreaHeight / 2
           : selected === "shape"
             ? shapeTop + shapeSizePx / 2
             : null;
@@ -658,6 +710,32 @@ export function BannerCanvas({
         <div className="relative h-full w-full">
           {editable && showCenterX ? <div className="pointer-events-none absolute inset-y-0 left-1/2 z-[120] w-px -translate-x-1/2 bg-cyan-300/90" /> : null}
           {editable && showCenterY ? <div className="pointer-events-none absolute inset-x-0 top-1/2 z-[120] h-px -translate-y-1/2 bg-cyan-300/90" /> : null}
+          {editable && guideAreaEnabled ? (
+            <div
+              className={`absolute border-2 border-dashed ${selected === "guideArea" ? "border-cyan-400 bg-cyan-200/10" : "border-cyan-300/80 bg-cyan-100/10"} cursor-move`}
+              style={{
+                left: `${guideAreaLeft}px`,
+                top: `${guideAreaTop}px`,
+                width: `${guideAreaWidth}px`,
+                height: `${guideAreaHeight}px`,
+                zIndex: 115,
+              }}
+              onMouseDown={(event) => startDrag("guideArea", event)}
+              onWheel={(event) => onResizeWheel("guideArea", event)}
+            >
+              <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-cyan-300/80" />
+              <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-cyan-300/80" />
+              <div className="pointer-events-none absolute left-2 top-2 rounded bg-cyan-500/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                Oblast zarovnání
+              </div>
+              <button
+                type="button"
+                aria-label="Resize guide area"
+                className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                onMouseDown={(event) => startResize("guideArea", event)}
+              />
+            </div>
+          ) : null}
 
           {hasLogo ? (
             <div
