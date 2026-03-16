@@ -351,7 +351,7 @@ export function PropertyPanel({
               </label>
               <div className="space-y-2">
                 <Label className="text-xs">Velikost loga: {(format.logoScale || 1).toFixed(2)}x</Label>
-                <RangeWithCenter min={0.4} max={12} step={0.1} value={format.logoScale || 1} onChange={(v) => onFormatChange("logoScale", v)} />
+                <RangeWithCenter min={0.4} max={18} step={0.1} value={format.logoScale || 1} onChange={(v) => onFormatChange("logoScale", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun X: {format.logoOffsetX || 0}px</Label>
@@ -386,7 +386,7 @@ export function PropertyPanel({
               ) : null}
               <div className="space-y-2">
                 <Label className="text-xs">Velikost QR: {(format.qrScale || 1).toFixed(2)}x</Label>
-                <RangeWithCenter min={0.4} max={4} step={0.05} value={format.qrScale || 1} onChange={(v) => onFormatChange("qrScale", v)} />
+                <RangeWithCenter min={0.4} max={6} step={0.05} value={format.qrScale || 1} onChange={(v) => onFormatChange("qrScale", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun QR X: {format.qrOffsetX || 0}px</Label>
@@ -409,7 +409,7 @@ export function PropertyPanel({
               />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost headline: {format.headlineSize}px</Label>
-                <RangeWithCenter min={16} max={180} value={format.headlineSize} onChange={(v) => onFormatChange("headlineSize", v)} />
+                <RangeWithCenter min={16} max={270} value={format.headlineSize} onChange={(v) => onFormatChange("headlineSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun headline X: {format.headlineOffsetX || 0}px</Label>
@@ -435,7 +435,7 @@ export function PropertyPanel({
               />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost popisu: {format.subheadlineSize}px</Label>
-                <RangeWithCenter min={12} max={96} value={format.subheadlineSize} onChange={(v) => onFormatChange("subheadlineSize", v)} />
+                <RangeWithCenter min={12} max={144} value={format.subheadlineSize} onChange={(v) => onFormatChange("subheadlineSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun popisu X: {format.subheadlineOffsetX || 0}px</Label>
@@ -459,7 +459,7 @@ export function PropertyPanel({
               />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost POPIS 2: {format.subheadline2Size || format.subheadlineSize}px</Label>
-                <RangeWithCenter min={12} max={96} value={format.subheadline2Size || format.subheadlineSize} onChange={(v) => onFormatChange("subheadline2Size", v)} />
+                <RangeWithCenter min={12} max={144} value={format.subheadline2Size || format.subheadlineSize} onChange={(v) => onFormatChange("subheadline2Size", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun POPIS 2 X: {format.subheadline2OffsetX || 0}px</Label>
@@ -484,7 +484,7 @@ export function PropertyPanel({
               />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost kontaktu: {format.contactSize || format.subheadlineSize}px</Label>
-                <RangeWithCenter min={12} max={96} value={format.contactSize || format.subheadlineSize} onChange={(v) => onFormatChange("contactSize", v)} />
+                <RangeWithCenter min={12} max={144} value={format.contactSize || format.subheadlineSize} onChange={(v) => onFormatChange("contactSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun kontaktu X: {format.contactOffsetX || 0}px</Label>
@@ -504,7 +504,7 @@ export function PropertyPanel({
               <Input value={ctaValue} onChange={(e) => onFormatChange("ctaText", e.target.value)} className="border-slate-200 bg-white" />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost CTA: {format.ctaSize}px</Label>
-                <RangeWithCenter min={10} max={60} value={format.ctaSize} onChange={(v) => onFormatChange("ctaSize", v)} />
+                <RangeWithCenter min={10} max={90} value={format.ctaSize} onChange={(v) => onFormatChange("ctaSize", v)} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs">Posun CTA X: {format.ctaOffsetX || 0}px</Label>

@@ -43,12 +43,12 @@ export type BannerRenderModel = {
 
 export function computeBannerRenderModel(banner: Banner, format: BannerFormat, scale: number): BannerRenderModel {
   const padding = Math.max(8, Math.round(format.padding * scale));
-  const headlineSize = Math.max(12, Math.round(format.headlineSize * scale));
-  const subheadlineSize = Math.max(10, Math.round(format.subheadlineSize * scale));
-  const subheadline2Size = Math.max(10, Math.round((format.subheadline2Size || format.subheadlineSize) * scale));
-  const contactSize = Math.max(10, Math.round((format.contactSize || format.subheadlineSize) * scale));
-  const ctaSize = Math.max(10, Math.round(format.ctaSize * scale));
-  const logoScale = Math.max(0.4, Math.min(12, format.logoScale || 1));
+  const headlineSize = Math.max(12, Math.min(Math.round(270 * scale), Math.round(format.headlineSize * scale)));
+  const subheadlineSize = Math.max(10, Math.min(Math.round(144 * scale), Math.round(format.subheadlineSize * scale)));
+  const subheadline2Size = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.subheadline2Size || format.subheadlineSize) * scale)));
+  const contactSize = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.contactSize || format.subheadlineSize) * scale)));
+  const ctaSize = Math.max(10, Math.min(Math.round(90 * scale), Math.round(format.ctaSize * scale)));
+  const logoScale = Math.max(0.4, Math.min(18, format.logoScale || 1));
   const logoOffsetX = Math.round((format.logoOffsetX || 0) * scale);
   const logoOffsetY = Math.round((format.logoOffsetY || 0) * scale);
   const textOffsetX = Math.round((format.textOffsetX || 0) * scale);

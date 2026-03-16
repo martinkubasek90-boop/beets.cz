@@ -109,9 +109,9 @@ function applyStep(value: number, delta: number, min: number, max: number) {
 }
 
 const LOGO_SCALE_MIN = 0.4;
-const LOGO_SCALE_MAX = 12;
+const LOGO_SCALE_MAX = 18;
 const QR_SCALE_MIN = 0.4;
-const QR_SCALE_MAX = 4;
+const QR_SCALE_MAX = 6;
 const CENTER_MAGNET_PX = 8;
 const CENTER_GUIDE_EPS = 0.5;
 
@@ -260,10 +260,10 @@ export function BannerCanvas({
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
       if (!editable || !onFormatPatch) return;
-      if (target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resolvedFormat.headlineSize || 56, direction * 4, 16, 180)) });
-      if (target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
-      if (target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
-      if (target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resolvedFormat.contactSize || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
+      if (target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resolvedFormat.headlineSize || 56, direction * 4, 16, 270)) });
+      if (target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resolvedFormat.subheadlineSize || 28, direction * 2, 12, 144)) });
+      if (target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 144)) });
+      if (target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resolvedFormat.contactSize || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 144)) });
       if (target === "logo") {
         onFormatPatch({
           logoScale: applyStep(resolvedFormat.logoScale || 1, direction * 0.1, LOGO_SCALE_MIN, LOGO_SCALE_MAX),
@@ -277,7 +277,7 @@ export function BannerCanvas({
         return;
       }
       onFormatPatch({
-        shapeSize: Math.round(applyStep(resolvedFormat.shapeSize || 24, direction * 2, 4, 80)),
+        shapeSize: Math.round(applyStep(resolvedFormat.shapeSize || 24, direction * 2, 4, 120)),
       });
     },
     [
@@ -370,11 +370,11 @@ export function BannerCanvas({
           onFormatPatch({ qrScale: nextQrScale });
           return;
         }
-        if (resizeState.target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resizeState.origin.headlineSize, dragDelta * 1.1, 16, 180)) });
-        if (resizeState.target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 96)) });
-        if (resizeState.target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 96)) });
-        if (resizeState.target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resizeState.origin.contactSize, dragDelta * 0.55, 12, 96)) });
-        const nextShapeSize = applyStep(resizeState.origin.shapeSize, dragDelta / 2.2, 4, 80);
+        if (resizeState.target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resizeState.origin.headlineSize, dragDelta * 1.1, 16, 270)) });
+        if (resizeState.target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 144)) });
+        if (resizeState.target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 144)) });
+        if (resizeState.target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resizeState.origin.contactSize, dragDelta * 0.55, 12, 144)) });
+        const nextShapeSize = applyStep(resizeState.origin.shapeSize, dragDelta / 2.2, 4, 120);
         onFormatPatch({ shapeSize: Math.round(nextShapeSize) });
         return;
       }
