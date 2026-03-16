@@ -8,8 +8,8 @@ import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render
 
 const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
 
-type DragTarget = "logo" | "text" | "cta" | "shape";
-type ResizeTarget = "logo" | "text" | "shape";
+type DragTarget = "logo" | "qr" | "text" | "cta" | "shape";
+type ResizeTarget = "logo" | "qr" | "text" | "shape";
 
 type DragState = {
   target: DragTarget;
@@ -18,6 +18,8 @@ type DragState = {
   origin: {
     logoOffsetX: number;
     logoOffsetY: number;
+    qrOffsetX: number;
+    qrOffsetY: number;
     textOffsetX: number;
     textOffsetY: number;
     ctaOffsetX: number;
@@ -33,6 +35,7 @@ type ResizeState = {
   startY: number;
   origin: {
     logoScale: number;
+    qrScale: number;
     headlineSize: number;
     subheadlineSize: number;
     subheadline2Size: number;
@@ -50,10 +53,13 @@ const FALLBACK_FORMAT: BannerFormat = {
   subheadlineSize: 64,
   ctaSize: 56,
   logoScale: 1,
+  qrScale: 1,
   textOffsetX: 0,
   textOffsetY: 0,
   logoOffsetX: 0,
   logoOffsetY: 0,
+  qrOffsetX: 0,
+  qrOffsetY: 0,
   ctaOffsetX: 0,
   ctaOffsetY: 0,
   shapeEnabled: false,
@@ -71,6 +77,7 @@ const FALLBACK_FORMAT: BannerFormat = {
   ctaAlignX: "left",
   ctaAlignY: "bottom",
   zLogo: 40,
+  zQr: 45,
   zText: 30,
   zCta: 50,
   zShape: 10,
@@ -83,6 +90,8 @@ function applyStep(value: number, delta: number, min: number, max: number) {
 
 const LOGO_SCALE_MIN = 0.4;
 const LOGO_SCALE_MAX = 12;
+const QR_SCALE_MIN = 0.4;
+const QR_SCALE_MAX = 4;
 const CENTER_MAGNET_PX = 8;
 const CENTER_GUIDE_EPS = 0.5;
 
@@ -157,9 +166,10 @@ export function BannerCanvas({
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
   const shapeLeft = Math.round(boxW * ((resolvedFormat.shapeX || 78) / 100) - shapeSizePx / 2);
   const shapeTop = Math.round(boxH * ((resolvedFormat.shapeY || 22) / 100) - shapeSizePx / 2);
-  const sizeTarget = selected === "text" || selected === "logo" || selected === "shape" ? selected : null;
+  const sizeTarget = selected === "text" || selected === "logo" || selected === "qr" || selected === "shape" ? selected : null;
   const textContentAlign = resolvedFormat.textContentAlign || "left";
   const zLogo = typeof resolvedFormat.zLogo === "number" ? resolvedFormat.zLogo : 40;
+  const zQr = typeof resolvedFormat.zQr === "number" ? resolvedFormat.zQr : 45;
   const zText = typeof resolvedFormat.zText === "number" ? resolvedFormat.zText : 30;
   const zCta = typeof resolvedFormat.zCta === "number" ? resolvedFormat.zCta : 50;
   const zShape = typeof resolvedFormat.zShape === "number" ? resolvedFormat.zShape : 10;
@@ -180,6 +190,14 @@ export function BannerCanvas({
   const ctaTop = model.ctaTop;
   const logoBaseLeft = logoLeft - Math.round((resolvedFormat.logoOffsetX || 0) * scale);
   const logoBaseTop = logoTop - Math.round((resolvedFormat.logoOffsetY || 0) * scale);
+  const qrScale = clamp(resolvedFormat.qrScale || 1, QR_SCALE_MIN, QR_SCALE_MAX);
+  const qrBaseFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.19, 56, 220));
+  const qrFrameSize = Math.round(qrBaseFrameSize * qrScale);
+  const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
+  const qrBaseLeft = boxW - padding - qrFrameSize;
+  const qrBaseTop = boxH - padding - qrFrameSize;
+  const qrLeft = qrBaseLeft + Math.round((resolvedFormat.qrOffsetX || 0) * scale);
+  const qrTop = qrBaseTop + Math.round((resolvedFormat.qrOffsetY || 0) * scale);
   const textBaseLeft = textLeft - Math.round((resolvedFormat.textOffsetX || 0) * scale);
   const textBaseTop = textTop - Math.round((resolvedFormat.textOffsetY || 0) * scale);
   const ctaBaseLeft = ctaLeft - Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
@@ -192,10 +210,6 @@ export function BannerCanvas({
   const logoRawPreviewSrc = banner.logoUrl ? toPreviewImageUrl(banner.logoUrl) : "";
   const qrPreviewSrc = banner.qrImageUrl ? toPreviewImageUrl(banner.qrImageUrl) : "";
   const hasQr = Boolean(qrPreviewSrc);
-  const qrFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.19, 56, 220));
-  const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
-  const qrLeft = boxW - padding - qrFrameSize;
-  const qrTop = boxH - padding - qrFrameSize;
   const overlayIcon = (banner.overlayIcon || "").trim();
   const hasOverlayIcon = Boolean(overlayIcon);
   const iconFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.13, 44, 160));
@@ -223,6 +237,12 @@ export function BannerCanvas({
         });
         return;
       }
+      if (target === "qr") {
+        onFormatPatch({
+          qrScale: applyStep(resolvedFormat.qrScale || 1, direction * 0.08, QR_SCALE_MIN, QR_SCALE_MAX),
+        });
+        return;
+      }
       onFormatPatch({
         shapeSize: Math.round(applyStep(resolvedFormat.shapeSize || 24, direction * 2, 4, 80)),
       });
@@ -232,6 +252,7 @@ export function BannerCanvas({
       onFormatPatch,
       resolvedFormat.headlineSize,
       resolvedFormat.logoScale,
+      resolvedFormat.qrScale,
       resolvedFormat.shapeSize,
       resolvedFormat.subheadlineSize,
       resolvedFormat.subheadline2Size,
@@ -247,10 +268,12 @@ export function BannerCanvas({
       target,
       startX: event.clientX,
       startY: event.clientY,
-      origin: {
-        logoOffsetX: resolvedFormat.logoOffsetX || 0,
-        logoOffsetY: resolvedFormat.logoOffsetY || 0,
-        textOffsetX: resolvedFormat.textOffsetX || 0,
+        origin: {
+          logoOffsetX: resolvedFormat.logoOffsetX || 0,
+          logoOffsetY: resolvedFormat.logoOffsetY || 0,
+          qrOffsetX: resolvedFormat.qrOffsetX || 0,
+          qrOffsetY: resolvedFormat.qrOffsetY || 0,
+          textOffsetX: resolvedFormat.textOffsetX || 0,
         textOffsetY: resolvedFormat.textOffsetY || 0,
         ctaOffsetX: resolvedFormat.ctaOffsetX || 0,
         ctaOffsetY: resolvedFormat.ctaOffsetY || 0,
@@ -271,6 +294,7 @@ export function BannerCanvas({
       startY: event.clientY,
       origin: {
         logoScale: resolvedFormat.logoScale || 1,
+        qrScale: resolvedFormat.qrScale || 1,
         headlineSize: resolvedFormat.headlineSize || 56,
         subheadlineSize: resolvedFormat.subheadlineSize || 28,
         subheadline2Size: resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28,
@@ -298,6 +322,11 @@ export function BannerCanvas({
         if (resizeState.target === "logo") {
           const nextLogoScale = applyStep(resizeState.origin.logoScale, dragDelta / 120, LOGO_SCALE_MIN, LOGO_SCALE_MAX);
           onFormatPatch({ logoScale: nextLogoScale });
+          return;
+        }
+        if (resizeState.target === "qr") {
+          const nextQrScale = applyStep(resizeState.origin.qrScale, dragDelta / 120, QR_SCALE_MIN, QR_SCALE_MAX);
+          onFormatPatch({ qrScale: nextQrScale });
           return;
         }
         if (resizeState.target === "text") {
@@ -333,6 +362,22 @@ export function BannerCanvas({
         onFormatPatch({
           logoOffsetX: Math.round(nextOffsetX),
           logoOffsetY: Math.round(nextOffsetY),
+        });
+        return;
+      }
+
+      if (state.target === "qr") {
+        let nextOffsetX = state.origin.qrOffsetX + dx;
+        let nextOffsetY = state.origin.qrOffsetY + dy;
+        const nextCenterX = qrBaseLeft + Math.round(nextOffsetX * scale) + qrFrameSize / 2;
+        const nextCenterY = qrBaseTop + Math.round(nextOffsetY * scale) + qrFrameSize / 2;
+        const centerDiffX = boxW / 2 - nextCenterX;
+        const centerDiffY = boxH / 2 - nextCenterY;
+        if (Math.abs(centerDiffX) <= CENTER_MAGNET_PX) nextOffsetX += centerDiffX / scale;
+        if (Math.abs(centerDiffY) <= CENTER_MAGNET_PX) nextOffsetY += centerDiffY / scale;
+        onFormatPatch({
+          qrOffsetX: Math.round(nextOffsetX),
+          qrOffsetY: Math.round(nextOffsetY),
         });
         return;
       }
@@ -405,6 +450,9 @@ export function BannerCanvas({
     logoH,
     logoW,
     onFormatPatch,
+    qrBaseLeft,
+    qrBaseTop,
+    qrFrameSize,
     resolvedFormat.height,
     resolvedFormat.width,
     scale,
@@ -457,6 +505,8 @@ export function BannerCanvas({
   const selectedCenterX =
     selected === "logo"
       ? logoLeft + logoW / 2
+      : selected === "qr"
+        ? qrLeft + qrFrameSize / 2
       : selected === "text"
         ? textLeft + textW / 2
         : selected === "cta"
@@ -467,6 +517,8 @@ export function BannerCanvas({
   const selectedCenterY =
     selected === "logo"
       ? logoTop + logoH / 2
+      : selected === "qr"
+        ? qrTop + qrFrameSize / 2
       : selected === "text"
         ? textTop
         : selected === "cta"
@@ -553,14 +605,16 @@ export function BannerCanvas({
 
           {hasQr ? (
             <div
-              className="absolute overflow-hidden rounded-[10px] border border-white/70 bg-white/95 shadow-lg"
+              className={`absolute overflow-hidden rounded-[10px] border border-white/70 bg-white/95 shadow-lg ${editable ? "cursor-move" : ""} ${selected === "qr" ? "ring-2 ring-cyan-300" : ""}`}
+              onMouseDown={(event) => startDrag("qr", event)}
+              onWheel={(event) => onResizeWheel("qr", event)}
               style={{
                 left: `${qrLeft}px`,
                 top: `${qrTop}px`,
                 width: `${qrFrameSize}px`,
                 height: `${qrFrameSize}px`,
                 padding: `${qrPadding}px`,
-                zIndex: Math.max(zLogo, zCta, zText) + 5,
+                zIndex: zQr,
               }}
             >
               <img
@@ -569,6 +623,14 @@ export function BannerCanvas({
                 className="h-full w-full object-contain"
                 draggable={false}
               />
+              {editable && selected === "qr" ? (
+                <button
+                  type="button"
+                  aria-label="Resize QR"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("qr", event)}
+                />
+              ) : null}
             </div>
           ) : null}
 

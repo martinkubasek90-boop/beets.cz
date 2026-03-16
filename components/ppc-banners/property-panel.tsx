@@ -8,7 +8,7 @@ import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
-type LayerId = "logo" | "headline" | "description" | "description2" | "cta" | "background";
+type LayerId = "logo" | "qr" | "headline" | "description" | "description2" | "cta" | "background";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -200,7 +200,15 @@ export function PropertyPanel({
   const ctaAlignX = format?.ctaAlignX || "left";
   const ctaAlignY = format?.ctaAlignY || "bottom";
   const currentLayerKey =
-    activeLayer === "logo" ? "logo" : activeLayer === "cta" ? "cta" : activeLayer === "headline" || activeLayer === "description" || activeLayer === "description2" ? "text" : "background";
+    activeLayer === "logo"
+      ? "logo"
+      : activeLayer === "qr"
+        ? "qr"
+        : activeLayer === "cta"
+          ? "cta"
+          : activeLayer === "headline" || activeLayer === "description" || activeLayer === "description2"
+            ? "text"
+            : "background";
   const headlineValue = format?.headline ?? banner.headline;
   const subheadlineValue = format?.subheadline ?? banner.subheadline;
   const subheadline2Value = format?.subheadline2 ?? "";
@@ -215,18 +223,20 @@ export function PropertyPanel({
   const offsetRangeY = Math.max(320, Math.round(formatHeight * 1.25));
   const zMap = {
     logo: typeof format?.zLogo === "number" ? format.zLogo : 40,
+    qr: typeof format?.zQr === "number" ? format.zQr : 45,
     text: typeof format?.zText === "number" ? format.zText : 30,
     cta: typeof format?.zCta === "number" ? format.zCta : 50,
   } as const;
   const orderedLayers = Object.entries(zMap)
     .sort((a, b) => a[1] - b[1])
-    .map(([key]) => key as "logo" | "text" | "cta");
-  const currentOrderIndex = currentLayerKey === "background" ? -1 : orderedLayers.indexOf(currentLayerKey as "logo" | "text" | "cta");
+    .map(([key]) => key as "logo" | "qr" | "text" | "cta");
+  const currentOrderIndex = currentLayerKey === "background" ? -1 : orderedLayers.indexOf(currentLayerKey as "logo" | "qr" | "text" | "cta");
 
-  const applyLayerOrder = (order: Array<"logo" | "text" | "cta">) => {
+  const applyLayerOrder = (order: Array<"logo" | "qr" | "text" | "cta">) => {
     order.forEach((layer, idx) => {
       const z = 10 + idx * 10;
       if (layer === "logo") onFormatChange("zLogo", z);
+      if (layer === "qr") onFormatChange("zQr", z);
       if (layer === "text") onFormatChange("zText", z);
       if (layer === "cta") onFormatChange("zCta", z);
     });
@@ -268,11 +278,12 @@ export function PropertyPanel({
         <div className="grid grid-cols-1 gap-2">
           {([
             ["logo", "1. Logo"],
-            ["headline", "2. Nadpis"],
-            ["description", "3. Popis"],
-            ["description2", "4. POPIS 2"],
-            ["cta", "5. CTA"],
-            ["background", "6. Background foto"],
+            ["qr", "2. QR"],
+            ["headline", "3. Nadpis"],
+            ["description", "4. Popis"],
+            ["description2", "5. POPIS 2"],
+            ["cta", "6. CTA"],
+            ["background", "7. Background foto"],
           ] as const).map(([id, label]) => (
             <button
               key={id}
@@ -338,6 +349,39 @@ export function PropertyPanel({
               </div>
               <AlignButtons label="Zarovnání X" value={logoAlignX} onChange={(v) => onFormatChange("logoAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání Y" value={logoAlignY} onChange={(v) => onFormatChange("logoAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
+            </>
+          ) : null}
+
+          {activeLayer === "qr" ? (
+            <>
+              <Label className="text-xs text-slate-600">QR kod URL</Label>
+              <Input value={banner.qrImageUrl || ""} onChange={(e) => onBannerChange("qrImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../qr.jpg" />
+              <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                <Upload className="h-3.5 w-3.5" />
+                Vybrat QR obrazek
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => void onQrUpload(e.target.files?.[0] || null)} />
+              </label>
+              {banner.qrImageUrl ? (
+                <button
+                  type="button"
+                  onClick={() => onBannerChange("qrImageUrl", "")}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  Odebrat QR obrazek
+                </button>
+              ) : null}
+              <div className="space-y-2">
+                <Label className="text-xs">Velikost QR: {(format.qrScale || 1).toFixed(2)}x</Label>
+                <RangeWithCenter min={0.4} max={4} step={0.05} value={format.qrScale || 1} onChange={(v) => onFormatChange("qrScale", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun QR X: {format.qrOffsetX || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.qrOffsetX || 0} onChange={(v) => onFormatChange("qrOffsetX", v)} center={0} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun QR Y: {format.qrOffsetY || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.qrOffsetY || 0} onChange={(v) => onFormatChange("qrOffsetY", v)} center={0} />
+              </div>
             </>
           ) : null}
 
@@ -460,29 +504,6 @@ export function PropertyPanel({
           <Label className="text-xs text-slate-600">Barva textu</Label>
           <Input type="color" value={banner.textColor} onChange={(e) => onBannerChange("textColor", e.target.value)} className="h-11 border-slate-200 bg-white p-1.5" />
         </div>
-      </div>
-
-      <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Dalsi obrazek</p>
-        <div className="space-y-2">
-          <Label className="text-xs text-slate-600">QR kod URL</Label>
-          <Input value={banner.qrImageUrl || ""} onChange={(e) => onBannerChange("qrImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../qr.jpg" />
-        </div>
-        <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
-          <Upload className="h-3.5 w-3.5" />
-          Vybrat QR obrazek
-          <input type="file" className="hidden" accept="image/*" onChange={(e) => void onQrUpload(e.target.files?.[0] || null)} />
-        </label>
-        {banner.qrImageUrl ? (
-          <button
-            type="button"
-            onClick={() => onBannerChange("qrImageUrl", "")}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Odebrat QR obrazek
-          </button>
-        ) : null}
-        <p className="text-[11px] text-slate-500">QR se vykresli do praveho dolniho rohu a bude i v exportu.</p>
       </div>
 
       <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">

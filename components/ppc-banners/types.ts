@@ -12,10 +12,13 @@ export type BannerFormat = {
   subheadlineSize: number;
   ctaSize: number;
   logoScale: number;
+  qrScale?: number;
   textOffsetX: number;
   textOffsetY: number;
   logoOffsetX: number;
   logoOffsetY: number;
+  qrOffsetX?: number;
+  qrOffsetY?: number;
   ctaOffsetX: number;
   ctaOffsetY: number;
   shapeEnabled: boolean;
@@ -34,6 +37,7 @@ export type BannerFormat = {
   ctaAlignX?: "left" | "center" | "right";
   ctaAlignY?: "top" | "center" | "bottom";
   zLogo?: number;
+  zQr?: number;
   zText?: number;
   zCta?: number;
   zShape?: number;

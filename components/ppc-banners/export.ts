@@ -184,11 +184,13 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   }
 
   const boxH = model.boxH;
-  const qrFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.19, 56, 220));
+  const qrScale = clamp(format.qrScale || 1, 0.4, 4);
+  const qrBaseFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.19, 56, 220));
+  const qrFrameSize = Math.round(qrBaseFrameSize * qrScale);
   const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
   const qrImageSize = qrFrameSize - qrPadding * 2;
-  const qrLeft = viewW - model.padding - qrFrameSize;
-  const qrTop = viewH - model.padding - qrFrameSize;
+  const qrLeft = viewW - model.padding - qrFrameSize + Math.round(format.qrOffsetX || 0);
+  const qrTop = viewH - model.padding - qrFrameSize + Math.round(format.qrOffsetY || 0);
   const overlayIcon = (banner.overlayIcon || "").trim();
   const hasOverlayIcon = Boolean(overlayIcon);
   const iconFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.13, 44, 160));
