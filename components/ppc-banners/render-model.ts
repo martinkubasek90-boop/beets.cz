@@ -95,8 +95,10 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
 
   const ctaAlignX = format.ctaAlignX || "left";
   const ctaAlignY = format.ctaAlignY || "bottom";
-  const ctaW = Math.round((resolvedCtaText || "Zjistit více").length * ctaSize * 0.55 + 32);
-  const ctaH = Math.round(ctaSize + 20);
+  const ctaPadX = Math.round(16 * scale);
+  const ctaPadY = Math.round(10 * scale);
+  const ctaW = Math.round((resolvedCtaText || "Zjistit více").length * ctaSize * 0.55 + ctaPadX * 2);
+  const ctaH = Math.round(ctaSize + ctaPadY * 2);
   const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - padding - ctaW;
   const ctaBaseY = ctaAlignY === "top" ? padding : ctaAlignY === "center" ? Math.round((boxH - ctaH) / 2) : boxH - padding - ctaH;
   const ctaLeft = ctaBaseX + ctaOffsetX;

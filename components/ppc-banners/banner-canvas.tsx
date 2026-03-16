@@ -224,7 +224,7 @@ export function BannerCanvas({
   const logoBaseLeft = logoLeft - Math.round((resolvedFormat.logoOffsetX || 0) * scale);
   const logoBaseTop = logoTop - Math.round((resolvedFormat.logoOffsetY || 0) * scale);
   const qrScale = clamp(resolvedFormat.qrScale || 1, QR_SCALE_MIN, QR_SCALE_MAX);
-  const qrBaseFrameSize = Math.round(clamp(Math.min(boxW, boxH) * 0.19, 56, 220));
+  const qrBaseFrameSize = Math.round(clamp(Math.min(resolvedFormat.width, resolvedFormat.height) * 0.19, 56, 220) * scale);
   const qrFrameSize = Math.round(qrBaseFrameSize * qrScale);
   const qrPadding = Math.max(6, Math.round(qrFrameSize * 0.08));
   const qrBaseLeft = boxW - padding - qrFrameSize;

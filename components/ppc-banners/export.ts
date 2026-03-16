@@ -305,15 +305,14 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   ctx.font = `700 ${model.ctaSize}px ${BANNER_FONT_STACK}`;
   const ctaW = model.ctaW;
   const ctaH = model.ctaH;
-  const ctaPadX = 16;
   const ctaX = model.ctaLeft;
   const ctaY = model.ctaTop;
   ctx.fillStyle = banner.ctaBg || "#facc15";
   ctx.fillRect(ctaX, ctaY, ctaW, ctaH);
   ctx.fillStyle = banner.ctaTextColor || "#111827";
-  ctx.textAlign = "left";
+  ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(ctaText, Math.round(ctaX + ctaPadX), Math.round(ctaY + ctaH / 2));
+  ctx.fillText(ctaText, Math.round(ctaX + ctaW / 2), Math.round(ctaY + ctaH / 2));
 
   if (targetW === viewW && targetH === viewH) {
     const outputCanvas = document.createElement("canvas");
