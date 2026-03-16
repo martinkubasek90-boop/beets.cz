@@ -248,7 +248,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       ctx.fillStyle = "rgba(255,255,255,0.96)";
       ctx.strokeStyle = "rgba(255,255,255,0.7)";
       ctx.lineWidth = 2;
-      roundedRectPath(ctx, qrLeft, qrTop, qrFrameSize, qrFrameSize, 16);
+      roundedRectPath(ctx, qrLeft, qrTop, qrFrameSize, qrFrameSize, Math.round(qrFrameSize * 0.12));
       ctx.fill();
       ctx.stroke();
 
@@ -296,10 +296,10 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.textBaseline = "alphabetic";
   };
 
-  drawTextBlock(resolvedHeadline || "", model.headlineSize, "800", model.headlineLeft, model.headlineTop, format.layout === "vertical" ? 4 : 3, model.headlineSize * 1.05);
-  drawTextBlock(resolvedSubheadline || "", model.subheadlineSize, "500", model.subheadlineLeft, model.subheadlineTop, format.layout === "vertical" ? 5 : 4, model.subheadlineSize * 1.5);
-  drawTextBlock(resolvedSubheadline2 || "", resolvedSubheadline2Size, "500", model.subheadline2Left, model.subheadline2Top, format.layout === "vertical" ? 5 : 4, resolvedSubheadline2Size * 1.5);
-  drawTextBlock(resolvedContactText || "", resolvedContactSize, "500", model.contactLeft, model.contactTop, 4, resolvedContactSize * 1.4);
+  drawTextBlock(resolvedHeadline || "", model.headlineSize, "800", model.headlineLeft, model.headlineTop, format.layout === "vertical" ? 8 : 6, model.headlineSize * 1.05);
+  drawTextBlock(resolvedSubheadline || "", model.subheadlineSize, "500", model.subheadlineLeft, model.subheadlineTop, format.layout === "vertical" ? 12 : 10, model.subheadlineSize * 1.5);
+  drawTextBlock(resolvedSubheadline2 || "", resolvedSubheadline2Size, "500", model.subheadline2Left, model.subheadline2Top, format.layout === "vertical" ? 12 : 10, resolvedSubheadline2Size * 1.5);
+  drawTextBlock(resolvedContactText || "", resolvedContactSize, "500", model.contactLeft, model.contactTop, 8, resolvedContactSize * 1.4);
 
   const ctaText = resolvedCtaText || "Zjistit více";
   ctx.font = `700 ${model.ctaSize}px ${BANNER_FONT_STACK}`;
