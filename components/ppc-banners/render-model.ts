@@ -11,14 +11,21 @@ export type BannerRenderModel = {
   headlineSize: number;
   subheadlineSize: number;
   subheadline2Size: number;
+  contactSize: number;
   ctaSize: number;
   logoW: number;
   logoH: number;
   logoLeft: number;
   logoTop: number;
   textW: number;
-  textLeft: number;
-  textTop: number;
+  headlineLeft: number;
+  headlineTop: number;
+  subheadlineLeft: number;
+  subheadlineTop: number;
+  subheadline2Left: number;
+  subheadline2Top: number;
+  contactLeft: number;
+  contactTop: number;
   ctaW: number;
   ctaH: number;
   ctaLeft: number;
@@ -29,6 +36,7 @@ export type BannerRenderModel = {
   resolvedHeadline: string;
   resolvedSubheadline: string;
   resolvedSubheadline2: string;
+  resolvedContactText: string;
   resolvedCtaText: string;
   resolvedBgImageUrl: string;
 };
@@ -38,6 +46,7 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const headlineSize = Math.max(12, Math.round(format.headlineSize * scale));
   const subheadlineSize = Math.max(10, Math.round(format.subheadlineSize * scale));
   const subheadline2Size = Math.max(10, Math.round((format.subheadline2Size || format.subheadlineSize) * scale));
+  const contactSize = Math.max(10, Math.round((format.contactSize || format.subheadlineSize) * scale));
   const ctaSize = Math.max(10, Math.round(format.ctaSize * scale));
   const logoScale = Math.max(0.4, Math.min(12, format.logoScale || 1));
   const logoOffsetX = Math.round((format.logoOffsetX || 0) * scale);
@@ -50,6 +59,7 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const resolvedHeadline = format.headline ?? banner.headline;
   const resolvedSubheadline = format.subheadline ?? banner.subheadline;
   const resolvedSubheadline2 = format.subheadline2 ?? "";
+  const resolvedContactText = format.contactText ?? banner.contactText ?? "";
   const resolvedCtaText = format.ctaText ?? banner.ctaText;
   const resolvedBgImageUrl = format.bgImageUrl ?? banner.bgImageUrl ?? "";
   const bgScale = clamp(typeof format.bgScale === "number" ? format.bgScale : typeof banner.bgScale === "number" ? banner.bgScale : 100, 10, 260);
@@ -73,8 +83,15 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const textW = Math.max(120, boxW - padding * 2 - 10);
   const textBaseX = textAlignX === "left" ? padding : textAlignX === "center" ? Math.round((boxW - textW) / 2) : boxW - padding - textW;
   const textBaseY = textAlignY === "top" ? padding + Math.round(80 * scale) : textAlignY === "center" ? Math.round(boxH * 0.37) : boxH - padding - Math.round(140 * scale);
-  const textLeft = textBaseX + textOffsetX;
-  const textTop = textBaseY + textOffsetY;
+  const headlineLeft = textBaseX + textOffsetX + Math.round((format.headlineOffsetX || 0) * scale);
+  const headlineTop = textBaseY + textOffsetY + Math.round((format.headlineOffsetY || 0) * scale);
+  const subheadlineLeft = textBaseX + textOffsetX + Math.round((format.subheadlineOffsetX || 0) * scale);
+  const subheadlineTop = textBaseY + textOffsetY + Math.round(headlineSize * 1.35) + Math.round((format.subheadlineOffsetY || 0) * scale);
+  const subheadline2Left = textBaseX + textOffsetX + Math.round((format.subheadline2OffsetX || 0) * scale);
+  const subheadline2Top = textBaseY + textOffsetY + Math.round(headlineSize * 1.35 + subheadlineSize * 1.7) + Math.round((format.subheadline2OffsetY || 0) * scale);
+  const contactBaseY = boxH - padding - Math.round(contactSize * 2.2);
+  const contactLeft = textBaseX + Math.round((format.contactOffsetX || 0) * scale);
+  const contactTop = contactBaseY + Math.round((format.contactOffsetY || 0) * scale);
 
   const ctaAlignX = format.ctaAlignX || "left";
   const ctaAlignY = format.ctaAlignY || "bottom";
@@ -92,14 +109,21 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
     headlineSize,
     subheadlineSize,
     subheadline2Size,
+    contactSize,
     ctaSize,
     logoW,
     logoH,
     logoLeft,
     logoTop,
     textW,
-    textLeft,
-    textTop,
+    headlineLeft,
+    headlineTop,
+    subheadlineLeft,
+    subheadlineTop,
+    subheadline2Left,
+    subheadline2Top,
+    contactLeft,
+    contactTop,
     ctaW,
     ctaH,
     ctaLeft,
@@ -110,6 +134,7 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
     resolvedHeadline,
     resolvedSubheadline,
     resolvedSubheadline2,
+    resolvedContactText,
     resolvedCtaText,
     resolvedBgImageUrl,
   };

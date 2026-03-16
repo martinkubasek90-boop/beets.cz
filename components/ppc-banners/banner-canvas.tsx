@@ -8,8 +8,8 @@ import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render
 
 const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
 
-type DragTarget = "logo" | "qr" | "text" | "cta" | "shape";
-type ResizeTarget = "logo" | "qr" | "text" | "shape";
+type DragTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta" | "shape";
+type ResizeTarget = "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "shape";
 
 type DragState = {
   target: DragTarget;
@@ -20,8 +20,14 @@ type DragState = {
     logoOffsetY: number;
     qrOffsetX: number;
     qrOffsetY: number;
-    textOffsetX: number;
-    textOffsetY: number;
+    headlineOffsetX: number;
+    headlineOffsetY: number;
+    subheadlineOffsetX: number;
+    subheadlineOffsetY: number;
+    subheadline2OffsetX: number;
+    subheadline2OffsetY: number;
+    contactOffsetX: number;
+    contactOffsetY: number;
     ctaOffsetX: number;
     ctaOffsetY: number;
     shapeX: number;
@@ -39,6 +45,7 @@ type ResizeState = {
     headlineSize: number;
     subheadlineSize: number;
     subheadline2Size: number;
+    contactSize: number;
     shapeSize: number;
   };
 };
@@ -51,11 +58,20 @@ const FALLBACK_FORMAT: BannerFormat = {
   layout: "horizontal",
   headlineSize: 144,
   subheadlineSize: 64,
+  contactSize: 52,
   ctaSize: 56,
   logoScale: 1,
   qrScale: 1,
   textOffsetX: 0,
   textOffsetY: 0,
+  headlineOffsetX: 0,
+  headlineOffsetY: 0,
+  subheadlineOffsetX: 0,
+  subheadlineOffsetY: 0,
+  subheadline2OffsetX: 0,
+  subheadline2OffsetY: 0,
+  contactOffsetX: 0,
+  contactOffsetY: 0,
   logoOffsetX: 0,
   logoOffsetY: 0,
   qrOffsetX: 0,
@@ -79,6 +95,10 @@ const FALLBACK_FORMAT: BannerFormat = {
   zLogo: 40,
   zQr: 45,
   zText: 30,
+  zHeadline: 30,
+  zSubheadline: 31,
+  zSubheadline2: 32,
+  zContact: 33,
   zCta: 50,
   zShape: 10,
   padding: 112,
@@ -151,10 +171,12 @@ export function BannerCanvas({
   const headlineSize = model.headlineSize;
   const subheadlineSize = model.subheadlineSize;
   const subheadline2Size = model.subheadline2Size;
+  const contactSize = model.contactSize;
   const ctaSize = model.ctaSize;
   const resolvedHeadline = model.resolvedHeadline;
   const resolvedSubheadline = model.resolvedSubheadline;
   const resolvedSubheadline2 = model.resolvedSubheadline2;
+  const resolvedContactText = model.resolvedContactText;
   const resolvedCtaText = model.resolvedCtaText;
   const resolvedBgImageUrl = model.resolvedBgImageUrl;
   const bgPreviewUrl = toPreviewImageUrl(resolvedBgImageUrl);
@@ -166,11 +188,17 @@ export function BannerCanvas({
   const shapeSizePx = Math.round(Math.min(boxW, boxH) * ((resolvedFormat.shapeSize || 24) / 100));
   const shapeLeft = Math.round(boxW * ((resolvedFormat.shapeX || 78) / 100) - shapeSizePx / 2);
   const shapeTop = Math.round(boxH * ((resolvedFormat.shapeY || 22) / 100) - shapeSizePx / 2);
-  const sizeTarget = selected === "text" || selected === "logo" || selected === "qr" || selected === "shape" ? selected : null;
+  const sizeTarget =
+    selected === "headline" || selected === "subheadline" || selected === "subheadline2" || selected === "contact" || selected === "logo" || selected === "qr" || selected === "shape"
+      ? selected
+      : null;
   const textContentAlign = resolvedFormat.textContentAlign || "left";
   const zLogo = typeof resolvedFormat.zLogo === "number" ? resolvedFormat.zLogo : 40;
   const zQr = typeof resolvedFormat.zQr === "number" ? resolvedFormat.zQr : 45;
-  const zText = typeof resolvedFormat.zText === "number" ? resolvedFormat.zText : 30;
+  const zHeadline = typeof resolvedFormat.zHeadline === "number" ? resolvedFormat.zHeadline : 30;
+  const zSubheadline = typeof resolvedFormat.zSubheadline === "number" ? resolvedFormat.zSubheadline : 31;
+  const zSubheadline2 = typeof resolvedFormat.zSubheadline2 === "number" ? resolvedFormat.zSubheadline2 : 32;
+  const zContact = typeof resolvedFormat.zContact === "number" ? resolvedFormat.zContact : 33;
   const zCta = typeof resolvedFormat.zCta === "number" ? resolvedFormat.zCta : 50;
   const zShape = typeof resolvedFormat.zShape === "number" ? resolvedFormat.zShape : 10;
 
@@ -180,9 +208,14 @@ export function BannerCanvas({
   const logoTop = model.logoTop;
 
   const textW = model.textW;
-  const textLeft = model.textLeft;
-  const textTop = model.textTop;
-  const textGap = Math.max(2, Math.round(8 * scale));
+  const headlineLeft = model.headlineLeft;
+  const headlineTop = model.headlineTop;
+  const subheadlineLeft = model.subheadlineLeft;
+  const subheadlineTop = model.subheadlineTop;
+  const subheadline2Left = model.subheadline2Left;
+  const subheadline2Top = model.subheadline2Top;
+  const contactLeft = model.contactLeft;
+  const contactTop = model.contactTop;
 
   const estimatedCtaW = model.ctaW;
   const estimatedCtaH = model.ctaH;
@@ -198,14 +231,21 @@ export function BannerCanvas({
   const qrBaseTop = boxH - padding - qrFrameSize;
   const qrLeft = qrBaseLeft + Math.round((resolvedFormat.qrOffsetX || 0) * scale);
   const qrTop = qrBaseTop + Math.round((resolvedFormat.qrOffsetY || 0) * scale);
-  const textBaseLeft = textLeft - Math.round((resolvedFormat.textOffsetX || 0) * scale);
-  const textBaseTop = textTop - Math.round((resolvedFormat.textOffsetY || 0) * scale);
+  const headlineBaseLeft = headlineLeft - Math.round((resolvedFormat.headlineOffsetX || 0) * scale);
+  const headlineBaseTop = headlineTop - Math.round((resolvedFormat.headlineOffsetY || 0) * scale);
+  const subheadlineBaseLeft = subheadlineLeft - Math.round((resolvedFormat.subheadlineOffsetX || 0) * scale);
+  const subheadlineBaseTop = subheadlineTop - Math.round((resolvedFormat.subheadlineOffsetY || 0) * scale);
+  const subheadline2BaseLeft = subheadline2Left - Math.round((resolvedFormat.subheadline2OffsetX || 0) * scale);
+  const subheadline2BaseTop = subheadline2Top - Math.round((resolvedFormat.subheadline2OffsetY || 0) * scale);
+  const contactBaseLeft = contactLeft - Math.round((resolvedFormat.contactOffsetX || 0) * scale);
+  const contactBaseTop = contactTop - Math.round((resolvedFormat.contactOffsetY || 0) * scale);
   const ctaBaseLeft = ctaLeft - Math.round((resolvedFormat.ctaOffsetX || 0) * scale);
   const ctaBaseTop = ctaTop - Math.round((resolvedFormat.ctaOffsetY || 0) * scale);
   const hasLogo = Boolean((banner.logoUrl || "").trim());
   const hasHeadline = Boolean((resolvedHeadline || "").trim());
   const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
   const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
+  const hasContact = Boolean((resolvedContactText || "").trim());
   const hasLogoTransparent = Boolean(banner.logoTransparentBg);
   const logoRawPreviewSrc = banner.logoUrl ? toPreviewImageUrl(banner.logoUrl) : "";
   const qrPreviewSrc = banner.qrImageUrl ? toPreviewImageUrl(banner.qrImageUrl) : "";
@@ -220,17 +260,10 @@ export function BannerCanvas({
   const patchSize = useCallback(
     (target: ResizeTarget, direction: 1 | -1) => {
       if (!editable || !onFormatPatch) return;
-      if (target === "text") {
-        const nextHeadline = applyStep(resolvedFormat.headlineSize || 56, direction * 4, 16, 180);
-        const nextSubheadline = applyStep(resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96);
-        const nextSubheadline2 = applyStep(resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96);
-        onFormatPatch({
-          headlineSize: Math.round(nextHeadline),
-          subheadlineSize: Math.round(nextSubheadline),
-          subheadline2Size: Math.round(nextSubheadline2),
-        });
-        return;
-      }
+      if (target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resolvedFormat.headlineSize || 56, direction * 4, 16, 180)) });
+      if (target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
+      if (target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
+      if (target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resolvedFormat.contactSize || resolvedFormat.subheadlineSize || 28, direction * 2, 12, 96)) });
       if (target === "logo") {
         onFormatPatch({
           logoScale: applyStep(resolvedFormat.logoScale || 1, direction * 0.1, LOGO_SCALE_MIN, LOGO_SCALE_MAX),
@@ -252,6 +285,7 @@ export function BannerCanvas({
       onFormatPatch,
       resolvedFormat.headlineSize,
       resolvedFormat.logoScale,
+      resolvedFormat.contactSize,
       resolvedFormat.qrScale,
       resolvedFormat.shapeSize,
       resolvedFormat.subheadlineSize,
@@ -273,13 +307,19 @@ export function BannerCanvas({
           logoOffsetY: resolvedFormat.logoOffsetY || 0,
           qrOffsetX: resolvedFormat.qrOffsetX || 0,
           qrOffsetY: resolvedFormat.qrOffsetY || 0,
-          textOffsetX: resolvedFormat.textOffsetX || 0,
-        textOffsetY: resolvedFormat.textOffsetY || 0,
-        ctaOffsetX: resolvedFormat.ctaOffsetX || 0,
-        ctaOffsetY: resolvedFormat.ctaOffsetY || 0,
-        shapeX: resolvedFormat.shapeX || 78,
-        shapeY: resolvedFormat.shapeY || 22,
-      },
+          headlineOffsetX: resolvedFormat.headlineOffsetX || 0,
+          headlineOffsetY: resolvedFormat.headlineOffsetY || 0,
+          subheadlineOffsetX: resolvedFormat.subheadlineOffsetX || 0,
+          subheadlineOffsetY: resolvedFormat.subheadlineOffsetY || 0,
+          subheadline2OffsetX: resolvedFormat.subheadline2OffsetX || 0,
+          subheadline2OffsetY: resolvedFormat.subheadline2OffsetY || 0,
+          contactOffsetX: resolvedFormat.contactOffsetX || 0,
+          contactOffsetY: resolvedFormat.contactOffsetY || 0,
+          ctaOffsetX: resolvedFormat.ctaOffsetX || 0,
+          ctaOffsetY: resolvedFormat.ctaOffsetY || 0,
+          shapeX: resolvedFormat.shapeX || 78,
+          shapeY: resolvedFormat.shapeY || 22,
+        },
     };
   };
 
@@ -298,6 +338,7 @@ export function BannerCanvas({
         headlineSize: resolvedFormat.headlineSize || 56,
         subheadlineSize: resolvedFormat.subheadlineSize || 28,
         subheadline2Size: resolvedFormat.subheadline2Size || resolvedFormat.subheadlineSize || 28,
+        contactSize: resolvedFormat.contactSize || resolvedFormat.subheadlineSize || 28,
         shapeSize: resolvedFormat.shapeSize || 24,
       },
     };
@@ -329,17 +370,10 @@ export function BannerCanvas({
           onFormatPatch({ qrScale: nextQrScale });
           return;
         }
-        if (resizeState.target === "text") {
-          const nextHeadline = applyStep(resizeState.origin.headlineSize, dragDelta * 1.1, 16, 180);
-          const nextSubheadline = applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 96);
-          const nextSubheadline2 = applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 96);
-          onFormatPatch({
-            headlineSize: Math.round(nextHeadline),
-            subheadlineSize: Math.round(nextSubheadline),
-            subheadline2Size: Math.round(nextSubheadline2),
-          });
-          return;
-        }
+        if (resizeState.target === "headline") return void onFormatPatch({ headlineSize: Math.round(applyStep(resizeState.origin.headlineSize, dragDelta * 1.1, 16, 180)) });
+        if (resizeState.target === "subheadline") return void onFormatPatch({ subheadlineSize: Math.round(applyStep(resizeState.origin.subheadlineSize, dragDelta * 0.55, 12, 96)) });
+        if (resizeState.target === "subheadline2") return void onFormatPatch({ subheadline2Size: Math.round(applyStep(resizeState.origin.subheadline2Size, dragDelta * 0.55, 12, 96)) });
+        if (resizeState.target === "contact") return void onFormatPatch({ contactSize: Math.round(applyStep(resizeState.origin.contactSize, dragDelta * 0.55, 12, 96)) });
         const nextShapeSize = applyStep(resizeState.origin.shapeSize, dragDelta / 2.2, 4, 80);
         onFormatPatch({ shapeSize: Math.round(nextShapeSize) });
         return;
@@ -382,18 +416,50 @@ export function BannerCanvas({
         return;
       }
 
-      if (state.target === "text") {
-        let nextOffsetX = state.origin.textOffsetX + dx;
-        let nextOffsetY = state.origin.textOffsetY + dy;
-        const nextCenterX = textBaseLeft + Math.round(nextOffsetX * scale) + textW / 2;
-        const nextCenterY = textBaseTop + Math.round(nextOffsetY * scale);
+      if (state.target === "headline" || state.target === "subheadline" || state.target === "subheadline2" || state.target === "contact") {
+        const offsetKeyX =
+          state.target === "headline"
+            ? "headlineOffsetX"
+            : state.target === "subheadline"
+              ? "subheadlineOffsetX"
+              : state.target === "subheadline2"
+                ? "subheadline2OffsetX"
+                : "contactOffsetX";
+        const offsetKeyY =
+          state.target === "headline"
+            ? "headlineOffsetY"
+            : state.target === "subheadline"
+              ? "subheadlineOffsetY"
+              : state.target === "subheadline2"
+                ? "subheadline2OffsetY"
+                : "contactOffsetY";
+        const baseLeft =
+          state.target === "headline"
+            ? headlineBaseLeft
+            : state.target === "subheadline"
+              ? subheadlineBaseLeft
+              : state.target === "subheadline2"
+                ? subheadline2BaseLeft
+                : contactBaseLeft;
+        const baseTop =
+          state.target === "headline"
+            ? headlineBaseTop
+            : state.target === "subheadline"
+              ? subheadlineBaseTop
+              : state.target === "subheadline2"
+                ? subheadline2BaseTop
+                : contactBaseTop;
+        let nextOffsetX = state.origin[offsetKeyX] + dx;
+        let nextOffsetY = state.origin[offsetKeyY] + dy;
+        const nextCenterX = baseLeft + Math.round(nextOffsetX * scale) + textW / 2;
+        const nextCenterY = baseTop + Math.round(nextOffsetY * scale);
         const centerDiffX = boxW / 2 - nextCenterX;
         const centerDiffY = boxH / 2 - nextCenterY;
         if (Math.abs(centerDiffX) <= CENTER_MAGNET_PX) nextOffsetX += centerDiffX / scale;
         if (Math.abs(centerDiffY) <= CENTER_MAGNET_PX) nextOffsetY += centerDiffY / scale;
         onFormatPatch({
-          textOffsetX: Math.round(nextOffsetX),
-          textOffsetY: Math.round(nextOffsetY),
+          [offsetKeyX]: Math.round(nextOffsetX),
+          [offsetKeyY]: Math.round(nextOffsetY),
         });
         return;
       }
@@ -442,9 +508,13 @@ export function BannerCanvas({
     boxW,
     ctaBaseLeft,
     ctaBaseTop,
+    contactBaseLeft,
+    contactBaseTop,
     editable,
     estimatedCtaH,
     estimatedCtaW,
+    headlineBaseLeft,
+    headlineBaseTop,
     logoBaseLeft,
     logoBaseTop,
     logoH,
@@ -456,8 +526,10 @@ export function BannerCanvas({
     resolvedFormat.height,
     resolvedFormat.width,
     scale,
-    textBaseLeft,
-    textBaseTop,
+    subheadline2BaseLeft,
+    subheadline2BaseTop,
+    subheadlineBaseLeft,
+    subheadlineBaseTop,
     textW,
   ]);
 
@@ -507,8 +579,14 @@ export function BannerCanvas({
       ? logoLeft + logoW / 2
       : selected === "qr"
         ? qrLeft + qrFrameSize / 2
-      : selected === "text"
-        ? textLeft + textW / 2
+      : selected === "headline"
+        ? headlineLeft + textW / 2
+      : selected === "subheadline"
+        ? subheadlineLeft + textW / 2
+      : selected === "subheadline2"
+        ? subheadline2Left + textW / 2
+      : selected === "contact"
+        ? contactLeft + textW / 2
         : selected === "cta"
           ? ctaLeft + estimatedCtaW / 2
           : selected === "shape"
@@ -519,8 +597,14 @@ export function BannerCanvas({
       ? logoTop + logoH / 2
       : selected === "qr"
         ? qrTop + qrFrameSize / 2
-      : selected === "text"
-        ? textTop
+      : selected === "headline"
+        ? headlineTop
+      : selected === "subheadline"
+        ? subheadlineTop
+      : selected === "subheadline2"
+        ? subheadline2Top
+      : selected === "contact"
+        ? contactTop
         : selected === "cta"
           ? ctaTop + estimatedCtaH / 2
           : selected === "shape"
@@ -645,77 +729,116 @@ export function BannerCanvas({
                 fontSize: `${iconFontSize}px`,
                 lineHeight: "1",
                 fontFamily: BANNER_FONT_STACK,
-                zIndex: Math.max(zLogo, zCta, zText) + 4,
+                zIndex: Math.max(zLogo, zCta, zHeadline, zSubheadline, zSubheadline2, zContact) + 4,
               }}
             >
               <span>{overlayIcon}</span>
             </div>
           ) : null}
 
-          {hasHeadline || hasSubheadline || hasSubheadline2 ? (
+          {hasHeadline ? (
             <div
-              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "text" ? "ring-2 ring-cyan-300" : ""}`}
+              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "headline" ? "ring-2 ring-cyan-300" : ""}`}
               style={{
-                left: `${textLeft}px`,
-                top: `${textTop}px`,
+                left: `${headlineLeft}px`,
+                top: `${headlineTop}px`,
                 width: `${textW}px`,
-                transform: "translateY(-50%)",
                 textAlign: textContentAlign,
-                zIndex: zText,
+                zIndex: zHeadline,
               }}
-              onMouseDown={(event) => startDrag("text", event)}
-              onWheel={(event) => onResizeWheel("text", event)}
+              onMouseDown={(event) => startDrag("headline", event)}
+              onWheel={(event) => onResizeWheel("headline", event)}
             >
-              {hasHeadline ? (
-                <h2
-                  className="font-extrabold"
-                  style={{
-                    color: banner.textColor,
-                    fontSize: `${headlineSize}px`,
-                    lineHeight: "1.05",
-                    fontFamily: BANNER_FONT_STACK,
-                    margin: 0,
-                  }}
-                >
-                  {resolvedHeadline}
-                </h2>
-              ) : null}
-              {hasSubheadline ? (
-                <p
-                  className="font-medium"
-                  style={{
-                    marginTop: hasHeadline ? `${textGap}px` : undefined,
-                    color: banner.textColor,
-                    fontSize: `${subheadlineSize}px`,
-                    lineHeight: "1.5",
-                    fontFamily: BANNER_FONT_STACK,
-                    margin: 0,
-                  }}
-                >
-                  {resolvedSubheadline}
-                </p>
-              ) : null}
-              {hasSubheadline2 ? (
-                <p
-                  className="font-medium"
-                  style={{
-                    marginTop: hasHeadline || hasSubheadline ? `${textGap}px` : undefined,
-                    color: banner.textColor,
-                    fontSize: `${subheadline2Size}px`,
-                    lineHeight: "1.5",
-                    fontFamily: BANNER_FONT_STACK,
-                    margin: 0,
-                  }}
-                >
-                  {resolvedSubheadline2}
-                </p>
-              ) : null}
-              {editable && selected === "text" ? (
+              <h2
+                className="font-extrabold whitespace-pre-wrap"
+                style={{
+                  color: banner.textColor,
+                  fontSize: `${headlineSize}px`,
+                  lineHeight: "1.05",
+                  fontFamily: BANNER_FONT_STACK,
+                  margin: 0,
+                }}
+              >
+                {resolvedHeadline}
+              </h2>
+              {editable && selected === "headline" ? (
                 <button
                   type="button"
-                  aria-label="Resize text"
+                  aria-label="Resize headline"
                   className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
-                  onMouseDown={(event) => startResize("text", event)}
+                  onMouseDown={(event) => startResize("headline", event)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasSubheadline ? (
+            <div
+              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "subheadline" ? "ring-2 ring-cyan-300" : ""}`}
+              style={{ left: `${subheadlineLeft}px`, top: `${subheadlineTop}px`, width: `${textW}px`, textAlign: textContentAlign, zIndex: zSubheadline }}
+              onMouseDown={(event) => startDrag("subheadline", event)}
+              onWheel={(event) => onResizeWheel("subheadline", event)}
+            >
+              <p
+                className="font-medium whitespace-pre-wrap"
+                style={{ color: banner.textColor, fontSize: `${subheadlineSize}px`, lineHeight: "1.5", fontFamily: BANNER_FONT_STACK, margin: 0 }}
+              >
+                {resolvedSubheadline}
+              </p>
+              {editable && selected === "subheadline" ? (
+                <button
+                  type="button"
+                  aria-label="Resize subheadline"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("subheadline", event)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasSubheadline2 ? (
+            <div
+              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "subheadline2" ? "ring-2 ring-cyan-300" : ""}`}
+              style={{ left: `${subheadline2Left}px`, top: `${subheadline2Top}px`, width: `${textW}px`, textAlign: textContentAlign, zIndex: zSubheadline2 }}
+              onMouseDown={(event) => startDrag("subheadline2", event)}
+              onWheel={(event) => onResizeWheel("subheadline2", event)}
+            >
+              <p
+                className="font-medium whitespace-pre-wrap"
+                style={{ color: banner.textColor, fontSize: `${subheadline2Size}px`, lineHeight: "1.5", fontFamily: BANNER_FONT_STACK, margin: 0 }}
+              >
+                {resolvedSubheadline2}
+              </p>
+              {editable && selected === "subheadline2" ? (
+                <button
+                  type="button"
+                  aria-label="Resize subheadline2"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("subheadline2", event)}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasContact ? (
+            <div
+              className={`absolute ${editable ? "cursor-move" : ""} ${selected === "contact" ? "ring-2 ring-cyan-300" : ""}`}
+              style={{ left: `${contactLeft}px`, top: `${contactTop}px`, width: `${textW}px`, textAlign: textContentAlign, zIndex: zContact }}
+              onMouseDown={(event) => startDrag("contact", event)}
+              onWheel={(event) => onResizeWheel("contact", event)}
+            >
+              <p
+                className="font-medium whitespace-pre-wrap"
+                style={{ color: banner.textColor, fontSize: `${contactSize}px`, lineHeight: "1.4", fontFamily: BANNER_FONT_STACK, margin: 0 }}
+              >
+                {resolvedContactText}
+              </p>
+              {editable && selected === "contact" ? (
+                <button
+                  type="button"
+                  aria-label="Resize contact"
+                  className="absolute -bottom-2 -right-2 h-4 w-4 cursor-se-resize rounded-full border border-white bg-cyan-500 shadow"
+                  onMouseDown={(event) => startResize("contact", event)}
                 />
               ) : null}
             </div>

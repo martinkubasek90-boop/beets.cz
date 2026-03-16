@@ -76,20 +76,26 @@ async function resolveImageSource(input?: string) {
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number) {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  if (!words.length) return [];
+  const paragraphs = text.split(/\r?\n/);
   const lines: string[] = [];
-  let current = words[0];
-  for (let i = 1; i < words.length; i++) {
-    const next = `${current} ${words[i]}`;
-    if (ctx.measureText(next).width <= maxWidth) current = next;
-    else {
-      lines.push(current);
-      current = words[i];
-      if (lines.length >= maxLines - 1) break;
+  paragraphs.forEach((paragraph) => {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+    if (!words.length) {
+      lines.push("");
+      return;
     }
-  }
-  if (lines.length < maxLines) lines.push(current);
+    let current = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const next = `${current} ${words[i]}`;
+      if (ctx.measureText(next).width <= maxWidth) current = next;
+      else {
+        lines.push(current);
+        current = words[i];
+        if (lines.length >= maxLines - 1) break;
+      }
+    }
+    if (lines.length < maxLines) lines.push(current);
+  });
   return lines.slice(0, maxLines);
 }
 
@@ -155,12 +161,14 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   const resolvedHeadline = model.resolvedHeadline;
   const resolvedSubheadline = model.resolvedSubheadline;
   const resolvedSubheadline2 = model.resolvedSubheadline2;
+  const resolvedContactText = model.resolvedContactText;
   const resolvedCtaText = model.resolvedCtaText;
   const resolvedBgImageUrl = model.resolvedBgImageUrl;
   const resolvedBgScale = model.bgScale;
   const resolvedBgPositionX = model.bgPositionX;
   const resolvedBgPositionY = model.bgPositionY;
   const resolvedSubheadline2Size = model.subheadline2Size;
+  const resolvedContactSize = model.contactSize;
   const textContentAlign = format.textContentAlign || "left";
   await ensureFontsLoaded(format.headlineSize, format.subheadlineSize, format.ctaSize);
 
@@ -183,7 +191,6 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     } catch {}
   }
 
-  const boxH = model.boxH;
   const qrScale = clamp(format.qrScale || 1, 0.4, 4);
   const qrBaseFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.19, 56, 220));
   const qrFrameSize = Math.round(qrBaseFrameSize * qrScale);
@@ -270,68 +277,29 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     ctx.textBaseline = "alphabetic";
   }
 
-  const hasHeadline = Boolean((resolvedHeadline || "").trim());
-  const hasSubheadline = Boolean((resolvedSubheadline || "").trim());
-  const hasSubheadline2 = Boolean((resolvedSubheadline2 || "").trim());
-  if (hasHeadline || hasSubheadline || hasSubheadline2) {
+  const drawTextBlock = (text: string, size: number, weight: string, left: number, top: number, maxLines: number, lineHeight: number) => {
+    if (!text.trim()) return;
     const textW = model.textW;
-    const textLeft = model.textLeft;
-    const textAnchorY = model.textTop;
-    const textX =
-      textContentAlign === "left" ? textLeft : textContentAlign === "center" ? textLeft + textW / 2 : textLeft + textW;
+    const textX = textContentAlign === "left" ? left : textContentAlign === "center" ? left + textW / 2 : left + textW;
     ctx.textAlign = textContentAlign as CanvasTextAlign;
     ctx.fillStyle = banner.textColor || "#ffffff";
     ctx.textBaseline = "top";
-    const linesToDraw: Array<{ text: string; size: number; weight: string; lineHeight: number; gapBefore: number }> = [];
-
-    if (hasHeadline) {
-      ctx.font = `800 ${model.headlineSize}px ${BANNER_FONT_STACK}`;
-      const headlineLines = wrapLines(ctx, resolvedHeadline || "", textW, format.layout === "vertical" ? 3 : 2);
-      headlineLines.forEach((line) => {
-        linesToDraw.push({ text: line, size: model.headlineSize, weight: "800", lineHeight: model.headlineSize * 1.05, gapBefore: 0 });
-      });
-    }
-
-    if (hasSubheadline) {
-      ctx.font = `500 ${model.subheadlineSize}px ${BANNER_FONT_STACK}`;
-      const subLines = wrapLines(ctx, resolvedSubheadline || "", textW, format.layout === "vertical" ? 4 : 3);
-      subLines.forEach((line) => {
-        linesToDraw.push({
-          text: line,
-          size: model.subheadlineSize,
-          weight: "500",
-          lineHeight: model.subheadlineSize * 1.5,
-          gapBefore: linesToDraw.length ? 8 : 0,
-        });
-      });
-    }
-
-    if (hasSubheadline2) {
-      ctx.font = `500 ${resolvedSubheadline2Size}px ${BANNER_FONT_STACK}`;
-      const sub2Lines = wrapLines(ctx, resolvedSubheadline2 || "", textW, format.layout === "vertical" ? 4 : 3);
-      sub2Lines.forEach((line) => {
-        linesToDraw.push({
-          text: line,
-          size: resolvedSubheadline2Size,
-          weight: "500",
-          lineHeight: resolvedSubheadline2Size * 1.5,
-          gapBefore: linesToDraw.length ? 8 : 0,
-        });
-      });
-    }
-
-    const totalHeight = linesToDraw.reduce((acc, item) => acc + item.gapBefore + item.lineHeight, 0);
-    const minTextY = 0;
-    const maxTextY = Math.max(minTextY, boxH - totalHeight);
-    let textY = clamp(textAnchorY - totalHeight / 2, minTextY, maxTextY);
-    linesToDraw.forEach((item) => {
-      textY += item.gapBefore;
-      ctx.font = `${item.weight} ${item.size}px ${BANNER_FONT_STACK}`;
-      ctx.fillText(item.text, Math.round(textX), Math.round(textY));
-      textY += item.lineHeight;
+    ctx.font = `${weight} ${size}px ${BANNER_FONT_STACK}`;
+    const lines = wrapLines(ctx, text, textW, maxLines);
+    let textY = top;
+    lines.forEach((line) => {
+      ctx.font = `${weight} ${size}px ${BANNER_FONT_STACK}`;
+      ctx.fillText(line, Math.round(textX), Math.round(textY));
+      textY += lineHeight;
     });
     ctx.textAlign = "left";
-  }
+    ctx.textBaseline = "alphabetic";
+  };
+
+  drawTextBlock(resolvedHeadline || "", model.headlineSize, "800", model.headlineLeft, model.headlineTop, format.layout === "vertical" ? 4 : 3, model.headlineSize * 1.05);
+  drawTextBlock(resolvedSubheadline || "", model.subheadlineSize, "500", model.subheadlineLeft, model.subheadlineTop, format.layout === "vertical" ? 5 : 4, model.subheadlineSize * 1.5);
+  drawTextBlock(resolvedSubheadline2 || "", resolvedSubheadline2Size, "500", model.subheadline2Left, model.subheadline2Top, format.layout === "vertical" ? 5 : 4, resolvedSubheadline2Size * 1.5);
+  drawTextBlock(resolvedContactText || "", resolvedContactSize, "500", model.contactLeft, model.contactTop, 4, resolvedContactSize * 1.4);
 
   const ctaText = resolvedCtaText || "Zjistit více";
   ctx.font = `700 ${model.ctaSize}px ${BANNER_FONT_STACK}`;

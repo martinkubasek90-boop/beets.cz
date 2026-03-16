@@ -8,7 +8,7 @@ import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 
-type LayerId = "logo" | "qr" | "headline" | "description" | "description2" | "cta" | "background";
+type LayerId = "logo" | "qr" | "headline" | "description" | "description2" | "contact" | "cta" | "background";
 
 function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -204,14 +204,21 @@ export function PropertyPanel({
       ? "logo"
       : activeLayer === "qr"
         ? "qr"
+        : activeLayer === "headline"
+          ? "headline"
+          : activeLayer === "description"
+            ? "subheadline"
+            : activeLayer === "description2"
+              ? "subheadline2"
+              : activeLayer === "contact"
+                ? "contact"
         : activeLayer === "cta"
           ? "cta"
-          : activeLayer === "headline" || activeLayer === "description" || activeLayer === "description2"
-            ? "text"
-            : "background";
+          : "background";
   const headlineValue = format?.headline ?? banner.headline;
   const subheadlineValue = format?.subheadline ?? banner.subheadline;
   const subheadline2Value = format?.subheadline2 ?? "";
+  const contactValue = format?.contactText ?? banner.contactText ?? "";
   const ctaValue = format?.ctaText ?? banner.ctaText;
   const bgImageValue = format?.bgImageUrl ?? banner.bgImageUrl ?? "";
   const bgScaleValue = Number(format?.bgScale ?? banner.bgScale ?? 100);
@@ -224,20 +231,26 @@ export function PropertyPanel({
   const zMap = {
     logo: typeof format?.zLogo === "number" ? format.zLogo : 40,
     qr: typeof format?.zQr === "number" ? format.zQr : 45,
-    text: typeof format?.zText === "number" ? format.zText : 30,
+    headline: typeof format?.zHeadline === "number" ? format.zHeadline : 30,
+    subheadline: typeof format?.zSubheadline === "number" ? format.zSubheadline : 31,
+    subheadline2: typeof format?.zSubheadline2 === "number" ? format.zSubheadline2 : 32,
+    contact: typeof format?.zContact === "number" ? format.zContact : 33,
     cta: typeof format?.zCta === "number" ? format.zCta : 50,
   } as const;
   const orderedLayers = Object.entries(zMap)
     .sort((a, b) => a[1] - b[1])
-    .map(([key]) => key as "logo" | "qr" | "text" | "cta");
-  const currentOrderIndex = currentLayerKey === "background" ? -1 : orderedLayers.indexOf(currentLayerKey as "logo" | "qr" | "text" | "cta");
+    .map(([key]) => key as "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta");
+  const currentOrderIndex = currentLayerKey === "background" ? -1 : orderedLayers.indexOf(currentLayerKey as "logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta");
 
-  const applyLayerOrder = (order: Array<"logo" | "qr" | "text" | "cta">) => {
+  const applyLayerOrder = (order: Array<"logo" | "qr" | "headline" | "subheadline" | "subheadline2" | "contact" | "cta">) => {
     order.forEach((layer, idx) => {
       const z = 10 + idx * 10;
       if (layer === "logo") onFormatChange("zLogo", z);
       if (layer === "qr") onFormatChange("zQr", z);
-      if (layer === "text") onFormatChange("zText", z);
+      if (layer === "headline") onFormatChange("zHeadline", z);
+      if (layer === "subheadline") onFormatChange("zSubheadline", z);
+      if (layer === "subheadline2") onFormatChange("zSubheadline2", z);
+      if (layer === "contact") onFormatChange("zContact", z);
       if (layer === "cta") onFormatChange("zCta", z);
     });
   };
@@ -282,8 +295,9 @@ export function PropertyPanel({
             ["headline", "3. Nadpis"],
             ["description", "4. Popis"],
             ["description2", "5. POPIS 2"],
-            ["cta", "6. CTA"],
-            ["background", "7. Background foto"],
+            ["contact", "6. Kontakt"],
+            ["cta", "7. CTA"],
+            ["background", "8. Background foto"],
           ] as const).map(([id, label]) => (
             <button
               key={id}
@@ -388,18 +402,22 @@ export function PropertyPanel({
           {activeLayer === "headline" ? (
             <>
               <Label className="text-xs text-slate-600">Text nadpisu</Label>
-              <Input value={headlineValue} onChange={(e) => onFormatChange("headline", e.target.value)} className="border-slate-200 bg-white" />
+              <textarea
+                value={headlineValue}
+                onChange={(e) => onFormatChange("headline", e.target.value)}
+                className="min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500"
+              />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost headline: {format.headlineSize}px</Label>
                 <RangeWithCenter min={16} max={180} value={format.headlineSize} onChange={(v) => onFormatChange("headlineSize", v)} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Posun bloku X: {format.textOffsetX || 0}px</Label>
-                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.textOffsetX || 0} onChange={(v) => onFormatChange("textOffsetX", v)} center={0} />
+                <Label className="text-xs">Posun headline X: {format.headlineOffsetX || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.headlineOffsetX || 0} onChange={(v) => onFormatChange("headlineOffsetX", v)} center={0} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Posun bloku Y: {format.textOffsetY || 0}px</Label>
-                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.textOffsetY || 0} onChange={(v) => onFormatChange("textOffsetY", v)} center={0} />
+                <Label className="text-xs">Posun headline Y: {format.headlineOffsetY || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.headlineOffsetY || 0} onChange={(v) => onFormatChange("headlineOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání bloku X" value={textAlignX} onChange={(v) => onFormatChange("textAlignX", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
               <AlignButtons label="Zarovnání bloku Y" value={textAlignY} onChange={(v) => onFormatChange("textAlignY", v)} options={[{ value: "top", label: "Nahoru" }, { value: "center", label: "Střed" }, { value: "bottom", label: "Dolů" }]} />
@@ -410,10 +428,22 @@ export function PropertyPanel({
           {activeLayer === "description" ? (
             <>
               <Label className="text-xs text-slate-600">Text popisu</Label>
-              <Input value={subheadlineValue} onChange={(e) => onFormatChange("subheadline", e.target.value)} className="border-slate-200 bg-white" />
+              <textarea
+                value={subheadlineValue}
+                onChange={(e) => onFormatChange("subheadline", e.target.value)}
+                className="min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500"
+              />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost popisu: {format.subheadlineSize}px</Label>
                 <RangeWithCenter min={12} max={96} value={format.subheadlineSize} onChange={(v) => onFormatChange("subheadlineSize", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun popisu X: {format.subheadlineOffsetX || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.subheadlineOffsetX || 0} onChange={(v) => onFormatChange("subheadlineOffsetX", v)} center={0} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun popisu Y: {format.subheadlineOffsetY || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.subheadlineOffsetY || 0} onChange={(v) => onFormatChange("subheadlineOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
             </>
@@ -422,10 +452,47 @@ export function PropertyPanel({
           {activeLayer === "description2" ? (
             <>
               <Label className="text-xs text-slate-600">Text POPIS 2</Label>
-              <Input value={subheadline2Value} onChange={(e) => onFormatChange("subheadline2", e.target.value)} className="border-slate-200 bg-white" />
+              <textarea
+                value={subheadline2Value}
+                onChange={(e) => onFormatChange("subheadline2", e.target.value)}
+                className="min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500"
+              />
               <div className="space-y-2">
                 <Label className="text-xs">Velikost POPIS 2: {format.subheadline2Size || format.subheadlineSize}px</Label>
                 <RangeWithCenter min={12} max={96} value={format.subheadline2Size || format.subheadlineSize} onChange={(v) => onFormatChange("subheadline2Size", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun POPIS 2 X: {format.subheadline2OffsetX || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.subheadline2OffsetX || 0} onChange={(v) => onFormatChange("subheadline2OffsetX", v)} center={0} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun POPIS 2 Y: {format.subheadline2OffsetY || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.subheadline2OffsetY || 0} onChange={(v) => onFormatChange("subheadline2OffsetY", v)} center={0} />
+              </div>
+              <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
+            </>
+          ) : null}
+
+          {activeLayer === "contact" ? (
+            <>
+              <Label className="text-xs text-slate-600">Kontakt</Label>
+              <textarea
+                value={contactValue}
+                onChange={(e) => onFormatChange("contactText", e.target.value)}
+                className="min-h-24 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-cyan-500"
+                placeholder="+420 123 456 789&#10;info@firma.cz&#10;www.firma.cz"
+              />
+              <div className="space-y-2">
+                <Label className="text-xs">Velikost kontaktu: {format.contactSize || format.subheadlineSize}px</Label>
+                <RangeWithCenter min={12} max={96} value={format.contactSize || format.subheadlineSize} onChange={(v) => onFormatChange("contactSize", v)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun kontaktu X: {format.contactOffsetX || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.contactOffsetX || 0} onChange={(v) => onFormatChange("contactOffsetX", v)} center={0} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Posun kontaktu Y: {format.contactOffsetY || 0}px</Label>
+                <RangeWithCenter min={-offsetRangeY} max={offsetRangeY} step={1} value={format.contactOffsetY || 0} onChange={(v) => onFormatChange("contactOffsetY", v)} center={0} />
               </div>
               <AlignButtons label="Zarovnání textu" value={textContentAlign} onChange={(v) => onFormatChange("textContentAlign", v)} options={[{ value: "left", label: "Vlevo" }, { value: "center", label: "Střed" }, { value: "right", label: "Vpravo" }]} />
             </>
