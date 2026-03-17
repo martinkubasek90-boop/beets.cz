@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BannerCard } from "@/components/ppc-banners/banner-card";
 import { CreateBannerWizard } from "@/components/ppc-banners/create-banner-wizard";
-import { deleteBanner, listBanners, upsertBanner } from "@/components/ppc-banners/storage";
+import { deleteBanner, duplicateBanner, listBanners, upsertBanner } from "@/components/ppc-banners/storage";
 import type { Banner } from "@/components/ppc-banners/types";
 import { exportBannerPng, exportBannerZip } from "@/components/ppc-banners/export";
 
@@ -37,15 +37,9 @@ export function PpcBannersDashboardClient() {
   };
 
   const onDuplicate = (banner: Banner) => {
-    const now = new Date().toISOString();
-    const copy: Banner = {
-      ...banner,
-      id: `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-      name: `${banner.name} (kopie)`,
-      createdAt: now,
-      updatedAt: now,
-    };
-    upsertBanner(copy);
+    const copy = duplicateBanner(banner);
+    if (!copy) return;
+    setBanners(listBanners());
     setRefreshKey((prev) => prev + 1);
   };
 

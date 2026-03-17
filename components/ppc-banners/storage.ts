@@ -110,6 +110,24 @@ export function upsertBanner(banner: Banner) {
   window.localStorage.setItem(BANNERS_KEY, JSON.stringify(all));
 }
 
+export function duplicateBanner(source: Banner) {
+  if (typeof window === "undefined") return null;
+  const now = new Date().toISOString();
+  const clone: Banner = withDefaults({
+    ...source,
+    id: `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    name: `${source.name} (kopie)`,
+    createdAt: now,
+    updatedAt: now,
+    autosavedAt: now,
+    versions: [],
+    shareToken: undefined,
+    formats: source.formats.map((format) => ({ ...format })),
+  });
+  upsertBanner(clone);
+  return clone;
+}
+
 export function deleteBanner(id: string) {
   if (typeof window === "undefined") return;
   const next = listBanners().filter((item) => item.id !== id);

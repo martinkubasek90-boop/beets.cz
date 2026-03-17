@@ -50,16 +50,16 @@ export function BannerCard({
           <Link href={`/ppc-banners/editor?id=${encodeURIComponent(banner.id)}`} className="col-span-2">
             <Button className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 text-white hover:from-emerald-700 hover:to-cyan-700" size="sm">Upravit</Button>
           </Link>
-          <Button variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
-          <Button variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExport(banner)}>
+          <Button type="button" variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onDuplicate(banner)}>Duplikovat</Button>
+          <Button type="button" variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExport(banner)}>
             <Download className="h-3.5 w-3.5" />
             Export
           </Button>
-          <Button variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExportZip(banner)}>
+          <Button type="button" variant="outline" size="sm" className="w-full border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200" onClick={() => onExportZip(banner)}>
             <Archive className="h-3.5 w-3.5" />
             ZIP
           </Button>
-          <Button variant="outline" size="sm" className="w-full border-red-500 bg-white text-red-600 hover:bg-red-50" onClick={() => onDelete(banner.id)}>Smazat</Button>
+          <Button type="button" variant="outline" size="sm" className="w-full border-red-500 bg-white text-red-600 hover:bg-red-50" onClick={() => onDelete(banner.id)}>Smazat</Button>
         </div>
       </div>
     </div>
