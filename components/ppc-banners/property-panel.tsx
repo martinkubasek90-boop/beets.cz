@@ -99,7 +99,7 @@ export function PropertyPanel({
 }: {
   banner: Banner;
   format?: BannerFormat;
-  onBannerChange: (field: keyof Banner, value: string | number | boolean) => void;
+  onBannerChange: (field: keyof Banner, value: string | number | boolean | string[]) => void;
   onFormatChange: (field: keyof BannerFormat, value: string | number | boolean) => void;
 }) {
   const [loadingMeta, setLoadingMeta] = useState(false);
@@ -141,6 +141,12 @@ export function PropertyPanel({
     const dataUrl = await fileToDataUrl(file);
     onFormatChange("bgImageUrl", dataUrl);
     onBannerChange("bgMode", "upload");
+  };
+
+  const onGifFramesUpload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const dataUrls = await Promise.all(Array.from(files).map((file) => fileToDataUrl(file)));
+    onBannerChange("gifFrames", [...(banner.gifFrames || []), ...dataUrls].slice(0, 24));
   };
 
   const onQrUpload = async (file: File | null) => {
@@ -229,6 +235,8 @@ export function PropertyPanel({
   const bgScaleValue = Number(format?.bgScale ?? banner.bgScale ?? 100);
   const bgPositionXValue = Number(format?.bgPositionX ?? banner.bgPositionX ?? 50);
   const bgPositionYValue = Number(format?.bgPositionY ?? banner.bgPositionY ?? 50);
+  const gifFrames = banner.gifFrames || [];
+  const gifDelay = typeof banner.gifFrameDelayMs === "number" ? banner.gifFrameDelayMs : 900;
   const formatWidth = Math.max(1, format?.width ?? 1200);
   const formatHeight = Math.max(1, format?.height ?? 628);
   const offsetRangeX = Math.max(320, Math.round(formatWidth * 1.25));
@@ -702,6 +710,58 @@ export function PropertyPanel({
               <div className="space-y-2">
                 <Label className="text-xs">Pozice Y: {Math.round(bgPositionYValue)}%</Label>
                 <RangeWithCenter min={0} max={100} value={bgPositionYValue} onChange={(v) => onFormatChange("bgPositionY", v)} center={50} />
+              </div>
+              <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700">GIF slideshow</p>
+                    <p className="text-[11px] text-slate-500">Nahraj vice obrázků a export GIF použije každý z nich jako další snímek banneru.</p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">{gifFrames.length} snímků</span>
+                </div>
+                <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                  <Upload className="h-3.5 w-3.5" />
+                  Nahrát obrázky pro GIF
+                  <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => void onGifFramesUpload(e.target.files)} />
+                </label>
+                <div className="space-y-2">
+                  <Label className="text-xs">Délka snímku: {gifDelay} ms</Label>
+                  <RangeWithCenter min={200} max={3000} step={100} value={gifDelay} onChange={(v) => onBannerChange("gifFrameDelayMs", v)} center={900} />
+                </div>
+                {gifFrames.length ? (
+                  <>
+                    <div className="grid grid-cols-4 gap-2">
+                      {gifFrames.slice(0, 8).map((frame, index) => (
+                        <div key={`${index}-${frame.slice(0, 24)}`} className="relative overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                          <img src={frame} alt={`GIF frame ${index + 1}`} className="aspect-square h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => onBannerChange("gifFrames", gifFrames.filter((_, i) => i !== index))}
+                            className="absolute right-1 top-1 rounded bg-white/90 px-1 text-[10px] font-bold text-slate-700 shadow"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onBannerChange("gifFrames", [])}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Smazat všechny snímky
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onBannerChange("gifFrames", [...gifFrames].reverse())}
+                        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        Obrátit pořadí
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </>
           ) : null}

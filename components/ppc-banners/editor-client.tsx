@@ -12,7 +12,7 @@ import { BannerCanvas } from "@/components/ppc-banners/banner-canvas";
 import { FormatSelector } from "@/components/ppc-banners/format-selector";
 import { PropertyPanel } from "@/components/ppc-banners/property-panel";
 import { AIAssistant } from "@/components/ppc-banners/ai-assistant";
-import { exportBannerPng, exportBannerZip, getExportFileName } from "@/components/ppc-banners/export";
+import { exportBannerGif, exportBannerPng, exportBannerZip, getExportFileName } from "@/components/ppc-banners/export";
 import { computeChecklist, encodeSharePayload, isChecklistComplete } from "@/components/ppc-banners/banner-utils";
 
 export function PpcBannerEditorClient() {
@@ -104,7 +104,7 @@ export function PpcBannerEditorClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [banner, activeFormatIndex]);
 
-  const onBannerChange = (field: keyof Banner, value: string | number | boolean) => {
+  const onBannerChange = (field: keyof Banner, value: string | number | boolean | string[]) => {
     setSaved(false);
     setBanner((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
@@ -180,6 +180,15 @@ export function PpcBannerEditorClient() {
     if (!banner) return;
     try {
       await exportBannerZip(banner, exportScale);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const onExportGif = async () => {
+    if (!banner || !activeFormat) return;
+    try {
+      await exportBannerGif(banner, activeFormat);
     } catch (error) {
       console.error(error);
     }
@@ -285,6 +294,10 @@ export function PpcBannerEditorClient() {
           <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Download className="mr-1.5 h-3.5 w-3.5" />
             PNG
+          </Button>
+          <Button onClick={onExportGif} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            GIF
           </Button>
           <Button onClick={onExportZip} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
             <Archive className="mr-1.5 h-3.5 w-3.5" />

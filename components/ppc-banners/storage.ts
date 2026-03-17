@@ -22,6 +22,8 @@ function withDefaults(banner: Banner): Banner {
     goal,
     status,
     logoTransparentBg: Boolean(banner.logoTransparentBg),
+    gifFrames: Array.isArray(banner.gifFrames) ? banner.gifFrames.filter((item): item is string => typeof item === "string" && item.length > 0) : [],
+    gifFrameDelayMs: typeof banner.gifFrameDelayMs === "number" ? banner.gifFrameDelayMs : 900,
     formats: normalizedFormats.length ? normalizedFormats : [withFormatDefaults(PRESET_FORMATS[0])],
     versions: Array.isArray(banner.versions) ? banner.versions : [],
   };
@@ -151,6 +153,8 @@ export function makeSnapshot(banner: Banner): BannerSnapshot {
     bgColor: banner.bgColor,
     bgImageUrl: banner.bgImageUrl,
     bgPrompt: banner.bgPrompt,
+    gifFrames: banner.gifFrames,
+    gifFrameDelayMs: banner.gifFrameDelayMs,
     bgPositionX: banner.bgPositionX,
     bgPositionY: banner.bgPositionY,
     bgScale: banner.bgScale,

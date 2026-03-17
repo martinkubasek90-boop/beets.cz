@@ -370,3 +370,46 @@ export async function exportBannerZip(banner: Banner, outputScale = 1) {
   const blob = await response.blob();
   downloadBlob(blob, `${safeName}_all-formats.zip`);
 }
+
+export async function exportBannerGif(banner: Banner, format: BannerFormat) {
+  const frames = Array.isArray(banner.gifFrames) ? banner.gifFrames.filter(Boolean) : [];
+  if (frames.length < 2) {
+    throw new Error("Pro GIF nahraj aspoň 2 obrázky.");
+  }
+
+  const safeDelayMs = clamp(typeof banner.gifFrameDelayMs === "number" ? banner.gifFrameDelayMs : 900, 200, 3000);
+  const renderedFrames = await Promise.all(
+    frames.map(async (frameImageUrl, index) => {
+      const frameBanner: Banner = {
+        ...banner,
+        bgMode: "upload",
+        bgImageUrl: frameImageUrl,
+      };
+      return {
+        name: `frame-${String(index + 1).padStart(3, "0")}.png`,
+        dataUrl: await renderBannerPngDataUrl(frameBanner, format, 1),
+      };
+    }),
+  );
+
+  const safeName = getExportFileName(banner.name || "banner", format.width, format.height).replace(/\.png$/i, "");
+  const response = await fetch("/api/ppc-banners/export-gif", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: safeName,
+      width: format.width,
+      height: format.height,
+      delayMs: safeDelayMs,
+      files: renderedFrames,
+    }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.error || "GIF export selhal.");
+  }
+
+  const blob = await response.blob();
+  downloadBlob(blob, `${safeName}.gif`);
+}

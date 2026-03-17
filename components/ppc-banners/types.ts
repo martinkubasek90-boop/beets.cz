@@ -87,6 +87,8 @@ export type BannerSnapshot = {
   bgColor: string;
   bgImageUrl?: string;
   bgPrompt?: string;
+  gifFrames?: string[];
+  gifFrameDelayMs?: number;
   bgPositionX?: number;
   bgPositionY?: number;
   bgScale?: number;
@@ -145,6 +147,8 @@ export type Banner = {
   bgColor: string;
   bgImageUrl?: string;
   bgPrompt?: string;
+  gifFrames?: string[];
+  gifFrameDelayMs?: number;
   bgPositionX?: number;
   bgPositionY?: number;
   bgScale?: number;
