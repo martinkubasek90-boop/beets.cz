@@ -672,7 +672,7 @@ export function BannerCanvas({
   return (
     <div className="relative z-10 flex h-full items-center justify-center p-6">
       <div
-        className="relative overflow-hidden rounded-xl border border-slate-200 shadow-xl"
+        className="relative overflow-hidden border border-slate-200 shadow-xl"
         style={{
           width: `${boxW}px`,
           height: `${boxH}px`,
@@ -778,7 +778,7 @@ export function BannerCanvas({
 
           {hasQr ? (
             <div
-              className={`absolute overflow-hidden rounded-[10px] border border-white/70 bg-white/95 shadow-lg ${editable ? "cursor-move" : ""} ${selected === "qr" ? "ring-2 ring-cyan-300" : ""}`}
+              className={`absolute overflow-hidden border border-white/70 bg-white/95 shadow-lg ${editable ? "cursor-move" : ""} ${selected === "qr" ? "ring-2 ring-cyan-300" : ""}`}
               onMouseDown={(event) => startDrag("qr", event)}
               onWheel={(event) => onResizeWheel("qr", event)}
               style={{

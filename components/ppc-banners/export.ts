@@ -255,7 +255,9 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       ctx.fillStyle = "rgba(255,255,255,0.96)";
       ctx.strokeStyle = "rgba(255,255,255,0.7)";
       ctx.lineWidth = 2;
-      roundedRectPath(ctx, qrLeft, qrTop, qrFrameSize, qrFrameSize, Math.round(qrFrameSize * 0.12));
+      ctx.beginPath();
+      ctx.rect(qrLeft, qrTop, qrFrameSize, qrFrameSize);
+      ctx.closePath();
       ctx.fill();
       ctx.stroke();
 
