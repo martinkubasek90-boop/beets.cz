@@ -783,6 +783,7 @@ export function BannerCanvas({
                 src={qrPreviewSrc}
                 alt="QR"
                 className="h-full w-full object-contain"
+                style={{ imageRendering: "pixelated" }}
                 draggable={false}
               />
               {editable && selected === "qr" ? (

@@ -257,7 +257,9 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
       const drawH = Math.round(fitted.height);
       const drawX = Math.round(qrLeft + qrPadding + (qrImageSize - drawW) / 2);
       const drawY = Math.round(qrTop + qrPadding + (qrImageSize - drawH) / 2);
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(qr, drawX, drawY, drawW, drawH);
+      ctx.imageSmoothingEnabled = true;
     } catch {}
   }
 

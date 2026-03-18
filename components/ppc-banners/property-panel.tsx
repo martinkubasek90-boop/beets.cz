@@ -27,38 +27,27 @@ function countLines(text: string) {
   return Math.max(1, text.split(/\r?\n/).length);
 }
 
-function slugifySegment(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function resolveTrackedQrUrl(banner: Banner, format?: BannerFormat) {
+function resolveTrackedQrUrl(banner: Banner, _format?: BannerFormat) {
   const targetUrl = (banner.qrTargetUrl || "").trim();
   if (!targetUrl) return "";
   const normalized = /^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`;
   const url = new URL(normalized);
   if (!banner.qrTrackingEnabled) return url.toString();
 
-  const fallbackCampaign = slugifySegment(banner.name || banner.headline || banner.brandName || "ppc-banner") || "ppc-banner";
-  const fallbackContent = slugifySegment(format?.id || "qr");
   const source = (banner.qrUtmSource || "").trim() || "beets-qr";
   const medium = (banner.qrUtmMedium || "").trim() || "qr";
-  const campaign = (banner.qrUtmCampaign || "").trim() || fallbackCampaign;
-  const content = (banner.qrUtmContent || "").trim() || fallbackContent;
-  const term = (banner.qrUtmTerm || "").trim();
 
   url.searchParams.set("utm_source", source);
   url.searchParams.set("utm_medium", medium);
-  url.searchParams.set("utm_campaign", campaign);
-  if (content) url.searchParams.set("utm_content", content);
-  if (term) url.searchParams.set("utm_term", term);
-  else url.searchParams.delete("utm_term");
+  url.searchParams.delete("utm_campaign");
+  url.searchParams.delete("utm_content");
+  url.searchParams.delete("utm_term");
 
   return url.toString();
+}
+
+function svgToDataUrl(svg: string) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function AlignButtons<T extends string>({
@@ -195,17 +184,19 @@ export function PropertyPanel({
     if (!targetUrl) return;
     try {
       new URL(targetUrl);
-      const dataUrl = await QRCode.toDataURL(targetUrl, {
-        errorCorrectionLevel: "M",
-        margin: 2,
-        width: 512,
+      const svg = await QRCode.toString(targetUrl, {
+        errorCorrectionLevel: "L",
+        margin: 4,
+        width: 1024,
+        type: "svg",
         color: {
           dark: "#000000",
           light: "#FFFFFFFF",
         },
       });
       onBannerChange("qrTargetUrl", (/^https?:\/\//i.test((banner.qrTargetUrl || "").trim()) ? (banner.qrTargetUrl || "").trim() : `https://${(banner.qrTargetUrl || "").trim()}`));
-      onBannerChange("qrImageUrl", dataUrl);
+      onBannerChange("qrImageUrl", svgToDataUrl(svg));
+      if ((format?.qrScale || 1) < 1.15) onFormatChange("qrScale", 1.15);
     } catch (error) {
       console.error(error);
     }
@@ -607,18 +598,6 @@ export function PropertyPanel({
                       <Label className="text-xs text-slate-600">utm_medium</Label>
                       <Input value={banner.qrUtmMedium || ""} onChange={(e) => onBannerChange("qrUtmMedium", e.target.value)} className="border-slate-200 bg-white" placeholder="qr" />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">utm_campaign</Label>
-                      <Input value={banner.qrUtmCampaign || ""} onChange={(e) => onBannerChange("qrUtmCampaign", e.target.value)} className="border-slate-200 bg-white" placeholder={slugifySegment(banner.name || banner.headline || "ppc-banner") || "ppc-banner"} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-slate-600">utm_content</Label>
-                      <Input value={banner.qrUtmContent || ""} onChange={(e) => onBannerChange("qrUtmContent", e.target.value)} className="border-slate-200 bg-white" placeholder={slugifySegment(format?.id || "qr") || "qr"} />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-600">utm_term</Label>
-                    <Input value={banner.qrUtmTerm || ""} onChange={(e) => onBannerChange("qrUtmTerm", e.target.value)} className="border-slate-200 bg-white" placeholder="volitelne" />
                   </div>
                   <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
                     <Label className="text-xs text-slate-600">Vysledna trackovaci URL</Label>
