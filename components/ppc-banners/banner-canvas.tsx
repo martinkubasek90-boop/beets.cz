@@ -89,6 +89,7 @@ const FALLBACK_FORMAT: BannerFormat = {
   shapeX: 78,
   shapeY: 22,
   shapeSize: 24,
+  borderWidth: 0,
   guideAreaEnabled: false,
   guideAreaX: 4,
   guideAreaY: 4,
@@ -194,6 +195,7 @@ export function BannerCanvas({
   const bgPositionY = model.bgPositionY;
   const boxW = model.boxW;
   const boxH = model.boxH;
+  const borderWidthPx = Math.max(0, Math.round((resolvedFormat.borderWidth || 0) * scale));
   const guideAreaEnabled = model.guideAreaEnabled;
   const guideAreaLeft = model.guideAreaLeft;
   const guideAreaTop = model.guideAreaTop;
@@ -681,6 +683,15 @@ export function BannerCanvas({
           backgroundRepeat: "no-repeat",
         }}
       >
+        {borderWidthPx > 0 ? (
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              border: `${borderWidthPx}px solid #000000`,
+              zIndex: 140,
+            }}
+          />
+        ) : null}
         {resolvedFormat.shapeEnabled ? (
           <div
             className={`absolute ${editable ? "cursor-move" : "pointer-events-none"} ${selected === "shape" ? "ring-2 ring-cyan-300" : ""}`}

@@ -191,6 +191,13 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     } catch {}
   }
 
+  const borderWidth = Math.max(0, Math.round(format.borderWidth || 0));
+  if (borderWidth > 0) {
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = borderWidth;
+    ctx.strokeRect(borderWidth / 2, borderWidth / 2, viewW - borderWidth, viewH - borderWidth);
+  }
+
   const qrScale = clamp(format.qrScale || 1, 0.4, 4);
   const qrBaseFrameSize = Math.round(clamp(Math.min(viewW, viewH) * 0.19, 56, 220));
   const qrFrameSize = Math.round(qrBaseFrameSize * qrScale);

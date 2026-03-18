@@ -84,6 +84,7 @@ function withFormatDefaults(format: BannerFormat): BannerFormat {
     shapeX: typeof format.shapeX === "number" ? format.shapeX : 78,
     shapeY: typeof format.shapeY === "number" ? format.shapeY : 22,
     shapeSize: typeof format.shapeSize === "number" ? format.shapeSize : 24,
+    borderWidth: typeof format.borderWidth === "number" ? format.borderWidth : 0,
     logoAlignX: format.logoAlignX || "left",
     logoAlignY: format.logoAlignY || "top",
     textAlignX: format.textAlignX || "left",

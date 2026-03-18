@@ -801,6 +801,10 @@ export function PropertyPanel({
                 <Label className="text-xs">Pozice Y: {Math.round(bgPositionYValue)}%</Label>
                 <RangeWithCenter min={0} max={100} value={bgPositionYValue} onChange={(v) => onFormatChange("bgPositionY", v)} center={50} />
               </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Okraj: {Math.round(format.borderWidth || 0)} px</Label>
+                <RangeWithCenter min={0} max={80} step={1} value={Math.round(format.borderWidth || 0)} onChange={(v) => onFormatChange("borderWidth", v)} center={0} />
+              </div>
               <div className="mt-3 space-y-3 rounded-lg border border-slate-200 bg-white p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div>

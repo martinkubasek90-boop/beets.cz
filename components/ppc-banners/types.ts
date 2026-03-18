@@ -37,6 +37,7 @@ export type BannerFormat = {
   shapeX: number;
   shapeY: number;
   shapeSize: number;
+  borderWidth?: number;
   padding: number;
   logoAlignX?: "left" | "center" | "right";
   logoAlignY?: "top" | "center" | "bottom";
