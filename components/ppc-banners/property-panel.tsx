@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, Sparkles, Upload } from "lucide-react";
+import QRCode from "qrcode";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components/ppc-banners/banner-utils";
@@ -153,6 +154,28 @@ export function PropertyPanel({
     if (!file) return;
     const dataUrl = await fileToDataUrl(file);
     onBannerChange("qrImageUrl", dataUrl);
+  };
+
+  const generateQrCode = async () => {
+    const targetUrl = (banner.qrTargetUrl || "").trim();
+    if (!targetUrl) return;
+    try {
+      const normalized = /^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`;
+      new URL(normalized);
+      const dataUrl = await QRCode.toDataURL(normalized, {
+        errorCorrectionLevel: "M",
+        margin: 2,
+        width: 512,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFFFF",
+        },
+      });
+      onBannerChange("qrTargetUrl", normalized);
+      onBannerChange("qrImageUrl", dataUrl);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const generateBackground = async () => {
@@ -522,8 +545,22 @@ export function PropertyPanel({
 
           {activeLayer === "qr" ? (
             <>
-              <Label className="text-xs text-slate-600">QR kod URL</Label>
-              <Input value={banner.qrImageUrl || ""} onChange={(e) => onBannerChange("qrImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../qr.jpg" />
+              <Label className="text-xs text-slate-600">Cilova URL pro QR</Label>
+              <Input
+                value={banner.qrTargetUrl || ""}
+                onChange={(e) => onBannerChange("qrTargetUrl", e.target.value)}
+                className="border-slate-200 bg-white"
+                placeholder="https://..."
+              />
+              <button
+                type="button"
+                onClick={generateQrCode}
+                className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-700 hover:bg-cyan-100"
+              >
+                Vygenerovat QR z URL
+              </button>
+              <Label className="text-xs text-slate-600">QR obrazek URL</Label>
+              <Input value={banner.qrImageUrl || ""} onChange={(e) => onBannerChange("qrImageUrl", e.target.value)} className="border-slate-200 bg-white" placeholder="https://.../qr.png" />
               <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50">
                 <Upload className="h-3.5 w-3.5" />
                 Vybrat QR obrazek

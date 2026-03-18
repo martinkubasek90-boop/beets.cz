@@ -80,6 +80,7 @@ export type BannerSnapshot = {
   brandName: string;
   brandUrl: string;
   logoUrl?: string;
+  qrTargetUrl?: string;
   qrImageUrl?: string;
   overlayIcon?: string;
   logoTransparentBg?: boolean;
@@ -140,6 +141,7 @@ export type Banner = {
   brandName: string;
   brandUrl: string;
   logoUrl?: string;
+  qrTargetUrl?: string;
   qrImageUrl?: string;
   overlayIcon?: string;
   logoTransparentBg?: boolean;

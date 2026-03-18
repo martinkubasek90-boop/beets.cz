@@ -13,6 +13,23 @@ function safeParse(input: string) {
   }
 }
 
+function deepClone<T>(value: T): T {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function makeDuplicateName(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return "Banner (kopie)";
+  const match = trimmed.match(/^(.*) \(kopie(?: (\d+))?\)$/);
+  if (!match) return `${trimmed} (kopie)`;
+  const baseName = match[1]?.trim() || "Banner";
+  const currentIndex = Number(match[2] || "1");
+  return `${baseName} (kopie ${currentIndex + 1})`;
+}
+
 function withDefaults(banner: Banner): Banner {
   const goal: BannerGoal = banner.goal || "traffic";
   const status: BannerStatus = banner.status || "draft";
@@ -115,16 +132,15 @@ export function upsertBanner(banner: Banner) {
 export function duplicateBanner(source: Banner) {
   if (typeof window === "undefined") return null;
   const now = new Date().toISOString();
+  const sourceClone = deepClone(withDefaults(source));
   const clone: Banner = withDefaults({
-    ...source,
+    ...sourceClone,
     id: `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    name: `${source.name} (kopie)`,
+    name: makeDuplicateName(source.name),
     createdAt: now,
     updatedAt: now,
     autosavedAt: now,
-    versions: [],
     shareToken: undefined,
-    formats: source.formats.map((format) => ({ ...format })),
   });
   upsertBanner(clone);
   return clone;
@@ -146,6 +162,7 @@ export function makeSnapshot(banner: Banner): BannerSnapshot {
     brandName: banner.brandName,
     brandUrl: banner.brandUrl,
     logoUrl: banner.logoUrl,
+    qrTargetUrl: banner.qrTargetUrl,
     qrImageUrl: banner.qrImageUrl,
     overlayIcon: banner.overlayIcon,
     logoTransparentBg: banner.logoTransparentBg,
