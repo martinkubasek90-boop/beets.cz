@@ -81,6 +81,12 @@ export type BannerSnapshot = {
   brandUrl: string;
   logoUrl?: string;
   qrTargetUrl?: string;
+  qrTrackingEnabled?: boolean;
+  qrUtmSource?: string;
+  qrUtmMedium?: string;
+  qrUtmCampaign?: string;
+  qrUtmContent?: string;
+  qrUtmTerm?: string;
   qrImageUrl?: string;
   overlayIcon?: string;
   logoTransparentBg?: boolean;
@@ -142,6 +148,12 @@ export type Banner = {
   brandUrl: string;
   logoUrl?: string;
   qrTargetUrl?: string;
+  qrTrackingEnabled?: boolean;
+  qrUtmSource?: string;
+  qrUtmMedium?: string;
+  qrUtmCampaign?: string;
+  qrUtmContent?: string;
+  qrUtmTerm?: string;
   qrImageUrl?: string;
   overlayIcon?: string;
   logoTransparentBg?: boolean;

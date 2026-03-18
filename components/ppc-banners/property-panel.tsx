@@ -27,6 +27,40 @@ function countLines(text: string) {
   return Math.max(1, text.split(/\r?\n/).length);
 }
 
+function slugifySegment(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function resolveTrackedQrUrl(banner: Banner, format?: BannerFormat) {
+  const targetUrl = (banner.qrTargetUrl || "").trim();
+  if (!targetUrl) return "";
+  const normalized = /^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`;
+  const url = new URL(normalized);
+  if (!banner.qrTrackingEnabled) return url.toString();
+
+  const fallbackCampaign = slugifySegment(banner.name || banner.headline || banner.brandName || "ppc-banner") || "ppc-banner";
+  const fallbackContent = slugifySegment(format?.id || "qr");
+  const source = (banner.qrUtmSource || "").trim() || "beets-qr";
+  const medium = (banner.qrUtmMedium || "").trim() || "qr";
+  const campaign = (banner.qrUtmCampaign || "").trim() || fallbackCampaign;
+  const content = (banner.qrUtmContent || "").trim() || fallbackContent;
+  const term = (banner.qrUtmTerm || "").trim();
+
+  url.searchParams.set("utm_source", source);
+  url.searchParams.set("utm_medium", medium);
+  url.searchParams.set("utm_campaign", campaign);
+  if (content) url.searchParams.set("utm_content", content);
+  if (term) url.searchParams.set("utm_term", term);
+  else url.searchParams.delete("utm_term");
+
+  return url.toString();
+}
+
 function AlignButtons<T extends string>({
   label,
   value,
@@ -157,12 +191,11 @@ export function PropertyPanel({
   };
 
   const generateQrCode = async () => {
-    const targetUrl = (banner.qrTargetUrl || "").trim();
+    const targetUrl = resolveTrackedQrUrl(banner, format);
     if (!targetUrl) return;
     try {
-      const normalized = /^https?:\/\//i.test(targetUrl) ? targetUrl : `https://${targetUrl}`;
-      new URL(normalized);
-      const dataUrl = await QRCode.toDataURL(normalized, {
+      new URL(targetUrl);
+      const dataUrl = await QRCode.toDataURL(targetUrl, {
         errorCorrectionLevel: "M",
         margin: 2,
         width: 512,
@@ -171,7 +204,7 @@ export function PropertyPanel({
           light: "#FFFFFFFF",
         },
       });
-      onBannerChange("qrTargetUrl", normalized);
+      onBannerChange("qrTargetUrl", (/^https?:\/\//i.test((banner.qrTargetUrl || "").trim()) ? (banner.qrTargetUrl || "").trim() : `https://${(banner.qrTargetUrl || "").trim()}`));
       onBannerChange("qrImageUrl", dataUrl);
     } catch (error) {
       console.error(error);
@@ -260,6 +293,13 @@ export function PropertyPanel({
   const bgPositionYValue = Number(format?.bgPositionY ?? banner.bgPositionY ?? 50);
   const gifFrames = banner.gifFrames || [];
   const gifDelay = typeof banner.gifFrameDelayMs === "number" ? banner.gifFrameDelayMs : 900;
+  const trackedQrUrl = (() => {
+    try {
+      return resolveTrackedQrUrl(banner, format);
+    } catch {
+      return "";
+    }
+  })();
   const formatWidth = Math.max(1, format?.width ?? 1200);
   const formatHeight = Math.max(1, format?.height ?? 628);
   const offsetRangeX = Math.max(320, Math.round(formatWidth * 1.25));
@@ -552,6 +592,40 @@ export function PropertyPanel({
                 className="border-slate-200 bg-white"
                 placeholder="https://..."
               />
+              <label className="flex items-center justify-between rounded-md border border-slate-300 bg-white px-2 py-2 text-xs text-slate-700">
+                <span>Automaticky pridat UTM tracking</span>
+                <input type="checkbox" checked={Boolean(banner.qrTrackingEnabled ?? true)} onChange={(e) => onBannerChange("qrTrackingEnabled", e.target.checked)} />
+              </label>
+              {banner.qrTrackingEnabled ?? true ? (
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">utm_source</Label>
+                      <Input value={banner.qrUtmSource || ""} onChange={(e) => onBannerChange("qrUtmSource", e.target.value)} className="border-slate-200 bg-white" placeholder="beets-qr" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">utm_medium</Label>
+                      <Input value={banner.qrUtmMedium || ""} onChange={(e) => onBannerChange("qrUtmMedium", e.target.value)} className="border-slate-200 bg-white" placeholder="qr" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">utm_campaign</Label>
+                      <Input value={banner.qrUtmCampaign || ""} onChange={(e) => onBannerChange("qrUtmCampaign", e.target.value)} className="border-slate-200 bg-white" placeholder={slugifySegment(banner.name || banner.headline || "ppc-banner") || "ppc-banner"} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-600">utm_content</Label>
+                      <Input value={banner.qrUtmContent || ""} onChange={(e) => onBannerChange("qrUtmContent", e.target.value)} className="border-slate-200 bg-white" placeholder={slugifySegment(format?.id || "qr") || "qr"} />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-600">utm_term</Label>
+                    <Input value={banner.qrUtmTerm || ""} onChange={(e) => onBannerChange("qrUtmTerm", e.target.value)} className="border-slate-200 bg-white" placeholder="volitelne" />
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                    <Label className="text-xs text-slate-600">Vysledna trackovaci URL</Label>
+                    <p className="mt-1 break-all text-[11px] text-slate-700">{trackedQrUrl || "Zadej cilovou URL."}</p>
+                  </div>
+                </>
+              ) : null}
               <button
                 type="button"
                 onClick={generateQrCode}
