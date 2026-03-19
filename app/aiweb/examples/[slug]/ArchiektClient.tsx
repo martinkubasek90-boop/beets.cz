@@ -1,6 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { GooeyText } from '@/components/aiweb/gooey-text';
+import { GradientButton } from '@/components/aiweb/gradient-button';
+import { TestimonialsColumn, type AnimatedTestimonial } from '@/components/aiweb/testimonials-column';
+import { ThemeToggle } from '@/components/aiweb/theme-toggle';
 import type { ExampleSite } from '../data';
 
 const PORTFOLIO = [
@@ -16,11 +21,48 @@ const PROCESS = [
   { num: '4', label: 'Realizace' },
 ];
 
+const TESTIMONIALS: AnimatedTestimonial[] = [
+  {
+    text: 'Studio Form navrhlo rekonstrukci tak, že jsme konečně propojili starý byt s moderním životem. Každý detail má důvod.',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+    name: 'Klára Šebková',
+    role: 'Privátní klientka',
+  },
+  {
+    text: 'Komunikace byla přesná a klidná. Rozpočet, materiály i stavební dozor držely jednu linii od první skici po dokončení.',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+    name: 'Tomáš Havel',
+    role: 'Investor rekonstrukce',
+  },
+  {
+    text: 'Tohle nebyl jen návrh interiéru. Byla to kurátorská práce se světlem, objemem a rytmem prostoru.',
+    image: 'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=200&q=80',
+    name: 'Lucie Bártová',
+    role: 'Art director',
+  },
+];
+
 export default function ArchiektClient({ site: s }: { site: ExampleSite }) {
+  const [isDark, setIsDark] = useState(true);
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
+  const palette = isDark
+    ? {
+        bg: s.bg,
+        surface: s.surface,
+        text: s.text,
+        muted: s.textMuted,
+        line: 'rgba(255,255,255,0.08)',
+      }
+    : {
+        bg: '#f5f0e8',
+        surface: '#fbf8f2',
+        text: '#171717',
+        muted: '#6b645b',
+        line: 'rgba(23,23,23,0.08)',
+      };
 
   return (
-    <div style={{ background: s.bg, minHeight: '100vh', color: s.text, fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)' }}>
+    <div style={{ background: palette.bg, minHeight: '100vh', color: palette.text, fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)', transition: 'background 0.25s ease, color 0.25s ease' }}>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         .fu{animation:fadeUp 0.9s ease both}
@@ -48,36 +90,43 @@ export default function ArchiektClient({ site: s }: { site: ExampleSite }) {
       </div>
 
       {/* MINIMAL FIXED NAV */}
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, padding: '0 48px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: s.text }}>{s.name}</span>
-        <div style={{ display: 'flex', gap: 40 }}>
+      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, padding: '0 48px', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: `${palette.bg}d9`, backdropFilter: 'blur(18px)', borderBottom: `1px solid ${palette.line}` }}>
+        <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', color: palette.text }}>{s.name}</span>
+        <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {['Portfolio', 'Kontakt'].map(l => (
-            <span key={l} style={{ fontSize: 13, color: s.textMuted, cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase', transition: 'color 0.2s' }}
+            <span key={l} style={{ fontSize: 13, color: palette.muted, cursor: 'pointer', letterSpacing: '1px', textTransform: 'uppercase', transition: 'color 0.2s' }}
               onClick={() => scrollTo(l === 'Kontakt' ? 'kontakt' : 'portfolio')}
-              onMouseEnter={e => { (e.currentTarget as HTMLSpanElement).style.color = s.text; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLSpanElement).style.color = s.textMuted; }}>
+              onMouseEnter={e => { (e.currentTarget as HTMLSpanElement).style.color = palette.text; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLSpanElement).style.color = palette.muted; }}>
               {l}
             </span>
           ))}
+          <ThemeToggle isDark={isDark} onToggle={() => setIsDark(v => !v)} />
         </div>
       </nav>
 
       {/* BRUTALIST HERO */}
       <section style={{ padding: '140px 48px 80px', minHeight: '92vh', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
         <div style={{ maxWidth: 1200 }}>
-          <h1 className="fu" style={{ fontSize: 'clamp(80px, 12vw, 160px)', fontWeight: 900, letterSpacing: '-4px', lineHeight: 0.9, margin: '0 0 32px' }}>
-            {s.heroH1.map((line, i) => (
-              <span key={i} style={{ display: 'block', color: s.text }}>{line}</span>
-            ))}
-          </h1>
-          <div style={{ width: '100%', height: 1, background: 'rgba(248,250,252,0.2)', marginBottom: 28 }} />
+          <div className="fu" style={{ marginBottom: 36 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase', color: palette.muted, marginBottom: 18 }}>
+              {s.heroLabel}
+            </div>
+            <GooeyText
+              texts={['Prostor', 'Světlo', 'Materiál', 'Klid']}
+              className="mb-6 h-[84px] md:h-[120px]"
+              textClassName="font-black tracking-[-0.08em] text-[clamp(54px,10vw,132px)]"
+            />
+            <div style={{ fontSize: 'clamp(34px, 5vw, 58px)', fontWeight: 900, letterSpacing: '-2px', lineHeight: 0.95, color: palette.text }}>
+              je médium.
+            </div>
+          </div>
+          <div style={{ width: '100%', height: 1, background: palette.line, marginBottom: 28 }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
-            <p className="fu d1" style={{ fontSize: 16, color: s.textMuted, lineHeight: 1.8, maxWidth: 520, margin: 0 }}>
+            <p className="fu d1" style={{ fontSize: 16, color: palette.muted, lineHeight: 1.8, maxWidth: 520, margin: 0 }}>
               {s.heroSub}
             </p>
-            <button className="fu d2 cta-arrow" onClick={() => scrollTo('kontakt')}>
-              → Zahájit projekt
-            </button>
+            <GradientButton className="fu d2" onClick={() => scrollTo('kontakt')}>Zahájit projekt</GradientButton>
           </div>
         </div>
       </section>
@@ -92,11 +141,11 @@ export default function ArchiektClient({ site: s }: { site: ExampleSite }) {
       </section>
 
       {/* PORTFOLIO GRID */}
-      <section id="portfolio" style={{ padding: '100px 48px', background: s.bg }}>
+      <section id="portfolio" style={{ padding: '100px 48px', background: palette.bg }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 48 }}>
             <h2 style={{ fontSize: 'clamp(28px, 5vw, 52px)', fontWeight: 900, letterSpacing: '-2px', margin: 0 }}>Portfolio</h2>
-            <span style={{ fontSize: 13, color: s.textMuted, textTransform: 'uppercase', letterSpacing: '1.5px' }}>2022 — 2025</span>
+            <span style={{ fontSize: 13, color: palette.muted, textTransform: 'uppercase', letterSpacing: '1.5px' }}>2022 — 2025</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
             {PORTFOLIO.map((item, i) => (
@@ -117,54 +166,59 @@ export default function ArchiektClient({ site: s }: { site: ExampleSite }) {
       </section>
 
       {/* PROCESS - HORIZONTAL WITH OUTLINE NUMBERS */}
-      <section style={{ padding: '100px 48px', background: s.surface }}>
+      <section style={{ padding: '100px 48px', background: palette.surface }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <h2 style={{ fontWeight: 700, margin: '0 0 64px', textTransform: 'uppercase', letterSpacing: '3px', fontSize: 14, color: s.textMuted }}>Proces</h2>
+          <h2 style={{ fontWeight: 700, margin: '0 0 64px', textTransform: 'uppercase', letterSpacing: '3px', fontSize: 14, color: palette.muted }}>Proces</h2>
           <div style={{ display: 'flex', gap: 0 }}>
             {PROCESS.map((step, i) => (
-              <div key={i} style={{ flex: 1, borderRight: i < PROCESS.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none', paddingRight: 40, paddingLeft: i > 0 ? 40 : 0 }}>
+              <div key={i} style={{ flex: 1, borderRight: i < PROCESS.length - 1 ? `1px solid ${palette.line}` : 'none', paddingRight: 40, paddingLeft: i > 0 ? 40 : 0 }}>
                 <div style={{
                   fontSize: 'clamp(80px, 10vw, 120px)', fontWeight: 900, lineHeight: 0.9, marginBottom: 20,
                   color: 'transparent',
-                  WebkitTextStroke: '1px rgba(248,250,252,0.35)',
+                  WebkitTextStroke: `1px ${isDark ? 'rgba(248,250,252,0.35)' : 'rgba(23,23,23,0.22)'}`,
                   letterSpacing: '-4px',
                 }}>
                   {step.num}
                 </div>
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: s.text, letterSpacing: '0.5px' }}>{step.label}</p>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: palette.text, letterSpacing: '0.5px' }}>{step.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* QUOTE */}
-      <section style={{ padding: '120px 48px', background: s.bg, textAlign: 'center' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <p style={{ fontSize: 'clamp(24px, 4vw, 44px)', fontStyle: 'italic', fontWeight: 300, color: 'rgba(248,250,252,0.5)', lineHeight: 1.45, margin: 0, letterSpacing: '-0.5px' }}>
-            &ldquo;Dobrá architektura nevznikne bez trpělivého dialogu. Nejlepší budovy jsou ty, které přesně odráží lidi, kteří v nich žijí.&rdquo;
-          </p>
+      {/* TESTIMONIALS / QUOTE */}
+      <section style={{ padding: '120px 48px', background: palette.bg, overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '280px minmax(0,1fr) 280px', gap: 28, alignItems: 'center' }}>
+          <TestimonialsColumn testimonials={TESTIMONIALS.slice(0, 2)} duration={16} />
+          <div style={{ textAlign: 'center', padding: '0 12px' }}>
+            <p style={{ fontSize: 'clamp(24px, 4vw, 44px)', fontStyle: 'italic', fontWeight: 300, color: isDark ? 'rgba(248,250,252,0.5)' : 'rgba(23,23,23,0.55)', lineHeight: 1.45, margin: 0, letterSpacing: '-0.5px' }}>
+              &ldquo;Dobrá architektura nevznikne bez trpělivého dialogu. Nejlepší budovy jsou ty, které přesně odráží lidi, kteří v nich žijí.&rdquo;
+            </p>
+            <div style={{ marginTop: 22, fontSize: 12, fontWeight: 700, letterSpacing: '0.24em', textTransform: 'uppercase', color: palette.muted }}>
+              Studio Form · Reference klientů
+            </div>
+          </div>
+          <TestimonialsColumn testimonials={TESTIMONIALS.slice(1)} duration={18} />
         </div>
       </section>
 
       {/* MINIMAL CTA */}
-      <section id="kontakt" style={{ padding: '80px 48px', background: s.surface, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <section id="kontakt" style={{ padding: '80px 48px', background: palette.surface, borderTop: `1px solid ${palette.line}` }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 32 }}>
           <div>
             <h2 style={{ fontSize: 'clamp(32px, 5vw, 60px)', fontWeight: 900, letterSpacing: '-2.5px', margin: '0 0 8px' }}>Začněme spolu.</h2>
-            <p style={{ fontSize: 16, color: s.textMuted, margin: 0, lineHeight: 1.7 }}>Úvodní konzultace zdarma. Přivezeme skici a inspiraci přímo k vám.</p>
+            <p style={{ fontSize: 16, color: palette.muted, margin: 0, lineHeight: 1.7 }}>Úvodní konzultace zdarma. Přivezeme skici a inspiraci přímo k vám.</p>
           </div>
-          <button className="cta-arrow" onClick={() => window.open('mailto:form@studioform.cz')} style={{ fontSize: 18 }}>
-            → Kontaktovat studio
-          </button>
+          <GradientButton onClick={() => window.open('mailto:form@studioform.cz')}>Kontaktovat studio</GradientButton>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ padding: '28px 48px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        <span style={{ fontSize: 13, color: s.textMuted }}>{s.footerTagline}</span>
+      <footer style={{ padding: '28px 48px', borderTop: `1px solid ${palette.line}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <span style={{ fontSize: 13, color: palette.muted }}>{s.footerTagline}</span>
         <div style={{ display: 'flex', gap: 24 }}>
-          {s.footerLinks.map(l => (<span key={l} style={{ fontSize: 12, color: s.textMuted, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px' }}>{l}</span>))}
+          {s.footerLinks.map(l => (<span key={l} style={{ fontSize: 12, color: palette.muted, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '1px' }}>{l}</span>))}
         </div>
       </footer>
     </div>

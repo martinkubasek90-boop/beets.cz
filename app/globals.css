@@ -44,6 +44,30 @@ body {
     'Segoe UI', sans-serif;
 }
 
+.gradient-button {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06)) padding-box,
+    linear-gradient(135deg, #8b5cf6, #3b82f6 55%, #22d3ee) border-box;
+  border: 1px solid transparent;
+  box-shadow:
+    0 10px 30px rgba(59, 130, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+}
+
+.gradient-button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 38px rgba(59, 130, 246, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.gradient-button-variant {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03)) padding-box,
+    linear-gradient(135deg, rgba(255,255,255,0.32), rgba(255,255,255,0.08)) border-box;
+}
+
 .memodo-app {
   --memodo-bg: #efefef;
   --memodo-surface: #ffffff;

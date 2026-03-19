@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ContainerScroll } from '@/components/aiweb/container-scroll';
+import { GradientButton } from '@/components/aiweb/gradient-button';
 import { HeroGeometric } from '@/components/aiweb/hero-geometric';
 import type { ExampleSite } from '../data';
 
@@ -104,14 +105,7 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
         description={s.heroSub}
       >
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => scrollTo('kontakt')}
-            style={{ padding: '16px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-          >
-            {s.heroCta}
-          </button>
+          <GradientButton onClick={() => scrollTo('kontakt')}>{s.heroCta}</GradientButton>
           <button
             onClick={() => scrollTo('produkt')}
             style={{ padding: '16px 36px', borderRadius: 10, border: `1px solid ${s.border}`, cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: 'transparent', color: s.text, transition: 'all 0.2s' }}
@@ -309,14 +303,9 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
                 <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>{plan.name}</h3>
                 <div style={{ fontSize: 32, fontWeight: 900, color: s.primary, margin: '0 0 16px', letterSpacing: '-1px' }}>{plan.price}</div>
                 <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.7, margin: '0 0 28px' }}>{plan.desc}</p>
-                <button
-                  onClick={() => scrollTo('kontakt')}
-                  style={{ width: '100%', padding: '12px', borderRadius: 8, border: plan.highlight ? 'none' : `1px solid ${s.border}`, cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', background: plan.highlight ? s.primary : 'transparent', color: plan.highlight ? '#fff' : s.text, transition: 'all 0.2s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-                >
+                <GradientButton className="w-full justify-center" variant={plan.highlight ? "default" : "subtle"} onClick={() => scrollTo('kontakt')}>
                   Začít
-                </button>
+                </GradientButton>
               </div>
             ))}
           </div>
@@ -335,12 +324,7 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
           <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Kontakt</p>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, letterSpacing: '-1.5px', margin: '0 0 16px' }}>Začněte zdarma</h2>
           <p style={{ color: s.textMuted, fontSize: 16, marginBottom: 36, lineHeight: 1.7 }}>14 dní zdarma, bez kreditní karty. Zrušte kdykoliv.</p>
-          <button
-            onClick={() => window.open('mailto:hello@novatech.io')}
-            style={{ padding: '16px 44px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff' }}
-          >
-            {s.heroCta}
-          </button>
+          <GradientButton onClick={() => window.open('mailto:hello@novatech.io')}>{s.heroCta}</GradientButton>
         </div>
       </section>
 

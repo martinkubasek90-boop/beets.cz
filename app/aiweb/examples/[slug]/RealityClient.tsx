@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { GradientButton } from '@/components/aiweb/gradient-button';
 import type { ExampleSite } from '../data';
 
 const PROPERTIES = [
@@ -69,14 +70,7 @@ export default function RealityClient({ site: s }: { site: ExampleSite }) {
               {l}
             </span>
           ))}
-          <button
-            onClick={() => scrollTo('kontakt')}
-            style={{ padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-          >
-            {s.heroCta}
-          </button>
+          <GradientButton onClick={() => scrollTo('kontakt')}>{s.heroCta}</GradientButton>
         </div>
       </nav>
 
@@ -260,14 +254,9 @@ export default function RealityClient({ site: s }: { site: ExampleSite }) {
             {s.sections[1]?.title}
           </h2>
           <p style={{ fontSize: 16, color: s.textMuted, margin: '0 0 40px', lineHeight: 1.7 }}>{s.sections[1]?.sub}</p>
-          <button
-            onClick={() => window.open('tel:+420800123456')}
-            style={{ padding: '18px 48px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-          >
+          <GradientButton onClick={() => window.open('tel:+420800123456')}>
             {s.sections[1]?.ctaText || s.heroCta}
-          </button>
+          </GradientButton>
         </div>
       </section>
 
