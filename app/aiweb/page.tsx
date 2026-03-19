@@ -209,7 +209,7 @@ export default function AIWebPage() {
       </header>
 
       {/* ─── HERO ─── */}
-      <section style={{ position:'relative', overflow:'hidden', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', padding:'120px 24px 60px' }}>
+      <section style={{ position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', padding:'160px 24px 80px' }}>
         <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)', top:'-200px', left:'-200px', pointerEvents:'none', animation:'orbFloat 14s ease-in-out infinite' }} />
         <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle,rgba(37,99,235,0.15) 0%,transparent 70%)', bottom:'-150px', right:'-100px', pointerEvents:'none', animation:'orbFloat2 18s ease-in-out infinite' }} />
         <div className="mesh-bg" style={{ position:'absolute', inset:0, pointerEvents:'none' }} />
@@ -237,7 +237,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── STATS ─── */}
-      <section style={{ padding:'0 24px 60px' }}>
+      <section style={{ padding:'0 24px 48px' }}>
         <div style={{ maxWidth:900, margin:'0 auto' }}>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:2, borderRadius:16, overflow:'hidden', border:'1px solid rgba(167,139,250,0.15)', background:'rgba(167,139,250,0.05)' }}>
             {c.stats.map(s => (
@@ -251,13 +251,13 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── SERVICES ─── */}
-      <section id="sluzby" style={{ padding:'60px 24px', position:'relative' }}>
+      <section id="sluzby" style={{ padding:'48px 24px', position:'relative' }}>
         <div className="mesh-bg" style={{ position:'absolute', inset:0, opacity:0.5, pointerEvents:'none' }} />
         <div style={{ maxWidth:1200, margin:'0 auto', position:'relative' }}>
-          <div style={{ textAlign:'center', marginBottom:48 }}>
+          <div style={{ textAlign:'center', marginBottom:40 }}>
             <p className="section-label">Co děláme</p>
-            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 12px' }}>
-              <span className="grad-text">{c.servicesTitle}</span>
+            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 12px', color:'#f1f5f9' }}>
+              {c.servicesTitle}
             </h2>
             <p style={{ color:'#64748b', fontSize:16, maxWidth:500, margin:'0 auto' }}>{c.servicesSub}</p>
           </div>
@@ -277,8 +277,8 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── WHY US ─── */}
-      <section style={{ padding:'60px 24px', background:'linear-gradient(180deg,#04050f 0%,#070a1a 50%,#04050f 100%)' }}>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(480px,1fr))', gap:56, alignItems:'center' }}>
+      <section style={{ padding:'48px 24px', background:'rgba(7,10,26,0.6)', borderTop:'1px solid rgba(167,139,250,0.07)', borderBottom:'1px solid rgba(167,139,250,0.07)' }}>
+        <div style={{ maxWidth:1100, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))', gap:48, alignItems:'start' }}>
           <div>
             <p className="section-label">Proč my</p>
             <h2 style={{ fontSize:'clamp(26px,4vw,42px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 16px', lineHeight:1.15 }}>{c.whyTitle}</h2>
@@ -302,12 +302,12 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── PROCESS ─── */}
-      <section id="proces" style={{ padding:'60px 24px' }}>
+      <section id="proces" style={{ padding:'48px 24px' }}>
         <div style={{ maxWidth:760, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:48 }}>
+          <div style={{ textAlign:'center', marginBottom:36 }}>
             <p className="section-label">Jak pracujeme</p>
-            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 8px' }}>
-              <span className="grad-text">{c.processTitle}</span>
+            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 8px', color:'#f1f5f9' }}>
+              {c.processTitle}
             </h2>
             <p style={{ color:'#64748b', fontSize:16, margin:0 }}>{c.processSub}</p>
           </div>
@@ -315,13 +315,13 @@ export default function AIWebPage() {
             {c.process.map((p, i) => (
               <div key={p.step} style={{ display:'flex', gap:20 }}>
                 <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
-                  <div style={{ width:52, height:52, borderRadius:'50%', flexShrink:0, background:'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(37,99,235,0.3))', border:'1px solid rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20 }}>{p.icon}</div>
-                  {i < c.process.length - 1 && <div style={{ width:2, flex:1, minHeight:28, background:'linear-gradient(to bottom,rgba(124,58,237,0.4),rgba(37,99,235,0.1))', margin:'3px 0' }} />}
+                  <div style={{ width:48, height:48, borderRadius:'50%', flexShrink:0, background:'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(37,99,235,0.3))', border:'1px solid rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>{p.icon}</div>
+                  {i < c.process.length - 1 && <div style={{ width:2, flex:1, minHeight:20, background:'linear-gradient(to bottom,rgba(124,58,237,0.4),rgba(37,99,235,0.1))', margin:'3px 0' }} />}
                 </div>
-                <div style={{ paddingBottom:i < c.process.length - 1 ? 28 : 0, paddingTop:10 }}>
+                <div style={{ paddingBottom:i < c.process.length - 1 ? 20 : 0, paddingTop:8 }}>
                   <span style={{ fontSize:11, fontWeight:700, color:'#7c3aed', letterSpacing:'1px' }}>KROK {p.step}</span>
-                  <h3 style={{ fontSize:19, fontWeight:700, color:'#f1f5f9', margin:'6px 0 6px' }}>{p.title}</h3>
-                  <p style={{ color:'#64748b', fontSize:14, lineHeight:1.65, margin:0 }}>{p.desc}</p>
+                  <h3 style={{ fontSize:17, fontWeight:700, color:'#f1f5f9', margin:'4px 0 4px' }}>{p.title}</h3>
+                  <p style={{ color:'#64748b', fontSize:14, lineHeight:1.6, margin:0 }}>{p.desc}</p>
                 </div>
               </div>
             ))}
@@ -330,12 +330,12 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── REFERENCES ─── */}
-      <section id="reference" style={{ padding:'60px 24px', background:'rgba(7,10,26,0.8)' }}>
+      <section id="reference" style={{ padding:'48px 24px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:48 }}>
+          <div style={{ textAlign:'center', marginBottom:40 }}>
             <p className="section-label">Reference</p>
-            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 10px' }}>
-              <span className="grad-text">{c.referencesTitle}</span>
+            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 10px', color:'#f1f5f9' }}>
+              {c.referencesTitle}
             </h2>
             <p style={{ color:'#64748b', fontSize:16, margin:0 }}>{c.referencesSub}</p>
           </div>
@@ -366,7 +366,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── EXAMPLES ─── */}
-      <section id="priklady" style={{ padding: '60px 24px' }}>
+      <section id="priklady" style={{ padding: '48px 24px', position: 'relative' }}>
         <div className="mesh-bg" style={{ position: 'absolute', opacity: 0.3, inset: 0, pointerEvents: 'none' }} />
         <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
           <div style={{ textAlign: 'center', marginBottom: 48 }}>
@@ -404,7 +404,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── FORM ─── */}
-      <section id="poptavka" style={{ padding:'60px 24px', position:'relative', overflow:'hidden' }}>
+      <section id="poptavka" style={{ padding:'48px 24px', position:'relative', overflow:'hidden', background:'rgba(4,5,15,0.9)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
         <div style={{ position:'absolute', width:800, height:800, borderRadius:'50%', top:'50%', left:'50%', transform:'translate(-50%,-50%)', background:'radial-gradient(circle,rgba(124,58,237,0.07) 0%,transparent 65%)', pointerEvents:'none' }} />
         <div style={{ maxWidth:680, margin:'0 auto', position:'relative' }}>
           <div style={{ textAlign:'center', marginBottom:40 }}>
@@ -465,7 +465,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── CONTACT ─── */}
-      <section id="kontakt" style={{ padding:'60px 24px', background:'rgba(7,10,26,0.8)' }}>
+      <section id="kontakt" style={{ padding:'48px 24px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
         <div style={{ maxWidth:1000, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:40 }}>
             <p className="section-label">Kontakt</p>
