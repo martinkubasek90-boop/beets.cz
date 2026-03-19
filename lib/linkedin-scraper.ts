@@ -1495,6 +1495,45 @@ async function loadQueuedCompanySeeds(supabase: ReturnType<typeof getLinkedInSer
   return (data || []) as CompanySeedRow[];
 }
 
+async function insertCompanySeeds(
+  supabase: ReturnType<typeof getLinkedInServiceClient>,
+  runId: string,
+  seeds: Array<{
+    company_name: string | null;
+    company_domain: string | null;
+    location: string | null;
+    segment: string | null;
+    source: string | null;
+    status: CompanySeedStatus;
+    raw_payload: Record<string, unknown>;
+  }>,
+) {
+  if (!supabase || !seeds.length) return;
+
+  const existingSeeds = await loadQueuedCompanySeeds(supabase, runId);
+  const existingKeys = new Set(
+    existingSeeds.map((seed) => normalizeText(seed.company_domain || seed.company_name || "")),
+  );
+
+  const rows = seeds.filter((seed) => {
+    const key = normalizeText(seed.company_domain || seed.company_name || "");
+    if (!key || existingKeys.has(key)) return false;
+    existingKeys.add(key);
+    return true;
+  });
+
+  if (!rows.length) return;
+
+  const { error } = await supabase.from(LINKEDIN_TABLES.companySeeds).insert(
+    rows.map((row) => ({
+      run_id: runId,
+      ...row,
+    })),
+  );
+
+  if (error) throw new Error(error.message);
+}
+
 async function extractCompanySeedsFromDirectoryUrl(directoryUrl: string) {
   const html = await fetchText(directoryUrl);
   const matches = Array.from(html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi));
@@ -1885,11 +1924,7 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
         ).values(),
       );
 
-      const { error: seedInsertError } = await supabase.from(LINKEDIN_TABLES.companySeeds).upsert(dedupedSeeds, {
-        onConflict: "run_id,company_domain,company_name",
-      });
-
-      if (seedInsertError) throw new Error(seedInsertError.message);
+      await insertCompanySeeds(supabase, data.id, dedupedSeeds);
     }
   }
 
@@ -1960,10 +1995,7 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
             ).values(),
           );
 
-          const { error: seedInsertError } = await supabase.from(LINKEDIN_TABLES.companySeeds).upsert(dedupedDirectorySeeds, {
-            onConflict: "run_id,company_domain,company_name",
-          });
-          if (seedInsertError) throw new Error(seedInsertError.message);
+          await insertCompanySeeds(supabase, selectedRun.id, dedupedDirectorySeeds);
           queuedSeeds = await loadQueuedCompanySeeds(supabase, selectedRun.id);
         }
       }
