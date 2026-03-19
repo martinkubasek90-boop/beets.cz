@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { WebGLShader } from '@/components/aiweb/webgl-shader';
 import { EXAMPLES } from './examples/data';
@@ -113,6 +113,7 @@ export default function AIWebPage() {
   const [status, setStatus] = useState<FormStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [c, setC] = useState<AIWebContent>(DEFAULT_CONTENT);
+  const examplesTrackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -141,6 +142,20 @@ export default function AIWebPage() {
       if (!res.ok) { setErrorMsg(data.error || 'Chyba při odesílání.'); setStatus('error'); }
       else { setStatus('success'); setForm(EMPTY_FORM); }
     } catch { setErrorMsg('Chyba připojení. Zkuste to prosím znovu.'); setStatus('error'); }
+  };
+
+  const scrollExamples = (direction: number) => {
+    const node = examplesTrackRef.current;
+    if (!node) return;
+    node.scrollBy({
+      left: direction * Math.min(360, node.clientWidth * 0.9),
+      behavior: 'smooth',
+    });
+  };
+
+  const getReferenceHeadline = (role: string) => {
+    const company = role.split(',').slice(1).join(',').trim();
+    return company || role;
   };
 
   const scrollTo = (id: string) => {
@@ -330,20 +345,25 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── REFERENCES ─── */}
-      <section id="reference" style={{ padding:'48px 24px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
+      <section id="reference" style={{ padding:'32px 24px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:40 }}>
+          <div style={{ textAlign:'center', marginBottom:28 }}>
             <p className="section-label">Reference</p>
             <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 10px', color:'#f1f5f9' }}>
               {c.referencesTitle}
             </h2>
             <p style={{ color:'#64748b', fontSize:16, margin:0 }}>{c.referencesSub}</p>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:20 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))', gap:14 }}>
             {c.references.map(r => (
-              <div key={r.name} className="card-glow glass" style={{ padding:24, borderRadius:16 }}>
-                <div style={{ marginBottom:12 }}>{Array.from({length:r.stars}).map((_,i) => <span key={i} className="star" style={{ fontSize:15 }}>★</span>)}</div>
-                <p style={{ color:'#cbd5e1', fontSize:14, lineHeight:1.75, marginBottom:20, fontStyle:'italic' }}>&ldquo;{r.text}&rdquo;</p>
+              <div key={r.name} className="card-glow glass" style={{ padding:20, borderRadius:16 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:r.color, letterSpacing:'1.2px', textTransform:'uppercase' }}>
+                    {getReferenceHeadline(r.role)}
+                  </div>
+                  <div>{Array.from({length:r.stars}).map((_,i) => <span key={i} className="star" style={{ fontSize:14 }}>★</span>)}</div>
+                </div>
+                <p style={{ color:'#cbd5e1', fontSize:14, lineHeight:1.7, marginBottom:16, fontStyle:'italic' }}>&ldquo;{r.text}&rdquo;</p>
                 <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                   <div style={{ width:40, height:40, borderRadius:'50%', flexShrink:0, background:r.color, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13, fontWeight:700, color:'#fff' }}>{r.initials}</div>
                   <div>
@@ -354,7 +374,7 @@ export default function AIWebPage() {
               </div>
             ))}
           </div>
-          <div style={{ marginTop:48, textAlign:'center' }}>
+          <div style={{ marginTop:28, textAlign:'center' }}>
             <p style={{ color:'#334155', fontSize:12, letterSpacing:'2px', textTransform:'uppercase', marginBottom:20 }}>Důvěřují nám</p>
             <div style={{ display:'flex', justifyContent:'center', flexWrap:'wrap', gap:'10px 28px' }}>
               {['TechFlow', 'Bloom Boutique', 'DataStar', 'FitLife Academy', 'Nova Media', 'SkyRocket'].map(n => (
@@ -366,23 +386,51 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── EXAMPLES ─── */}
-      <section id="priklady" style={{ padding: '48px 24px', position: 'relative' }}>
+      <section id="priklady" style={{ padding: '32px 24px', position: 'relative' }}>
         <div className="mesh-bg" style={{ position: 'absolute', opacity: 0.3, inset: 0, pointerEvents: 'none' }} />
         <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <p className="section-label">Příklady webů</p>
-            <h2 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 12px' }}>
-              <span className="grad-text">10 odvětví. 10 webů.</span>
-            </h2>
-            <p style={{ color: '#64748b', fontSize: 16, maxWidth: 520, margin: '0 auto' }}>
-              Každý web tvoříme na míru dané branži. Prohlédněte si živé ukázky pro různá odvětví.
-            </p>
+          <div style={{ display:'flex', alignItems:'end', justifyContent:'space-between', gap:16, flexWrap:'wrap', marginBottom:20 }}>
+            <div>
+              <p className="section-label" style={{ marginBottom:8 }}>Příklady webů</p>
+              <h2 style={{ fontSize: 'clamp(28px,5vw,40px)', fontWeight: 900, letterSpacing: '-1px', margin: 0, color:'#f1f5f9' }}>
+                Ukázky webů
+              </h2>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <button
+                type="button"
+                onClick={() => scrollExamples(-1)}
+                aria-label="Předchozí ukázky"
+                style={{ width:44, height:44, borderRadius:999, border:'1px solid rgba(167,139,250,0.18)', background:'rgba(255,255,255,0.04)', color:'#f1f5f9', fontSize:20, cursor:'pointer' }}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() => scrollExamples(1)}
+                aria-label="Další ukázky"
+                style={{ width:44, height:44, borderRadius:999, border:'1px solid rgba(167,139,250,0.18)', background:'rgba(255,255,255,0.04)', color:'#f1f5f9', fontSize:20, cursor:'pointer' }}
+              >
+                →
+              </button>
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          <div
+            ref={examplesTrackRef}
+            style={{
+              display: 'flex',
+              gap: 16,
+              overflowX: 'auto',
+              paddingBottom: 8,
+              scrollSnapType: 'x proximity',
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
             {EXAMPLES.map(e => (
-              <Link key={e.slug} href={`/aiweb/examples/${e.slug}`} style={{ textDecoration: 'none' }}>
+              <Link key={e.slug} href={`/aiweb/examples/${e.slug}`} style={{ textDecoration: 'none', minWidth: 280, maxWidth: 280, flex: '0 0 280px', scrollSnapAlign:'start' }}>
                 <div className="card-glow" style={{
-                  padding: '24px', borderRadius: 14, cursor: 'pointer',
+                  padding: '22px', borderRadius: 14, cursor: 'pointer',
                   background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(167,139,250,0.12)',
                   height: '100%', display: 'flex', flexDirection: 'column', gap: 12,
                 }}>
