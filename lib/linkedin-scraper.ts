@@ -1534,6 +1534,86 @@ async function insertCompanySeeds(
   if (error) throw new Error(error.message);
 }
 
+async function insertOrUpdateProfiles(
+  supabase: ReturnType<typeof getLinkedInServiceClient>,
+  runId: string,
+  rows: Array<Record<string, unknown> & { linkedin_url: string }>,
+) {
+  if (!supabase || !rows.length) return;
+
+  const uniqueUrls = Array.from(new Set(rows.map((row) => row.linkedin_url).filter(Boolean)));
+  const { data: existingRows, error: existingError } = await supabase
+    .from(LINKEDIN_TABLES.profiles)
+    .select("id,linkedin_url")
+    .eq("run_id", runId)
+    .in("linkedin_url", uniqueUrls);
+
+  if (existingError) throw new Error(existingError.message);
+
+  const existingByUrl = new Map(
+    ((existingRows || []) as Array<{ id: string; linkedin_url: string }>).map((row) => [row.linkedin_url, row.id]),
+  );
+
+  const inserts: Array<Record<string, unknown>> = [];
+
+  for (const row of rows) {
+    const existingId = existingByUrl.get(row.linkedin_url);
+    if (existingId) {
+      const { error: updateError } = await supabase
+        .from(LINKEDIN_TABLES.profiles)
+        .update(row)
+        .eq("id", existingId);
+
+      if (updateError) throw new Error(updateError.message);
+      continue;
+    }
+
+    inserts.push(row);
+  }
+
+  if (!inserts.length) return;
+
+  const { error } = await supabase.from(LINKEDIN_TABLES.profiles).insert(inserts);
+  if (error) throw new Error(error.message);
+}
+
+async function insertOrUpdateCompany(
+  supabase: ReturnType<typeof getLinkedInServiceClient>,
+  row: {
+    normalized_name: string;
+    company_name: string;
+    company_domain: string | null;
+    location: string | null;
+    source: string;
+    raw_payload: Record<string, unknown>;
+  },
+) {
+  if (!supabase) return;
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from(LINKEDIN_TABLES.companies)
+    .select("id")
+    .eq("normalized_name", row.normalized_name)
+    .limit(1);
+
+  if (existingError) throw new Error(existingError.message);
+
+  const existingId = (existingRows as Array<{ id: string }> | null)?.[0]?.id;
+
+  if (existingId) {
+    const { error: updateError } = await supabase
+      .from(LINKEDIN_TABLES.companies)
+      .update(row)
+      .eq("id", existingId);
+
+    if (updateError) throw new Error(updateError.message);
+    return;
+  }
+
+  const { error } = await supabase.from(LINKEDIN_TABLES.companies).insert(row);
+  if (error) throw new Error(error.message);
+}
+
 async function extractCompanySeedsFromDirectoryUrl(directoryUrl: string) {
   const html = await fetchText(directoryUrl);
   const matches = Array.from(html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi));
@@ -2073,29 +2153,20 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
             },
           }));
 
-          const { error: insertError } = await supabase
-            .from(LINKEDIN_TABLES.profiles)
-            .upsert(rows, { onConflict: "run_id,linkedin_url" });
+          await insertOrUpdateProfiles(supabase, selectedRun.id, rows);
 
-          if (insertError) throw new Error(insertError.message);
-
-          const { error: companyUpsertError } = await supabase.from(LINKEDIN_TABLES.companies).upsert(
-            {
-              normalized_name: normalizeText(crawled.companyName || resolvedDomain),
-              company_name: crawled.companyName || resolvedDomain,
-              company_domain: crawled.companyDomain,
-              location: selectedRun.filters.locations[0] || null,
-              source: "company-miner",
-              raw_payload: {
-                runId: selectedRun.id,
-                contactEmail: crawled.contactEmail,
-                contactPhone: crawled.contactPhone,
-              },
+          await insertOrUpdateCompany(supabase, {
+            normalized_name: normalizeText(crawled.companyName || resolvedDomain),
+            company_name: crawled.companyName || resolvedDomain,
+            company_domain: crawled.companyDomain,
+            location: selectedRun.filters.locations[0] || null,
+            source: "company-miner",
+            raw_payload: {
+              runId: selectedRun.id,
+              contactEmail: crawled.contactEmail,
+              contactPhone: crawled.contactPhone,
             },
-            { onConflict: "normalized_name" },
-          );
-
-          if (companyUpsertError) throw new Error(companyUpsertError.message);
+          });
 
           if (queuedSeeds.length) {
             await supabase
@@ -2118,26 +2189,23 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
           await delay(250);
         } catch (error: unknown) {
           const message = error instanceof Error ? error.message : "Company crawl selhal.";
-          await supabase
-            .from(LINKEDIN_TABLES.profiles)
-            .upsert(
-              {
-                run_id: selectedRun.id,
-                linkedin_url: seed.company_domain || seed.company_name || crypto.randomUUID(),
-                source_query: selectedRun.source_query,
-                full_name: null,
-                headline: "Company crawl failed",
-                company_name: seed.company_name,
-                company_domain: seed.company_domain,
-                location: selectedRun.filters.locations[0] || null,
-                status: "failed" as LinkedInProfileStatus,
-                raw_payload: {
-                  sourceType: "company-website",
-                  error: message,
-                },
+          await insertOrUpdateProfiles(supabase, selectedRun.id, [
+            {
+              run_id: selectedRun.id,
+              linkedin_url: seed.company_domain || seed.company_name || crypto.randomUUID(),
+              source_query: selectedRun.source_query,
+              full_name: null,
+              headline: "Company crawl failed",
+              company_name: seed.company_name,
+              company_domain: seed.company_domain,
+              location: selectedRun.filters.locations[0] || null,
+              status: "failed" as LinkedInProfileStatus,
+              raw_payload: {
+                sourceType: "company-website",
+                error: message,
               },
-              { onConflict: "run_id,linkedin_url" },
-            );
+            },
+          ]);
 
           if (queuedSeeds.length) {
             await supabase
