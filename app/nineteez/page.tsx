@@ -238,7 +238,7 @@ export default function NineTeezPage() {
           display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         }}>
           <Image
-            src="/nineteez/mpc3000.jpg"
+            src="/nineteez/mpc3000.png"
             alt="Akai MPC 3000"
             width={680}
             height={580}
