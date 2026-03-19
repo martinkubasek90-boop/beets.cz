@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { SmokeBackground } from '@/components/ui/spooky-smoke-animation';
 
 /* ─────────────────────────────────────────────
@@ -230,30 +229,8 @@ export default function NineTeezPage() {
         {/* Dark overlay so smoke doesn't overpower */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: 'rgba(8,8,8,0.55)' }} />
 
-        {/* MPC 3000 Image */}
-        {/* ↓↓ UMÍSTI FOTO MPC do /public/nineteez/mpc3000.jpg ↓↓ */}
-        <div className="mpc-glow fade-up" style={{
-          position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-          zIndex: 2, width: '100%', maxWidth: 680,
-          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        }}>
-          <Image
-            src="/nineteez/mpc3000.png"
-            alt="Akai MPC 3000"
-            width={680}
-            height={580}
-            priority
-            style={{
-              objectFit: 'contain', objectPosition: 'bottom',
-              maxHeight: '65vh',
-              maskImage: 'linear-gradient(to top, rgba(8,8,8,1) 0%, rgba(8,8,8,0.9) 40%, transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to top, rgba(8,8,8,1) 0%, rgba(8,8,8,0.9) 40%, transparent 100%)',
-            }}
-          />
-        </div>
-
         {/* Text content */}
-        <div style={{ position: 'relative', zIndex: 3, textAlign: 'center', padding: '0 24px', marginTop: '-10vh' }}>
+        <div style={{ position: 'relative', zIndex: 3, textAlign: 'center', padding: '0 24px' }}>
           <p className="fade-up d1 section-label" style={{ marginBottom: 16 }}>Beatmaker · Praha · Since 2010</p>
 
           <h1 className="fade-up d2" style={{
