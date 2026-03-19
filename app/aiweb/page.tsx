@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { WebGLShader } from '@/components/aiweb/webgl-shader';
 
 /* ─── Types ─── */
 type FormData = {
@@ -207,6 +208,7 @@ export default function AIWebPage() {
 
   return (
     <div style={{ background: '#04050f', minHeight: '100vh', color: '#e2e8f0', fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)' }}>
+      <WebGLShader />
       <style>{`
         @keyframes orbFloat {
           0%,100% { transform: translate(0,0) scale(1); }
