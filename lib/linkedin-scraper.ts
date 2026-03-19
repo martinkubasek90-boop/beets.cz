@@ -47,6 +47,7 @@ export type LinkedInRun = {
     manualUrls: string[];
     companyNames: string[];
     companyDomains: string[];
+    seedRows: string[];
     highVolume: boolean;
     minerMode: boolean;
     enrichLimit: number;
@@ -72,6 +73,7 @@ export type LinkedInSearchPayload = {
   manualUrls?: string[];
   companyNames?: string[];
   companyDomains?: string[];
+  seedRows?: string[];
   highVolume?: boolean;
   minerMode?: boolean;
   enrichLimit?: number;
@@ -156,9 +158,25 @@ type LinkedInFilters = {
   manualUrls: string[];
   companyNames: string[];
   companyDomains: string[];
+  seedRows: string[];
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
+};
+
+type CompanySeedStatus = "queued" | "crawled" | "failed";
+
+type CompanySeedRow = {
+  id: string;
+  run_id: string;
+  company_name: string | null;
+  company_domain: string | null;
+  location: string | null;
+  segment: string | null;
+  source: string | null;
+  status: CompanySeedStatus;
+  last_error: string | null;
+  raw_payload: Record<string, unknown> | null;
 };
 
 const RUN_SELECT =
@@ -174,6 +192,7 @@ export const LINKEDIN_TABLES = {
   runs: "linkedin_scrape_runs",
   profiles: "linkedin_profile_candidates",
   companies: "linkedin_companies",
+  companySeeds: "linkedin_company_seeds",
 } as const;
 
 const sampleRuns: LinkedInRun[] = [
@@ -199,6 +218,7 @@ const sampleRuns: LinkedInRun[] = [
       manualUrls: [],
       companyNames: [],
       companyDomains: [],
+      seedRows: [],
       highVolume: false,
       minerMode: false,
       enrichLimit: 50,
@@ -316,6 +336,30 @@ function normalizeCompanyDomainInput(raw: string) {
   }
 }
 
+function parseCompanySeedLine(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed
+    .split(/\t|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (!parts.length) return null;
+
+  const [part1, part2, part3, part4] = parts;
+  const firstAsDomain = normalizeCompanyDomainInput(part1 || "");
+  const secondAsDomain = normalizeCompanyDomainInput(part2 || "");
+
+  return {
+    companyName: firstAsDomain ? null : part1 || null,
+    companyDomain: firstAsDomain || secondAsDomain || null,
+    location: firstAsDomain ? part2 || part3 || null : part3 || null,
+    segment: firstAsDomain ? part3 || part4 || null : part4 || null,
+    source: "manual-bulk",
+  };
+}
+
 function normalizeFilters(value: unknown) {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
@@ -328,6 +372,7 @@ function normalizeFilters(value: unknown) {
     companyDomains: toStringArray(source.companyDomains)
       .map((item) => normalizeCompanyDomainInput(item) || "")
       .filter(Boolean),
+    seedRows: toStringArray(source.seedRows),
     highVolume: typeof source.highVolume === "boolean" ? source.highVolume : false,
     minerMode: typeof source.minerMode === "boolean" ? source.minerMode : false,
     enrichLimit:
@@ -429,9 +474,23 @@ export function scoreProfileAgainstFilters(profile: LinkedInProfile, filters: Li
     reasons.push("lokace odpovida ICP");
   }
 
+  if (
+    /\b(developer|development|general contractor|contractor|construction|architect|architecture|facade|glazing|window|door|procurement|purchasing|estimating|preconstruction)\b/.test(
+      merged,
+    )
+  ) {
+    score += 14;
+    reasons.push("stavebni nebo specifikacni signal");
+  }
+
   if (/\b(vp|head|director|chief|senior|lead|manager|partnerships|business development|sales)\b/.test(headline)) {
     score += 8;
     reasons.push("seniorita nebo revenue role");
+  }
+
+  if (/\b(owner|founder|principal|partner|procurement|purchasing|estimating|preconstruction|project manager|architect)\b/.test(headline)) {
+    score += 10;
+    reasons.push("decision maker nebo specifikacni role");
   }
 
   if (/\b(b2b|saas|enterprise|software|cloud|platform|solutions)\b/.test(`${headline} ${company}`)) {
@@ -604,6 +663,7 @@ function expandIcpTerms(filters: LinkedInFilters) {
     manualUrls: filters.manualUrls,
     companyNames: filters.companyNames,
     companyDomains: filters.companyDomains,
+    seedRows: filters.seedRows,
     highVolume: filters.highVolume,
     minerMode: filters.minerMode,
     enrichLimit: filters.enrichLimit,
@@ -1331,6 +1391,19 @@ async function resolveCompanySeedDomains(filters: LinkedInFilters) {
   }));
 }
 
+async function loadQueuedCompanySeeds(supabase: ReturnType<typeof getLinkedInServiceClient>, runId: string) {
+  if (!supabase) throw new Error("Chybi Supabase service role.");
+
+  const { data, error } = await supabase
+    .from(LINKEDIN_TABLES.companySeeds)
+    .select("id,run_id,company_name,company_domain,location,segment,source,status,last_error,raw_payload")
+    .eq("run_id", runId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data || []) as CompanySeedRow[];
+}
+
 async function retryPendingContactEnrichment(supabase: ReturnType<typeof getLinkedInServiceClient>, runId: string) {
   if (!supabase) throw new Error("Chybi Supabase service role.");
 
@@ -1454,6 +1527,7 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
   const companyDomains = uniqueStrings(raw.companyDomains)
     .map((item) => normalizeCompanyDomainInput(item) || "")
     .filter(Boolean);
+  const seedRows = uniqueStrings(raw.seedRows);
   const sourceQuery = buildSourceQuery({ runMode, keywords, titles, locations, companyNames, companyDomains });
   const enrichLimit =
     typeof raw.enrichLimit === "number" && Number.isFinite(raw.enrichLimit)
@@ -1472,6 +1546,7 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
       manualUrls,
       companyNames,
       companyDomains,
+      seedRows,
       highVolume: Boolean(raw.highVolume),
       minerMode: Boolean(raw.minerMode),
       enrichLimit,
@@ -1541,10 +1616,15 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
 
   const normalized = normalizeSearchPayload(raw);
   if (normalized.filters.runMode === "company") {
-    if (!normalized.filters.companyDomains.length && !normalized.filters.companyNames.length) {
-      throw new Error("Pro company miner zadej alespon jednu domenu nebo nazev firmy.");
+    if (!normalized.filters.seedRows.length && !normalized.filters.companyDomains.length && !normalized.filters.companyNames.length) {
+      throw new Error("Pro company miner zadej bulk seeds, domeny nebo nazvy firem.");
     }
-    if (!normalized.filters.companyDomains.length && normalized.filters.companyNames.length && getSearchProviderLabel() === "none") {
+    if (
+      !normalized.filters.seedRows.length &&
+      !normalized.filters.companyDomains.length &&
+      normalized.filters.companyNames.length &&
+      getSearchProviderLabel() === "none"
+    ) {
       throw new Error("Bez search provideru potrebuje company miner primo domeny firem. Samotne nazvy firmy nestaci.");
     }
   } else if (!normalized.filters.keywords.length && !normalized.filters.titles.length && !normalized.filters.locations.length) {
@@ -1569,6 +1649,59 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
     .single();
 
   if (error) throw new Error(error.message);
+
+  if (normalized.filters.runMode === "company") {
+    const seedPayloads = [
+      ...normalized.filters.seedRows.map(parseCompanySeedLine).filter(Boolean),
+      ...normalized.filters.companyDomains.map((companyDomain) => ({
+        companyName: null,
+        companyDomain,
+        location: normalized.filters.locations[0] || null,
+        segment: normalized.filters.keywords[0] || null,
+        source: "manual-domain",
+      })),
+      ...normalized.filters.companyNames
+        .filter((companyName) => !normalized.filters.seedRows.some((row) => normalizeText(row).includes(normalizeText(companyName))))
+        .map((companyName) => ({
+          companyName,
+          companyDomain: null,
+          location: normalized.filters.locations[0] || null,
+          segment: normalized.filters.keywords[0] || null,
+          source: "manual-name",
+        })),
+    ];
+
+    if (seedPayloads.length) {
+      const dedupedSeeds = Array.from(
+        new Map(
+          seedPayloads
+            .filter((seed) => seed?.companyName || seed?.companyDomain)
+            .map((seed) => [
+              normalizeText(seed!.companyDomain || seed!.companyName || ""),
+              {
+                run_id: data.id,
+                company_name: seed!.companyName,
+                company_domain: seed!.companyDomain,
+                location: seed!.location,
+                segment: seed!.segment,
+                source: seed!.source,
+                status: "queued" as CompanySeedStatus,
+                raw_payload: {
+                  importedAt: new Date().toISOString(),
+                },
+              },
+            ]),
+        ).values(),
+      );
+
+      const { error: seedInsertError } = await supabase.from(LINKEDIN_TABLES.companySeeds).upsert(dedupedSeeds, {
+        onConflict: "run_id,company_domain,company_name",
+      });
+
+      if (seedInsertError) throw new Error(seedInsertError.message);
+    }
+  }
+
   return mapRun(data as LinkedInRunRow);
 }
 
@@ -1603,7 +1736,21 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
   try {
     if (selectedRun.filters.runMode === "company") {
-      const resolvedSeeds = await resolveCompanySeedDomains(selectedRun.filters);
+      const queuedSeeds = await loadQueuedCompanySeeds(supabase, selectedRun.id);
+      const resolvedSeeds = queuedSeeds.length
+        ? queuedSeeds
+        : (await resolveCompanySeedDomains(selectedRun.filters)).map((seed) => ({
+            id: seed.companyDomain || seed.companyName || crypto.randomUUID(),
+            run_id: selectedRun.id,
+            company_name: seed.companyName,
+            company_domain: seed.companyDomain,
+            location: selectedRun.filters.locations[0] || null,
+            segment: selectedRun.filters.keywords[0] || null,
+            source: "legacy-filters",
+            status: "queued" as CompanySeedStatus,
+            last_error: null,
+            raw_payload: null,
+          }));
       if (!resolvedSeeds.length) {
         throw new Error("Company miner nema zadne pouzitelne domeny. Zadej domeny firem, pripadne nazvy firem s aktivnim search providerem.");
       }
@@ -1621,9 +1768,24 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
       for (const seed of resolvedSeeds) {
         try {
+          let resolvedDomain = seed.company_domain;
+          if (!resolvedDomain) {
+            const resolved = await resolveCompanySeedDomains({
+              ...selectedRun.filters,
+              companyNames: seed.company_name ? [seed.company_name] : [],
+              companyDomains: [],
+              seedRows: [],
+            });
+            resolvedDomain = resolved[0]?.companyDomain || null;
+          }
+
+          if (!resolvedDomain) {
+            throw new Error("Nepodarilo se dohledat domenu firmy.");
+          }
+
           const crawled = await crawlCompanyWebsite({
-            companyDomain: seed.companyDomain,
-            companyName: seed.companyName,
+            companyDomain: resolvedDomain,
+            companyName: seed.company_name,
             filters: selectedRun.filters,
           });
 
@@ -1672,6 +1834,22 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
           if (companyUpsertError) throw new Error(companyUpsertError.message);
 
+          if (queuedSeeds.length) {
+            await supabase
+              .from(LINKEDIN_TABLES.companySeeds)
+              .update({
+                company_domain: resolvedDomain,
+                status: "crawled" as CompanySeedStatus,
+                last_error: null,
+                raw_payload: {
+                  ...(seed.raw_payload || {}),
+                  processedAt: new Date().toISOString(),
+                  leadsFound: rows.length,
+                },
+              })
+              .eq("id", seed.id);
+          }
+
           processed += rows.length;
           contactsFound += rows.filter((row) => row.contact_email || row.contact_phone).length;
           await delay(250);
@@ -1697,6 +1875,16 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
               },
               { onConflict: "run_id,linkedin_url" },
             );
+
+          if (queuedSeeds.length) {
+            await supabase
+              .from(LINKEDIN_TABLES.companySeeds)
+              .update({
+                status: "failed" as CompanySeedStatus,
+                last_error: message,
+              })
+              .eq("id", seed.id);
+          }
         }
       }
 

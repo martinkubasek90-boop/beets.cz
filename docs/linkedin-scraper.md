@@ -64,10 +64,12 @@ Do runu vlozis primo seznam verejnych LinkedIn URL.
 Do runu vlozis:
 - seznam domen firem
 - pripadne seznam nazvu firem
+- nebo bulk CSV radky ve formatu `firma,domena,lokace,segment`
 - lokaci a keywordy pro scoring
 
 Pipeline pak:
 - projde homepage firmy
+- seed firmy si uklada do queue tabulky
 - dohleda interní stranky typu `/contact`, `/about`, `/team`, `/people`, `/leadership`
 - vytahne verejne emaily a telefony
 - zkusí najit jmena a role na team/people strankach
@@ -146,6 +148,9 @@ V UI nastav:
   - `gensler.com`
   - `perkinswill.com`
   - `hdrinc.com`
+- nebo `Bulk seeds CSV`:
+  - `Gensler,gensler.com,USA,architect`
+  - `Turner Construction,turnerconstruction.com,USA,general contractor`
 
 Pak:
 - klikni `Zalozit run`

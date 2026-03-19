@@ -16,6 +16,7 @@ type FormState = {
   manualUrls: string;
   companyNames: string;
   companyDomains: string;
+  seedRows: string;
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -31,6 +32,7 @@ const emptyForm: FormState = {
   manualUrls: "",
   companyNames: "",
   companyDomains: "",
+  seedRows: "",
   highVolume: true,
   minerMode: true,
   enrichLimit: 60,
@@ -118,7 +120,7 @@ export function LinkedInDashboard({ initialData }: Props) {
   const activeRunCanProcess =
     Boolean(activeRunId) &&
     (activeRun?.filters.runMode === "company"
-      ? Boolean(activeRun.filters.companyDomains.length || activeRun.filters.companyNames.length)
+      ? Boolean(activeRun.filters.seedRows.length || activeRun.filters.companyDomains.length || activeRun.filters.companyNames.length)
       : data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
 
   async function reloadDashboard(nextRunId?: string) {
@@ -172,6 +174,10 @@ export function LinkedInDashboard({ initialData }: Props) {
             .map((item) => item.trim())
             .filter(Boolean),
           companyDomains: form.companyDomains
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          seedRows: form.seedRows
             .split("\n")
             .map((item) => item.trim())
             .filter(Boolean),
@@ -385,6 +391,16 @@ export function LinkedInDashboard({ initialData }: Props) {
               </label>
 
               <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Bulk seeds CSV</span>
+                <textarea
+                  className="min-h-32 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder={"Acme Development,acmedevelopment.com,Florida,developer\nBuildCo,buildco.com,Texas,general contractor"}
+                  value={form.seedRows}
+                  onChange={(event) => setForm((current) => ({ ...current, seedRows: event.target.value }))}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
                 <span className="text-slate-300">Poznamka</span>
                 <textarea
                   className="min-h-28 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
@@ -542,6 +558,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                       {run.filters.companyNames.length ? (
                         <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-sky-100">
                           companies: {run.filters.companyNames.length}
+                        </span>
+                      ) : null}
+                      {run.filters.seedRows.length ? (
+                        <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-violet-100">
+                          bulk seeds: {run.filters.seedRows.length}
                         </span>
                       ) : null}
                       <span

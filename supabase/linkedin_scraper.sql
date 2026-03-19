@@ -63,6 +63,33 @@ create table if not exists public.linkedin_companies (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.linkedin_company_seeds (
+  id uuid primary key default gen_random_uuid(),
+  run_id uuid not null references public.linkedin_scrape_runs(id) on delete cascade,
+  company_name text,
+  company_domain text,
+  location text,
+  segment text,
+  source text,
+  status text not null default 'queued' check (status in ('queued', 'crawled', 'failed')),
+  last_error text,
+  raw_payload jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.linkedin_company_seeds add column if not exists company_name text;
+alter table public.linkedin_company_seeds add column if not exists company_domain text;
+alter table public.linkedin_company_seeds add column if not exists location text;
+alter table public.linkedin_company_seeds add column if not exists segment text;
+alter table public.linkedin_company_seeds add column if not exists source text;
+alter table public.linkedin_company_seeds add column if not exists status text;
+alter table public.linkedin_company_seeds add column if not exists last_error text;
+alter table public.linkedin_company_seeds add column if not exists raw_payload jsonb not null default '{}'::jsonb;
+
+create unique index if not exists linkedin_company_seeds_run_domain_name_uidx
+  on public.linkedin_company_seeds (run_id, coalesce(company_domain, ''), coalesce(company_name, ''));
+
 create index if not exists linkedin_scrape_runs_created_at_idx
   on public.linkedin_scrape_runs (created_at desc);
 
@@ -80,6 +107,12 @@ create index if not exists linkedin_profile_candidates_contact_email_idx
 
 create index if not exists linkedin_companies_company_domain_idx
   on public.linkedin_companies (company_domain);
+
+create index if not exists linkedin_company_seeds_run_id_idx
+  on public.linkedin_company_seeds (run_id, created_at desc);
+
+create index if not exists linkedin_company_seeds_status_idx
+  on public.linkedin_company_seeds (status, created_at desc);
 
 create or replace function public.linkedin_touch_updated_at()
 returns trigger
@@ -104,4 +137,9 @@ for each row execute function public.linkedin_touch_updated_at();
 drop trigger if exists linkedin_companies_touch_updated_at on public.linkedin_companies;
 create trigger linkedin_companies_touch_updated_at
 before update on public.linkedin_companies
+for each row execute function public.linkedin_touch_updated_at();
+
+drop trigger if exists linkedin_company_seeds_touch_updated_at on public.linkedin_company_seeds;
+create trigger linkedin_company_seeds_touch_updated_at
+before update on public.linkedin_company_seeds
 for each row execute function public.linkedin_touch_updated_at();
