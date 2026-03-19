@@ -18,6 +18,7 @@ type FormState = {
   companyDomains: string;
   seedRows: string;
   directoryUrls: string;
+  autonomousDiscovery: boolean;
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -35,6 +36,7 @@ const emptyForm: FormState = {
   companyDomains: "",
   seedRows: "",
   directoryUrls: "",
+  autonomousDiscovery: true,
   highVolume: true,
   minerMode: true,
   enrichLimit: 60,
@@ -216,6 +218,7 @@ export function LinkedInDashboard({ initialData }: Props) {
             .split("\n")
             .map((item) => item.trim())
             .filter(Boolean),
+          autonomousDiscovery: form.autonomousDiscovery,
           highVolume: form.highVolume,
           minerMode: form.minerMode,
           enrichLimit: form.enrichLimit,
@@ -346,7 +349,7 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="mb-5">
               <h2 className="text-xl font-semibold">Novy scrape run</h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Company-first miner umi jet i bez search API. Nejlepsi vstup jsou domeny firem, volitelne doplnene o nazvy a lokaci.
+                Company-first miner umi jet i bez search API. Kdyz zapnes autonomous discovery, appka si sama pripravi directory sources podle segmentu a trhu.
               </p>
             </div>
 
@@ -453,6 +456,16 @@ export function LinkedInDashboard({ initialData }: Props) {
                   value={form.directoryUrls}
                   onChange={(event) => setForm((current) => ({ ...current, directoryUrls: event.target.value }))}
                 />
+              </label>
+
+              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.autonomousDiscovery}
+                  onChange={(event) => setForm((current) => ({ ...current, autonomousDiscovery: event.target.checked }))}
+                  className="h-4 w-4 accent-cyan-300"
+                />
+                <span>Autonomous discovery</span>
               </label>
 
               <label className="grid gap-2 text-sm">
@@ -623,6 +636,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                       {run.filters.directoryUrls.length ? (
                         <span className="rounded-full border border-indigo-300/20 bg-indigo-300/10 px-3 py-1 text-indigo-100">
                           directories: {run.filters.directoryUrls.length}
+                        </span>
+                      ) : null}
+                      {run.filters.autonomousDiscovery ? (
+                        <span className="rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1 text-teal-100">
+                          auto discovery
                         </span>
                       ) : null}
                       <span

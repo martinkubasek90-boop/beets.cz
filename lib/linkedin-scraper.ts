@@ -49,6 +49,7 @@ export type LinkedInRun = {
     companyDomains: string[];
     seedRows: string[];
     directoryUrls: string[];
+    autonomousDiscovery: boolean;
     highVolume: boolean;
     minerMode: boolean;
     enrichLimit: number;
@@ -76,6 +77,7 @@ export type LinkedInSearchPayload = {
   companyDomains?: string[];
   seedRows?: string[];
   directoryUrls?: string[];
+  autonomousDiscovery?: boolean;
   highVolume?: boolean;
   minerMode?: boolean;
   enrichLimit?: number;
@@ -162,6 +164,7 @@ type LinkedInFilters = {
   companyDomains: string[];
   seedRows: string[];
   directoryUrls: string[];
+  autonomousDiscovery: boolean;
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -223,6 +226,7 @@ const sampleRuns: LinkedInRun[] = [
       companyDomains: [],
       seedRows: [],
       directoryUrls: [],
+      autonomousDiscovery: false,
       highVolume: false,
       minerMode: false,
       enrichLimit: 50,
@@ -373,6 +377,68 @@ function looksLikeCompanyName(value: string) {
   );
 }
 
+function detectConstructionSegments(filters: LinkedInFilters) {
+  const text = normalizeText(
+    [
+      ...filters.keywords,
+      ...filters.titles,
+      ...filters.companyNames,
+      ...filters.locations,
+      filters.runMode,
+    ].join(" "),
+  );
+
+  const segments = new Set<string>();
+  if (/\barchitect|architecture|design\b/.test(text)) segments.add("architect");
+  if (/\bcontractor|construction|gc|general contractor|builder|preconstruction|estimating\b/.test(text)) segments.add("contractor");
+  if (/\bdeveloper|development|real estate|property|multifamily\b/.test(text)) segments.add("developer");
+  if (/\bfacade|glazing|window|door|fenestration\b/.test(text)) segments.add("facade");
+  if (!segments.size) {
+    segments.add("architect");
+    segments.add("contractor");
+    segments.add("developer");
+  }
+  return Array.from(segments);
+}
+
+function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
+  const segments = detectConstructionSegments(filters);
+  const usa = filters.locations.length === 0 || filters.locations.some((item) => /\busa|united states\b/i.test(item));
+  const urls = new Set<string>();
+
+  if (usa) {
+    if (segments.includes("architect")) {
+      [
+        "https://www.bdcnetwork.com/top-architecture-engineering-firms",
+        "https://www.architecturalrecord.com/top300",
+      ].forEach((url) => urls.add(url));
+    }
+
+    if (segments.includes("contractor")) {
+      [
+        "https://www.generalcontractors.org/the-top-general-contractors-in-the-united-states/",
+        "https://www.enr.com/toplists",
+      ].forEach((url) => urls.add(url));
+    }
+
+    if (segments.includes("developer")) {
+      [
+        "https://www.multihousingnews.com/top-multifamily-developers/",
+        "https://www.commercialsearch.com/news/top-commercial-real-estate-developers/",
+      ].forEach((url) => urls.add(url));
+    }
+
+    if (segments.includes("facade")) {
+      [
+        "https://www.glassmagazine.com/top-glazing-contractors",
+        "https://www.usglassmag.com/category/commercial/",
+      ].forEach((url) => urls.add(url));
+    }
+  }
+
+  return Array.from(urls);
+}
+
 function normalizeFilters(value: unknown) {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
@@ -387,6 +453,7 @@ function normalizeFilters(value: unknown) {
       .filter(Boolean),
     seedRows: toStringArray(source.seedRows),
     directoryUrls: toStringArray(source.directoryUrls),
+    autonomousDiscovery: typeof source.autonomousDiscovery === "boolean" ? source.autonomousDiscovery : false,
     highVolume: typeof source.highVolume === "boolean" ? source.highVolume : false,
     minerMode: typeof source.minerMode === "boolean" ? source.minerMode : false,
     enrichLimit:
@@ -679,6 +746,7 @@ function expandIcpTerms(filters: LinkedInFilters) {
     companyDomains: filters.companyDomains,
     seedRows: filters.seedRows,
     directoryUrls: filters.directoryUrls,
+    autonomousDiscovery: filters.autonomousDiscovery,
     highVolume: filters.highVolume,
     minerMode: filters.minerMode,
     enrichLimit: filters.enrichLimit,
@@ -1546,6 +1614,7 @@ export function buildSourceQuery(payload: LinkedInSearchPayload) {
     const keywords = uniqueStrings(payload.keywords);
     const seedRows = uniqueStrings(payload.seedRows);
     const directoryUrls = uniqueStrings(payload.directoryUrls);
+    const autonomousDiscovery = Boolean(payload.autonomousDiscovery);
 
     return [
       "company-first",
@@ -1553,6 +1622,7 @@ export function buildSourceQuery(payload: LinkedInSearchPayload) {
       companyDomains.length ? `domains:${companyDomains.join(" | ")}` : "",
       seedRows.length ? `bulk:${seedRows.length}` : "",
       directoryUrls.length ? `directories:${directoryUrls.length}` : "",
+      autonomousDiscovery ? "auto:on" : "",
       locations.length ? `locations:${locations.join(" | ")}` : "",
       keywords.length ? `keywords:${keywords.join(" | ")}` : "",
     ]
@@ -1586,7 +1656,40 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
     .filter(Boolean);
   const seedRows = uniqueStrings(raw.seedRows);
   const directoryUrls = uniqueStrings(raw.directoryUrls);
-  const sourceQuery = buildSourceQuery({ runMode, keywords, titles, locations, companyNames, companyDomains, seedRows, directoryUrls });
+  const autonomousDiscovery = Boolean(raw.autonomousDiscovery);
+  const autonomousFiltersBase = {
+    runMode,
+    keywords,
+    titles,
+    locations,
+    manualUrls,
+    companyNames,
+    companyDomains,
+    seedRows,
+    directoryUrls,
+    autonomousDiscovery,
+    highVolume: Boolean(raw.highVolume),
+    minerMode: Boolean(raw.minerMode),
+    enrichLimit:
+      typeof raw.enrichLimit === "number" && Number.isFinite(raw.enrichLimit)
+        ? Math.max(1, Math.min(250, Math.round(raw.enrichLimit)))
+        : 50,
+  } satisfies LinkedInFilters;
+  const mergedDirectoryUrls = uniqueStrings([
+    ...directoryUrls,
+    ...(autonomousDiscovery && runMode === "company" ? buildAutonomousDirectoryUrls(autonomousFiltersBase) : []),
+  ]);
+  const sourceQuery = buildSourceQuery({
+    runMode,
+    keywords,
+    titles,
+    locations,
+    companyNames,
+    companyDomains,
+    seedRows,
+    directoryUrls: mergedDirectoryUrls,
+    autonomousDiscovery,
+  });
   const enrichLimit =
     typeof raw.enrichLimit === "number" && Number.isFinite(raw.enrichLimit)
       ? Math.max(1, Math.min(250, Math.round(raw.enrichLimit)))
@@ -1605,7 +1708,8 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
       companyNames,
       companyDomains,
       seedRows,
-      directoryUrls,
+      directoryUrls: mergedDirectoryUrls,
+      autonomousDiscovery,
       highVolume: Boolean(raw.highVolume),
       minerMode: Boolean(raw.minerMode),
       enrichLimit,
@@ -1679,14 +1783,16 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
       !normalized.filters.seedRows.length &&
       !normalized.filters.companyDomains.length &&
       !normalized.filters.companyNames.length &&
-      !normalized.filters.directoryUrls.length
+      !normalized.filters.directoryUrls.length &&
+      !normalized.filters.autonomousDiscovery
     ) {
-      throw new Error("Pro company miner zadej bulk seeds, domeny, nazvy firem nebo directory URL.");
+      throw new Error("Pro company miner zadej bulk seeds, domeny, nazvy firem, directory URL nebo zapni autonomous discovery.");
     }
     if (
       !normalized.filters.seedRows.length &&
       !normalized.filters.companyDomains.length &&
       !normalized.filters.directoryUrls.length &&
+      !normalized.filters.autonomousDiscovery &&
       normalized.filters.companyNames.length &&
       getSearchProviderLabel() === "none"
     ) {

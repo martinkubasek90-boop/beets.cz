@@ -66,12 +66,14 @@ Do runu vlozis:
 - pripadne seznam nazvu firem
 - nebo bulk CSV radky ve formatu `firma,domena,lokace,segment`
 - nebo `Directory URLs`, tedy verejne listing/exhibitor/directory stranky
+- nebo jen zapnes `Autonomous discovery` a zadas segment + trh
 - lokaci a keywordy pro scoring
 
 Pipeline pak:
 - projde homepage firmy
 - seed firmy si uklada do queue tabulky
 - umi si vygenerovat dalsi seedy z verejnych directory/listing stranek
+- umi sama doplnit preddefinovane source URLs pro segmenty jako architect / general contractor / developer
 - dohleda interní stranky typu `/contact`, `/about`, `/team`, `/people`, `/leadership`
 - vytahne verejne emaily a telefony
 - zkusí najit jmena a role na team/people strankach
