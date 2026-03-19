@@ -17,6 +17,8 @@ export async function GET(request: Request) {
       runId: searchParams.get("runId"),
       q: searchParams.get("q"),
       limit: searchParams.get("limit") ? Number(searchParams.get("limit")) : undefined,
+      minScore: searchParams.get("minScore") ? Number(searchParams.get("minScore")) : undefined,
+      contactsOnly: searchParams.get("contactsOnly") === "1",
     });
 
     return NextResponse.json({ ok: true, ...results });

@@ -18,6 +18,9 @@ export type LinkedInProfile = {
   contact_phone: string | null;
   contact_source: string | null;
   contact_confidence: number | null;
+  icp_score?: number;
+  icp_grade?: "A" | "B" | "C" | "D";
+  icp_reasons?: string[];
   scraped_at: string | null;
   created_at: string;
   raw_payload: Record<string, unknown> | null;
@@ -127,6 +130,12 @@ type PublicContact = {
   contactPhone: string | null;
   contactSource: string | null;
   contactConfidence: number | null;
+};
+
+type LinkedInFilters = {
+  keywords: string[];
+  titles: string[];
+  locations: string[];
 };
 
 const RUN_SELECT =
@@ -309,6 +318,114 @@ function mapProfile(row: LinkedInProfileRow): LinkedInProfile {
     created_at: row.created_at,
     raw_payload: row.raw_payload,
   };
+}
+
+function normalizeText(value: string | null | undefined) {
+  return (value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function hasAnyMatch(haystack: string, needles: string[]) {
+  return needles.some((needle) => haystack.includes(normalizeText(needle)));
+}
+
+function uniqueReasons(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function toGrade(score: number): "A" | "B" | "C" | "D" {
+  if (score >= 80) return "A";
+  if (score >= 65) return "B";
+  if (score >= 45) return "C";
+  return "D";
+}
+
+export function scoreProfileAgainstFilters(profile: LinkedInProfile, filters: LinkedInFilters) {
+  const headline = normalizeText(profile.headline);
+  const company = normalizeText(profile.company_name);
+  const location = normalizeText(profile.location);
+  const query = normalizeText(profile.source_query);
+  const merged = [headline, company, location, query].join(" ");
+  const reasons: string[] = [];
+  let score = 0;
+
+  if (filters.titles.length && hasAnyMatch(headline, filters.titles)) {
+    score += 42;
+    reasons.push("headline match na job title");
+  } else if (filters.titles.length && hasAnyMatch(merged, filters.titles)) {
+    score += 24;
+    reasons.push("slaby match na job title");
+  }
+
+  if (filters.keywords.length) {
+    const keywordHits = filters.keywords.filter((keyword) => merged.includes(normalizeText(keyword)));
+    if (keywordHits.length) {
+      score += Math.min(24, keywordHits.length * 10);
+      reasons.push(`keyword match: ${keywordHits.slice(0, 3).join(", ")}`);
+    }
+  }
+
+  if (filters.locations.length && hasAnyMatch(location || merged, filters.locations)) {
+    score += 18;
+    reasons.push("lokace odpovida ICP");
+  }
+
+  if (/\b(vp|head|director|chief|senior|lead|manager|partnerships|business development|sales)\b/.test(headline)) {
+    score += 8;
+    reasons.push("seniorita nebo revenue role");
+  }
+
+  if (/\b(b2b|saas|enterprise|software|cloud|platform|solutions)\b/.test(`${headline} ${company}`)) {
+    score += 8;
+    reasons.push("B2B nebo SaaS signal");
+  }
+
+  if (profile.contact_email) {
+    score += 8;
+    reasons.push("ma verejny email");
+  }
+
+  if (profile.contact_phone) {
+    score += 4;
+    reasons.push("ma verejny telefon");
+  }
+
+  if (typeof profile.contact_confidence === "number") {
+    score += Math.round(profile.contact_confidence * 6);
+  }
+
+  const capped = Math.max(0, Math.min(100, score));
+  return {
+    score: capped,
+    grade: toGrade(capped),
+    reasons: uniqueReasons(reasons),
+  };
+}
+
+function attachScore(profile: LinkedInProfile, filters?: LinkedInFilters) {
+  if (!filters) {
+    return {
+      ...profile,
+      icp_score: 0,
+      icp_grade: "D" as const,
+      icp_reasons: [],
+    };
+  }
+
+  const scored = scoreProfileAgainstFilters(profile, filters);
+  return {
+    ...profile,
+    icp_score: scored.score,
+    icp_grade: scored.grade,
+    icp_reasons: scored.reasons,
+  };
+}
+
+function csvEscape(value: string | number | null | undefined) {
+  const text = value == null ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function uniqueStrings(values: string[] | undefined) {
@@ -708,7 +825,7 @@ export async function getLinkedInDashboardData(): Promise<LinkedInDashboardData>
   if (!supabase) {
     return {
       runs: sampleRuns,
-      profiles: sampleProfiles,
+      profiles: sampleProfiles.map((profile) => attachScore(profile, sampleRuns[0]?.filters)),
       ready: false,
       processorReady: false,
       searchProvider,
@@ -737,9 +854,16 @@ export async function getLinkedInDashboardData(): Promise<LinkedInDashboardData>
     };
   }
 
+  const runs = ((runsRes.data || []) as LinkedInRunRow[]).map(mapRun);
+  const runFilterMap = new Map(runs.map((run) => [run.id, run.filters]));
+  const profiles = ((profilesRes.data || []) as LinkedInProfileRow[])
+    .map(mapProfile)
+    .map((profile) => attachScore(profile, runFilterMap.get(profile.run_id)))
+    .sort((a, b) => (b.icp_score || 0) - (a.icp_score || 0));
+
   return {
-    runs: ((runsRes.data || []) as LinkedInRunRow[]).map(mapRun),
-    profiles: ((profilesRes.data || []) as LinkedInProfileRow[]).map(mapProfile),
+    runs,
+    profiles,
     ready: true,
     processorReady: searchProvider !== "none",
     searchProvider,
@@ -934,14 +1058,29 @@ export async function listLinkedInResults(params: {
   runId?: string | null;
   q?: string | null;
   limit?: number | null;
+  minScore?: number | null;
+  contactsOnly?: boolean | null;
 }) {
   const supabase = getLinkedInServiceClient();
   if (!supabase) {
+    const filters = sampleRuns.find((run) => run.id === params.runId)?.filters || sampleRuns[0]?.filters;
+    const scored = sampleProfiles.map((profile) => attachScore(profile, filters));
     return {
       ready: false,
-      items: sampleProfiles,
-      total: sampleProfiles.length,
+      items: scored,
+      total: scored.length,
     };
+  }
+
+  let runFilters: LinkedInFilters | undefined;
+  if (params.runId) {
+    const { data: runRow, error: runError } = await supabase
+      .from(LINKEDIN_TABLES.runs)
+      .select("filters")
+      .eq("id", params.runId)
+      .maybeSingle();
+    if (runError) throw new Error(runError.message);
+    runFilters = normalizeFilters(runRow?.filters);
   }
 
   const limit = Math.max(1, Math.min(100, Number(params.limit || 30)));
@@ -965,9 +1104,78 @@ export async function listLinkedInResults(params: {
   const { data, error, count } = await query;
   if (error) throw new Error(error.message);
 
+  let items = ((data || []) as LinkedInProfileRow[]).map(mapProfile).map((profile) => attachScore(profile, runFilters));
+
+  if (params.contactsOnly) {
+    items = items.filter((profile) => profile.contact_email || profile.contact_phone);
+  }
+
+  if (typeof params.minScore === "number" && Number.isFinite(params.minScore)) {
+    items = items.filter((profile) => (profile.icp_score || 0) >= params.minScore!);
+  }
+
+  items.sort((a, b) => (b.icp_score || 0) - (a.icp_score || 0));
+
   return {
     ready: true,
-    items: ((data || []) as LinkedInProfileRow[]).map(mapProfile),
-    total: count || 0,
+    items,
+    total: items.length || count || 0,
   };
+}
+
+export async function exportLinkedInResultsCsv(params: {
+  runId?: string | null;
+  q?: string | null;
+  minScore?: number | null;
+  contactsOnly?: boolean | null;
+}) {
+  const results = await listLinkedInResults({
+    runId: params.runId,
+    q: params.q,
+    minScore: params.minScore,
+    contactsOnly: params.contactsOnly,
+    limit: 500,
+  });
+
+  const header = [
+    "full_name",
+    "headline",
+    "company_name",
+    "company_domain",
+    "location",
+    "linkedin_url",
+    "contact_email",
+    "contact_phone",
+    "contact_source",
+    "contact_confidence",
+    "icp_score",
+    "icp_grade",
+    "icp_reasons",
+    "status",
+    "scraped_at",
+  ];
+
+  const rows = results.items.map((profile) =>
+    [
+      profile.full_name,
+      profile.headline,
+      profile.company_name,
+      profile.company_domain,
+      profile.location,
+      profile.linkedin_url,
+      profile.contact_email,
+      profile.contact_phone,
+      profile.contact_source,
+      profile.contact_confidence,
+      profile.icp_score,
+      profile.icp_grade,
+      profile.icp_reasons?.join("; "),
+      profile.status,
+      profile.scraped_at,
+    ]
+      .map(csvEscape)
+      .join(","),
+  );
+
+  return [header.map(csvEscape).join(","), ...rows].join("\n");
 }

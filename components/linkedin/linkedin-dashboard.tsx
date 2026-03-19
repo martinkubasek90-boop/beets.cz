@@ -72,6 +72,8 @@ export function LinkedInDashboard({ initialData }: Props) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [activeRunId, setActiveRunId] = useState<string>(initialData.runs[0]?.id || "");
   const [query, setQuery] = useState("");
+  const [minScore, setMinScore] = useState(60);
+  const [contactsOnly, setContactsOnly] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,8 @@ export function LinkedInDashboard({ initialData }: Props) {
     const q = query.trim().toLowerCase();
     return data.profiles.filter((profile) => {
       if (activeRunId && profile.run_id !== activeRunId) return false;
+      if (contactsOnly && !profile.contact_email && !profile.contact_phone) return false;
+      if ((profile.icp_score || 0) < minScore) return false;
       if (!q) return true;
       return [
         profile.full_name,
@@ -93,7 +97,7 @@ export function LinkedInDashboard({ initialData }: Props) {
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(q));
     });
-  }, [activeRunId, data.profiles, query]);
+  }, [activeRunId, contactsOnly, data.profiles, minScore, query]);
 
   const activeRun = data.runs.find((run) => run.id === activeRunId) || null;
 
@@ -184,6 +188,10 @@ export function LinkedInDashboard({ initialData }: Props) {
       setProcessing(false);
     }
   }
+
+  const exportUrl = `/api/linkedin/export?runId=${encodeURIComponent(activeRunId || "")}&q=${encodeURIComponent(
+    query,
+  )}&minScore=${minScore}&contactsOnly=${contactsOnly ? "1" : "0"}`;
 
   return (
     <main className="min-h-screen bg-[#07111d] text-white">
@@ -384,12 +392,6 @@ export function LinkedInDashboard({ initialData }: Props) {
                     Kontakty jsou jen verejne dohledane firemni udaje z webu, ne garantovane osobni kontakty.
                   </p>
                 </div>
-                <input
-                  className="rounded-full border border-white/10 bg-[#091422] px-4 py-2 text-sm text-white outline-none placeholder:text-slate-500"
-                  placeholder="Filtrovat jmeno, firmu, email, lokaci"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
               </div>
 
               {activeRun ? (
@@ -405,6 +407,43 @@ export function LinkedInDashboard({ initialData }: Props) {
                   konec {formatDate(activeRun.finished_at)}
                 </div>
               ) : null}
+
+              <div className="mb-4 grid gap-3 md:grid-cols-[1fr,220px,220px,auto]">
+                <input
+                  className="rounded-full border border-white/10 bg-[#091422] px-4 py-2 text-sm text-white outline-none placeholder:text-slate-500"
+                  placeholder="Filtrovat jmeno, firmu, email, lokaci"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                <label className="flex items-center gap-3 rounded-full border border-white/10 bg-[#091422] px-4 py-2 text-sm text-slate-300">
+                  <span>Min ICP score</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={minScore}
+                    onChange={(event) => setMinScore(Number(event.target.value))}
+                    className="w-full accent-cyan-300"
+                  />
+                  <span className="w-8 text-right text-white">{minScore}</span>
+                </label>
+                <label className="flex items-center gap-3 rounded-full border border-white/10 bg-[#091422] px-4 py-2 text-sm text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={contactsOnly}
+                    onChange={(event) => setContactsOnly(event.target.checked)}
+                    className="h-4 w-4 accent-cyan-300"
+                  />
+                  <span>Pouze s kontaktem</span>
+                </label>
+                <a
+                  href={exportUrl}
+                  className="inline-flex items-center justify-center rounded-full bg-cyan-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950"
+                >
+                  Export CSV
+                </a>
+              </div>
 
               <div className="grid gap-4">
                 {filteredProfiles.length ? (
@@ -430,9 +469,14 @@ export function LinkedInDashboard({ initialData }: Props) {
                           </div>
                         </div>
                         <div className="flex items-start">
-                          <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-200">
-                            {statusLabel(profile.status)}
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+                              {statusLabel(profile.status)}
+                            </span>
+                            <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs font-semibold text-emerald-200">
+                              ICP {profile.icp_score || 0} / {profile.icp_grade || "D"}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -455,6 +499,10 @@ export function LinkedInDashboard({ initialData }: Props) {
                           <div className="mt-2 text-sm text-slate-200">{profile.contact_source || "n/a"}</div>
                           <div className="mt-1 text-xs text-slate-500">{formatConfidence(profile.contact_confidence)}</div>
                         </div>
+                      </div>
+
+                      <div className="mt-3 text-xs text-slate-500">
+                        ICP signaly: {profile.icp_reasons?.length ? profile.icp_reasons.join(" · ") : "zadne"}
                       </div>
                     </div>
                   ))
