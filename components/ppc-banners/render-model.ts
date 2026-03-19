@@ -53,7 +53,7 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const subheadline2Size = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.subheadline2Size || format.subheadlineSize) * scale)));
   const contactSize = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.contactSize || format.subheadlineSize) * scale)));
   const ctaScale = clamp(typeof format.ctaScale === "number" ? format.ctaScale : 1, 0.5, 1.3);
-  const ctaSize = Math.max(10, Math.min(Math.round(90 * scale), Math.round(format.ctaSize * scale * ctaScale)));
+  const ctaSize = Math.max(7, Math.min(Math.round(90 * scale), Math.round(format.ctaSize * scale * ctaScale)));
   const logoScale = Math.max(0.4, Math.min(18, format.logoScale || 1));
   const logoOffsetX = Math.round((format.logoOffsetX || 0) * scale);
   const logoOffsetY = Math.round((format.logoOffsetY || 0) * scale);
@@ -130,8 +130,8 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
 
   const ctaAlignX = format.ctaAlignX || "left";
   const ctaAlignY = format.ctaAlignY || "bottom";
-  const ctaPadX = Math.round(22 * scale);
-  const ctaPadY = Math.round(14 * scale);
+  const ctaPadX = Math.max(6, Math.round(22 * scale * ctaScale));
+  const ctaPadY = Math.max(4, Math.round(14 * scale * ctaScale));
   const ctaW = Math.round((resolvedCtaText || "Zjistit více").length * ctaSize * 0.6 + ctaPadX * 2);
   const ctaH = Math.round(ctaSize + ctaPadY * 2);
   const ctaBaseX = ctaAlignX === "left" ? padding : ctaAlignX === "center" ? Math.round((boxW - ctaW) / 2) : boxW - padding - ctaW;
