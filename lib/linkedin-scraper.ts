@@ -411,6 +411,8 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
       [
         "https://www.bdcnetwork.com/top-architecture-engineering-firms",
         "https://www.architecturalrecord.com/top300",
+        "https://www.archpaper.com/tag/top-50/",
+        "https://www.enr.com/toplists/top-500-design-firms",
       ].forEach((url) => urls.add(url));
     }
 
@@ -418,6 +420,8 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
       [
         "https://www.generalcontractors.org/the-top-general-contractors-in-the-united-states/",
         "https://www.enr.com/toplists",
+        "https://www.enr.com/toplists/top-contractors",
+        "https://www.constructiondive.com/news/",
       ].forEach((url) => urls.add(url));
     }
 
@@ -425,6 +429,8 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
       [
         "https://www.multihousingnews.com/top-multifamily-developers/",
         "https://www.commercialsearch.com/news/top-commercial-real-estate-developers/",
+        "https://www.multihousingnews.com/top-multifamily-owners/",
+        "https://www.nreionline.com/top-owners",
       ].forEach((url) => urls.add(url));
     }
 
@@ -432,6 +438,8 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
       [
         "https://www.glassmagazine.com/top-glazing-contractors",
         "https://www.usglassmag.com/category/commercial/",
+        "https://www.architectmagazine.com/technology/products/",
+        "https://www.glassonweb.com/directory",
       ].forEach((url) => urls.add(url));
     }
   }
