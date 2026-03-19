@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { ContainerScroll } from '@/components/aiweb/container-scroll';
+import { HeroGeometric } from '@/components/aiweb/hero-geometric';
 import type { ExampleSite } from '../data';
 
 const STATS = [
@@ -95,47 +97,50 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
       </nav>
 
       {/* HERO */}
-      <section style={{ padding: '120px 40px 80px', textAlign: 'center' }}>
-        <div style={{ maxWidth: 800, margin: '0 auto' }}>
-          <div className="fu" style={{ display: 'inline-block', padding: '5px 16px', borderRadius: 100, background: `${s.primary}18`, border: `1px solid ${s.primary}35`, color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 28 }}>
-            {s.heroLabel}
-          </div>
-          <h1 className="fu d1" style={{ fontSize: 'clamp(44px, 8vw, 88px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-3px', margin: '0 0 28px' }}>
-            {s.heroH1.map((line, i) => (
-              <span key={i} style={{
-                display: 'block',
-                background: i === 1 ? `linear-gradient(135deg, ${s.primary}, #3b82f6)` : 'none',
-                WebkitBackgroundClip: i === 1 ? 'text' : 'unset',
-                WebkitTextFillColor: i === 1 ? 'transparent' : 'unset',
-                color: i === 1 ? 'transparent' : s.text,
-              }}>{line}</span>
-            ))}
-          </h1>
-          <p className="fu d2" style={{ fontSize: 18, color: s.textMuted, lineHeight: 1.75, maxWidth: 560, margin: '0 auto 44px' }}>
-            {s.heroSub}
-          </p>
-          <div className="fu d3" style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 72 }}>
-            <button
-              onClick={() => scrollTo('kontakt')}
-              style={{ padding: '16px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
-            >
-              {s.heroCta}
-            </button>
-            <button
-              onClick={() => scrollTo('jak-to-funguje')}
-              style={{ padding: '16px 36px', borderRadius: 10, border: `1px solid ${s.border}`, cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: 'transparent', color: s.text, transition: 'all 0.2s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = s.primary; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = s.border; }}
-            >
-              {s.heroCtaSecondary}
-            </button>
-          </div>
+      <HeroGeometric
+        badge={s.heroLabel}
+        title1={s.heroH1[0] || s.name}
+        title2={s.heroH1.slice(1).join(' ') || s.tagline}
+        description={s.heroSub}
+      >
+        <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => scrollTo('kontakt')}
+            style={{ padding: '16px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          >
+            {s.heroCta}
+          </button>
+          <button
+            onClick={() => scrollTo('produkt')}
+            style={{ padding: '16px 36px', borderRadius: 10, border: `1px solid ${s.border}`, cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: 'transparent', color: s.text, transition: 'all 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = s.primary; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = s.border; }}
+          >
+            {s.heroCtaSecondary}
+          </button>
+        </div>
+      </HeroGeometric>
 
-          {/* CSS DASHBOARD MOCKUP */}
-          <div className="fu d4" style={{ borderRadius: 16, overflow: 'hidden', border: `1px solid rgba(139,92,246,0.3)`, boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(139,92,246,0.15)` }}>
-            {/* Browser header */}
+      {/* PRODUCT WALKTHROUGH */}
+      <section id="produkt" style={{ background: s.bg, padding: '0 24px 60px' }}>
+        <ContainerScroll
+          titleComponent={
+            <div>
+              <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>
+                Produkt v akci
+              </p>
+              <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 16px', color: s.text }}>
+                Dashboard, který ukazuje dopad v reálném čase
+              </h2>
+              <p style={{ fontSize: 16, lineHeight: 1.8, color: s.textMuted, maxWidth: 720, margin: '0 auto' }}>
+                Přehled úspor, běžících workflow a integrací na jedné obrazovce. Tohle už je produkt, ne marketingový placeholder.
+              </p>
+            </div>
+          }
+        >
+          <div className="fu d4" style={{ borderRadius: 16, overflow: 'hidden', height: '100%', border: `1px solid rgba(139,92,246,0.3)`, boxShadow: `0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(139,92,246,0.15)` }}>
             <div style={{ background: '#0e0e1f', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
               <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#febc2e' }} />
@@ -144,9 +149,7 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>app.novatech.io/dashboard</span>
               </div>
             </div>
-            {/* Dashboard content */}
-            <div style={{ background: '#080b1a', padding: '24px', display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, height: 280 }}>
-              {/* Sidebar */}
+            <div style={{ background: '#080b1a', padding: '24px', display: 'grid', gridTemplateColumns: '200px 1fr', gap: 16, height: 'calc(100% - 49px)' }}>
               <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '16px 12px' }}>
                 {['Dashboard', 'Automatizace', 'Integrace', 'Reporty', 'Nastavení'].map((item, i) => (
                   <div key={i} style={{ padding: '8px 12px', borderRadius: 6, marginBottom: 4, background: i === 0 ? `${s.primary}20` : 'transparent', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -155,7 +158,6 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
                   </div>
                 ))}
               </div>
-              {/* Main content */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                   {[['Ušetřeno', '284h', '#8b5cf6'], ['Spuštěné', '12', '#10b981'], ['Integrace', '23', '#3b82f6'], ['Úspěšnost', '99.2%', '#f59e0b']].map(([label, val, color], i) => (
@@ -173,7 +175,7 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
               </div>
             </div>
           </div>
-        </div>
+        </ContainerScroll>
       </section>
 
       {/* STATS BAR */}
