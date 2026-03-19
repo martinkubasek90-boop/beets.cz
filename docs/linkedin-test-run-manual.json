@@ -1,0 +1,11 @@
+{
+  "name": "USA B2B business development manual import",
+  "keywords": ["B2B", "SaaS"],
+  "titles": ["business development", "partnerships", "sales director"],
+  "locations": ["USA", "United States"],
+  "manualUrls": [
+    "https://www.linkedin.com/in/example-profile-1/",
+    "https://www.linkedin.com/in/example-profile-2/"
+  ],
+  "notes": "Manualni LinkedIn URL import bez search provideru."
+}

@@ -4,6 +4,7 @@ Tenhle flow je urceny pro:
 - discovery verejnych LinkedIn profilu
 - enrichment pres verejne firemni weby
 - export leadu do CSV
+- manualni import verejnych LinkedIn URL bez search API
 
 Neni urceny pro:
 - neveerejna LinkedIn data
@@ -41,24 +42,33 @@ Nebo obsah souboru `supabase/linkedin_scraper.sql` vloz do SQL editoru.
 ## Jak pipeline funguje
 
 1. Vytvoris run v `/linkedin`
-2. App slozi query typu:
+2. App jede jednou ze 2 cest:
+
+`A) Search discovery`
+
+App slozi query typu:
 
 ```text
 site:linkedin.com/in/ ("business development" OR "partnerships") ("USA" OR "United States") B2B SaaS
 ```
 
-3. Search provider vrati verejne LinkedIn URL
-4. Scraper nacte verejnou HTML stranku profilu
-5. Parser vytahne:
+Search provider vrati verejne LinkedIn URL.
+
+`B) Manual import`
+
+Do runu vlozis primo seznam verejnych LinkedIn URL.
+
+3. Scraper nacte verejnou HTML stranku profilu
+4. Parser vytahne:
    - jmeno
    - headline
    - firmu
    - lokaci
-6. Enrichment zkusí najit firemni web
-7. Z firemnich stranek jako `/`, `/contact`, `/about`, `/team` zkusí vytahnout:
+5. Enrichment zkusí najit firemni web
+6. Z firemnich stranek jako `/`, `/contact`, `/about`, `/team` zkusí vytahnout:
    - verejny email
    - verejny telefon
-8. Profil dostane ICP score a jde exportovat do CSV
+7. Profil dostane ICP score a jde exportovat do CSV
 
 ## Co dela enrichment
 
@@ -93,6 +103,10 @@ Pak:
 Stejny payload je pripraveny v:
 
 `docs/linkedin-test-run.json`
+
+Manual-only varianta je v:
+
+`docs/linkedin-test-run-manual.json`
 
 Pres API muzes run zalozit takto:
 

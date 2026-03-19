@@ -43,6 +43,7 @@ export type LinkedInRun = {
     keywords: string[];
     titles: string[];
     locations: string[];
+    manualUrls: string[];
   };
 };
 
@@ -61,6 +62,7 @@ export type LinkedInSearchPayload = {
   keywords?: string[];
   titles?: string[];
   locations?: string[];
+  manualUrls?: string[];
   notes?: string;
 };
 
@@ -136,6 +138,7 @@ type LinkedInFilters = {
   keywords: string[];
   titles: string[];
   locations: string[];
+  manualUrls: string[];
 };
 
 const RUN_SELECT =
@@ -172,6 +175,7 @@ const sampleRuns: LinkedInRun[] = [
       keywords: ["B2B", "SaaS"],
       titles: ["business development", "partnerships"],
       locations: ["United States", "USA"],
+      manualUrls: [],
     },
   },
 ];
@@ -277,6 +281,7 @@ function normalizeFilters(value: unknown) {
     keywords: toStringArray(source.keywords),
     titles: toStringArray(source.titles),
     locations: toStringArray(source.locations),
+    manualUrls: toStringArray(source.manualUrls).map((item) => normalizeLinkedInProfileUrl(item) || "").filter(Boolean),
   };
 }
 
@@ -807,13 +812,14 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
   const keywords = uniqueStrings(raw.keywords);
   const titles = uniqueStrings(raw.titles);
   const locations = uniqueStrings(raw.locations);
+  const manualUrls = uniqueStrings(raw.manualUrls).map((item) => normalizeLinkedInProfileUrl(item) || "").filter(Boolean);
   const sourceQuery = buildSourceQuery({ keywords, titles, locations });
 
   return {
     name: raw.name?.trim() || `LinkedIn run ${new Date().toLocaleDateString("cs-CZ")}`,
     notes: raw.notes?.trim() || null,
     sourceQuery,
-    filters: { keywords, titles, locations },
+    filters: { keywords, titles, locations, manualUrls },
   };
 }
 
@@ -879,7 +885,9 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
 
   const normalized = normalizeSearchPayload(raw);
   if (!normalized.filters.keywords.length && !normalized.filters.titles.length && !normalized.filters.locations.length) {
-    throw new Error("Vypln alespon jedno klicove slovo, job title nebo lokaci.");
+    if (!normalized.filters.manualUrls.length) {
+      throw new Error("Vypln alespon jedno klicove slovo, job title, lokaci nebo manualni LinkedIn URL.");
+    }
   }
 
   const { data, error } = await supabase
@@ -919,10 +927,6 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
         return { supabase: supabaseClient, run: mapRun(data as LinkedInRunRow) };
       })();
 
-  if (getSearchProviderLabel() === "none") {
-    throw new Error("Chybi search provider. Nastav SERPER_API_KEY nebo SERPAPI_API_KEY.");
-  }
-
   const startedAt = new Date().toISOString();
   await supabase
     .from(LINKEDIN_TABLES.runs)
@@ -935,17 +939,27 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
     .eq("id", selectedRun.id);
 
   try {
-    const searchResults = await searchWeb(selectedRun.source_query, 10);
-    const linkedinUrls = pickBestLinkedInUrls(searchResults);
+    const manualUrls = selectedRun.filters.manualUrls || [];
+    let discoveredUrls: string[] = [];
 
-    if (linkedinUrls.length) {
-      const rows = linkedinUrls.map((linkedinUrl) => ({
+    if (manualUrls.length) {
+      discoveredUrls = manualUrls;
+    } else {
+      if (getSearchProviderLabel() === "none") {
+        throw new Error("Chybi search provider. Nastav SERPER_API_KEY nebo SERPAPI_API_KEY, nebo pouzij manualni LinkedIn URL.");
+      }
+      const searchResults = await searchWeb(selectedRun.source_query, 10);
+      discoveredUrls = pickBestLinkedInUrls(searchResults);
+    }
+
+    if (discoveredUrls.length) {
+      const rows = discoveredUrls.map((linkedinUrl) => ({
         run_id: selectedRun.id,
         linkedin_url: linkedinUrl,
         source_query: selectedRun.source_query,
         status: "pending" as LinkedInProfileStatus,
         raw_payload: {
-          discoverySource: getSearchProviderLabel(),
+          discoverySource: manualUrls.length ? "manual" : getSearchProviderLabel(),
           discoveredAt: new Date().toISOString(),
         },
       }));
@@ -961,14 +975,14 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       .from(LINKEDIN_TABLES.runs)
       .update({
         status: "scraping",
-        total_candidates: linkedinUrls.length,
+        total_candidates: discoveredUrls.length,
       })
       .eq("id", selectedRun.id);
 
     let processed = 0;
     let contactsFound = 0;
 
-    for (const linkedinUrl of linkedinUrls) {
+    for (const linkedinUrl of discoveredUrls) {
       try {
         const profile = await scrapeLinkedInPublicProfile(linkedinUrl);
         const contact = await enrichPublicCompanyContact(profile.companyName);
@@ -990,7 +1004,7 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
             scraped_at: new Date().toISOString(),
             raw_payload: {
               ...profile.rawPayload,
-              searchProvider: getSearchProviderLabel(),
+              searchProvider: manualUrls.length ? "manual" : getSearchProviderLabel(),
               enrichmentMode: getEnrichmentModeLabel(),
             },
           })
@@ -1021,7 +1035,7 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       .from(LINKEDIN_TABLES.runs)
       .update({
         status: "completed",
-        total_candidates: linkedinUrls.length,
+        total_candidates: discoveredUrls.length,
         total_profiles: processed,
         finished_at: finishedAt,
         last_error: null,
@@ -1034,10 +1048,10 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
     return {
       run: mapRun(finalRunRow as LinkedInRunRow),
-      discovered: linkedinUrls.length,
+      discovered: discoveredUrls.length,
       processed,
       contactsFound,
-      searchProvider: getSearchProviderLabel(),
+      searchProvider: manualUrls.length ? "manual" : getSearchProviderLabel(),
       enrichmentMode: getEnrichmentModeLabel(),
     };
   } catch (error: unknown) {

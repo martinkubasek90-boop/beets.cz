@@ -12,6 +12,7 @@ type FormState = {
   keywords: string;
   titles: string;
   locations: string;
+  manualUrls: string;
   notes: string;
 };
 
@@ -20,6 +21,7 @@ const emptyForm: FormState = {
   keywords: "",
   titles: "",
   locations: "",
+  manualUrls: "",
   notes: "",
 };
 
@@ -100,6 +102,7 @@ export function LinkedInDashboard({ initialData }: Props) {
   }, [activeRunId, contactsOnly, data.profiles, minScore, query]);
 
   const activeRun = data.runs.find((run) => run.id === activeRunId) || null;
+  const activeRunCanProcess = Boolean(activeRunId) && (data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
 
   async function reloadDashboard(nextRunId?: string) {
     setLoading(true);
@@ -142,6 +145,10 @@ export function LinkedInDashboard({ initialData }: Props) {
           keywords: splitCsv(form.keywords),
           titles: splitCsv(form.titles),
           locations: splitCsv(form.locations),
+          manualUrls: form.manualUrls
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
           notes: form.notes,
         }),
       });
@@ -298,6 +305,16 @@ export function LinkedInDashboard({ initialData }: Props) {
                 />
               </label>
 
+              <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Manual LinkedIn URL</span>
+                <textarea
+                  className="min-h-24 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder={"https://www.linkedin.com/in/first-profile/\nhttps://www.linkedin.com/in/second-profile/"}
+                  value={form.manualUrls}
+                  onChange={(event) => setForm((current) => ({ ...current, manualUrls: event.target.value }))}
+                />
+              </label>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -327,7 +344,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                   <button
                     type="button"
                     onClick={handleProcessRun}
-                    disabled={!activeRunId || processing || !data.processorReady}
+                    disabled={!activeRunCanProcess || processing}
                     className="rounded-full bg-cyan-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {processing ? "Bezi processing..." : "Start processing"}
@@ -337,7 +354,7 @@ export function LinkedInDashboard({ initialData }: Props) {
 
               {!data.processorReady ? (
                 <div className="mb-4 rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-100">
-                  Processing neni aktivni. Nastav `SERPER_API_KEY` nebo `SERPAPI_API_KEY`.
+                  Search discovery neni aktivni. Nastav `SERPER_API_KEY` nebo `SERPAPI_API_KEY`, nebo pouzij manualni LinkedIn URL.
                 </div>
               ) : null}
 
@@ -378,6 +395,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                           {item}
                         </span>
                       ))}
+                      {run.filters.manualUrls.length ? (
+                        <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-cyan-200">
+                          manual URLs: {run.filters.manualUrls.length}
+                        </span>
+                      ) : null}
                     </div>
                   </button>
                 ))}
