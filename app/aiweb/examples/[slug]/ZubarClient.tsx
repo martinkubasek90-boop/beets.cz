@@ -10,6 +10,12 @@ const STEPS = [
   { num: '04', title: 'Péče po ošetření', desc: 'Dostanete jasné pokyny pro domácí péči a termín kontroly.' },
 ];
 
+const CLINIC_PHOTOS = [
+  { id: 'photo-1629909615957-be38d48fbbe4', alt: 'Moderní zubní ordinace', label: 'Moderní ordinace' },
+  { id: 'photo-1666214276372-24e108fbe7b8', alt: 'Zubní tým', label: 'Zkušený tým' },
+  { id: 'photo-1606206522985-14e4a75bb5e0', alt: 'Péče o pacienta', label: 'Individuální péče' },
+];
+
 export default function ZubarClient({ site: s }: { site: ExampleSite }) {
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
 
@@ -24,6 +30,10 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
         .step-card { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); flex: 1; }
         .nav-link { font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: color 0.2s; }
         .nav-link:hover { color: #2563eb; }
+        .clinic-card { flex: 1; overflow: hidden; border-radius: 16px; position: relative; }
+        .clinic-card img { width: 100%; height: 260px; object-fit: cover; display: block; transition: transform 0.4s ease; }
+        .clinic-card:hover img { transform: scale(1.04); }
+        .clinic-label { position: absolute; bottom: 14px; left: 14px; background: rgba(255,255,255,0.95); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 700; color: #2563eb; }
       `}</style>
 
       {/* AIWEB Demo badge */}
@@ -58,7 +68,7 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
       </nav>
 
       {/* SPLIT HERO */}
-      <section style={{ display: 'flex', minHeight: '88vh', background: '#f8fafc' }}>
+      <section style={{ display: 'flex', minHeight: '86vh', background: '#f8fafc' }}>
         {/* Left: text */}
         <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 64px' }}>
           <div className="fu" style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 100, background: `${s.primary}12`, border: `1px solid ${s.primary}30`, color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 28, alignSelf: 'flex-start' }}>
@@ -91,15 +101,24 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
             </button>
           </div>
         </div>
-        {/* Right: patient photo */}
+        {/* Right: clinic photo */}
         <div style={{ flex: '0 0 45%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 40px', background: '#fff' }}>
           <div style={{ position: 'relative' }}>
             <div style={{ position: 'absolute', inset: -10, borderRadius: 26, border: `3px solid ${s.primary}`, opacity: 0.3 }} />
             <img
-              src="https://images.unsplash.com/photo-1588776814546-1ffbb5c098d5?auto=format&fit=crop&w=600&q=80"
-              alt="Spokojený pacient"
+              src="https://images.unsplash.com/photo-1629909615957-be38d48fbbe4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+              alt="Moderní zubní ordinace DentCare"
               style={{ width: 420, height: 520, objectFit: 'cover', borderRadius: 20, display: 'block', boxShadow: '0 20px 60px rgba(37,99,235,0.15)' }}
             />
+            {/* Floating badge */}
+            <div style={{ position: 'absolute', bottom: 28, left: -32, background: '#fff', borderRadius: 14, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+              <div style={{ fontSize: 24, fontWeight: 900, color: s.primary, lineHeight: 1 }}>98%</div>
+              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginTop: 2 }}>spokojených pacientů</div>
+            </div>
+            <div style={{ position: 'absolute', top: 28, right: -28, background: s.primary, borderRadius: 14, padding: '12px 16px', boxShadow: '0 8px 32px rgba(37,99,235,0.3)' }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', lineHeight: 1 }}>15+</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginTop: 2 }}>let praxe</div>
+            </div>
           </div>
         </div>
       </section>
@@ -111,8 +130,29 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
         </p>
       </div>
 
+      {/* CLINIC PHOTO STRIP */}
+      <section style={{ padding: '72px 40px', background: '#f0f6ff' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Naše klinika</p>
+            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 900, letterSpacing: '-1px', margin: 0, color: '#0f172a' }}>Moderní prostředí, špičkové vybavení</h2>
+          </div>
+          <div style={{ display: 'flex', gap: 20 }}>
+            {CLINIC_PHOTOS.map(photo => (
+              <div key={photo.id} className="clinic-card">
+                <img
+                  src={`https://images.unsplash.com/${photo.id}?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80`}
+                  alt={photo.alt}
+                />
+                <div className="clinic-label">{photo.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* PROCESS STEPS */}
-      <section style={{ padding: '100px 40px', background: '#f0f6ff' }}>
+      <section style={{ padding: '100px 40px', background: '#fff' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 60 }}>
             <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Jak to funguje</p>
@@ -135,18 +175,29 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
       {/* SERVICES GRID */}
       <section id="sluzby" style={{ padding: '100px 40px', background: '#f8fafc' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Ošetření</p>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-1.5px', margin: 0, color: '#0f172a' }}>Komplexní péče o váš chrup</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
-            {s.sections[0]?.items?.map((item, i) => (
-              <div key={i} className="service-card">
-                <div style={{ fontSize: 26, marginBottom: 12 }}>{item.icon}</div>
-                <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: '#0f172a' }}>{item.title}</h3>
-                <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.7, margin: 0 }}>{item.desc}</p>
+          <div style={{ display: 'flex', gap: 80, alignItems: 'center' }}>
+            {/* Left: text */}
+            <div style={{ flex: 1 }}>
+              <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Ošetření</p>
+              <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-1.5px', margin: '0 0 40px', color: '#0f172a' }}>Komplexní péče o váš chrup</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {s.sections[0]?.items?.map((item, i) => (
+                  <div key={i} className="service-card">
+                    <div style={{ fontSize: 26, marginBottom: 12 }}>{item.icon}</div>
+                    <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: '#0f172a' }}>{item.title}</h3>
+                    <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.7, margin: 0 }}>{item.desc}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+            {/* Right: photo */}
+            <div style={{ flex: '0 0 400px' }}>
+              <img
+                src="https://images.unsplash.com/photo-1666214276372-24e108fbe7b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                alt="Zubní lékař při práci"
+                style={{ width: '100%', height: 480, objectFit: 'cover', borderRadius: 20, display: 'block', boxShadow: '0 16px 48px rgba(37,99,235,0.12)' }}
+              />
+            </div>
           </div>
         </div>
       </section>
