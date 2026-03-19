@@ -14,6 +14,8 @@ type FormState = {
   locations: string;
   manualUrls: string;
   highVolume: boolean;
+  minerMode: boolean;
+  enrichLimit: number;
   notes: string;
 };
 
@@ -24,6 +26,8 @@ const emptyForm: FormState = {
   locations: "",
   manualUrls: "",
   highVolume: true,
+  minerMode: true,
+  enrichLimit: 60,
   notes: "",
 };
 
@@ -152,6 +156,8 @@ export function LinkedInDashboard({ initialData }: Props) {
             .map((item) => item.trim())
             .filter(Boolean),
           highVolume: form.highVolume,
+          minerMode: form.minerMode,
+          enrichLimit: form.enrichLimit,
           notes: form.notes,
         }),
       });
@@ -328,6 +334,33 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span>High volume discovery</span>
               </label>
 
+              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.minerMode}
+                  onChange={(event) => setForm((current) => ({ ...current, minerMode: event.target.checked }))}
+                  className="h-4 w-4 accent-cyan-300"
+                />
+                <span>Miner mode</span>
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Enrich top N</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={250}
+                  className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  value={form.enrichLimit}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      enrichLimit: Number.isFinite(Number(event.target.value)) ? Number(event.target.value) : 60,
+                    }))
+                  }
+                />
+              </label>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -416,6 +449,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                       {run.filters.highVolume ? (
                         <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-emerald-200">
                           high volume
+                        </span>
+                      ) : null}
+                      {run.filters.minerMode ? (
+                        <span className="rounded-full border border-fuchsia-300/20 bg-fuchsia-300/10 px-3 py-1 text-fuchsia-200">
+                          miner / enrich {run.filters.enrichLimit}
                         </span>
                       ) : null}
                     </div>

@@ -87,6 +87,18 @@ Je vhodny hlavne pro:
 - stavebni firmy
 - real estate developery
 
+## Miner mode
+
+`Miner mode` je sirsi discovery rezim:
+- dela vic query batchu
+- bere vic stran search vysledku
+- uklada sirsi pool kandidatu
+- enrichment dela jen na `top N` profilech, aby se run nezpomalil
+
+Pouziti:
+- kdyz chces maximalizovat pocet kandidatu
+- a enrichment delat jen na casti nejzajimavejsich vysledku
+
 ## Co dela enrichment
 
 Enrichment je uz hotovy v kodu.

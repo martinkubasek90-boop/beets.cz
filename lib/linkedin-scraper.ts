@@ -45,6 +45,8 @@ export type LinkedInRun = {
     locations: string[];
     manualUrls: string[];
     highVolume: boolean;
+    minerMode: boolean;
+    enrichLimit: number;
   };
 };
 
@@ -65,6 +67,8 @@ export type LinkedInSearchPayload = {
   locations?: string[];
   manualUrls?: string[];
   highVolume?: boolean;
+  minerMode?: boolean;
+  enrichLimit?: number;
   notes?: string;
 };
 
@@ -144,6 +148,8 @@ type LinkedInFilters = {
   locations: string[];
   manualUrls: string[];
   highVolume: boolean;
+  minerMode: boolean;
+  enrichLimit: number;
 };
 
 const RUN_SELECT =
@@ -182,6 +188,8 @@ const sampleRuns: LinkedInRun[] = [
       locations: ["United States", "USA"],
       manualUrls: [],
       highVolume: false,
+      minerMode: false,
+      enrichLimit: 50,
     },
   },
 ];
@@ -289,6 +297,11 @@ function normalizeFilters(value: unknown) {
     locations: toStringArray(source.locations),
     manualUrls: toStringArray(source.manualUrls).map((item) => normalizeLinkedInProfileUrl(item) || "").filter(Boolean),
     highVolume: typeof source.highVolume === "boolean" ? source.highVolume : false,
+    minerMode: typeof source.minerMode === "boolean" ? source.minerMode : false,
+    enrichLimit:
+      typeof source.enrichLimit === "number" && Number.isFinite(source.enrichLimit)
+        ? Math.max(1, Math.min(250, Math.round(source.enrichLimit)))
+        : 50,
   };
 }
 
@@ -557,17 +570,19 @@ function expandIcpTerms(filters: LinkedInFilters) {
     locations: filters.locations,
     manualUrls: filters.manualUrls,
     highVolume: filters.highVolume,
+    minerMode: filters.minerMode,
+    enrichLimit: filters.enrichLimit,
   };
 }
 
 function generateSearchQueries(filters: LinkedInFilters) {
   const expanded = expandIcpTerms(filters);
-  const titleChunkSize = expanded.highVolume ? 1 : 2;
-  const keywordChunkSize = expanded.highVolume ? 1 : 2;
+  const titleChunkSize = expanded.highVolume || expanded.minerMode ? 1 : 2;
+  const keywordChunkSize = expanded.highVolume || expanded.minerMode ? 1 : 2;
   const titleChunks = chunkStrings(expanded.titles, titleChunkSize);
   const keywordChunks = chunkStrings(expanded.keywords, keywordChunkSize);
   const locationChunks = chunkStrings(expanded.locations.length ? expanded.locations : ["United States"], 2);
-  const maxQueries = expanded.highVolume ? 36 : 12;
+  const maxQueries = expanded.minerMode ? 120 : expanded.highVolume ? 36 : 12;
   const queries: string[] = [];
 
   if (!titleChunks.length && !keywordChunks.length) {
@@ -764,15 +779,16 @@ async function fetchText(url: string) {
   return response.text();
 }
 
-async function searchWeb(query: string, num = 10): Promise<SearchResult[]> {
+async function searchWeb(query: string, num = 10, start = 0): Promise<SearchResult[]> {
   if (getSerperApiKey()) {
+    const page = Math.floor(start / Math.max(1, num)) + 1;
     const response = await fetch("https://google.serper.dev/search", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-API-KEY": getSerperApiKey(),
       },
-      body: JSON.stringify({ q: query, num }),
+      body: JSON.stringify({ q: query, num, page }),
       signal: AbortSignal.timeout(20000),
     });
 
@@ -798,6 +814,7 @@ async function searchWeb(query: string, num = 10): Promise<SearchResult[]> {
     url.searchParams.set("engine", "google");
     url.searchParams.set("q", query);
     url.searchParams.set("num", String(num));
+    url.searchParams.set("start", String(start));
     url.searchParams.set("api_key", getSerpApiKey());
 
     const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
@@ -1092,12 +1109,24 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
   const locations = uniqueStrings(raw.locations);
   const manualUrls = uniqueStrings(raw.manualUrls).map((item) => normalizeLinkedInProfileUrl(item) || "").filter(Boolean);
   const sourceQuery = buildSourceQuery({ keywords, titles, locations });
+  const enrichLimit =
+    typeof raw.enrichLimit === "number" && Number.isFinite(raw.enrichLimit)
+      ? Math.max(1, Math.min(250, Math.round(raw.enrichLimit)))
+      : 50;
 
   return {
     name: raw.name?.trim() || `LinkedIn run ${new Date().toLocaleDateString("cs-CZ")}`,
     notes: raw.notes?.trim() || null,
     sourceQuery,
-    filters: { keywords, titles, locations, manualUrls, highVolume: Boolean(raw.highVolume) },
+    filters: {
+      keywords,
+      titles,
+      locations,
+      manualUrls,
+      highVolume: Boolean(raw.highVolume),
+      minerMode: Boolean(raw.minerMode),
+      enrichLimit,
+    },
   };
 }
 
@@ -1228,12 +1257,16 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       }
       const queries = generateSearchQueries(selectedRun.filters);
       const discoveredSet = new Set<string>();
+      const pageStarts = selectedRun.filters.minerMode ? [0, 10, 20, 30, 40] : selectedRun.filters.highVolume ? [0, 10] : [0];
 
       for (const query of queries) {
-        const searchResults = await searchWeb(query, 10);
-        const queryUrls = pickBestLinkedInUrls(searchResults);
-        queryUrls.forEach((url) => discoveredSet.add(url));
-        await delay(250);
+        for (const start of pageStarts) {
+          const searchResults = await searchWeb(query, 10, start);
+          const queryUrls = pickBestLinkedInUrls(searchResults);
+          queryUrls.forEach((url) => discoveredSet.add(url));
+          if (!queryUrls.length) break;
+          await delay(selectedRun.filters.minerMode ? 120 : 250);
+        }
       }
 
       discoveredUrls = Array.from(discoveredSet);
@@ -1268,8 +1301,11 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
     let processed = 0;
     let contactsFound = 0;
+    const enrichmentUrls = selectedRun.filters.minerMode
+      ? discoveredUrls.slice(0, Math.min(selectedRun.filters.enrichLimit, discoveredUrls.length))
+      : discoveredUrls;
 
-    for (const linkedinUrl of discoveredUrls) {
+    for (const linkedinUrl of enrichmentUrls) {
       try {
         const profile = await scrapeLinkedInPublicProfile(linkedinUrl);
         const contact = await enrichPublicCompanyContact({
