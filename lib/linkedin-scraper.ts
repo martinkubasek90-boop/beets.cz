@@ -447,7 +447,7 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
   return Array.from(urls);
 }
 
-function normalizeFilters(value: unknown) {
+function normalizeFilters(value: unknown): LinkedInRun["filters"] {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
     runMode: source.runMode === "company" ? "company" : "linkedin",
