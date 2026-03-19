@@ -78,6 +78,9 @@ create index if not exists linkedin_profile_candidates_company_idx
 create index if not exists linkedin_profile_candidates_contact_email_idx
   on public.linkedin_profile_candidates (contact_email);
 
+create index if not exists linkedin_companies_company_domain_idx
+  on public.linkedin_companies (company_domain);
+
 create or replace function public.linkedin_touch_updated_at()
 returns trigger
 language plpgsql

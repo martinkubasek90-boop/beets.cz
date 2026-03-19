@@ -9,10 +9,13 @@ type Props = {
 
 type FormState = {
   name: string;
+  runMode: "linkedin" | "company";
   keywords: string;
   titles: string;
   locations: string;
   manualUrls: string;
+  companyNames: string;
+  companyDomains: string;
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -21,10 +24,13 @@ type FormState = {
 
 const emptyForm: FormState = {
   name: "",
+  runMode: "company",
   keywords: "",
   titles: "",
   locations: "",
   manualUrls: "",
+  companyNames: "",
+  companyDomains: "",
   highVolume: true,
   minerMode: true,
   enrichLimit: 60,
@@ -109,7 +115,11 @@ export function LinkedInDashboard({ initialData }: Props) {
   }, [activeRunId, contactsOnly, data.profiles, minScore, query]);
 
   const activeRun = data.runs.find((run) => run.id === activeRunId) || null;
-  const activeRunCanProcess = Boolean(activeRunId) && (data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
+  const activeRunCanProcess =
+    Boolean(activeRunId) &&
+    (activeRun?.filters.runMode === "company"
+      ? Boolean(activeRun.filters.companyDomains.length || activeRun.filters.companyNames.length)
+      : data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
 
   async function reloadDashboard(nextRunId?: string) {
     setLoading(true);
@@ -149,10 +159,19 @@ export function LinkedInDashboard({ initialData }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
+          runMode: form.runMode,
           keywords: splitCsv(form.keywords),
           titles: splitCsv(form.titles),
           locations: splitCsv(form.locations),
           manualUrls: form.manualUrls
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          companyNames: form.companyNames
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          companyDomains: form.companyDomains
             .split("\n")
             .map((item) => item.trim())
             .filter(Boolean),
@@ -244,11 +263,11 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="max-w-3xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300/80">BEETS / LinkedIn</p>
               <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
-                Discovery + public contact enrichment pro verejne LinkedIn profily
+                Company-first miner a public contact enrichment pro architekty a stavebni firmy
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-                Run se nejdriv postavi z query, pak jde pres search provider pro discovery profilu a nakonec z
-                firemnich webu vytahne verejne kontakty. Osobni maily a telefony to negarantuje.
+                Primarni flow ted umi jit primo z domen a webu firem. LinkedIn discovery zustava jen jako doplnek,
+                ale company miner funguje i bez search API a taha kontakty z homepage, contact, about, team a people stranek.
               </p>
             </div>
             <div className="grid gap-3 text-sm text-slate-200 md:grid-cols-4">
@@ -286,16 +305,30 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="mb-5">
               <h2 className="text-xl font-semibold">Novy scrape run</h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Priklad: `keywords=B2B,SaaS`, `titles=business development,partnerships`, `locations=USA`.
+                Company-first miner umi jet i bez search API. Nejlepsi vstup jsou domeny firem, volitelne doplnene o nazvy a lokaci.
               </p>
             </div>
 
             <div className="grid gap-4">
               <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Rezim</span>
+                <select
+                  className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none"
+                  value={form.runMode}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, runMode: event.target.value === "linkedin" ? "linkedin" : "company" }))
+                  }
+                >
+                  <option value="company">Company miner</option>
+                  <option value="linkedin">LinkedIn discovery</option>
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-sm">
                 <span className="text-slate-300">Nazev runu</span>
                 <input
                   className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="USA B2B business development"
+                  placeholder="USA architects company miner"
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                 />
@@ -305,7 +338,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span className="text-slate-300">Keywords</span>
                 <input
                   className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="B2B, SaaS"
+                  placeholder="architecture, construction, commercial"
                   value={form.keywords}
                   onChange={(event) => setForm((current) => ({ ...current, keywords: event.target.value }))}
                 />
@@ -328,6 +361,26 @@ export function LinkedInDashboard({ initialData }: Props) {
                   placeholder="USA, United States"
                   value={form.locations}
                   onChange={(event) => setForm((current) => ({ ...current, locations: event.target.value }))}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Company names</span>
+                <textarea
+                  className="min-h-24 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder={"Gensler\nPerkins&Will\nTurner Construction"}
+                  value={form.companyNames}
+                  onChange={(event) => setForm((current) => ({ ...current, companyNames: event.target.value }))}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Company domains</span>
+                <textarea
+                  className="min-h-24 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder={"gensler.com\nperkinswill.com\nturnerconstruction.com"}
+                  value={form.companyDomains}
+                  onChange={(event) => setForm((current) => ({ ...current, companyDomains: event.target.value }))}
                 />
               </label>
 
@@ -435,7 +488,7 @@ export function LinkedInDashboard({ initialData }: Props) {
 
               {!data.processorReady ? (
                 <div className="mb-4 rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-100">
-                  Search discovery neni aktivni. Nastav `SERPER_API_KEY` nebo `SERPAPI_API_KEY`, nebo pouzij manualni LinkedIn URL.
+                  Search discovery neni aktivni. To nevadi pro company miner, ktery funguje jen z domen firem. Pro LinkedIn auto-discovery bys ale potreboval `SERPER_API_KEY` nebo `SERPAPI_API_KEY`.
                 </div>
               ) : null}
 
@@ -481,6 +534,25 @@ export function LinkedInDashboard({ initialData }: Props) {
                           manual URLs: {run.filters.manualUrls.length}
                         </span>
                       ) : null}
+                      {run.filters.companyDomains.length ? (
+                        <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-amber-100">
+                          domains: {run.filters.companyDomains.length}
+                        </span>
+                      ) : null}
+                      {run.filters.companyNames.length ? (
+                        <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-sky-100">
+                          companies: {run.filters.companyNames.length}
+                        </span>
+                      ) : null}
+                      <span
+                        className={`rounded-full border px-3 py-1 ${
+                          run.filters.runMode === "company"
+                            ? "border-amber-300/20 bg-amber-300/10 text-amber-100"
+                            : "border-cyan-300/20 bg-cyan-300/10 text-cyan-200"
+                        }`}
+                      >
+                        {run.filters.runMode === "company" ? "company miner" : "linkedin"}
+                      </span>
                       {run.filters.highVolume ? (
                         <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-emerald-200">
                           high volume

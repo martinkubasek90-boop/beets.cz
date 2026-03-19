@@ -3,6 +3,7 @@
 Tenhle flow je urceny pro:
 - discovery verejnych LinkedIn profilu
 - enrichment pres verejne firemni weby
+- company-first miner z domen a webu firem
 - export leadu do CSV
 - manualni import verejnych LinkedIn URL bez search API
 
@@ -42,7 +43,7 @@ Nebo obsah souboru `supabase/linkedin_scraper.sql` vloz do SQL editoru.
 ## Jak pipeline funguje
 
 1. Vytvoris run v `/linkedin`
-2. App jede jednou ze 2 cest:
+2. App jede jednou ze 3 cest:
 
 `A) Search discovery`
 
@@ -57,6 +58,20 @@ Search provider vrati verejne LinkedIn URL.
 `B) Manual import`
 
 Do runu vlozis primo seznam verejnych LinkedIn URL.
+
+`C) Company-first miner`
+
+Do runu vlozis:
+- seznam domen firem
+- pripadne seznam nazvu firem
+- lokaci a keywordy pro scoring
+
+Pipeline pak:
+- projde homepage firmy
+- dohleda interní stranky typu `/contact`, `/about`, `/team`, `/people`, `/leadership`
+- vytahne verejne emaily a telefony
+- zkusí najit jmena a role na team/people strankach
+- ulozi leady i bez search API
 
 3. Scraper nacte verejnou HTML stranku profilu
 4. Parser vytahne:
@@ -100,6 +115,8 @@ Pouziti:
 - kdyz chces maximalizovat pocet kandidatu
 - a enrichment delat jen na casti nejzajimavejsich vysledku
 
+Pro rezim `company miner` je ale nejdulezitejsi kvalitni seznam domen. Tam search API nepotrebujes vubec.
+
 ## Co dela enrichment
 
 Enrichment je uz hotovy v kodu.
@@ -115,6 +132,26 @@ To znamena:
 - `ano`, umi dohledat mail a telefon
 - `ne`, negarantuje osobni kontakt konkretniho cloveka
 - casto najde obecny firemni kontakt typu `sales@`, `hello@`, `info@`
+
+## Doporuceny company-first run
+
+V UI nastav:
+
+- `Rezim`: `Company miner`
+- `Nazev runu`: `USA architects company miner`
+- `Keywords`: `architecture, architect, commercial`
+- `Job titles`: `principal architect, founder, owner, project architect`
+- `Lokace`: `USA, United States`
+- `Company domains`:
+  - `gensler.com`
+  - `perkinswill.com`
+  - `hdrinc.com`
+
+Pak:
+- klikni `Zalozit run`
+- vyber run
+- klikni `Start processing`
+- po dobehu klikni `Enrich pending`
 
 ## Test run pro B2B business development v USA
 
