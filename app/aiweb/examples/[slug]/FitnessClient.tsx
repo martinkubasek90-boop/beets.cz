@@ -25,6 +25,24 @@ const STATS = [
   { val: '2400+', label: 'členů' },
 ];
 
+const TRAINERS = [
+  {
+    name: 'Marek Vávra',
+    role: 'Strength coach',
+    image: 'https://images.unsplash.com/photo-1567013127542-490d757e51fc?auto=format&fit=crop&w=700&q=80',
+  },
+  {
+    name: 'Adéla Prokopová',
+    role: 'Yoga & mobility',
+    image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=700&q=80',
+  },
+  {
+    name: 'David Rejzek',
+    role: 'Conditioning',
+    image: 'https://images.unsplash.com/photo-1594737625785-a6cbdabd333c?auto=format&fit=crop&w=700&q=80',
+  },
+];
+
 export default function FitnessClient({ site: s }: { site: ExampleSite }) {
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
 
@@ -38,6 +56,7 @@ export default function FitnessClient({ site: s }: { site: ExampleSite }) {
         .class-card:hover { background: rgba(239,68,68,0.07); transform: translateX(4px); }
         .pricing-card { border-radius: 16px; padding: 40px 32px; transition: all 0.25s; }
         .pricing-card:hover:not(.pricing-highlight) { transform: translateY(-4px); }
+        .trainer-card img { width: 100%; height: 280px; object-fit: cover; display: block; }
       `}</style>
 
       {/* AIWEB Demo badge */}
@@ -144,6 +163,41 @@ export default function FitnessClient({ site: s }: { site: ExampleSite }) {
                   <span>📅 {cls.schedule}</span>
                   <span>🕐 {cls.time}</span>
                   <span>⏱ {cls.duration}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TRAINERS */}
+      <section style={{ padding: '100px 40px', background: '#0b0b0b', borderTop: '1px solid rgba(239,68,68,0.12)', borderBottom: '1px solid rgba(239,68,68,0.12)' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap', marginBottom: 44 }}>
+            <div>
+              <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 10 }}>Trenéři</p>
+              <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 900, letterSpacing: '-2px', margin: 0, textTransform: 'uppercase' }}>Lidi, co tě potáhnou dopředu</h2>
+            </div>
+            <p style={{ maxWidth: 420, margin: 0, fontSize: 15, lineHeight: 1.7, color: s.textMuted }}>
+              Každý trenér má vlastní specializaci. Neprodáváme členství, ale jasný progres a strukturu.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 18 }}>
+            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, minHeight: 420 }}>
+              <img src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1200&q=80" alt="Trénink ve FitZone" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,8,8,0.92), rgba(8,8,8,0.15))' }} />
+              <div style={{ position: 'absolute', left: 24, right: 24, bottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: s.primary, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 10 }}>Coaching floor</div>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1.1, marginBottom: 8 }}>Denně desítky vedených tréninků</div>
+                <div style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.72)' }}>Od ranní mobility až po večerní conditioning. Vždy s koučem na place.</div>
+              </div>
+            </div>
+            {TRAINERS.map((trainer) => (
+              <div key={trainer.name} className="trainer-card" style={{ borderRadius: 18, overflow: 'hidden', background: '#111', border: '1px solid rgba(239,68,68,0.16)' }}>
+                <img src={trainer.image} alt={trainer.name} />
+                <div style={{ padding: 18 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4 }}>{trainer.name}</div>
+                  <div style={{ fontSize: 13, color: s.primary, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px' }}>{trainer.role}</div>
                 </div>
               </div>
             ))}

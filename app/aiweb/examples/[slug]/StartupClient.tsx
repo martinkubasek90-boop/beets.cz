@@ -22,6 +22,26 @@ const PRICING = [
   { icon: '🏢', name: 'Enterprise', price: 'Na míru', desc: 'SLA, dedikovaný support, on-premise varianta', highlight: false },
 ];
 
+const TEAM_SHOTS = [
+  {
+    src: 'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=900&q=80',
+    title: 'Produktový workshop',
+    desc: 'Mapování procesů s klientem během jednoho odpoledne.',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=900&q=80',
+    title: 'Tým implementace',
+    desc: 'CX, onboarding a integrace vedené jedním delivery týmem.',
+  },
+];
+
+const CUSTOMER_STORY = {
+  company: 'Scaleup Labs',
+  quote: 'Za šest týdnů jsme převedli schvalování nákupů a onboarding lidí do jedné platformy. NovaTech nám vrátil desítky hodin týdně.',
+  resultA: '142 h',
+  resultB: '3 týdny',
+};
+
 export default function StartupClient({ site: s }: { site: ExampleSite }) {
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
 
@@ -35,6 +55,8 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
         .feature-card:hover { background: rgba(139,92,246,0.1); transform: translateY(-3px); }
         .pricing-card { border-radius: 16px; padding: 36px 32px; border: 1px solid rgba(139,92,246,0.2); transition: all 0.25s; }
         .pricing-card:hover { transform: translateY(-4px); }
+        .team-shot { position: relative; overflow: hidden; border-radius: 18px; min-height: 340px; }
+        .team-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
       `}</style>
 
       {/* AIWEB Demo badge */}
@@ -166,6 +188,44 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
         </div>
       </section>
 
+      {/* TEAM / DELIVERY STORY */}
+      <section style={{ padding: '100px 40px', background: s.bg }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 28, alignItems: 'stretch' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            {TEAM_SHOTS.map((shot) => (
+              <div key={shot.title} className="team-shot">
+                <img src={shot.src} alt={shot.title} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(4,5,15,0.88), rgba(4,5,15,0.08))' }} />
+                <div style={{ position: 'absolute', left: 20, right: 20, bottom: 18 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 6 }}>{shot.title}</div>
+                  <div style={{ fontSize: 14, lineHeight: 1.6, color: 'rgba(241,245,249,0.72)' }}>{shot.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background: s.surface, border: `1px solid ${s.border}`, borderRadius: 24, padding: '40px 36px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>Customer story</p>
+            <h2 style={{ fontSize: 'clamp(30px, 4vw, 52px)', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 18px' }}>
+              Nasazení bez chaosu
+            </h2>
+            <p style={{ fontSize: 17, color: s.textMuted, lineHeight: 1.8, margin: '0 0 22px' }}>
+              {CUSTOMER_STORY.quote}
+            </p>
+            <div style={{ fontSize: 14, fontWeight: 700, color: s.text, marginBottom: 28 }}>{CUSTOMER_STORY.company}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ padding: 18, borderRadius: 16, background: 'rgba(139,92,246,0.08)', border: `1px solid rgba(139,92,246,0.18)` }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: s.primary }}>{CUSTOMER_STORY.resultA}</div>
+                <div style={{ fontSize: 13, color: s.textMuted, lineHeight: 1.6 }}>ušetřených každý měsíc v interních operacích</div>
+              </div>
+              <div style={{ padding: 18, borderRadius: 16, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.18)' }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: '#60a5fa' }}>{CUSTOMER_STORY.resultB}</div>
+                <div style={{ fontSize: 13, color: s.textMuted, lineHeight: 1.6 }}>od briefu po první funkční workflow v produkci</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FEATURES 2x2 */}
       <section style={{ padding: '100px 40px', background: s.bg }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
@@ -179,6 +239,23 @@ export default function StartupClient({ site: s }: { site: ExampleSite }) {
                 <div style={{ fontSize: 32, marginBottom: 16 }}>{item.icon}</div>
                 <h3 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 10px' }}>{item.title}</h3>
                 <p style={{ fontSize: 15, color: s.textMuted, lineHeight: 1.7, margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SOCIAL PROOF STRIP */}
+      <section style={{ padding: '56px 40px', background: s.surface, borderTop: `1px solid ${s.border}`, borderBottom: `1px solid ${s.border}` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ fontSize: 12, color: s.primary, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 6px' }}>Používají týmy z</p>
+            <h3 style={{ fontSize: 26, fontWeight: 800, margin: 0 }}>SaaS, financí i retailu</h3>
+          </div>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {['Scaleup Labs', 'Finport', 'Northgrid', 'Bricklane', 'Astera Ops'].map((name) => (
+              <div key={name} style={{ padding: '12px 16px', borderRadius: 999, border: `1px solid ${s.border}`, background: 'rgba(255,255,255,0.03)', color: s.textMuted, fontSize: 13, fontWeight: 700 }}>
+                {name}
               </div>
             ))}
           </div>

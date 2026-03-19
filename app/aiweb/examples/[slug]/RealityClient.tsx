@@ -17,6 +17,12 @@ const STATS = [
   { val: '2%', label: 'férová provize' },
 ];
 
+const DISTRICTS = [
+  { name: 'Praha 1', vibe: 'historické byty a investiční adresy' },
+  { name: 'Praha 6', vibe: 'vily, rodiny a klidné rezidenční lokality' },
+  { name: 'Karlín', vibe: 'nové byty, kanceláře a moderní městský život' },
+];
+
 export default function RealityClient({ site: s }: { site: ExampleSite }) {
   const [scrolled, setScrolled] = useState(false);
   const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
@@ -36,6 +42,7 @@ export default function RealityClient({ site: s }: { site: ExampleSite }) {
         .prop-card { border-radius: 16px; overflow: hidden; background: #061410; border: 1px solid rgba(16,185,129,0.15); transition: all 0.3s; }
         .prop-card:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.35); }
         .prop-card img { display: block; width: 100%; height: 260px; object-fit: cover; }
+        .district-card { border-radius: 18px; overflow: hidden; border: 1px solid rgba(16,185,129,0.14); background: #061410; }
       `}</style>
 
       {/* AIWEB Demo badge */}
@@ -154,6 +161,45 @@ export default function RealityClient({ site: s }: { site: ExampleSite }) {
                   >
                     Zjistit více
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* DISTRICTS / CITY GUIDE */}
+      <section style={{ padding: '100px 40px', background: s.surface }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20, flexWrap: 'wrap', marginBottom: 42 }}>
+            <div>
+              <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Pražské lokality</p>
+              <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-1.5px', margin: 0 }}>Kde jsme nejsilnější</h2>
+            </div>
+            <p style={{ maxWidth: 420, margin: 0, fontSize: 15, lineHeight: 1.7, color: s.textMuted }}>
+              Klienti u nás nehledají jen metr čtvereční. Potřebují pochopit lokalitu, komunitu i potenciál ceny v čase.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 18 }}>
+            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 18, minHeight: 420 }}>
+              <img src="https://images.unsplash.com/photo-1519677100203-a0e668c92439?auto=format&fit=crop&w=1200&q=80" alt="Praha panorama" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(3,13,10,0.92), rgba(3,13,10,0.08))' }} />
+              <div style={{ position: 'absolute', left: 24, right: 24, bottom: 24 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: s.primary, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 8 }}>Local market insight</div>
+                <div style={{ fontSize: 30, fontWeight: 900, color: '#fff', lineHeight: 1.1, marginBottom: 8 }}>Doporučení podle životního stylu, ne jen ceny</div>
+                <div style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(255,255,255,0.72)' }}>Propojujeme nabídku s reálným kontextem. Školy, doprava, investiční potenciál i charakter čtvrti.</div>
+              </div>
+            </div>
+            {DISTRICTS.map((district, index) => (
+              <div key={district.name} className="district-card">
+                <img
+                  src={`https://images.unsplash.com/${index === 0 ? 'photo-1500530855697-b586d89ba3ee' : index === 1 ? 'photo-1494526585095-c41746248156' : 'photo-1460317442991-0ec209397118'}?auto=format&fit=crop&w=900&q=80`}
+                  alt={district.name}
+                  style={{ width: '100%', height: 250, objectFit: 'cover', display: 'block' }}
+                />
+                <div style={{ padding: 20 }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: s.text, marginBottom: 6 }}>{district.name}</div>
+                  <div style={{ fontSize: 14, lineHeight: 1.7, color: s.textMuted }}>{district.vibe}</div>
                 </div>
               </div>
             ))}
