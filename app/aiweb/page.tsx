@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { WebGLShader } from '@/components/aiweb/webgl-shader';
+import { EXAMPLES } from './examples/data';
 
 /* ─── Types ─── */
 type FormData = {
@@ -360,6 +361,44 @@ export default function AIWebPage() {
                 <span key={n} style={{ color:'#334155', fontSize:14, fontWeight:700 }}>{n}</span>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── EXAMPLES ─── */}
+      <section id="priklady" style={{ padding: '60px 24px' }}>
+        <div className="mesh-bg" style={{ position: 'absolute', opacity: 0.3, inset: 0, pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <p className="section-label">Příklady webů</p>
+            <h2 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 12px' }}>
+              <span className="grad-text">10 odvětví. 10 webů.</span>
+            </h2>
+            <p style={{ color: '#64748b', fontSize: 16, maxWidth: 520, margin: '0 auto' }}>
+              Každý web tvoříme na míru dané branži. Prohlédněte si živé ukázky pro různá odvětví.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            {EXAMPLES.map(e => (
+              <Link key={e.slug} href={`/aiweb/examples/${e.slug}`} style={{ textDecoration: 'none' }}>
+                <div className="card-glow" style={{
+                  padding: '24px', borderRadius: 14, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(167,139,250,0.12)',
+                  height: '100%', display: 'flex', flexDirection: 'column', gap: 12,
+                }}>
+                  {/* Color swatch */}
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: e.primary, flexShrink: 0 }} />
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{e.industry}</div>
+                  </div>
+                  <div style={{ fontWeight: 800, fontSize: 18, color: '#f1f5f9', letterSpacing: '-0.3px' }}>{e.name}</div>
+                  <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, flex: 1 }}>{e.description}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: e.primary, fontSize: 13, fontWeight: 600, marginTop: 4 }}>
+                    Zobrazit demo <span>→</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

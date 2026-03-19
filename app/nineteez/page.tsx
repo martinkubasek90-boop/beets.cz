@@ -223,7 +223,7 @@ export default function NineTeezPage() {
       <section style={{ position: 'relative', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         {/* Smoke BG */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <SmokeBackground smokeColor="#c8a96e" />
+          <SmokeBackground smokeColor="#cc2000" />
         </div>
 
         {/* Dark overlay so smoke doesn't overpower */}
