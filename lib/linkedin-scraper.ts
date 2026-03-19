@@ -2505,6 +2505,15 @@ export async function enrichPendingLinkedInRun(runId: string) {
   };
 }
 
+export async function deleteLinkedInRun(runId: string) {
+  const { supabase } = await loadRunById(runId);
+
+  const { error } = await supabase.from(LINKEDIN_TABLES.runs).delete().eq("id", runId);
+  if (error) throw new Error(error.message);
+
+  return { ok: true };
+}
+
 export async function listLinkedInResults(params: {
   runId?: string | null;
   q?: string | null;

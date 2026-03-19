@@ -97,6 +97,7 @@ export function LinkedInDashboard({ initialData }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [enrichingPending, setEnrichingPending] = useState(false);
+  const [deletingRun, setDeletingRun] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string>(initialData.error || "");
 
@@ -296,6 +297,34 @@ export function LinkedInDashboard({ initialData }: Props) {
       await reloadDashboard(activeRunId, { preserveNotice: true });
     } finally {
       setEnrichingPending(false);
+    }
+  }
+
+  async function handleDeleteRun() {
+    if (!activeRunId || deletingRun) return;
+    const confirmed = window.confirm("Opravdu smazat tento run? Smazou se i navazane profily a seedy.");
+    if (!confirmed) return;
+
+    setDeletingRun(true);
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/linkedin/run", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: activeRunId }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || "Nepodarilo se smazat run.");
+      }
+
+      setNotice("Run byl smazan.");
+      await reloadDashboard("");
+    } catch (error: unknown) {
+      setNotice(error instanceof Error ? error.message : "Nepodarilo se smazat run.");
+    } finally {
+      setDeletingRun(false);
     }
   }
 
@@ -570,6 +599,14 @@ export function LinkedInDashboard({ initialData }: Props) {
                     className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {enrichingPending ? "Bezi retry..." : "Enrich pending"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteRun}
+                    disabled={!activeRunId || deletingRun || processing || enrichingPending || loading}
+                    className="rounded-full border border-rose-300/30 bg-rose-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deletingRun ? "Mazani..." : "Smazat run"}
                   </button>
                 </div>
               </div>
