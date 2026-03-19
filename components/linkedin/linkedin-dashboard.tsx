@@ -39,6 +39,11 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function formatConfidence(value: number | null) {
+  if (typeof value !== "number") return "n/a";
+  return `${Math.round(value * 100)} %`;
+}
+
 function statusLabel(status: LinkedInRun["status"] | LinkedInProfile["status"]) {
   switch (status) {
     case "queued":
@@ -68,6 +73,7 @@ export function LinkedInDashboard({ initialData }: Props) {
   const [activeRunId, setActiveRunId] = useState<string>(initialData.runs[0]?.id || "");
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string>(initialData.error || "");
 
@@ -81,11 +87,15 @@ export function LinkedInDashboard({ initialData }: Props) {
         profile.headline,
         profile.company_name,
         profile.location,
+        profile.contact_email,
+        profile.contact_phone,
       ]
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(q));
     });
   }, [activeRunId, data.profiles, query]);
+
+  const activeRun = data.runs.find((run) => run.id === activeRunId) || null;
 
   async function reloadDashboard(nextRunId?: string) {
     setLoading(true);
@@ -100,6 +110,9 @@ export function LinkedInDashboard({ initialData }: Props) {
         runs: json.runs,
         profiles: json.profiles,
         ready: json.ready,
+        processorReady: json.processorReady,
+        searchProvider: json.searchProvider,
+        enrichmentMode: json.enrichmentMode,
         error: json.error,
       });
       setActiveRunId(nextRunId || json.runs[0]?.id || "");
@@ -135,12 +148,40 @@ export function LinkedInDashboard({ initialData }: Props) {
       }
 
       setForm(emptyForm);
-      setNotice("Run byl zalozen. Dalsi krok je napojit worker, ktery doplni discovery a scraping.");
+      setNotice("Run byl zalozen. Ted ho muzes rovnou zpracovat tlacitkem Start processing.");
       await reloadDashboard(json.run.id);
     } catch (error: unknown) {
       setNotice(error instanceof Error ? error.message : "Nepodarilo se zalozit scrape run.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleProcessRun() {
+    if (!activeRunId) return;
+    setProcessing(true);
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/linkedin/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: activeRunId }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || "Nepodarilo se zpracovat run.");
+      }
+
+      setNotice(
+        `Run zpracovan. Discovery: ${json.discovered}, profily: ${json.processed}, kontakty: ${json.contactsFound}.`,
+      );
+      await reloadDashboard(activeRunId);
+    } catch (error: unknown) {
+      setNotice(error instanceof Error ? error.message : "Nepodarilo se zpracovat run.");
+      await reloadDashboard(activeRunId);
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -152,14 +193,14 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="max-w-3xl">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-300/80">BEETS / LinkedIn</p>
               <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] text-white md:text-5xl">
-                MVP dashboard pro scraper verejnych LinkedIn profilu
+                Discovery + public contact enrichment pro verejne LinkedIn profily
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300">
-                Tahle verze umi zalozit scrape run, drzet metadata v Supabase a zobrazit nalezene profily.
-                Discovery worker a parser se muzou doplnit bez predelani UI nebo DB.
+                Run se nejdriv postavi z query, pak jde pres search provider pro discovery profilu a nakonec z
+                firemnich webu vytahne verejne kontakty. Osobni maily a telefony to negarantuje.
               </p>
             </div>
-            <div className="grid gap-3 text-sm text-slate-200 md:grid-cols-3">
+            <div className="grid gap-3 text-sm text-slate-200 md:grid-cols-4">
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                 <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runy</div>
                 <div className="mt-2 text-2xl font-semibold">{data.runs.length}</div>
@@ -169,8 +210,12 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <div className="mt-2 text-2xl font-semibold">{data.profiles.length}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Datovy stav</div>
-                <div className="mt-2 text-sm font-semibold text-cyan-200">{data.ready ? "Napojeno na Supabase" : "Ukazkovy mod"}</div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Search provider</div>
+                <div className="mt-2 text-sm font-semibold text-cyan-200">{data.searchProvider}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Enrichment</div>
+                <div className="mt-2 text-sm font-semibold text-cyan-200">{data.enrichmentMode}</div>
               </div>
             </div>
           </div>
@@ -190,7 +235,7 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="mb-5">
               <h2 className="text-xl font-semibold">Novy scrape run</h2>
               <p className="mt-2 text-sm leading-6 text-slate-400">
-                Zadavas pouze discovery parametry. Worker se napoji pozdeji na stejnou tabulku runu.
+                Priklad: `keywords=B2B,SaaS`, `titles=business development,partnerships`, `locations=USA`.
               </p>
             </div>
 
@@ -198,8 +243,8 @@ export function LinkedInDashboard({ initialData }: Props) {
               <label className="grid gap-2 text-sm">
                 <span className="text-slate-300">Nazev runu</span>
                 <input
-                  className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none ring-0 placeholder:text-slate-500"
-                  placeholder="Praha ecommerce marketing"
+                  className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder="USA B2B business development"
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                 />
@@ -209,7 +254,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span className="text-slate-300">Keywords</span>
                 <input
                   className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="e-commerce, SaaS, B2B"
+                  placeholder="B2B, SaaS"
                   value={form.keywords}
                   onChange={(event) => setForm((current) => ({ ...current, keywords: event.target.value }))}
                 />
@@ -219,7 +264,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span className="text-slate-300">Job titles</span>
                 <input
                   className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="marketing manager, head of growth"
+                  placeholder="business development, sales director"
                   value={form.titles}
                   onChange={(event) => setForm((current) => ({ ...current, titles: event.target.value }))}
                 />
@@ -229,7 +274,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span className="text-slate-300">Lokace</span>
                 <input
                   className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="Praha, Brno"
+                  placeholder="USA, United States"
                   value={form.locations}
                   onChange={(event) => setForm((current) => ({ ...current, locations: event.target.value }))}
                 />
@@ -239,7 +284,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                 <span className="text-slate-300">Poznamka</span>
                 <textarea
                   className="min-h-28 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
-                  placeholder="Napriklad priorita segmentu, ICP nebo export cil."
+                  placeholder="Napriklad ICP, obor nebo export cil."
                   value={form.notes}
                   onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
                 />
@@ -260,17 +305,33 @@ export function LinkedInDashboard({ initialData }: Props) {
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Scrape runs</h2>
-                  <p className="mt-1 text-sm text-slate-400">V tomhle kroku se uklada discovery zadani a stav pipeline.</p>
+                  <p className="mt-1 text-sm text-slate-400">Vyber run a spust discovery + enrichment pipeline.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => reloadDashboard(activeRunId)}
-                  disabled={loading}
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white disabled:opacity-60"
-                >
-                  {loading ? "Nacitam..." : "Obnovit"}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => reloadDashboard(activeRunId)}
+                    disabled={loading}
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white disabled:opacity-60"
+                  >
+                    {loading ? "Nacitam..." : "Obnovit"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleProcessRun}
+                    disabled={!activeRunId || processing || !data.processorReady}
+                    className="rounded-full bg-cyan-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {processing ? "Bezi processing..." : "Start processing"}
+                  </button>
+                </div>
               </div>
+
+              {!data.processorReady ? (
+                <div className="mb-4 rounded-2xl border border-red-300/20 bg-red-300/10 px-4 py-3 text-sm text-red-100">
+                  Processing neni aktivni. Nastav `SERPER_API_KEY` nebo `SERPAPI_API_KEY`.
+                </div>
+              ) : null}
 
               <div className="grid gap-3">
                 {data.runs.map((run) => (
@@ -292,6 +353,7 @@ export function LinkedInDashboard({ initialData }: Props) {
                       <div className="text-xs text-slate-400">{formatDate(run.created_at)}</div>
                     </div>
                     <div className="mt-3 text-sm leading-6 text-slate-300">{run.source_query}</div>
+                    {run.last_error ? <div className="mt-3 text-xs text-red-300">{run.last_error}</div> : null}
                     <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
                       {run.filters.keywords.map((item) => (
                         <span key={`${run.id}-kw-${item}`} className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
@@ -317,57 +379,90 @@ export function LinkedInDashboard({ initialData }: Props) {
             <div className="rounded-[24px] border border-white/10 bg-white/5 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.24)]">
               <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Nalezene profily</h2>
+                  <h2 className="text-xl font-semibold">Nalezene profily a kontakty</h2>
                   <p className="mt-1 text-sm text-slate-400">
-                    Zatim UI pro list a filtry. Worker bude pozdeji doplnovat realne vysledky do stejne tabulky.
+                    Kontakty jsou jen verejne dohledane firemni udaje z webu, ne garantovane osobni kontakty.
                   </p>
                 </div>
                 <input
                   className="rounded-full border border-white/10 bg-[#091422] px-4 py-2 text-sm text-white outline-none placeholder:text-slate-500"
-                  placeholder="Filtrovat jmeno, firmu, lokaci"
+                  placeholder="Filtrovat jmeno, firmu, email, lokaci"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-white/10">
-                <div className="grid grid-cols-[1.2fr,1.3fr,1fr,0.8fr] gap-3 border-b border-white/10 bg-[#091422] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  <div>Profil</div>
-                  <div>Headline / Firma</div>
-                  <div>Lokace</div>
-                  <div>Stav</div>
+              {activeRun ? (
+                <div className="mb-4 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-sm text-slate-300">
+                  Aktivni run: <span className="font-semibold text-white">{activeRun.name}</span>
+                  {" · "}
+                  kandidati {activeRun.total_candidates}
+                  {" · "}
+                  profily {activeRun.total_profiles}
+                  {" · "}
+                  start {formatDate(activeRun.started_at)}
+                  {" · "}
+                  konec {formatDate(activeRun.finished_at)}
                 </div>
+              ) : null}
 
-                <div className="divide-y divide-white/10">
-                  {filteredProfiles.length ? (
-                    filteredProfiles.map((profile) => (
-                      <a
-                        key={profile.id}
-                        href={profile.linkedin_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="grid grid-cols-1 gap-3 px-4 py-4 transition hover:bg-white/5 md:grid-cols-[1.2fr,1.3fr,1fr,0.8fr]"
-                      >
+              <div className="grid gap-4">
+                {filteredProfiles.length ? (
+                  filteredProfiles.map((profile) => (
+                    <div
+                      key={profile.id}
+                      className="rounded-2xl border border-white/10 bg-[#091422]/80 p-4 transition hover:border-white/20"
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                         <div>
-                          <div className="font-medium">{profile.full_name || "Neznamy profil"}</div>
-                          <div className="mt-1 text-xs text-slate-500">{profile.linkedin_url}</div>
+                          <a
+                            href={profile.linkedin_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-lg font-semibold text-white underline-offset-4 hover:underline"
+                          >
+                            {profile.full_name || "Neznamy profil"}
+                          </a>
+                          <div className="mt-1 text-sm text-slate-300">{profile.headline || "Bez headline"}</div>
+                          <div className="mt-2 text-xs text-slate-500">
+                            {profile.company_name || "Firma nezjistena"}
+                            {profile.location ? ` · ${profile.location}` : ""}
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-sm text-slate-200">{profile.headline || "Bez headline"}</div>
-                          <div className="mt-1 text-xs text-slate-500">{profile.company_name || "Firma nezjistena"}</div>
-                        </div>
-                        <div className="text-sm text-slate-300">{profile.location || "Lokace nezjistena"}</div>
                         <div className="flex items-start">
                           <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-semibold text-cyan-200">
                             {statusLabel(profile.status)}
                           </span>
                         </div>
-                      </a>
-                    ))
-                  ) : (
-                    <div className="px-4 py-8 text-sm text-slate-400">Zatim tu nejsou zadne profily pro vybrany run nebo filtr.</div>
-                  )}
-                </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-4">
+                        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Firma / domena</div>
+                          <div className="mt-2 text-sm text-slate-200">{profile.company_name || "n/a"}</div>
+                          <div className="mt-1 text-xs text-slate-500">{profile.company_domain || "n/a"}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Email</div>
+                          <div className="mt-2 break-all text-sm text-slate-200">{profile.contact_email || "n/a"}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Telefon</div>
+                          <div className="mt-2 text-sm text-slate-200">{profile.contact_phone || "n/a"}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-3">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">Zdroj / confidence</div>
+                          <div className="mt-2 text-sm text-slate-200">{profile.contact_source || "n/a"}</div>
+                          <div className="mt-1 text-xs text-slate-500">{formatConfidence(profile.contact_confidence)}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-8 text-sm text-slate-400">
+                    Zatim tu nejsou zadne profily pro vybrany run nebo filtr.
+                  </div>
+                )}
               </div>
             </div>
           </div>

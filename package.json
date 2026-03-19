@@ -5,6 +5,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "linkedin:scrape": "node scripts/linkedin-scraper.mjs",
     "n8n:start": "cd ../n8n && PATH=\"$PWD/.corepack-bin:$PATH\" ./packages/cli/bin/n8n start",
     "n8n:version": "cd ../n8n && PATH=\"$PWD/.corepack-bin:$PATH\" ./packages/cli/bin/n8n --version"
   },
