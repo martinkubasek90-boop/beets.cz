@@ -94,6 +94,7 @@ Je vhodny hlavne pro:
 - bere vic stran search vysledku
 - uklada sirsi pool kandidatu
 - enrichment dela jen na `top N` profilech, aby se run nezpomalil
+- po prvnim pruchodu muzes spustit `Enrich pending`, ktery znovu projde jen leady bez kontaktu
 
 Pouziti:
 - kdyz chces maximalizovat pocet kandidatu

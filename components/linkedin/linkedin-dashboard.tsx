@@ -84,6 +84,7 @@ export function LinkedInDashboard({ initialData }: Props) {
   const [contactsOnly, setContactsOnly] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [enrichingPending, setEnrichingPending] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string>(initialData.error || "");
 
@@ -202,6 +203,32 @@ export function LinkedInDashboard({ initialData }: Props) {
       await reloadDashboard(activeRunId);
     } finally {
       setProcessing(false);
+    }
+  }
+
+  async function handleEnrichPendingRun() {
+    if (!activeRunId) return;
+    setEnrichingPending(true);
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/linkedin/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ runId: activeRunId, mode: "enrich_pending" }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.ok) {
+        throw new Error(json.error || "Nepodarilo se dorazit pending enrichment.");
+      }
+
+      setNotice(`Pending enrichment hotov. Nove kontakty: ${json.contactsFound}.`);
+      await reloadDashboard(activeRunId);
+    } catch (error: unknown) {
+      setNotice(error instanceof Error ? error.message : "Nepodarilo se dorazit pending enrichment.");
+      await reloadDashboard(activeRunId);
+    } finally {
+      setEnrichingPending(false);
     }
   }
 
@@ -394,6 +421,14 @@ export function LinkedInDashboard({ initialData }: Props) {
                     className="rounded-full bg-cyan-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {processing ? "Bezi processing..." : "Start processing"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleEnrichPendingRun}
+                    disabled={!activeRunId || enrichingPending}
+                    className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {enrichingPending ? "Bezi retry..." : "Enrich pending"}
                   </button>
                 </div>
               </div>

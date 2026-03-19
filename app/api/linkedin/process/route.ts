@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { processLinkedInRun } from "@/lib/linkedin-scraper";
+import { enrichPendingLinkedInRun, processLinkedInRun } from "@/lib/linkedin-scraper";
 
 export const runtime = "nodejs";
 
@@ -31,10 +31,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "Unauthorized." }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { runId?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    runId?: string;
+    mode?: "process" | "enrich_pending";
+  };
 
   try {
-    const result = await processLinkedInRun(body.runId);
+    const result =
+      body.mode === "enrich_pending" && body.runId
+        ? await enrichPendingLinkedInRun(body.runId)
+        : await processLinkedInRun(body.runId);
     return NextResponse.json({ ok: true, ...result });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Nepodarilo se zpracovat LinkedIn run.";

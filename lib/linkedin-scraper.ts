@@ -1073,6 +1073,70 @@ async function enrichPublicCompanyContact(profile: {
   };
 }
 
+async function retryPendingContactEnrichment(supabase: ReturnType<typeof getLinkedInServiceClient>, runId: string) {
+  if (!supabase) throw new Error("Chybi Supabase service role.");
+
+  const { data: retryRows, error: retryLoadError } = await supabase
+    .from(LINKEDIN_TABLES.profiles)
+    .select(PROFILE_SELECT)
+    .eq("run_id", runId)
+    .or("contact_email.is.null,contact_phone.is.null");
+
+  if (retryLoadError) {
+    throw new Error(retryLoadError.message);
+  }
+
+  let contactsFound = 0;
+
+  for (const retryRow of ((retryRows || []) as LinkedInProfileRow[]).slice(0, 100)) {
+    const retryProfile = mapProfile(retryRow);
+    if (retryProfile.contact_email || retryProfile.contact_phone) continue;
+
+    try {
+      const retryContact = await enrichPublicCompanyContact(
+        {
+          companyName: retryProfile.company_name,
+          companyCandidates: retryProfile.company_name ? [retryProfile.company_name] : [],
+          fullName: retryProfile.full_name,
+          location: retryProfile.location,
+          headline: retryProfile.headline,
+        },
+        { aggressive: true },
+      );
+
+      if (!retryContact.contactEmail && !retryContact.contactPhone && !retryContact.companyDomain) {
+        continue;
+      }
+
+      if (retryContact.contactEmail || retryContact.contactPhone) {
+        contactsFound += 1;
+      }
+
+      await supabase
+        .from(LINKEDIN_TABLES.profiles)
+        .update({
+          company_name: retryContact.resolvedCompanyName || retryProfile.company_name,
+          company_domain: retryContact.companyDomain || retryProfile.company_domain,
+          contact_email: retryContact.contactEmail || retryProfile.contact_email,
+          contact_phone: retryContact.contactPhone || retryProfile.contact_phone,
+          contact_source: retryContact.contactSource || retryProfile.contact_source,
+          contact_confidence: retryContact.contactConfidence || retryProfile.contact_confidence,
+          raw_payload: {
+            ...(retryProfile.raw_payload || {}),
+            retryEnrichment: true,
+          },
+        })
+        .eq("id", retryProfile.id);
+
+      await delay(200);
+    } catch {
+      // Retry enrichment is best-effort only.
+    }
+  }
+
+  return contactsFound;
+}
+
 async function loadRunById(runId: string) {
   const supabase = getLinkedInServiceClient();
   if (!supabase) throw new Error("Chybi Supabase service role.");
@@ -1256,20 +1320,26 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
         throw new Error("Chybi search provider. Nastav SERPER_API_KEY nebo SERPAPI_API_KEY, nebo pouzij manualni LinkedIn URL.");
       }
       const queries = generateSearchQueries(selectedRun.filters);
-      const discoveredSet = new Set<string>();
-      const pageStarts = selectedRun.filters.minerMode ? [0, 10, 20, 30, 40] : selectedRun.filters.highVolume ? [0, 10] : [0];
+      const discoveredMap = new Map<string, number>();
+      const pageStarts = selectedRun.filters.minerMode
+        ? [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]
+        : selectedRun.filters.highVolume
+          ? [0, 10, 20]
+          : [0];
 
       for (const query of queries) {
         for (const start of pageStarts) {
           const searchResults = await searchWeb(query, 10, start);
           const queryUrls = pickBestLinkedInUrls(searchResults);
-          queryUrls.forEach((url) => discoveredSet.add(url));
+          queryUrls.forEach((url) => discoveredMap.set(url, (discoveredMap.get(url) || 0) + 1));
           if (!queryUrls.length) break;
-          await delay(selectedRun.filters.minerMode ? 120 : 250);
+          await delay(selectedRun.filters.minerMode ? 80 : 250);
         }
       }
 
-      discoveredUrls = Array.from(discoveredSet);
+      discoveredUrls = Array.from(discoveredMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([url]) => url);
     }
 
     if (discoveredUrls.length) {
@@ -1281,6 +1351,7 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
         raw_payload: {
           discoverySource: manualUrls.length ? "manual" : getSearchProviderLabel(),
           discoveredAt: new Date().toISOString(),
+          discoveryRank: discoveredUrls.indexOf(linkedinUrl) + 1,
         },
       }));
 
@@ -1359,57 +1430,7 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       }
     }
 
-    const { data: retryRows, error: retryLoadError } = await supabase
-      .from(LINKEDIN_TABLES.profiles)
-      .select("id,run_id,full_name,headline,company_name,company_domain,location,linkedin_url,source_query,status,contact_email,contact_phone,contact_source,contact_confidence,scraped_at,created_at,raw_payload")
-      .eq("run_id", selectedRun.id)
-      .or("contact_email.is.null,contact_phone.is.null");
-
-    if (retryLoadError) {
-      throw new Error(retryLoadError.message);
-    }
-
-    for (const retryRow of ((retryRows || []) as LinkedInProfileRow[]).slice(0, 25)) {
-      const retryProfile = mapProfile(retryRow);
-      if (retryProfile.contact_email || retryProfile.contact_phone) continue;
-
-      try {
-        const retryContact = await enrichPublicCompanyContact(
-          {
-            companyName: retryProfile.company_name,
-            companyCandidates: retryProfile.company_name ? [retryProfile.company_name] : [],
-            fullName: retryProfile.full_name,
-            location: retryProfile.location,
-            headline: retryProfile.headline,
-          },
-          { aggressive: true },
-        );
-
-        if (!retryContact.contactEmail && !retryContact.contactPhone && !retryContact.companyDomain) {
-          continue;
-        }
-
-        await supabase
-          .from(LINKEDIN_TABLES.profiles)
-          .update({
-            company_name: retryContact.resolvedCompanyName || retryProfile.company_name,
-            company_domain: retryContact.companyDomain || retryProfile.company_domain,
-            contact_email: retryContact.contactEmail || retryProfile.contact_email,
-            contact_phone: retryContact.contactPhone || retryProfile.contact_phone,
-            contact_source: retryContact.contactSource || retryProfile.contact_source,
-            contact_confidence: retryContact.contactConfidence || retryProfile.contact_confidence,
-            raw_payload: {
-              ...(retryProfile.raw_payload || {}),
-              retryEnrichment: true,
-            },
-          })
-          .eq("id", retryProfile.id);
-
-        await delay(200);
-      } catch {
-        // Retry enrichment is best-effort only.
-      }
-    }
+    contactsFound += await retryPendingContactEnrichment(supabase, selectedRun.id);
 
     const finishedAt = new Date().toISOString();
     const { data: finalRunRow, error: finalRunError } = await supabase
@@ -1447,6 +1468,28 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       .eq("id", selectedRun.id);
     throw new Error(message);
   }
+}
+
+export async function enrichPendingLinkedInRun(runId: string) {
+  const { supabase, run } = await loadRunById(runId);
+  const contactsFound = await retryPendingContactEnrichment(supabase, runId);
+
+  const { data, error } = await supabase
+    .from(LINKEDIN_TABLES.runs)
+    .select(RUN_SELECT)
+    .eq("id", runId)
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return {
+    run: mapRun(data as LinkedInRunRow),
+    discovered: run.total_candidates,
+    processed: run.total_profiles,
+    contactsFound,
+    searchProvider: getSearchProviderLabel(),
+    enrichmentMode: `${getEnrichmentModeLabel()}-retry`,
+  };
 }
 
 export async function listLinkedInResults(params: {
