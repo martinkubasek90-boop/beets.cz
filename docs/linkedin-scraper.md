@@ -65,11 +65,13 @@ Do runu vlozis:
 - seznam domen firem
 - pripadne seznam nazvu firem
 - nebo bulk CSV radky ve formatu `firma,domena,lokace,segment`
+- nebo `Directory URLs`, tedy verejne listing/exhibitor/directory stranky
 - lokaci a keywordy pro scoring
 
 Pipeline pak:
 - projde homepage firmy
 - seed firmy si uklada do queue tabulky
+- umi si vygenerovat dalsi seedy z verejnych directory/listing stranek
 - dohleda interní stranky typu `/contact`, `/about`, `/team`, `/people`, `/leadership`
 - vytahne verejne emaily a telefony
 - zkusí najit jmena a role na team/people strankach
@@ -151,6 +153,9 @@ V UI nastav:
 - nebo `Bulk seeds CSV`:
   - `Gensler,gensler.com,USA,architect`
   - `Turner Construction,turnerconstruction.com,USA,general contractor`
+- nebo `Directory URLs`:
+  - `https://example.com/exhibitors`
+  - `https://example.com/member-directory`
 
 Pak:
 - klikni `Zalozit run`

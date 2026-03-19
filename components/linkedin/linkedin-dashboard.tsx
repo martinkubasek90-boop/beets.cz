@@ -17,6 +17,7 @@ type FormState = {
   companyNames: string;
   companyDomains: string;
   seedRows: string;
+  directoryUrls: string;
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -33,6 +34,7 @@ const emptyForm: FormState = {
   companyNames: "",
   companyDomains: "",
   seedRows: "",
+  directoryUrls: "",
   highVolume: true,
   minerMode: true,
   enrichLimit: 60,
@@ -96,6 +98,30 @@ export function LinkedInDashboard({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string>(initialData.error || "");
 
+  async function handleSeedFileImport(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const normalized = text
+        .replace(/^\uFEFF/, "")
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join("\n");
+      setForm((current) => ({
+        ...current,
+        seedRows: current.seedRows ? `${current.seedRows}\n${normalized}` : normalized,
+      }));
+      setNotice(`CSV import hotov: ${file.name}`);
+    } catch {
+      setNotice("Nepodarilo se nacist CSV soubor.");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
   const filteredProfiles = useMemo(() => {
     const q = query.trim().toLowerCase();
     return data.profiles.filter((profile) => {
@@ -120,7 +146,12 @@ export function LinkedInDashboard({ initialData }: Props) {
   const activeRunCanProcess =
     Boolean(activeRunId) &&
     (activeRun?.filters.runMode === "company"
-      ? Boolean(activeRun.filters.seedRows.length || activeRun.filters.companyDomains.length || activeRun.filters.companyNames.length)
+      ? Boolean(
+          activeRun.filters.seedRows.length ||
+            activeRun.filters.companyDomains.length ||
+            activeRun.filters.companyNames.length ||
+            activeRun.filters.directoryUrls.length,
+        )
       : data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
 
   async function reloadDashboard(nextRunId?: string) {
@@ -178,6 +209,10 @@ export function LinkedInDashboard({ initialData }: Props) {
             .map((item) => item.trim())
             .filter(Boolean),
           seedRows: form.seedRows
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
+          directoryUrls: form.directoryUrls
             .split("\n")
             .map((item) => item.trim())
             .filter(Boolean),
@@ -401,6 +436,26 @@ export function LinkedInDashboard({ initialData }: Props) {
               </label>
 
               <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Import CSV soubor</span>
+                <input
+                  type="file"
+                  accept=".csv,text/csv,.txt"
+                  onChange={handleSeedFileImport}
+                  className="rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-sm text-slate-300 file:mr-3 file:rounded-full file:border-0 file:bg-cyan-300 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-slate-950"
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
+                <span className="text-slate-300">Directory URLs</span>
+                <textarea
+                  className="min-h-24 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
+                  placeholder={"https://example.com/exhibitors\nhttps://example.com/directory"}
+                  value={form.directoryUrls}
+                  onChange={(event) => setForm((current) => ({ ...current, directoryUrls: event.target.value }))}
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm">
                 <span className="text-slate-300">Poznamka</span>
                 <textarea
                   className="min-h-28 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-white outline-none placeholder:text-slate-500"
@@ -563,6 +618,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                       {run.filters.seedRows.length ? (
                         <span className="rounded-full border border-violet-300/20 bg-violet-300/10 px-3 py-1 text-violet-100">
                           bulk seeds: {run.filters.seedRows.length}
+                        </span>
+                      ) : null}
+                      {run.filters.directoryUrls.length ? (
+                        <span className="rounded-full border border-indigo-300/20 bg-indigo-300/10 px-3 py-1 text-indigo-100">
+                          directories: {run.filters.directoryUrls.length}
                         </span>
                       ) : null}
                       <span

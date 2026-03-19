@@ -48,6 +48,7 @@ export type LinkedInRun = {
     companyNames: string[];
     companyDomains: string[];
     seedRows: string[];
+    directoryUrls: string[];
     highVolume: boolean;
     minerMode: boolean;
     enrichLimit: number;
@@ -74,6 +75,7 @@ export type LinkedInSearchPayload = {
   companyNames?: string[];
   companyDomains?: string[];
   seedRows?: string[];
+  directoryUrls?: string[];
   highVolume?: boolean;
   minerMode?: boolean;
   enrichLimit?: number;
@@ -159,6 +161,7 @@ type LinkedInFilters = {
   companyNames: string[];
   companyDomains: string[];
   seedRows: string[];
+  directoryUrls: string[];
   highVolume: boolean;
   minerMode: boolean;
   enrichLimit: number;
@@ -219,6 +222,7 @@ const sampleRuns: LinkedInRun[] = [
       companyNames: [],
       companyDomains: [],
       seedRows: [],
+      directoryUrls: [],
       highVolume: false,
       minerMode: false,
       enrichLimit: 50,
@@ -360,6 +364,15 @@ function parseCompanySeedLine(line: string) {
   };
 }
 
+function looksLikeCompanyName(value: string) {
+  return Boolean(
+    value &&
+      !/^https?:\/\//i.test(value) &&
+      !/\b(contact|about|team|leadership|privacy|terms)\b/i.test(value) &&
+      value.trim().length >= 3,
+  );
+}
+
 function normalizeFilters(value: unknown) {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
@@ -373,6 +386,7 @@ function normalizeFilters(value: unknown) {
       .map((item) => normalizeCompanyDomainInput(item) || "")
       .filter(Boolean),
     seedRows: toStringArray(source.seedRows),
+    directoryUrls: toStringArray(source.directoryUrls),
     highVolume: typeof source.highVolume === "boolean" ? source.highVolume : false,
     minerMode: typeof source.minerMode === "boolean" ? source.minerMode : false,
     enrichLimit:
@@ -664,6 +678,7 @@ function expandIcpTerms(filters: LinkedInFilters) {
     companyNames: filters.companyNames,
     companyDomains: filters.companyDomains,
     seedRows: filters.seedRows,
+    directoryUrls: filters.directoryUrls,
     highVolume: filters.highVolume,
     minerMode: filters.minerMode,
     enrichLimit: filters.enrichLimit,
@@ -1404,6 +1419,44 @@ async function loadQueuedCompanySeeds(supabase: ReturnType<typeof getLinkedInSer
   return (data || []) as CompanySeedRow[];
 }
 
+async function extractCompanySeedsFromDirectoryUrl(directoryUrl: string) {
+  const html = await fetchText(directoryUrl);
+  const matches = Array.from(html.matchAll(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi));
+  const seeds = new Map<
+    string,
+    {
+      companyName: string | null;
+      companyDomain: string | null;
+      location: string | null;
+      segment: string | null;
+      source: string;
+    }
+  >();
+
+  for (const [, href, anchorHtml] of matches) {
+    const companyDomain = normalizeCompanyDomainInput(href || "");
+    if (!companyDomain) continue;
+    if (/linkedin\.com|facebook\.com|instagram\.com|x\.com|twitter\.com|youtube\.com|google\.com|maps\.apple\.com/i.test(companyDomain)) {
+      continue;
+    }
+
+    const anchorText = decodeHtml(anchorHtml).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const companyName = looksLikeCompanyName(anchorText) ? anchorText : null;
+    const key = normalizeText(companyDomain);
+    if (!seeds.has(key)) {
+      seeds.set(key, {
+        companyName,
+        companyDomain,
+        location: null,
+        segment: "directory-seed",
+        source: directoryUrl,
+      });
+    }
+  }
+
+  return Array.from(seeds.values());
+}
+
 async function retryPendingContactEnrichment(supabase: ReturnType<typeof getLinkedInServiceClient>, runId: string) {
   if (!supabase) throw new Error("Chybi Supabase service role.");
 
@@ -1491,11 +1544,15 @@ export function buildSourceQuery(payload: LinkedInSearchPayload) {
       .filter(Boolean);
     const locations = uniqueStrings(payload.locations);
     const keywords = uniqueStrings(payload.keywords);
+    const seedRows = uniqueStrings(payload.seedRows);
+    const directoryUrls = uniqueStrings(payload.directoryUrls);
 
     return [
       "company-first",
       companyNames.length ? `names:${companyNames.join(" | ")}` : "",
       companyDomains.length ? `domains:${companyDomains.join(" | ")}` : "",
+      seedRows.length ? `bulk:${seedRows.length}` : "",
+      directoryUrls.length ? `directories:${directoryUrls.length}` : "",
       locations.length ? `locations:${locations.join(" | ")}` : "",
       keywords.length ? `keywords:${keywords.join(" | ")}` : "",
     ]
@@ -1528,7 +1585,8 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
     .map((item) => normalizeCompanyDomainInput(item) || "")
     .filter(Boolean);
   const seedRows = uniqueStrings(raw.seedRows);
-  const sourceQuery = buildSourceQuery({ runMode, keywords, titles, locations, companyNames, companyDomains });
+  const directoryUrls = uniqueStrings(raw.directoryUrls);
+  const sourceQuery = buildSourceQuery({ runMode, keywords, titles, locations, companyNames, companyDomains, seedRows, directoryUrls });
   const enrichLimit =
     typeof raw.enrichLimit === "number" && Number.isFinite(raw.enrichLimit)
       ? Math.max(1, Math.min(250, Math.round(raw.enrichLimit)))
@@ -1547,6 +1605,7 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
       companyNames,
       companyDomains,
       seedRows,
+      directoryUrls,
       highVolume: Boolean(raw.highVolume),
       minerMode: Boolean(raw.minerMode),
       enrichLimit,
@@ -1616,12 +1675,18 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
 
   const normalized = normalizeSearchPayload(raw);
   if (normalized.filters.runMode === "company") {
-    if (!normalized.filters.seedRows.length && !normalized.filters.companyDomains.length && !normalized.filters.companyNames.length) {
-      throw new Error("Pro company miner zadej bulk seeds, domeny nebo nazvy firem.");
+    if (
+      !normalized.filters.seedRows.length &&
+      !normalized.filters.companyDomains.length &&
+      !normalized.filters.companyNames.length &&
+      !normalized.filters.directoryUrls.length
+    ) {
+      throw new Error("Pro company miner zadej bulk seeds, domeny, nazvy firem nebo directory URL.");
     }
     if (
       !normalized.filters.seedRows.length &&
       !normalized.filters.companyDomains.length &&
+      !normalized.filters.directoryUrls.length &&
       normalized.filters.companyNames.length &&
       getSearchProviderLabel() === "none"
     ) {
@@ -1651,7 +1716,18 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
   if (error) throw new Error(error.message);
 
   if (normalized.filters.runMode === "company") {
+    const directorySeedPayloads = [];
+    for (const directoryUrl of normalized.filters.directoryUrls) {
+      try {
+        const generatedSeeds = await extractCompanySeedsFromDirectoryUrl(directoryUrl);
+        directorySeedPayloads.push(...generatedSeeds);
+      } catch {
+        // Directory seed generation is best-effort during run creation.
+      }
+    }
+
     const seedPayloads = [
+      ...directorySeedPayloads,
       ...normalized.filters.seedRows.map(parseCompanySeedLine).filter(Boolean),
       ...normalized.filters.companyDomains.map((companyDomain) => ({
         companyName: null,
@@ -1688,6 +1764,7 @@ export async function createLinkedInRun(raw: LinkedInSearchPayload) {
                 status: "queued" as CompanySeedStatus,
                 raw_payload: {
                   importedAt: new Date().toISOString(),
+                  sourceKind: seed!.source === "manual-bulk" ? "bulk" : seed!.source === "manual-domain" ? "domain" : "directory",
                 },
               },
             ]),
@@ -1736,7 +1813,47 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
   try {
     if (selectedRun.filters.runMode === "company") {
-      const queuedSeeds = await loadQueuedCompanySeeds(supabase, selectedRun.id);
+      let queuedSeeds = await loadQueuedCompanySeeds(supabase, selectedRun.id);
+      if (!queuedSeeds.length && selectedRun.filters.directoryUrls.length) {
+        const directorySeeds = [];
+        for (const directoryUrl of selectedRun.filters.directoryUrls) {
+          try {
+            directorySeeds.push(...(await extractCompanySeedsFromDirectoryUrl(directoryUrl)));
+          } catch {
+            // Best-effort seed generation during processing.
+          }
+        }
+
+        if (directorySeeds.length) {
+          const dedupedDirectorySeeds = Array.from(
+            new Map(
+              directorySeeds.map((seed) => [
+                normalizeText(seed.companyDomain || seed.companyName || ""),
+                {
+                  run_id: selectedRun.id,
+                  company_name: seed.companyName,
+                  company_domain: seed.companyDomain,
+                  location: seed.location,
+                  segment: seed.segment,
+                  source: seed.source,
+                  status: "queued" as CompanySeedStatus,
+                  raw_payload: {
+                    importedAt: new Date().toISOString(),
+                    sourceKind: "directory",
+                  },
+                },
+              ]),
+            ).values(),
+          );
+
+          const { error: seedInsertError } = await supabase.from(LINKEDIN_TABLES.companySeeds).upsert(dedupedDirectorySeeds, {
+            onConflict: "run_id,company_domain,company_name",
+          });
+          if (seedInsertError) throw new Error(seedInsertError.message);
+          queuedSeeds = await loadQueuedCompanySeeds(supabase, selectedRun.id);
+        }
+      }
+
       const resolvedSeeds = queuedSeeds.length
         ? queuedSeeds
         : (await resolveCompanySeedDomains(selectedRun.filters)).map((seed) => ({
@@ -1818,8 +1935,8 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
 
           const { error: companyUpsertError } = await supabase.from(LINKEDIN_TABLES.companies).upsert(
             {
-              normalized_name: normalizeText(crawled.companyName || seed.companyDomain),
-              company_name: crawled.companyName || seed.companyDomain,
+              normalized_name: normalizeText(crawled.companyName || resolvedDomain),
+              company_name: crawled.companyName || resolvedDomain,
               company_domain: crawled.companyDomain,
               location: selectedRun.filters.locations[0] || null,
               source: "company-miner",
@@ -1860,12 +1977,12 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
             .upsert(
               {
                 run_id: selectedRun.id,
-                linkedin_url: seed.companyDomain,
+                linkedin_url: seed.company_domain || seed.company_name || crypto.randomUUID(),
                 source_query: selectedRun.source_query,
                 full_name: null,
                 headline: "Company crawl failed",
-                company_name: seed.companyName,
-                company_domain: seed.companyDomain,
+                company_name: seed.company_name,
+                company_domain: seed.company_domain,
                 location: selectedRun.filters.locations[0] || null,
                 status: "failed" as LinkedInProfileStatus,
                 raw_payload: {
