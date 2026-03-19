@@ -344,6 +344,17 @@ function normalizeCompanyDomainInput(raw: string) {
   }
 }
 
+function hostnameFromUrl(raw: string) {
+  const normalized = normalizeCompanyDomainInput(raw);
+  if (!normalized) return null;
+
+  try {
+    return new URL(normalized).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
 function parseCompanySeedLine(line: string) {
   const trimmed = line.trim();
   if (!trimmed) return null;
@@ -413,6 +424,11 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
         "https://www.architecturalrecord.com/top300",
         "https://www.archpaper.com/tag/top-50/",
         "https://www.enr.com/toplists/top-500-design-firms",
+        "https://www.architecturelab.net/top-architecture-firms/",
+        "https://www.architizer.com/blog/practice/materials/architecture-firms/",
+        "https://www.aiachicago.org/firm-directory",
+        "https://newyorkitecture.com/top-architecture-firms-in-new-york-city/",
+        "https://www.dexigner.com/directory/cat/Architecture/Firms",
       ].forEach((url) => urls.add(url));
     }
 
@@ -422,6 +438,11 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
         "https://www.enr.com/toplists",
         "https://www.enr.com/toplists/top-contractors",
         "https://www.constructiondive.com/news/",
+        "https://www.constructionbusinessowner.com/",
+        "https://www.agc.org/industry-priorities/safety-health/environmental-construction-industry",
+        "https://www.buildzoom.com/blog/top-general-contractors",
+        "https://www.thebluebook.com/search.html",
+        "https://www.constructionjournal.com/companies",
       ].forEach((url) => urls.add(url));
     }
 
@@ -431,6 +452,11 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
         "https://www.commercialsearch.com/news/top-commercial-real-estate-developers/",
         "https://www.multihousingnews.com/top-multifamily-owners/",
         "https://www.nreionline.com/top-owners",
+        "https://therealdeal.com/national/issues_articles/top-residential-developers/",
+        "https://www.builderonline.com/builder-100",
+        "https://www.nahb.org/nahb-community/member-directories",
+        "https://www.commercialcafe.com/blog/top-us-developers/",
+        "https://www.bisnow.com/tags/developers",
       ].forEach((url) => urls.add(url));
     }
 
@@ -440,6 +466,11 @@ function buildAutonomousDirectoryUrls(filters: LinkedInFilters) {
         "https://www.usglassmag.com/category/commercial/",
         "https://www.architectmagazine.com/technology/products/",
         "https://www.glassonweb.com/directory",
+        "https://www.windowanddoor.com/directory",
+        "https://www.usglassmag.com/tag/glazing-contractors/",
+        "https://www.glass.org/member-company-directory",
+        "https://www.facadetectonics.org/member-directory",
+        "https://www.awci.org/find-a-contractor",
       ].forEach((url) => urls.add(url));
     }
   }
@@ -1282,7 +1313,18 @@ function slugifyText(value: string) {
 function looksLikePersonName(value: string) {
   const cleaned = value.trim();
   if (!/^[A-Z][A-Za-z.'-]+(?:\s+[A-Z][A-Za-z.'-]+){1,3}$/.test(cleaned)) return false;
-  if (/\b(architecture|architects|construction|contractor|studio|design|contact|about|team|leadership)\b/i.test(cleaned)) {
+  if (
+    /\b(architecture|architects|construction|contractor|studio|design|contact|about|team|leadership|projects|awards|news|review|history|library|policy|account|sourcebooks|west|east|midwest|ce center|webinars|conference|sessions|industry|technology|business|building|privacy|sign in|sign out|view all|my account)\b/i.test(
+      cleaned,
+    )
+  ) {
+    return false;
+  }
+  if (cleaned.length > 40) {
+    return false;
+  }
+  const words = cleaned.split(/\s+/);
+  if (words.some((word) => word.length === 1)) {
     return false;
   }
   return true;
@@ -1317,6 +1359,31 @@ function extractInternalCompanyLinks(html: string, baseOrigin: string) {
       ),
     ),
   ).slice(0, 12);
+}
+
+function isLikelyPublisherDomain(hostname: string) {
+  return /\b(enr\.com|archpaper\.com|architecturalrecord\.com|constructiondive\.com|bisnow\.com|multihousingnews\.com|nreionline\.com|commercialsearch\.com|usglassmag\.com|glassmagazine\.com|architectmagazine\.com|glassonweb\.com|buildzoom\.com|builderonline\.com|bdcnetwork\.com|dexigner\.com|bnpmedia\.com)\b/i.test(
+    hostname,
+  );
+}
+
+function isLikelyNavigationalText(value: string) {
+  const cleaned = normalizeText(value);
+  return /\b(sign in|sign out|view all|privacy|policy|site map|my account|book reviews|industry news|upcoming webinars|conference sessions|course library|complete library|information technology|quarterly cost reports|historical indexes|sourcebooks|ask enr ai|featured products|legacy award|annual photo contest)\b/.test(
+    cleaned,
+  );
+}
+
+function shouldAcceptDirectorySeed(directoryUrl: string, companyDomain: string, anchorText: string) {
+  const directoryHost = hostnameFromUrl(directoryUrl);
+  const companyHost = hostnameFromUrl(companyDomain);
+  if (!companyHost) return false;
+  if (directoryHost && companyHost === directoryHost) return false;
+  if (directoryHost && companyHost.endsWith(`.${directoryHost}`)) return false;
+  if (isLikelyPublisherDomain(companyHost)) return false;
+  if (!looksLikeCompanyName(anchorText) || isLikelyNavigationalText(anchorText)) return false;
+  if (anchorText.trim().split(/\s+/).length > 8) return false;
+  return true;
 }
 
 function extractCompanyNameFromWebsite(html: string, domain: string) {
@@ -1389,12 +1456,14 @@ async function crawlCompanyWebsite(params: {
         bestContactSource = pageUrl;
       }
 
-      extractTeamMembersFromHtml(html, resolvedCompanyName).forEach((lead) => {
-        const key = normalizeText(lead.fullName);
-        if (!leadMap.has(key)) {
-          leadMap.set(key, { ...lead, sourceUrl: pageUrl });
-        }
-      });
+      if (/(team|leadership|people|staff|management|principals|about|our-team|about-us|who-we-are)/i.test(pageUrl)) {
+        extractTeamMembersFromHtml(html, resolvedCompanyName).forEach((lead) => {
+          const key = normalizeText(lead.fullName);
+          if (!leadMap.has(key)) {
+            leadMap.set(key, { ...lead, sourceUrl: pageUrl });
+          }
+        });
+      }
       await delay(200);
     } catch {
       // Ignore missing pages for company-first crawl.
@@ -1636,6 +1705,7 @@ async function extractCompanySeedsFromDirectoryUrl(directoryUrl: string) {
     }
 
     const anchorText = decodeHtml(anchorHtml).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (!shouldAcceptDirectorySeed(directoryUrl, companyDomain, anchorText)) continue;
     const companyName = looksLikeCompanyName(anchorText) ? anchorText : null;
     const key = normalizeText(companyDomain);
     if (!seeds.has(key)) {
