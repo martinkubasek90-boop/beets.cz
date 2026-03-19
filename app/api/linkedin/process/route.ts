@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { enrichPendingLinkedInRun, processLinkedInRun } from "@/lib/linkedin-scraper";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function isAuthorized(request: Request) {
   const expected = process.env.LINKEDIN_SCRAPER_TOKEN;

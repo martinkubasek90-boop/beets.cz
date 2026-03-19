@@ -156,7 +156,7 @@ export function LinkedInDashboard({ initialData }: Props) {
         )
       : data.processorReady || Boolean(activeRun?.filters.manualUrls?.length));
 
-  async function reloadDashboard(nextRunId?: string) {
+  async function reloadDashboard(nextRunId?: string, options?: { preserveNotice?: boolean }) {
     setLoading(true);
     try {
       const response = await fetch("/api/linkedin/results?mode=dashboard", { cache: "no-store" });
@@ -175,9 +175,13 @@ export function LinkedInDashboard({ initialData }: Props) {
         error: json.error,
       });
       setActiveRunId(nextRunId || json.runs[0]?.id || "");
-      setNotice(json.error || "");
+      if (!options?.preserveNotice) {
+        setNotice(json.error || "");
+      }
     } catch (error: unknown) {
-      setNotice(error instanceof Error ? error.message : "Nepodarilo se nacist dashboard.");
+      if (!options?.preserveNotice) {
+        setNotice(error instanceof Error ? error.message : "Nepodarilo se nacist dashboard.");
+      }
     } finally {
       setLoading(false);
     }
@@ -263,7 +267,7 @@ export function LinkedInDashboard({ initialData }: Props) {
       await reloadDashboard(activeRunId);
     } catch (error: unknown) {
       setNotice(error instanceof Error ? error.message : "Nepodarilo se zpracovat run.");
-      await reloadDashboard(activeRunId);
+      await reloadDashboard(activeRunId, { preserveNotice: true });
     } finally {
       setProcessing(false);
     }
@@ -289,7 +293,7 @@ export function LinkedInDashboard({ initialData }: Props) {
       await reloadDashboard(activeRunId);
     } catch (error: unknown) {
       setNotice(error instanceof Error ? error.message : "Nepodarilo se dorazit pending enrichment.");
-      await reloadDashboard(activeRunId);
+      await reloadDashboard(activeRunId, { preserveNotice: true });
     } finally {
       setEnrichingPending(false);
     }
