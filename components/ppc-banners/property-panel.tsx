@@ -751,6 +751,10 @@ export function PropertyPanel({
                 <RangeWithCenter min={10} max={90} value={format.ctaSize} onChange={(v) => onFormatChange("ctaSize", v)} />
               </div>
               <div className="space-y-2">
+                <Label className="text-xs">Měřítko CTA: {Math.round((format.ctaScale || 1) * 100)} %</Label>
+                <RangeWithCenter min={0.5} max={1.3} step={0.05} value={format.ctaScale || 1} onChange={(v) => onFormatChange("ctaScale", v)} center={1} />
+              </div>
+              <div className="space-y-2">
                 <Label className="text-xs">Posun CTA X: {format.ctaOffsetX || 0}px</Label>
                 <RangeWithCenter min={-offsetRangeX} max={offsetRangeX} step={1} value={format.ctaOffsetX || 0} onChange={(v) => onFormatChange("ctaOffsetX", v)} center={0} />
               </div>

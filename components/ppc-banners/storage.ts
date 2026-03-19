@@ -55,6 +55,7 @@ function withFormatDefaults(format: BannerFormat): BannerFormat {
     ...format,
     contactSize: typeof format.contactSize === "number" ? format.contactSize : format.subheadlineSize || fallback.subheadlineSize,
     logoScale: typeof format.logoScale === "number" ? format.logoScale : 1,
+    ctaScale: typeof format.ctaScale === "number" ? format.ctaScale : 1,
     qrScale: typeof format.qrScale === "number" ? format.qrScale : 1,
     textOffsetX: typeof format.textOffsetX === "number" ? format.textOffsetX : 0,
     textOffsetY: typeof format.textOffsetY === "number" ? format.textOffsetY : 0,

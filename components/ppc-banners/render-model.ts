@@ -52,7 +52,8 @@ export function computeBannerRenderModel(banner: Banner, format: BannerFormat, s
   const subheadlineSize = Math.max(10, Math.min(Math.round(144 * scale), Math.round(format.subheadlineSize * scale)));
   const subheadline2Size = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.subheadline2Size || format.subheadlineSize) * scale)));
   const contactSize = Math.max(10, Math.min(Math.round(144 * scale), Math.round((format.contactSize || format.subheadlineSize) * scale)));
-  const ctaSize = Math.max(10, Math.min(Math.round(90 * scale), Math.round(format.ctaSize * scale)));
+  const ctaScale = clamp(typeof format.ctaScale === "number" ? format.ctaScale : 1, 0.5, 1.3);
+  const ctaSize = Math.max(10, Math.min(Math.round(90 * scale), Math.round(format.ctaSize * scale * ctaScale)));
   const logoScale = Math.max(0.4, Math.min(18, format.logoScale || 1));
   const logoOffsetX = Math.round((format.logoOffsetX || 0) * scale);
   const logoOffsetY = Math.round((format.logoOffsetY || 0) * scale);

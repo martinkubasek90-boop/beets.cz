@@ -12,6 +12,7 @@ export type BannerFormat = {
   subheadlineSize: number;
   contactSize?: number;
   ctaSize: number;
+  ctaScale?: number;
   logoScale: number;
   qrScale?: number;
   textOffsetX: number;
@@ -184,13 +185,13 @@ export type Banner = {
 
 export const PRESET_FORMATS: BannerFormat[] = [
   { id: "1200x628", name: "Meta 1200x628 (2x edit)", width: 2400, height: 1256, layout: "horizontal", headlineSize: 144, subheadlineSize: 68, ctaSize: 56, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 128 },
-  { id: "1080x1080", name: "Square 1080x1080 (2x edit)", width: 2160, height: 2160, layout: "square", headlineSize: 148, subheadlineSize: 68, ctaSize: 56, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 148 },
-  { id: "1080x1920", name: "Story 1080x1920 (2x edit)", width: 2160, height: 3840, layout: "vertical", headlineSize: 184, subheadlineSize: 84, ctaSize: 64, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 172 },
-  { id: "300x250", name: "Display 300x250 (2x edit)", width: 600, height: 500, layout: "horizontal", headlineSize: 56, subheadlineSize: 32, ctaSize: 28, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 40 },
-  { id: "336x280", name: "Display 336x280 (2x edit)", width: 672, height: 560, layout: "horizontal", headlineSize: 60, subheadlineSize: 32, ctaSize: 28, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 44 },
-  { id: "728x90", name: "Leaderboard 728x90 (2x edit)", width: 1456, height: 180, layout: "horizontal", headlineSize: 60, subheadlineSize: 32, ctaSize: 28, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 36 },
-  { id: "300x600", name: "Half-page 300x600 (2x edit)", width: 600, height: 1200, layout: "vertical", headlineSize: 84, subheadlineSize: 44, ctaSize: 36, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 52 },
-  { id: "160x600", name: "Skyscraper 160x600 (2x edit)", width: 320, height: 1200, layout: "vertical", headlineSize: 60, subheadlineSize: 32, ctaSize: 26, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 32 },
+  { id: "1080x1080", name: "Square 1080x1080 (2x edit)", width: 2160, height: 2160, layout: "square", headlineSize: 148, subheadlineSize: 68, ctaSize: 56, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 148 },
+  { id: "1080x1920", name: "Story 1080x1920 (2x edit)", width: 2160, height: 3840, layout: "vertical", headlineSize: 184, subheadlineSize: 84, ctaSize: 64, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 172 },
+  { id: "300x250", name: "Display 300x250 (2x edit)", width: 600, height: 500, layout: "horizontal", headlineSize: 56, subheadlineSize: 32, ctaSize: 28, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 40 },
+  { id: "336x280", name: "Display 336x280 (2x edit)", width: 672, height: 560, layout: "horizontal", headlineSize: 60, subheadlineSize: 32, ctaSize: 28, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 44 },
+  { id: "728x90", name: "Leaderboard 728x90 (2x edit)", width: 1456, height: 180, layout: "horizontal", headlineSize: 60, subheadlineSize: 32, ctaSize: 28, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 36 },
+  { id: "300x600", name: "Half-page 300x600 (2x edit)", width: 600, height: 1200, layout: "vertical", headlineSize: 84, subheadlineSize: 44, ctaSize: 36, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 52 },
+  { id: "160x600", name: "Skyscraper 160x600 (2x edit)", width: 320, height: 1200, layout: "vertical", headlineSize: 60, subheadlineSize: 32, ctaSize: 26, ctaScale: 1, logoScale: 1, textOffsetX: 0, textOffsetY: 0, logoOffsetX: 0, logoOffsetY: 0, ctaOffsetX: 0, ctaOffsetY: 0, shapeEnabled: false, shapeType: "circle", shapeColor: "#06B6D4", shapeOpacity: 26, shapeX: 78, shapeY: 22, shapeSize: 24, padding: 32 },
 ];
 
 export function makeCustomFormat(width: number, height: number): BannerFormat {
@@ -218,6 +219,7 @@ export function makeCustomFormat(width: number, height: number): BannerFormat {
     subheadlineSize,
     subheadline2Size: subheadlineSize,
     ctaSize,
+    ctaScale: 1,
     padding,
     logoScale: 1,
     textOffsetX: 0,
