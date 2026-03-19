@@ -44,6 +44,7 @@ export type LinkedInRun = {
     titles: string[];
     locations: string[];
     manualUrls: string[];
+    highVolume: boolean;
   };
 };
 
@@ -63,6 +64,7 @@ export type LinkedInSearchPayload = {
   titles?: string[];
   locations?: string[];
   manualUrls?: string[];
+  highVolume?: boolean;
   notes?: string;
 };
 
@@ -139,6 +141,7 @@ type LinkedInFilters = {
   titles: string[];
   locations: string[];
   manualUrls: string[];
+  highVolume: boolean;
 };
 
 const RUN_SELECT =
@@ -176,6 +179,7 @@ const sampleRuns: LinkedInRun[] = [
       titles: ["business development", "partnerships"],
       locations: ["United States", "USA"],
       manualUrls: [],
+      highVolume: false,
     },
   },
 ];
@@ -282,6 +286,7 @@ function normalizeFilters(value: unknown) {
     titles: toStringArray(source.titles),
     locations: toStringArray(source.locations),
     manualUrls: toStringArray(source.manualUrls).map((item) => normalizeLinkedInProfileUrl(item) || "").filter(Boolean),
+    highVolume: typeof source.highVolume === "boolean" ? source.highVolume : false,
   };
 }
 
@@ -441,6 +446,149 @@ function uniqueStrings(values: string[] | undefined) {
         .filter(Boolean),
     ),
   );
+}
+
+function chunkStrings(values: string[], size: number) {
+  const chunks: string[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
+}
+
+function buildScopedSearchQuery(params: {
+  titles?: string[];
+  locations?: string[];
+  keywords?: string[];
+}) {
+  const titles = uniqueStrings(params.titles);
+  const locations = uniqueStrings(params.locations);
+  const keywords = uniqueStrings(params.keywords);
+
+  return [
+    "site:linkedin.com/in/",
+    titles.length ? `(${titles.map((title) => `"${title}"`).join(" OR ")})` : "",
+    locations.length ? `(${locations.map((location) => `"${location}"`).join(" OR ")})` : "",
+    keywords.join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function expandIcpTerms(filters: LinkedInFilters) {
+  const keywordBag = new Set(filters.keywords);
+  const titleBag = new Set(filters.titles);
+  const text = normalizeText([...filters.keywords, ...filters.titles].join(" "));
+
+  if (/\barchitect|architecture|design studio|architecture firm\b/.test(text)) {
+    [
+      "architecture firm",
+      "architectural designer",
+      "commercial architecture",
+      "residential architect",
+      "design studio",
+      "interior architecture",
+      "urban design",
+      "architectural studio",
+      "planning and design",
+    ].forEach((item) => keywordBag.add(item));
+    [
+      "principal architect",
+      "project architect",
+      "architect",
+      "design director",
+      "founder",
+      "managing principal",
+      "studio director",
+      "architectural designer",
+      "project designer",
+    ].forEach((item) => titleBag.add(item));
+  }
+
+  if (/\bconstruction|contractor|builder|preconstruction\b/.test(text)) {
+    [
+      "construction company",
+      "general contractor",
+      "commercial construction",
+      "commercial contractor",
+      "builder",
+      "design build",
+      "real estate construction",
+      "construction management",
+      "multifamily construction",
+    ].forEach((item) => keywordBag.add(item));
+    [
+      "owner",
+      "founder",
+      "preconstruction manager",
+      "director of construction",
+      "business development",
+      "construction executive",
+      "project executive",
+      "operations manager",
+      "estimator",
+    ].forEach((item) => titleBag.add(item));
+  }
+
+  if (/\bdeveloper|development|real estate|property\b/.test(text)) {
+    [
+      "real estate developer",
+      "property developer",
+      "multifamily developer",
+      "commercial real estate",
+      "land development",
+      "development company",
+    ].forEach((item) => keywordBag.add(item));
+    [
+      "developer",
+      "development director",
+      "real estate developer",
+      "development manager",
+      "acquisitions manager",
+      "principal",
+    ].forEach((item) => titleBag.add(item));
+  }
+
+  return {
+    keywords: Array.from(keywordBag),
+    titles: Array.from(titleBag),
+    locations: filters.locations,
+    manualUrls: filters.manualUrls,
+    highVolume: filters.highVolume,
+  };
+}
+
+function generateSearchQueries(filters: LinkedInFilters) {
+  const expanded = expandIcpTerms(filters);
+  const titleChunkSize = expanded.highVolume ? 1 : 2;
+  const keywordChunkSize = expanded.highVolume ? 1 : 2;
+  const titleChunks = chunkStrings(expanded.titles, titleChunkSize);
+  const keywordChunks = chunkStrings(expanded.keywords, keywordChunkSize);
+  const locationChunks = chunkStrings(expanded.locations.length ? expanded.locations : ["United States"], 2);
+  const maxQueries = expanded.highVolume ? 36 : 12;
+  const queries: string[] = [];
+
+  if (!titleChunks.length && !keywordChunks.length) {
+    return [buildScopedSearchQuery({ locations: expanded.locations })];
+  }
+
+  for (const locationGroup of locationChunks) {
+    for (const titleGroup of titleChunks.length ? titleChunks : [[]]) {
+      for (const keywordGroup of keywordChunks.length ? keywordChunks : [[]]) {
+        const query = buildScopedSearchQuery({
+          titles: titleGroup,
+          locations: locationGroup,
+          keywords: keywordGroup,
+        });
+        if (query) queries.push(query);
+        if (queries.length >= maxQueries) return queries;
+      }
+    }
+  }
+
+  return queries.length
+    ? queries
+    : [buildScopedSearchQuery({ titles: expanded.titles, locations: expanded.locations, keywords: expanded.keywords })];
 }
 
 function delay(ms: number) {
@@ -819,7 +967,7 @@ export function normalizeSearchPayload(raw: LinkedInSearchPayload) {
     name: raw.name?.trim() || `LinkedIn run ${new Date().toLocaleDateString("cs-CZ")}`,
     notes: raw.notes?.trim() || null,
     sourceQuery,
-    filters: { keywords, titles, locations, manualUrls },
+    filters: { keywords, titles, locations, manualUrls, highVolume: Boolean(raw.highVolume) },
   };
 }
 
@@ -948,8 +1096,17 @@ export async function processLinkedInRun(runId?: string | null): Promise<LinkedI
       if (getSearchProviderLabel() === "none") {
         throw new Error("Chybi search provider. Nastav SERPER_API_KEY nebo SERPAPI_API_KEY, nebo pouzij manualni LinkedIn URL.");
       }
-      const searchResults = await searchWeb(selectedRun.source_query, 10);
-      discoveredUrls = pickBestLinkedInUrls(searchResults);
+      const queries = generateSearchQueries(selectedRun.filters);
+      const discoveredSet = new Set<string>();
+
+      for (const query of queries) {
+        const searchResults = await searchWeb(query, 10);
+        const queryUrls = pickBestLinkedInUrls(searchResults);
+        queryUrls.forEach((url) => discoveredSet.add(url));
+        await delay(250);
+      }
+
+      discoveredUrls = Array.from(discoveredSet);
     }
 
     if (discoveredUrls.length) {

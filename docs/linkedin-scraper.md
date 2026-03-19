@@ -70,6 +70,23 @@ Do runu vlozis primo seznam verejnych LinkedIn URL.
    - verejny telefon
 7. Profil dostane ICP score a jde exportovat do CSV
 
+## High volume discovery
+
+V UI je mozne zapnout `High volume discovery`.
+
+Ten rezim:
+- generuje vic query variant z jednoho ICP
+- pridava synonyma pro segmenty jako:
+  - architects
+  - construction firms
+  - developers
+- umi vratit vic kandidatu nez jeden jednoduchy search query
+
+Je vhodny hlavne pro:
+- architektonicka studia
+- stavebni firmy
+- real estate developery
+
 ## Co dela enrichment
 
 Enrichment je uz hotovy v kodu.

@@ -6,6 +6,21 @@ export const runtime = "nodejs";
 function isAuthorized(request: Request) {
   const expected = process.env.LINKEDIN_SCRAPER_TOKEN;
   if (!expected) return true;
+
+  // Allow same-origin browser calls from the local UI during development.
+  const origin = request.headers.get("origin") || "";
+  const host = request.headers.get("host") || "";
+  if (origin && host) {
+    try {
+      const originUrl = new URL(origin);
+      if (originUrl.host === host) {
+        return true;
+      }
+    } catch {
+      // Ignore malformed origin and fall back to bearer auth.
+    }
+  }
+
   const auth = request.headers.get("authorization") || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   return token === expected;

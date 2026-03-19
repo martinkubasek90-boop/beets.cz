@@ -13,6 +13,7 @@ type FormState = {
   titles: string;
   locations: string;
   manualUrls: string;
+  highVolume: boolean;
   notes: string;
 };
 
@@ -22,6 +23,7 @@ const emptyForm: FormState = {
   titles: "",
   locations: "",
   manualUrls: "",
+  highVolume: true,
   notes: "",
 };
 
@@ -149,6 +151,7 @@ export function LinkedInDashboard({ initialData }: Props) {
             .split("\n")
             .map((item) => item.trim())
             .filter(Boolean),
+          highVolume: form.highVolume,
           notes: form.notes,
         }),
       });
@@ -315,6 +318,16 @@ export function LinkedInDashboard({ initialData }: Props) {
                 />
               </label>
 
+              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#091422] px-4 py-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={form.highVolume}
+                  onChange={(event) => setForm((current) => ({ ...current, highVolume: event.target.checked }))}
+                  className="h-4 w-4 accent-cyan-300"
+                />
+                <span>High volume discovery</span>
+              </label>
+
               <button
                 type="submit"
                 disabled={submitting}
@@ -398,6 +411,11 @@ export function LinkedInDashboard({ initialData }: Props) {
                       {run.filters.manualUrls.length ? (
                         <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-cyan-200">
                           manual URLs: {run.filters.manualUrls.length}
+                        </span>
+                      ) : null}
+                      {run.filters.highVolume ? (
+                        <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-emerald-200">
+                          high volume
                         </span>
                       ) : null}
                     </div>
