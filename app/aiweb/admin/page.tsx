@@ -292,7 +292,7 @@ export default function AIWebAdminPage() {
                 ].map(f => (
                   <div key={f.field}>
                     <Label>{f.label}</Label>
-                    <input style={inputStyle(true)} value={(content as Record<string,unknown>)[f.field] as string} placeholder={f.placeholder} onChange={e => setField(f.field, e.target.value)} />
+                    <input style={inputStyle(true)} value={(content as unknown as Record<string,unknown>)[f.field] as string} placeholder={f.placeholder} onChange={e => setField(f.field, e.target.value)} />
                   </div>
                 ))}
               </div>
