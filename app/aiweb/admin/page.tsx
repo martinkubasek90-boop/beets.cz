@@ -134,7 +134,7 @@ export default function AIWebAdminPage() {
             <Link href="/aiweb" target="_blank" style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(167,139,250,0.2)', background: 'transparent', color: '#94a3b8', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
               Náhled ↗
             </Link>
-            <button onClick={save} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: saved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color: saved ? '#34d399' : '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.3s', border: saved ? '1px solid rgba(52,211,153,0.4)' : 'none' } as React.CSSProperties}>
+            <button onClick={save} style={{ padding: '8px 20px', borderRadius: 8, background: saved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color: saved ? '#34d399' : '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.3s', border: saved ? '1px solid rgba(52,211,153,0.4)' : 'none' } as React.CSSProperties}>
               {saved ? '✓ Uloženo' : 'Uložit změny'}
             </button>
           </div>
@@ -311,7 +311,7 @@ export default function AIWebAdminPage() {
           <p style={{ color: '#64748b', fontSize: 13, margin: 0 }}>
             💾 Změny se ukládají do prohlížeče (localStorage). Funguje okamžitě bez nutnosti nasazení.
           </p>
-          <button onClick={save} style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: saved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color: saved ? '#34d399' : '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', border: saved ? '1px solid rgba(52,211,153,0.4)' : 'none', transition: 'all 0.3s' } as React.CSSProperties}>
+          <button onClick={save} style={{ padding: '10px 24px', borderRadius: 8, background: saved ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg,#7c3aed,#2563eb)', color: saved ? '#34d399' : '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', border: saved ? '1px solid rgba(52,211,153,0.4)' : 'none', transition: 'all 0.3s' } as React.CSSProperties}>
             {saved ? '✓ Uloženo!' : 'Uložit změny'}
           </button>
         </div>
