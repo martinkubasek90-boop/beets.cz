@@ -9,6 +9,8 @@ import RestauraaceClient from './RestauraaceClient';
 import RealityClient from './RealityClient';
 import AdvokatClient from './AdvokatClient';
 import KavarnaClient from './KavarnaClient';
+import FitnessClient from './FitnessClient';
+import FotografClient from './FotografClient';
 
 export function generateStaticParams() {
   return EXAMPLES.map(e => ({ slug: e.slug }));
@@ -37,6 +39,8 @@ export default async function ExamplePage({ params }: { params: Promise<{ slug: 
   if (slug === 'reality') return <RealityClient site={site} />;
   if (slug === 'advokat') return <AdvokatClient site={site} />;
   if (slug === 'kavarna') return <KavarnaClient site={site} />;
+  if (slug === 'fitness') return <FitnessClient site={site} />;
+  if (slug === 'fotograf') return <FotografClient site={site} />;
 
   return <ExampleClient site={site} />;
 }

@@ -1,40 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { BackgroundGradientAnimation } from '@/components/ui/background-gradient-animation';
 import type { ExampleSite } from '../data';
 
-export default function ZubarClient({ site: s }: { site: ExampleSite }) {
-  const scrollTo = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
+const STEPS = [
+  { num: '01', title: 'Online objednávka', desc: 'Vyberte si termín online nebo zavolejte. Volné termíny do 48 hodin.' },
+  { num: '02', title: 'Uvítání a konzultace', desc: 'Přivítáme vás a probereme vaše potřeby. Žádný spěch, žádný stres.' },
+  { num: '03', title: 'Ošetření', desc: 'Moderní přístroje, šetrné metody. Bezbolestná péče je naší prioritou.' },
+  { num: '04', title: 'Péče po ošetření', desc: 'Dostanete jasné pokyny pro domácí péči a termín kontroly.' },
+];
 
-  const btn = (text: string, primary = true) => (
-    <button
-      onClick={() => scrollTo('kontakt')}
-      style={{
-        padding: '14px 28px', borderRadius: 8,
-        border: primary ? 'none' : `1px solid ${s.primary}`,
-        cursor: 'pointer', fontSize: 15, fontWeight: 700, fontFamily: 'inherit',
-        background: primary ? s.primary : 'transparent',
-        color: primary ? '#fff' : s.primary,
-        transition: 'all 0.2s',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; }}
-    >
-      {text}
-    </button>
-  );
+export default function ZubarClient({ site: s }: { site: ExampleSite }) {
+  const scrollTo = (id: string) => { document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' }); };
 
   return (
     <div style={{ background: s.bg, minHeight: '100vh', color: s.text, fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)' }}>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-        .fu{animation:fadeUp 0.7s ease both}
-        .d1{animation-delay:0.1s} .d2{animation-delay:0.22s} .d3{animation-delay:0.34s}
-        .card-ex { transition:all 0.25s; }
-        .card-ex:hover { transform:translateY(-3px); }
+        .fu { animation: fadeUp 0.7s ease both; }
+        .d1 { animation-delay: 0.1s; } .d2 { animation-delay: 0.22s; } .d3 { animation-delay: 0.34s; }
+        .service-card { background: #fff; border: 1px solid rgba(37,99,235,0.12); border-left: 4px solid #2563eb; border-radius: 10px; padding: 24px 28px; transition: all 0.25s; }
+        .service-card:hover { box-shadow: 0 8px 32px rgba(37,99,235,0.12); transform: translateY(-2px); }
+        .step-card { background: #fff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 2px 16px rgba(0,0,0,0.06); flex: 1; }
+        .nav-link { font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; transition: color 0.2s; }
+        .nav-link:hover { color: #2563eb; }
       `}</style>
 
       {/* AIWEB Demo badge */}
@@ -50,104 +39,159 @@ export default function ZubarClient({ site: s }: { site: ExampleSite }) {
         </Link>
       </div>
 
-      {/* HERO – BackgroundGradientAnimation */}
-      <section style={{ position: 'relative', overflow: 'hidden' }}>
-        <BackgroundGradientAnimation
-          gradientBackgroundStart="rgb(240, 248, 255)"
-          gradientBackgroundEnd="rgb(219, 234, 254)"
-          firstColor="37, 99, 235"
-          secondColor="59, 130, 246"
-          thirdColor="147, 197, 253"
-          fourthColor="96, 165, 250"
-          fifthColor="191, 219, 254"
-          pointerColor="37, 99, 235"
-          containerClassName="!h-screen !w-full !relative"
-        >
-          {/* NAV inside gradient */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50, padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(248,250,252,0.8)', backdropFilter: 'blur(16px)', borderBottom: `1px solid ${s.border}` }}>
-            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '-0.5px', color: s.text }}>{s.name}</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-              {s.footerLinks.map(l => (
-                <span key={l} style={{ fontSize: 14, color: s.textMuted, cursor: 'pointer' }}>{l}</span>
-              ))}
-              {btn(s.heroCta)}
-            </div>
-          </div>
+      {/* STICKY WHITE NAV */}
+      <nav style={{ position: 'sticky', top: 0, zIndex: 50, padding: '0 40px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#ffffff', boxShadow: '0 1px 12px rgba(0,0,0,0.08)', borderBottom: '1px solid rgba(37,99,235,0.08)' }}>
+        <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '-0.5px', color: s.primary }}>{s.name}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+          {s.footerLinks.map(l => (
+            <span key={l} className="nav-link">{l}</span>
+          ))}
+          <button
+            onClick={() => scrollTo('kontakt')}
+            style={{ padding: '10px 22px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          >
+            {s.heroCta}
+          </button>
+        </div>
+      </nav>
 
-          {/* Hero text */}
-          <div className="absolute z-50 inset-0 flex flex-col items-center justify-center text-center px-6 pointer-events-none">
-            <div className="fu" style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 100, background: `${s.primary}20`, border: `1px solid ${s.primary}40`, color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 28 }}>
-              {s.heroLabel}
-            </div>
-            <h1 className="fu d1" style={{ fontSize: 'clamp(44px, 9vw, 96px)', fontWeight: 900, lineHeight: 0.95, letterSpacing: '-3px', margin: '0 0 28px', color: s.text }}>
-              {s.heroH1.map((line, i) => (
-                <span key={i} style={{ display: 'block', color: i === s.heroH1.length - 1 ? s.primary : s.text }}>
-                  {line}
-                </span>
-              ))}
-            </h1>
-            <p className="fu d2" style={{ fontSize: 'clamp(16px, 2vw, 19px)', color: s.textMuted, lineHeight: 1.75, maxWidth: 580, margin: '0 auto 40px' }}>
-              {s.heroSub}
-            </p>
-            <div className="fu d3 pointer-events-auto" style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {btn(s.heroCta, true)}
-              {btn(s.heroCtaSecondary, false)}
-            </div>
+      {/* SPLIT HERO */}
+      <section style={{ display: 'flex', minHeight: '88vh', background: '#f8fafc' }}>
+        {/* Left: text */}
+        <div style={{ flex: '0 0 55%', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px 64px' }}>
+          <div className="fu" style={{ display: 'inline-block', padding: '6px 16px', borderRadius: 100, background: `${s.primary}12`, border: `1px solid ${s.primary}30`, color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 28, alignSelf: 'flex-start' }}>
+            {s.heroLabel}
           </div>
-        </BackgroundGradientAnimation>
+          <h1 className="fu d1" style={{ fontSize: 'clamp(44px, 6vw, 76px)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-2.5px', margin: '0 0 24px', color: '#0f172a' }}>
+            {s.heroH1.map((line, i) => (
+              <span key={i} style={{ display: 'block' }}>{line}</span>
+            ))}
+          </h1>
+          <p className="fu d2" style={{ fontSize: 18, color: s.textMuted, lineHeight: 1.75, maxWidth: 460, margin: '0 0 40px' }}>
+            {s.heroSub}
+          </p>
+          <div className="fu d3" style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => scrollTo('kontakt')}
+              style={{ padding: '16px 32px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff', transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.88'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+            >
+              {s.heroCta}
+            </button>
+            <button
+              onClick={() => scrollTo('sluzby')}
+              style={{ padding: '16px 32px', borderRadius: 10, border: `2px solid ${s.primary}`, cursor: 'pointer', fontSize: 15, fontWeight: 700, fontFamily: 'inherit', background: '#fff', color: s.primary, transition: 'all 0.2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = `${s.primary}10`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fff'; }}
+            >
+              {s.heroCtaSecondary}
+            </button>
+          </div>
+        </div>
+        {/* Right: patient photo */}
+        <div style={{ flex: '0 0 45%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 40px', background: '#fff' }}>
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: -10, borderRadius: 26, border: `3px solid ${s.primary}`, opacity: 0.3 }} />
+            <img
+              src="https://images.unsplash.com/photo-1588776814546-1ffbb5c098d5?auto=format&fit=crop&w=600&q=80"
+              alt="Spokojený pacient"
+              style={{ width: 420, height: 520, objectFit: 'cover', borderRadius: 20, display: 'block', boxShadow: '0 20px 60px rgba(37,99,235,0.15)' }}
+            />
+          </div>
+        </div>
       </section>
 
-      {/* SECTIONS */}
-      {s.sections.map((sec, si) => (
-        <section key={si} style={{ padding: '80px 24px', background: si % 2 === 0 ? s.surface : s.bg }}>
-          <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-            {sec.type === 'cta' ? (
-              <div style={{ textAlign: 'center', padding: '60px 24px', borderRadius: 20, background: `${s.primary}12`, border: `1px solid ${s.primary}30` }}>
-                <h2 style={{ fontSize: 'clamp(24px, 4vw, 40px)', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 12px' }}>{sec.title}</h2>
-                {sec.sub && <p style={{ color: s.textMuted, fontSize: 16, margin: '0 0 32px', maxWidth: 500, marginLeft: 'auto', marginRight: 'auto' }}>{sec.sub}</p>}
-                {btn(sec.ctaText || s.heroCta)}
-              </div>
-            ) : (
-              <>
-                <div style={{ textAlign: 'center', marginBottom: 52 }}>
-                  {sec.label && <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 10 }}>{sec.label}</p>}
-                  <h2 style={{ fontSize: 'clamp(24px, 4vw, 44px)', fontWeight: 900, letterSpacing: '-1px', margin: 0 }}>{sec.title}</h2>
-                  {sec.sub && <p style={{ color: s.textMuted, fontSize: 16, margin: '12px 0 0' }}>{sec.sub}</p>}
-                </div>
-                {sec.items && (
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${sec.items.length <= 3 ? '220px' : '240px'}, 1fr))`, gap: 20 }}>
-                    {sec.items.map((item, ii) => (
-                      <div key={ii} className="card-ex" style={{ padding: '24px', borderRadius: 14, background: `${s.primary}08`, border: `1px solid ${s.border}` }}>
-                        <div style={{ fontSize: 28, marginBottom: 14 }}>{item.icon}</div>
-                        <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: s.text }}>{item.title}</h3>
-                        <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.65, margin: 0 }}>{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
+      {/* TRUST STRIP */}
+      <div style={{ background: s.primary, padding: '18px 40px', textAlign: 'center' }}>
+        <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '0.5px' }}>
+          ✓ Přijímáme VZP &nbsp;·&nbsp; ✓ Přijímáme ČPZP &nbsp;·&nbsp; ✓ Přijímáme OZP &nbsp;·&nbsp; ✓ Bez čekání
+        </p>
+      </div>
+
+      {/* PROCESS STEPS */}
+      <section style={{ padding: '100px 40px', background: '#f0f6ff' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Jak to funguje</p>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-1.5px', margin: 0, color: '#0f172a' }}>Čtyři kroky ke krásnému úsměvu</h2>
           </div>
-        </section>
-      ))}
+          <div style={{ display: 'flex', gap: 24 }}>
+            {STEPS.map((step) => (
+              <div key={step.num} className="step-card">
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: s.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 16, marginBottom: 20 }}>
+                  {step.num}
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 10px', color: '#0f172a' }}>{step.title}</h3>
+                <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.7, margin: 0 }}>{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SERVICES GRID */}
+      <section id="sluzby" style={{ padding: '100px 40px', background: '#f8fafc' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Ošetření</p>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 900, letterSpacing: '-1.5px', margin: 0, color: '#0f172a' }}>Komplexní péče o váš chrup</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+            {s.sections[0]?.items?.map((item, i) => (
+              <div key={i} className="service-card">
+                <div style={{ fontSize: 26, marginBottom: 12 }}>{item.icon}</div>
+                <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 8px', color: '#0f172a' }}>{item.title}</h3>
+                <p style={{ fontSize: 14, color: s.textMuted, lineHeight: 1.7, margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* BLUE CTA SECTION */}
+      <section style={{ padding: '100px 40px', background: s.primary }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 900, letterSpacing: '-2px', margin: '0 0 20px', color: '#fff' }}>
+            {s.sections[1]?.title}
+          </h2>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.8)', margin: '0 0 40px', lineHeight: 1.7 }}>
+            {s.sections[1]?.sub}
+          </p>
+          <button
+            onClick={() => scrollTo('kontakt')}
+            style={{ padding: '18px 44px', borderRadius: 12, border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 800, fontFamily: 'inherit', background: '#fff', color: s.primary, transition: 'all 0.2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.9'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+          >
+            {s.sections[1]?.ctaText || s.heroCta}
+          </button>
+        </div>
+      </section>
 
       {/* CONTACT */}
-      <section id="kontakt" style={{ padding: '80px 24px', textAlign: 'center' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <section id="kontakt" style={{ padding: '80px 40px', background: '#fff' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ color: s.primary, fontSize: 12, fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', marginBottom: 12 }}>Kontakt</p>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 16px' }}>Pojďme spolupracovat</h2>
-          <p style={{ color: s.textMuted, fontSize: 16, marginBottom: 36, lineHeight: 1.7 }}>Ozvěte se nám. Rádi odpovíme na vaše otázky a připravíme nezávaznou nabídku.</p>
-          {btn(s.heroCta)}
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 900, letterSpacing: '-1px', margin: '0 0 16px', color: '#0f172a' }}>Objednejte se online</h2>
+          <p style={{ color: s.textMuted, fontSize: 16, marginBottom: 10, lineHeight: 1.7 }}>Volné termíny do 48 hodin. Přijímáme všechny pojišťovny.</p>
+          <p style={{ color: s.textMuted, fontSize: 15, marginBottom: 36 }}>📞 +420 222 333 444 · 📍 Jugoslávských partyzánů 10, Praha 6</p>
+          <button
+            onClick={() => window.open('tel:+420222333444')}
+            style={{ padding: '16px 36px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', background: s.primary, color: '#fff' }}
+          >
+            Zavolat a objednat se
+          </button>
         </div>
       </section>
 
       {/* FOOTER */}
-      <footer style={{ padding: '28px 24px', borderTop: `1px solid ${s.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, maxWidth: 1100, margin: '0 auto' }}>
+      <footer style={{ padding: '28px 40px', borderTop: '1px solid rgba(37,99,235,0.12)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, background: '#f8fafc' }}>
         <span style={{ fontWeight: 700, fontSize: 14, color: s.textMuted }}>{s.footerTagline}</span>
         <div style={{ display: 'flex', gap: 20 }}>
-          {s.footerLinks.map(l => (
-            <span key={l} style={{ fontSize: 13, color: s.textMuted, cursor: 'pointer' }}>{l}</span>
-          ))}
+          {s.footerLinks.map(l => (<span key={l} style={{ fontSize: 13, color: s.textMuted, cursor: 'pointer' }}>{l}</span>))}
         </div>
       </footer>
     </div>
