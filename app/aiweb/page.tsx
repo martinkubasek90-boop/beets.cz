@@ -102,7 +102,6 @@ export const DEFAULT_CONTENT: AIWebContent = {
 const EMPTY_FORM: FormData = { name: '', email: '', phone: '', company: '', budget: '', message: '', gdpr: false };
 const NAV_LINKS = [
   { label: 'Služby', href: '#sluzby' },
-  { label: 'Jak pracujeme', href: '#proces' },
   { label: 'Reference', href: '#reference' },
   { label: 'Kontakt', href: '#kontakt' },
 ];
@@ -282,61 +281,8 @@ export default function AIWebPage() {
         </div>
       </section>
 
-      {/* ─── WHY US ─── */}
-      <section style={{ padding:'48px 24px', background:'rgba(7,10,26,0.6)', borderTop:'1px solid rgba(167,139,250,0.07)', borderBottom:'1px solid rgba(167,139,250,0.07)' }}>
-        <div style={{ maxWidth:1100, margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))', gap:48, alignItems:'start' }}>
-          <div>
-            <p className="section-label">Proč my</p>
-            <h2 style={{ fontSize:'clamp(26px,4vw,42px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 16px', lineHeight:1.15 }}>{c.whyTitle}</h2>
-            <p style={{ color:'#64748b', fontSize:16, lineHeight:1.8, marginBottom:28 }}>{c.whySub}</p>
-            <button className="btn-primary" onClick={() => scrollTo('#poptavka')} style={{ padding:'14px 28px', borderRadius:10, border:'none', cursor:'pointer', fontSize:15, fontWeight:600, color:'#fff' }}>Začít spolupráci →</button>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-            {c.whyItems.map(item => (
-              <div key={item.title} style={{ display:'flex', gap:14, padding:'14px 18px', borderRadius:12, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(167,139,250,0.08)', transition:'border-color 0.2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor='rgba(124,58,237,0.3)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor='rgba(167,139,250,0.08)'; }}>
-                <span style={{ fontSize:20, flexShrink:0, marginTop:2 }}>{item.icon}</span>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14, color:'#f1f5f9', marginBottom:3 }}>{item.title}</div>
-                  <div style={{ fontSize:13, color:'#64748b', lineHeight:1.6 }}>{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── PROCESS ─── */}
-      <section id="proces" style={{ padding:'48px 24px' }}>
-        <div style={{ maxWidth:760, margin:'0 auto' }}>
-          <div style={{ textAlign:'center', marginBottom:36 }}>
-            <p className="section-label">Jak pracujeme</p>
-            <h2 style={{ fontSize:'clamp(28px,5vw,48px)', fontWeight:900, letterSpacing:'-1px', margin:'0 0 8px', color:'#f1f5f9' }}>
-              {c.processTitle}
-            </h2>
-            <p style={{ color:'#64748b', fontSize:16, margin:0 }}>{c.processSub}</p>
-          </div>
-          <div style={{ display:'flex', flexDirection:'column' }}>
-            {c.process.map((p, i) => (
-              <div key={p.step} style={{ display:'flex', gap:20 }}>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
-                  <div style={{ width:48, height:48, borderRadius:'50%', flexShrink:0, background:'linear-gradient(135deg,rgba(124,58,237,0.3),rgba(37,99,235,0.3))', border:'1px solid rgba(124,58,237,0.4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>{p.icon}</div>
-                  {i < c.process.length - 1 && <div style={{ width:2, flex:1, minHeight:20, background:'linear-gradient(to bottom,rgba(124,58,237,0.4),rgba(37,99,235,0.1))', margin:'3px 0' }} />}
-                </div>
-                <div style={{ paddingBottom:i < c.process.length - 1 ? 20 : 0, paddingTop:8 }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:'#7c3aed', letterSpacing:'1px' }}>KROK {p.step}</span>
-                  <h3 style={{ fontSize:17, fontWeight:700, color:'#f1f5f9', margin:'4px 0 4px' }}>{p.title}</h3>
-                  <p style={{ color:'#64748b', fontSize:14, lineHeight:1.6, margin:0 }}>{p.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ─── REFERENCES ─── */}
-      <section id="reference" style={{ padding:'12px 24px 32px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)', marginTop:-8, position:'relative', zIndex:1 }}>
+      <section id="reference" style={{ padding:'28px 24px 32px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)', marginTop:0, position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <p className="section-label">Reference</p>
