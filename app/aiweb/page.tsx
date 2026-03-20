@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { WebGLShader } from '@/components/aiweb/webgl-shader';
-import { EXAMPLES } from './examples/data';
+import { GALLERY_ITEMS } from './examples/gallery-items';
+import { Gallery4 } from '@/components/aiweb/gallery4';
 
 /* ─── Types ─── */
 type FormData = {
@@ -113,7 +114,6 @@ export default function AIWebPage() {
   const [status, setStatus] = useState<FormStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [c, setC] = useState<AIWebContent>(DEFAULT_CONTENT);
-  const examplesTrackRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -142,15 +142,6 @@ export default function AIWebPage() {
       if (!res.ok) { setErrorMsg(data.error || 'Chyba při odesílání.'); setStatus('error'); }
       else { setStatus('success'); setForm(EMPTY_FORM); }
     } catch { setErrorMsg('Chyba připojení. Zkuste to prosím znovu.'); setStatus('error'); }
-  };
-
-  const scrollExamples = (direction: number) => {
-    const node = examplesTrackRef.current;
-    if (!node) return;
-    node.scrollBy({
-      left: direction * Math.min(360, node.clientWidth * 0.9),
-      behavior: 'smooth',
-    });
   };
 
   const getReferenceHeadline = (role: string) => {
@@ -239,10 +230,10 @@ export default function AIWebPage() {
             <button className="btn-primary" onClick={() => scrollTo('#poptavka')} style={{ padding:'16px 32px', borderRadius:10, border:'none', cursor:'pointer', fontSize:16, fontWeight:700, color:'#fff', display:'flex', alignItems:'center', gap:8 }}>
               {c.heroCta} <span style={{ fontSize:18 }}>→</span>
             </button>
-            <button onClick={() => scrollTo('#reference')} style={{ padding:'16px 32px', borderRadius:10, cursor:'pointer', fontSize:16, fontWeight:600, color:'#e2e8f0', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', transition:'all 0.25s' }}
+            <button onClick={() => scrollTo('#priklady')} style={{ padding:'16px 32px', borderRadius:10, cursor:'pointer', fontSize:16, fontWeight:600, color:'#e2e8f0', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', transition:'all 0.25s' }}
               onMouseEnter={e => { (e.target as HTMLButtonElement).style.background='rgba(255,255,255,0.1)'; }}
               onMouseLeave={e => { (e.target as HTMLButtonElement).style.background='rgba(255,255,255,0.05)'; }}>
-              Prohlédnout reference
+              Ukázky webů
             </button>
           </div>
           <div style={{ marginTop:48, display:'flex', justifyContent:'center', flexWrap:'wrap', gap:'8px 32px' }}>
@@ -345,7 +336,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── REFERENCES ─── */}
-      <section id="reference" style={{ padding:'32px 24px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
+      <section id="reference" style={{ padding:'12px 24px 32px', background:'rgba(7,10,26,0.85)', borderTop:'1px solid rgba(167,139,250,0.07)', marginTop:-8, position:'relative', zIndex:1 }}>
         <div style={{ maxWidth:1100, margin:'0 auto' }}>
           <div style={{ textAlign:'center', marginBottom:28 }}>
             <p className="section-label">Reference</p>
@@ -386,70 +377,17 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── EXAMPLES ─── */}
-      <section id="priklady" style={{ padding: '32px 24px', position: 'relative' }}>
-        <div className="mesh-bg" style={{ position: 'absolute', opacity: 0.3, inset: 0, pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
-          <div style={{ display:'flex', alignItems:'end', justifyContent:'space-between', gap:16, flexWrap:'wrap', marginBottom:20 }}>
-            <div>
-              <p className="section-label" style={{ marginBottom:8 }}>Příklady webů</p>
-              <h2 style={{ fontSize: 'clamp(28px,5vw,40px)', fontWeight: 900, letterSpacing: '-1px', margin: 0, color:'#f1f5f9' }}>
-                Ukázky webů
-              </h2>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <button
-                type="button"
-                onClick={() => scrollExamples(-1)}
-                aria-label="Předchozí ukázky"
-                style={{ width:44, height:44, borderRadius:999, border:'1px solid rgba(167,139,250,0.18)', background:'rgba(255,255,255,0.04)', color:'#f1f5f9', fontSize:20, cursor:'pointer' }}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollExamples(1)}
-                aria-label="Další ukázky"
-                style={{ width:44, height:44, borderRadius:999, border:'1px solid rgba(167,139,250,0.18)', background:'rgba(255,255,255,0.04)', color:'#f1f5f9', fontSize:20, cursor:'pointer' }}
-              >
-                →
-              </button>
-            </div>
-          </div>
-          <div
-            ref={examplesTrackRef}
-            style={{
-              display: 'flex',
-              gap: 16,
-              overflowX: 'auto',
-              paddingBottom: 8,
-              scrollSnapType: 'x proximity',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-            }}
-          >
-            {EXAMPLES.map(e => (
-              <Link key={e.slug} href={`/aiweb/examples/${e.slug}`} style={{ textDecoration: 'none', minWidth: 280, maxWidth: 280, flex: '0 0 280px', scrollSnapAlign:'start' }}>
-                <div className="card-glow" style={{
-                  padding: '22px', borderRadius: 14, cursor: 'pointer',
-                  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(167,139,250,0.12)',
-                  height: '100%', display: 'flex', flexDirection: 'column', gap: 12,
-                }}>
-                  {/* Color swatch */}
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: e.primary, flexShrink: 0 }} />
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{e.industry}</div>
-                  </div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: '#f1f5f9', letterSpacing: '-0.3px' }}>{e.name}</div>
-                  <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, flex: 1 }}>{e.description}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: e.primary, fontSize: 13, fontWeight: 600, marginTop: 4 }}>
-                    Zobrazit demo <span>→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <div style={{ position:'relative' }}>
+        <div className="mesh-bg" style={{ position:'absolute', opacity:0.22, inset:0, pointerEvents:'none' }} />
+        <Gallery4
+          id="priklady"
+          title="Ukázky webů"
+          description="Vyberte si styl, který je nejblíž vašemu oboru. Každá ukázka má vlastní vizuál a samostatné demo."
+          items={GALLERY_ITEMS}
+          ctaHref="/aiweb/ukazkywebu"
+          ctaLabel="Zobrazit celý přehled webů"
+        />
+      </div>
 
       {/* ─── FORM ─── */}
       <section id="poptavka" style={{ padding:'48px 24px', position:'relative', overflow:'hidden', background:'rgba(4,5,15,0.9)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
