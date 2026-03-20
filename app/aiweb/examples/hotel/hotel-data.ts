@@ -6,6 +6,7 @@ export const hotelTheme = {
   surfaceSoft: "#f6f3ee",
   surfaceStrong: "#ebe8e3",
   primary: "#173124",
+  primaryLight: "#496455",
   primaryContainer: "#2d4739",
   secondary: "#785836",
   secondarySoft: "#fed2a7",

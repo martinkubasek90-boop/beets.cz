@@ -25,7 +25,7 @@ export default function HotelExperiencePage() {
         </section>
 
         <section style={{ maxWidth: 1536, margin: "0 auto", padding: "96px 32px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 24, autoRows: 300 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 24, gridAutoRows: 300 }}>
             <div style={{ gridColumn: "span 2", position: "relative", overflow: "hidden", borderRadius: 22 }}>
               <img src={hotelExperiences[0].image} alt={hotelExperiences[0].title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.15))" }} />
