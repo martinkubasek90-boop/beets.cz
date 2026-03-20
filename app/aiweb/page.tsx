@@ -255,6 +255,19 @@ export default function AIWebPage() {
         </div>
       </section>
 
+      {/* ─── EXAMPLES ─── */}
+      <div style={{ position:'relative' }}>
+        <div className="mesh-bg" style={{ position:'absolute', opacity:0.22, inset:0, pointerEvents:'none' }} />
+        <Gallery4
+          id="priklady"
+          title="Příklady webů pro různé obory"
+          description="Vyberte si obor, který je nejblíž vašemu projektu. Každá ukázka funguje jako inspirace pro budoucí web na míru."
+          items={GALLERY_ITEMS}
+          ctaHref="/aiweb/ukazkywebu"
+          ctaLabel="Zobrazit celý přehled webů"
+        />
+      </div>
+
       {/* ─── SERVICES ─── */}
       <section id="sluzby" style={{ padding:'20px 24px 48px', position:'relative' }}>
         <div className="mesh-bg" style={{ position:'absolute', inset:0, opacity:0.5, pointerEvents:'none' }} />
@@ -321,19 +334,6 @@ export default function AIWebPage() {
           </div>
         </div>
       </section>
-
-      {/* ─── EXAMPLES ─── */}
-      <div style={{ position:'relative' }}>
-        <div className="mesh-bg" style={{ position:'absolute', opacity:0.22, inset:0, pointerEvents:'none' }} />
-        <Gallery4
-          id="priklady"
-          title="Ukázky webů"
-          description="Vyberte si styl, který je nejblíž vašemu oboru. Každá ukázka má vlastní vizuál a samostatné demo."
-          items={GALLERY_ITEMS}
-          ctaHref="/aiweb/ukazkywebu"
-          ctaLabel="Zobrazit celý přehled webů"
-        />
-      </div>
 
       {/* ─── FORM ─── */}
       <section id="poptavka" style={{ padding:'48px 24px', position:'relative', overflow:'hidden', background:'rgba(4,5,15,0.9)', borderTop:'1px solid rgba(167,139,250,0.07)' }}>
