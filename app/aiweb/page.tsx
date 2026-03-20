@@ -214,7 +214,7 @@ export default function AIWebPage() {
       </header>
 
       {/* ─── HERO ─── */}
-      <section style={{ position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', padding:'160px 24px 80px' }}>
+      <section style={{ position:'relative', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', padding:'160px 24px 28px' }}>
         <div style={{ position:'absolute', width:700, height:700, borderRadius:'50%', background:'radial-gradient(circle,rgba(124,58,237,0.18) 0%,transparent 70%)', top:'-200px', left:'-200px', pointerEvents:'none', animation:'orbFloat 14s ease-in-out infinite' }} />
         <div style={{ position:'absolute', width:600, height:600, borderRadius:'50%', background:'radial-gradient(circle,rgba(37,99,235,0.15) 0%,transparent 70%)', bottom:'-150px', right:'-100px', pointerEvents:'none', animation:'orbFloat2 18s ease-in-out infinite' }} />
         <div className="mesh-bg" style={{ position:'absolute', inset:0, pointerEvents:'none' }} />
@@ -256,7 +256,7 @@ export default function AIWebPage() {
       </section>
 
       {/* ─── SERVICES ─── */}
-      <section id="sluzby" style={{ padding:'48px 24px', position:'relative' }}>
+      <section id="sluzby" style={{ padding:'20px 24px 48px', position:'relative' }}>
         <div className="mesh-bg" style={{ position:'absolute', inset:0, opacity:0.5, pointerEvents:'none' }} />
         <div style={{ maxWidth:1200, margin:'0 auto', position:'relative' }}>
           <div style={{ textAlign:'center', marginBottom:40 }}>
