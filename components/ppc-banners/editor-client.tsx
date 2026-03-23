@@ -12,8 +12,34 @@ import { BannerCanvas } from "@/components/ppc-banners/banner-canvas";
 import { FormatSelector } from "@/components/ppc-banners/format-selector";
 import { PropertyPanel } from "@/components/ppc-banners/property-panel";
 import { AIAssistant } from "@/components/ppc-banners/ai-assistant";
-import { exportBannerGif, exportBannerPng, exportBannerZip, getExportFileName } from "@/components/ppc-banners/export";
+import { exportBannerGif, exportBannerPng, exportBannerZip, getExportFileName, type BannerExportMimeType } from "@/components/ppc-banners/export";
 import { computeChecklist, encodeSharePayload, isChecklistComplete } from "@/components/ppc-banners/banner-utils";
+
+type ExportSizeUnit = "KB" | "MB";
+type ExportSizePreset = {
+  label: string;
+  value: string;
+  unit: ExportSizeUnit;
+  mimeType?: BannerExportMimeType;
+};
+
+const EXPORT_SIZE_PRESETS: ExportSizePreset[] = [
+  { label: "Sklik 150 KB", value: "150", unit: "KB", mimeType: "image/jpeg" },
+  { label: "Sklik 300 KB", value: "300", unit: "KB", mimeType: "image/jpeg" },
+  { label: "Display 500 KB", value: "500", unit: "KB", mimeType: "image/jpeg" },
+  { label: "1 MB", value: "1", unit: "MB" },
+];
+
+function parseExportSizeBytes(value: string, unit: ExportSizeUnit) {
+  const parsed = Number(String(value).replace(",", "."));
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return Math.round(parsed * (unit === "MB" ? 1024 * 1024 : 1024));
+}
+
+function formatBytes(bytes: number) {
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
 
 export function PpcBannerEditorClient() {
   const router = useRouter();
@@ -27,7 +53,12 @@ export function PpcBannerEditorClient() {
   const [autosaveTick, setAutosaveTick] = useState(0);
   const [tab, setTab] = useState<"properties" | "ai">("properties");
   const [exportScale, setExportScale] = useState<1 | 0.75 | 0.5 | 0.25>(1);
+  const [exportMimeType, setExportMimeType] = useState<BannerExportMimeType>("image/png");
+  const [exportSizeValue, setExportSizeValue] = useState("150");
+  const [exportSizeUnit, setExportSizeUnit] = useState<ExportSizeUnit>("KB");
+  const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [emailHtmlCopied, setEmailHtmlCopied] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const initDoneRef = useRef(false);
 
@@ -56,10 +87,18 @@ export function PpcBannerEditorClient() {
     const h = Math.max(1, Math.round(activeFormat.height * exportScale));
     return { w, h };
   }, [activeFormat, exportScale]);
+  const exportTargetBytes = useMemo(() => parseExportSizeBytes(exportSizeValue, exportSizeUnit), [exportSizeUnit, exportSizeValue]);
+
+  const applyExportPreset = (preset: ExportSizePreset) => {
+    setExportSizeValue(preset.value);
+    setExportSizeUnit(preset.unit);
+    if (preset.mimeType) setExportMimeType(preset.mimeType);
+  };
 
   const persist = (options?: { createVersion?: boolean; label?: string; autosave?: boolean }) => {
     if (!banner) return;
     setSaving(true);
+    setSaveError(null);
     const nextChecklist = computeChecklist(banner);
     const complete = isChecklistComplete(nextChecklist);
     const now = new Date().toISOString();
@@ -84,14 +123,19 @@ export function PpcBannerEditorClient() {
       next.versions = [version, ...(next.versions || [])].slice(0, 20);
     }
 
-    upsertBanner(next);
-    setBanner(next);
-    setSaving(false);
-    if (!options?.autosave) {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1600);
-    } else {
-      setAutosaveTick((prev) => prev + 1);
+    try {
+      upsertBanner(next);
+      setBanner(next);
+      if (!options?.autosave) {
+        setSaved(true);
+        window.setTimeout(() => setSaved(false), 1600);
+      } else {
+        setAutosaveTick((prev) => prev + 1);
+      }
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Uložení selhalo.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -170,18 +214,37 @@ export function PpcBannerEditorClient() {
   const onExportCurrent = async () => {
     if (!banner || !activeFormat) return;
     try {
-      await exportBannerPng(banner, activeFormat, exportScale);
+      const result = await exportBannerPng(banner, activeFormat, exportScale, {
+        mimeType: exportMimeType,
+        maxFileSizeBytes: exportTargetBytes,
+      });
+      setExportFeedback(
+        result.targetBytesMet
+          ? `Staženo: ${formatBytes(result.blob.size)}`
+          : `Staženo: ${formatBytes(result.blob.size)}. Limit ${formatBytes(exportTargetBytes || 0)} se nepodařilo dodržet.`,
+      );
     } catch (error) {
       console.error(error);
+      setExportFeedback("Export PNG/JPG selhal.");
     }
   };
 
   const onExportZip = async () => {
     if (!banner) return;
     try {
-      await exportBannerZip(banner, exportScale);
+      const results = await exportBannerZip(banner, exportScale, {
+        mimeType: exportMimeType,
+        maxFileSizeBytes: exportTargetBytes,
+      });
+      const oversized = results.filter((item) => !item.targetBytesMet).length;
+      setExportFeedback(
+        oversized
+          ? `ZIP stažen. ${oversized} souborů je nad limitem ${formatBytes(exportTargetBytes || 0)}.`
+          : "ZIP stažen.",
+      );
     } catch (error) {
       console.error(error);
+      setExportFeedback("ZIP export selhal.");
     }
   };
 
@@ -189,20 +252,25 @@ export function PpcBannerEditorClient() {
     if (!banner || !activeFormat) return;
     try {
       await exportBannerGif(banner, activeFormat);
+      setExportFeedback("GIF stažen.");
     } catch (error) {
       console.error(error);
+      setExportFeedback("GIF export selhal.");
     }
   };
 
   const onExportEmailRetina = async () => {
     if (!banner || !activeFormat) return;
     try {
-      await exportBannerPng(banner, activeFormat, 1);
+      await exportBannerPng(banner, activeFormat, 1, {
+        mimeType: exportMimeType,
+        maxFileSizeBytes: exportTargetBytes,
+      });
       const retinaW = activeFormat.width;
       const retinaH = activeFormat.height;
       const displayW = Math.max(1, Math.round(retinaW / 2));
       const displayH = Math.max(1, Math.round(retinaH / 2));
-      const filename = getExportFileName(banner.name || "banner", retinaW, retinaH);
+      const filename = getExportFileName(banner.name || "banner", retinaW, retinaH, exportMimeType === "image/jpeg" ? "jpg" : "png");
       const alt = (banner.name || "banner").replace(/"/g, "&quot;");
       const html = `<img src="${filename}" alt="${alt}" width="${displayW}" height="${displayH}" style="display:block;width:${displayW}px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />`;
       await navigator.clipboard.writeText(html);
@@ -286,9 +354,32 @@ export function PpcBannerEditorClient() {
               </button>
             ))}
           </div>
+          <select
+            value={exportMimeType}
+            onChange={(e) => setExportMimeType(e.target.value as BannerExportMimeType)}
+            className="h-8 rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700"
+          >
+            <option value="image/png">PNG</option>
+            <option value="image/jpeg">JPG</option>
+          </select>
+          <Input
+            value={exportSizeValue}
+            onChange={(e) => setExportSizeValue(e.target.value)}
+            inputMode="decimal"
+            className="h-8 w-20 border-slate-300 bg-white text-xs"
+            placeholder="150"
+          />
+          <select
+            value={exportSizeUnit}
+            onChange={(e) => setExportSizeUnit(e.target.value as ExportSizeUnit)}
+            className="h-8 rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700"
+          >
+            <option value="KB">KB</option>
+            <option value="MB">MB</option>
+          </select>
           {exportTargetSize ? (
             <span className="text-[11px] text-slate-600">
-              export: {exportTargetSize.w}x{exportTargetSize.h}
+              export: {exportTargetSize.w}x{exportTargetSize.h}{exportTargetBytes ? ` • max ${formatBytes(exportTargetBytes)}` : ""}
             </span>
           ) : null}
           <Button onClick={onExportCurrent} size="sm" variant="outline" className="border-slate-300 bg-slate-100 text-slate-700 hover:bg-slate-200">
@@ -321,6 +412,32 @@ export function PpcBannerEditorClient() {
           </Button>
         </div>
       </div>
+      <div className="flex min-h-10 shrink-0 items-center gap-2 overflow-x-auto border-b border-slate-200/70 bg-white/70 px-4 py-1.5 text-xs backdrop-blur">
+        <span className="whitespace-nowrap font-semibold text-slate-500">Rychlé presety:</span>
+        {EXPORT_SIZE_PRESETS.map((preset) => {
+          const active = exportSizeValue === preset.value && exportSizeUnit === preset.unit && (!preset.mimeType || exportMimeType === preset.mimeType);
+          return (
+            <button
+              key={preset.label}
+              type="button"
+              onClick={() => applyExportPreset(preset)}
+              className={`whitespace-nowrap rounded-full border px-2.5 py-1 font-semibold ${active ? "border-cyan-500 bg-cyan-50 text-cyan-700" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"}`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+      {saveError || exportFeedback ? (
+        <div className="flex min-h-9 shrink-0 items-center justify-between border-b border-slate-200/70 bg-white/80 px-4 text-xs backdrop-blur">
+          <span className={saveError ? "text-red-600" : "text-slate-600"}>{saveError || exportFeedback}</span>
+          {exportMimeType === "image/png" && exportTargetBytes ? (
+            <span className="text-[11px] text-amber-700">Přesný limit velikosti funguje nejlépe u JPG.</span>
+          ) : (
+            <span />
+          )}
+        </div>
+      ) : null}
 
       <div className="flex flex-1 overflow-hidden">
         <div className="hidden w-60 shrink-0 overflow-y-auto border-r border-slate-200/80 bg-white/85 p-3 backdrop-blur md:block">

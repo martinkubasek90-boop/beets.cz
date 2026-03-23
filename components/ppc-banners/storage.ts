@@ -129,7 +129,12 @@ export function upsertBanner(banner: Banner) {
   const normalized = withDefaults(banner);
   if (idx >= 0) all[idx] = normalized;
   else all.unshift(normalized);
-  window.localStorage.setItem(BANNERS_KEY, JSON.stringify(all));
+  try {
+    window.localStorage.setItem(BANNERS_KEY, JSON.stringify(all));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    throw new Error(message || "Banner je příliš velký pro lokální uložení. Zmenši nahrané obrázky nebo počet GIF snímků.");
+  }
 }
 
 export function duplicateBanner(source: Banner) {

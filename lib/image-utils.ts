@@ -49,3 +49,17 @@ export async function resizeImageFile(file: File, options: ResizeImageOptions = 
 
   return new File([blob], getOutputName(file.name, mimeType), { type: mimeType });
 }
+
+export async function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function optimizeImageToDataUrl(file: File, options: ResizeImageOptions = {}) {
+  const optimized = await resizeImageFile(file, options);
+  return fileToDataUrl(optimized);
+}

@@ -10,18 +10,10 @@ import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { PRESET_FORMATS } from "@/components/ppc-banners/types";
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import { normalizeImageUrl, toPreviewImageUrl } from "@/components/ppc-banners/banner-utils";
+import { optimizeImageToDataUrl } from "@/lib/image-utils";
 
 function uid() {
   return `b_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 export function CreateBannerWizard({
@@ -166,13 +158,13 @@ export function CreateBannerWizard({
 
   const onLogoUpload = async (file: File | null) => {
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await optimizeImageToDataUrl(file, { maxSize: 720, quality: 0.86, mimeType: "image/webp" });
     setLogoUrl(dataUrl);
   };
 
   const onBgUpload = async (file: File | null) => {
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await optimizeImageToDataUrl(file, { maxSize: 1600, quality: 0.82, mimeType: "image/webp" });
     setBgImageUrl(dataUrl);
   };
 

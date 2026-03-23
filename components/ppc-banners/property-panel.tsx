@@ -9,17 +9,9 @@ import { computeChecklist, contrastRatio, normalizeImageUrl } from "@/components
 import { computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 import { getBrandKit, saveBrandKit } from "@/components/ppc-banners/storage";
 import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
+import { optimizeImageToDataUrl } from "@/lib/image-utils";
 
 type LayerId = "logo" | "qr" | "headline" | "description" | "description2" | "contact" | "cta" | "background";
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 const ICON_PRESETS = ["", "→", "↗", "➜", "➔", "↑", "☎", "✉", "★", "✓"] as const;
 
@@ -156,26 +148,28 @@ export function PropertyPanel({
 
   const onLogoUpload = async (file: File | null) => {
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await optimizeImageToDataUrl(file, { maxSize: 720, quality: 0.86, mimeType: "image/webp" });
     onBannerChange("logoUrl", dataUrl);
   };
 
   const onBgUpload = async (file: File | null) => {
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await optimizeImageToDataUrl(file, { maxSize: 1600, quality: 0.82, mimeType: "image/webp" });
     onFormatChange("bgImageUrl", dataUrl);
     onBannerChange("bgMode", "upload");
   };
 
   const onGifFramesUpload = async (files: FileList | null) => {
     if (!files?.length) return;
-    const dataUrls = await Promise.all(Array.from(files).map((file) => fileToDataUrl(file)));
+    const dataUrls = await Promise.all(
+      Array.from(files).map((file) => optimizeImageToDataUrl(file, { maxSize: 1280, quality: 0.78, mimeType: "image/webp" })),
+    );
     onBannerChange("gifFrames", [...(banner.gifFrames || []), ...dataUrls].slice(0, 24));
   };
 
   const onQrUpload = async (file: File | null) => {
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await optimizeImageToDataUrl(file, { maxSize: 1024, quality: 0.9, mimeType: "image/webp" });
     onBannerChange("qrImageUrl", dataUrl);
   };
 

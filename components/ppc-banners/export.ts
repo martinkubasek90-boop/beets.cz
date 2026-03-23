@@ -4,6 +4,15 @@ import type { Banner, BannerFormat } from "@/components/ppc-banners/types";
 import { clamp, computeBannerRenderModel } from "@/components/ppc-banners/render-model";
 
 const BANNER_FONT_STACK = 'Inter, "Segoe UI", Arial, sans-serif';
+export type BannerExportMimeType = "image/png" | "image/jpeg";
+export type BannerExportResult = {
+  blob: Blob;
+  width: number;
+  height: number;
+  mimeType: BannerExportMimeType;
+  fileExtension: "png" | "jpg";
+  targetBytesMet: boolean;
+};
 
 function roundedRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const radius = Math.max(0, Math.min(r, Math.min(w, h) / 2));
@@ -119,6 +128,18 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function canvasToBlob(canvas: HTMLCanvasElement, mimeType: BannerExportMimeType, quality?: number) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Export blob se nepodařilo vytvořit."));
+        return;
+      }
+      resolve(blob);
+    }, mimeType, quality);
+  });
+}
+
 function fitSize(width: number, height: number, maxWidth: number, maxHeight: number) {
   if (!width || !height || !maxWidth || !maxHeight) return { width: 0, height: 0 };
   const ratio = Math.min(maxWidth / width, maxHeight / height);
@@ -139,7 +160,7 @@ async function ensureFontsLoaded(headlineSize: number, subheadlineSize: number, 
   } catch {}
 }
 
-export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat, outputScale = 1) {
+async function renderBannerCanvas(banner: Banner, format: BannerFormat, outputScale = 1) {
   const viewW = format.width;
   const viewH = format.height;
   const safeOutputScale = clamp(outputScale, 0.1, 1);
@@ -334,7 +355,7 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
     outputCtx.imageSmoothingEnabled = true;
     outputCtx.imageSmoothingQuality = "high";
     outputCtx.drawImage(workCanvas, 0, 0, targetW, targetH);
-    return outputCanvas.toDataURL("image/png");
+    return outputCanvas;
   }
 
   const outputCanvas = document.createElement("canvas");
@@ -345,29 +366,108 @@ export async function renderBannerPngDataUrl(banner: Banner, format: BannerForma
   outputCtx.imageSmoothingEnabled = true;
   outputCtx.imageSmoothingQuality = "high";
   outputCtx.drawImage(workCanvas, 0, 0, targetW, targetH);
+  return outputCanvas;
+}
+
+export async function renderBannerPngDataUrl(banner: Banner, format: BannerFormat, outputScale = 1) {
+  const outputCanvas = await renderBannerCanvas(banner, format, outputScale);
   return outputCanvas.toDataURL("image/png");
 }
 
-export function getExportFileName(bannerName: string, width: number, height: number) {
+export function getExportFileName(bannerName: string, width: number, height: number, extension: "png" | "jpg" = "png") {
   const safeName = (bannerName || "banner").replace(/[^\w\-]+/g, "_");
-  return `${safeName}_${width}x${height}.png`;
+  return `${safeName}_${width}x${height}.${extension}`;
 }
 
-export async function exportBannerPng(banner: Banner, format: BannerFormat, outputScale = 1) {
+export async function renderBannerBlob(
+  banner: Banner,
+  format: BannerFormat,
+  options?: {
+    outputScale?: number;
+    mimeType?: BannerExportMimeType;
+    maxFileSizeBytes?: number;
+  },
+): Promise<BannerExportResult> {
+  const safeOutputScale = clamp(options?.outputScale ?? 1, 0.1, 1);
+  const mimeType = options?.mimeType === "image/jpeg" ? "image/jpeg" : "image/png";
+  const outputCanvas = await renderBannerCanvas(banner, format, safeOutputScale);
+  const width = outputCanvas.width;
+  const height = outputCanvas.height;
+  const maxFileSizeBytes = typeof options?.maxFileSizeBytes === "number" && options.maxFileSizeBytes > 0 ? options.maxFileSizeBytes : undefined;
+  const fileExtension = mimeType === "image/jpeg" ? "jpg" : "png";
+
+  if (mimeType === "image/jpeg") {
+    let bestBlob: Blob | null = null;
+    let targetBytesMet = false;
+    for (const quality of [0.92, 0.86, 0.8, 0.74, 0.68, 0.62, 0.56, 0.5, 0.44]) {
+      const blob = await canvasToBlob(outputCanvas, mimeType, quality);
+      if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+      if (!maxFileSizeBytes || blob.size <= maxFileSizeBytes) {
+        bestBlob = blob;
+        targetBytesMet = true;
+        break;
+      }
+    }
+    return {
+      blob: bestBlob || await canvasToBlob(outputCanvas, mimeType, 0.8),
+      width,
+      height,
+      mimeType,
+      fileExtension,
+      targetBytesMet: maxFileSizeBytes ? targetBytesMet : true,
+    };
+  }
+
+  const blob = await canvasToBlob(outputCanvas, mimeType);
+  return {
+    blob,
+    width,
+    height,
+    mimeType,
+    fileExtension,
+    targetBytesMet: maxFileSizeBytes ? blob.size <= maxFileSizeBytes : true,
+  };
+}
+
+export async function exportBannerPng(
+  banner: Banner,
+  format: BannerFormat,
+  outputScale = 1,
+  options?: { mimeType?: BannerExportMimeType; maxFileSizeBytes?: number },
+) {
   const safeOutputScale = clamp(outputScale, 0.1, 1);
-  const dataUrl = await renderBannerPngDataUrl(banner, format, safeOutputScale);
-  const outW = Math.max(1, Math.round(format.width * safeOutputScale));
-  const outH = Math.max(1, Math.round(format.height * safeOutputScale));
-  downloadDataUrl(dataUrl, getExportFileName(banner.name || "banner", outW, outH));
+  const result = await renderBannerBlob(banner, format, {
+    outputScale: safeOutputScale,
+    mimeType: options?.mimeType,
+    maxFileSizeBytes: options?.maxFileSizeBytes,
+  });
+  downloadBlob(result.blob, getExportFileName(banner.name || "banner", result.width, result.height, result.fileExtension));
+  return result;
 }
 
-export async function exportBannerZip(banner: Banner, outputScale = 1) {
+export async function exportBannerZip(
+  banner: Banner,
+  outputScale = 1,
+  options?: { mimeType?: BannerExportMimeType; maxFileSizeBytes?: number },
+) {
   const safeOutputScale = clamp(outputScale, 0.1, 1);
   const safeName = (banner.name || "banner").replace(/[^\w\-]+/g, "_");
+  const renderedFiles = await Promise.all(
+    (banner.formats || []).map(async (format) => renderBannerBlob(banner, format, {
+      outputScale: safeOutputScale,
+      mimeType: options?.mimeType,
+      maxFileSizeBytes: options?.maxFileSizeBytes,
+    })),
+  );
   const files = await Promise.all(
-    (banner.formats || []).map(async (format) => ({
-      name: `${safeName}_${Math.max(1, Math.round(format.width * safeOutputScale))}x${Math.max(1, Math.round(format.height * safeOutputScale))}.png`,
-      dataUrl: await renderBannerPngDataUrl(banner, format, safeOutputScale),
+    renderedFiles.map(async (result) => ({
+      name: getExportFileName(safeName, result.width, result.height, result.fileExtension),
+      dataUrl: await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = reject;
+        reader.readAsDataURL(result.blob);
+      }),
     })),
   );
   const response = await fetch("/api/ppc-banners/export-zip", {
@@ -380,6 +480,7 @@ export async function exportBannerZip(banner: Banner, outputScale = 1) {
   }
   const blob = await response.blob();
   downloadBlob(blob, `${safeName}_all-formats.zip`);
+  return renderedFiles;
 }
 
 export async function exportBannerGif(banner: Banner, format: BannerFormat) {
