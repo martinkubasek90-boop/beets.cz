@@ -5,6 +5,7 @@ import { ArrowRight, Mail, MapPin, Users } from "lucide-react";
 import { NewsSection } from "@/components/tomas-pernik/news-section";
 import { PlannerShowcase } from "@/components/tomas-pernik/planner-showcase";
 import { RetrofuturisticBackground } from "@/components/tomas-pernik/retrofuturistic-background";
+import VideoPlayer from "@/components/tomas-pernik/video-player";
 import styles from "./tomas-pernik.module.css";
 
 const lora = Lora({
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const portraitUrl = "/tomas-pernik/pernik-portrait.png";
+const campaignVideoUrl = "/tomas-pernik/kampan.mp4";
 
 const priorities = [
   {
@@ -121,6 +123,16 @@ export default function TomasPernikPage() {
               </div>
             </aside>
           </div>
+        </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.sectionAlt}`}>
+        <div className={styles.shell}>
+          <div className={styles.sectionHead}>
+            <span className={styles.kicker}>Video</span>
+            <h2>Krátké kampaňové video připravené pro mobil i desktop</h2>
+          </div>
+          <VideoPlayer src={campaignVideoUrl} poster={portraitUrl} title="Tomáš Perník | Kampaňové video" />
         </div>
       </section>
 
