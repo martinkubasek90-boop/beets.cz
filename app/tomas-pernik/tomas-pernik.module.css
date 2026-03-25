@@ -260,6 +260,10 @@
   gap: 0.55rem;
 }
 
+.inlineFacts li {
+  min-width: 0;
+}
+
 .heroCard,
 .priorityCard,
 .profileCard,
@@ -1023,7 +1027,7 @@
 @media (max-width: 980px) {
   .hero {
     min-height: auto;
-    padding-bottom: 3.5rem;
+    padding-bottom: 2.5rem;
   }
 
   .heroLayout,
@@ -1039,26 +1043,50 @@
   }
 
   .heroLayout {
-    padding-top: 2rem;
+    gap: 1rem;
+    padding-top: 1rem;
   }
 
   .heroCopy {
-    padding: 4rem 0 0;
+    max-width: none;
+    padding: 2rem 0 0;
   }
 
   .heroVisual {
-    max-width: 560px;
-    min-height: 620px;
+    max-width: 520px;
+    min-height: 0;
+    margin: 0 auto;
   }
 
   .heroPortrait {
-    right: -0.5rem;
-    bottom: -1.25rem;
+    position: relative;
+    right: auto;
+    bottom: auto;
     width: min(100%, 520px);
+    margin: 0 auto;
+  }
+
+  .heroPortraitImage {
+    width: 118%;
+    margin-left: -9%;
+    transform: scale(1.04);
+  }
+
+  .profileCard,
+  .statPanel,
+  .priorityCard,
+  .ctaCard,
+  .newsCard {
+    border-radius: 20px;
+  }
+
+  .plannerSection,
+  .section {
+    padding: 3rem 0 4rem;
   }
 
   .deskSurface {
-    padding: 3rem 1.5rem 4.5rem;
+    padding: 1.5rem 1.25rem 2rem;
   }
 
   .plannerBook {
@@ -1067,9 +1095,41 @@
   }
 
   .plannerBook::after,
-  .spine,
-  .plannerTabs {
+  .spine {
     display: none;
+  }
+
+  .plannerTabs {
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: 2;
+    display: flex;
+    flex-direction: row;
+    gap: 0.6rem;
+    margin: 0 0 1rem;
+    padding: 0 0 0.35rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .plannerTabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .plannerTab {
+    flex: 0 0 auto;
+    border: 1px solid var(--planner-paper-shadow);
+    border-radius: 999px;
+    padding: 0.72rem 1rem;
+    writing-mode: horizontal-tb;
+    text-orientation: initial;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .plannerTabActive {
+    transform: none;
   }
 
   .plannerPageLeft,
@@ -1084,7 +1144,7 @@
   }
 
   .topbar {
-    padding-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
   }
 
   .nav {
@@ -1092,11 +1152,13 @@
   }
 
   .heroLayout {
-    padding-top: 0.5rem;
+    gap: 0.75rem;
+    padding-top: 0;
   }
 
   .heroCopy h1 {
-    font-size: clamp(3.4rem, 18vw, 5rem);
+    font-size: clamp(3.2rem, 17vw, 4.8rem);
+    line-height: 0.9;
   }
 
   .heroCard h2,
@@ -1106,52 +1168,258 @@
     font-size: clamp(1.8rem, 8vw, 2.5rem);
   }
 
-  .heroPortrait {
-    position: relative;
-    right: auto;
-    bottom: auto;
+  .brand {
+    gap: 0.65rem;
+  }
+
+  .brandLogo {
+    width: 94px;
+  }
+
+  .brandText {
+    font-size: 0.9rem;
+  }
+
+  .kicker {
+    margin-bottom: 0.85rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+  }
+
+  .heroCopy {
+    padding-top: 1.25rem;
+  }
+
+  .lead {
+    margin-top: 1.25rem;
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  .actions {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .primaryButton,
+  .secondaryButton {
     width: 100%;
-    min-height: 0;
-  }
-
-  .heroVisual {
-    min-height: 0;
-  }
-
-  .heroPortraitImage {
-    width: 120%;
-    margin-left: -10%;
-    transform: scale(1.05);
+    min-height: 54px;
   }
 
   .inlineFacts {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1.35rem;
+  }
+
+  .inlineFacts li {
+    align-items: flex-start;
+    gap: 0.7rem;
+    border: 1px solid rgba(3, 78, 162, 0.12);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    padding: 0.95rem 1rem;
+    box-shadow: 0 12px 24px rgba(3, 78, 162, 0.06);
+  }
+
+  .heroVisual {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .heroPortrait {
+    width: 100%;
+    max-width: 430px;
+  }
+
+  .heroPortrait::before {
+    inset: 6% 10% 12% 10%;
+  }
+
+  .heroPortraitImage {
+    width: 132%;
+    margin-left: -18%;
+    transform: scale(1.08);
+  }
+
+  .sectionHead {
+    margin-bottom: 1.35rem;
+  }
+
+  .priorityCard,
+  .profileCard,
+  .statPanel,
+  .ctaCard {
+    padding: 1.2rem;
+  }
+
+  .priorityCard h3 {
+    font-size: 1.08rem;
+    line-height: 1.35;
+  }
+
+  .profileLayout {
+    gap: 1rem;
+  }
+
+  .statPanel {
+    gap: 0.95rem;
+  }
+
+  .statItem strong {
+    font-size: 1.65rem;
+  }
+
+  .ctaCard {
+    align-items: stretch;
   }
 
   .deskSurface {
-    padding: 1.25rem;
+    padding: 1rem;
+    border-radius: 22px;
   }
 
   .plannerPage {
-    padding: 28px 20px;
+    padding: 22px 16px;
   }
 
   .dayTitle {
-    font-size: 2rem;
+    font-size: 2.2rem;
   }
 
   .timeLabel {
-    width: 58px;
-    padding-right: 10px;
+    width: 62px;
+    padding-right: 8px;
+    font-size: 0.68rem;
   }
 
   .eventPrimary,
   .eventMuted {
     left: 70px;
-    right: 8px;
+    right: 0;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .sectionTitle {
+    margin-bottom: 16px;
+    font-size: 1.22rem;
+  }
+
+  .taskItem {
+    gap: 12px;
+    padding: 10px 0;
+  }
+
+  .taskText {
+    font-size: 0.9rem;
+  }
+
+  .taskMeta {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .notesArea {
+    height: 220px;
+  }
+
+  .handwriting {
+    left: 0;
+    font-size: 1rem;
+    line-height: 30px;
+  }
+
+  .newsCard {
+    padding: 1.1rem;
+  }
+
+  .newsCard h3 {
+    font-size: 1.08rem;
+  }
+
+  .newsCard p {
+    line-height: 1.62;
   }
 
   .newsSliderControls {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .newsSliderButton {
+    width: 100%;
+  }
+
+  .newsSliderMeta {
+    gap: 0.5rem;
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .shell {
+    width: min(100% - 1rem, 1180px);
+  }
+
+  .hero {
+    padding-top: 0.9rem;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(2.8rem, 16vw, 4.2rem);
+    letter-spacing: -0.065em;
+  }
+
+  .lead,
+  .priorityCard p,
+  .profileCard p,
+  .ctaCard p,
+  .statItem span {
+    font-size: 0.96rem;
+    line-height: 1.65;
+  }
+
+  .heroPortrait {
+    max-width: 360px;
+  }
+
+  .heroPortraitImage {
+    width: 138%;
+    margin-left: -22%;
+    transform: scale(1.1);
+  }
+
+  .plannerTabs {
+    margin-bottom: 0.8rem;
+  }
+
+  .plannerTab {
+    padding: 0.68rem 0.9rem;
+    font-size: 0.68rem;
+  }
+
+  .metaTop {
+    gap: 8px;
+    font-size: 0.6rem;
+  }
+
+  .timeBlock {
+    height: 44px;
+  }
+
+  .timeLabel {
+    width: 56px;
+  }
+
+  .eventPrimary,
+  .eventMuted {
+    left: 62px;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .currentTimeIndicator {
+    left: 39px;
   }
 }
