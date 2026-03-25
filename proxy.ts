@@ -39,6 +39,10 @@ export async function proxy(request: NextRequest) {
       return NextResponse.rewrite(url);
     }
 
+    if (pathname === "/vimperak") {
+      return await updateSession(request);
+    }
+
     if (!pathname.startsWith("/api/tomas-pernik/")) {
       url.pathname = "/";
       return NextResponse.redirect(url);
