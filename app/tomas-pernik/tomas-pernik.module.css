@@ -311,8 +311,8 @@
 
 .heroPortrait {
   position: absolute;
-  right: 0;
-  bottom: -2rem;
+  right: -2.2rem;
+  bottom: -3.4rem;
   overflow: visible;
   width: min(43vw, 580px);
   min-height: 0;
@@ -338,7 +338,7 @@
   margin-left: 0;
   object-fit: contain;
   object-position: center top;
-  mix-blend-mode: multiply;
+  mix-blend-mode: normal;
   transform: scale(1.03);
   transform-origin: center center;
   filter:
