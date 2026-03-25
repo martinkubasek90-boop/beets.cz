@@ -1,33 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "@/app/tomas-pernik/tomas-pernik.module.css";
-
-const tabs = ["Jan", "Feb", "Mar", "Apr", "May"];
-
-const tasks = [
-  {
-    text: "Finalize color palette for the 'Flower Friendly' landing page campaign.",
-    meta: ["Design"],
-    completed: true,
-  },
-  {
-    text: "Update inventory counts for Peonies and Ranunculus arrivals.",
-    meta: ["Operations", "Due 2:00 PM"],
-    completed: false,
-  },
-  {
-    text: "Draft copy for the bespoke wedding bouquet brochure.",
-    meta: [],
-    completed: false,
-  },
-];
+import {
+  type PlannerContent,
+  PLANNER_MONTHS,
+  cloneDefaultPlannerContent,
+  loadPlannerContent,
+} from "@/components/tomas-pernik/planner-content";
 
 const timeBlocks = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
 export function PlannerShowcase() {
   const [activeTab, setActiveTab] = useState("Mar");
-  const [taskState, setTaskState] = useState(tasks);
+  const [content, setContent] = useState<PlannerContent>(() => cloneDefaultPlannerContent());
+
+  useEffect(() => {
+    setContent(loadPlannerContent());
+  }, []);
+
+  const month = useMemo(() => content.months[activeTab] ?? content.months.Mar, [activeTab, content]);
 
   return (
     <section className={styles.plannerSection} id="planner">
@@ -40,7 +32,7 @@ export function PlannerShowcase() {
         <div className={styles.plannerHost}>
           <div className={styles.deskSurface}>
             <div className={styles.plannerTabs}>
-              {tabs.map((tab) => (
+              {PLANNER_MONTHS.map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -57,16 +49,16 @@ export function PlannerShowcase() {
               <div className={`${styles.plannerPage} ${styles.plannerPageLeft}`}>
                 <header className={styles.dateHeader}>
                   <div className={styles.metaTop}>
-                    <span>Week 12</span>
+                    <span>{month.weekLabel}</span>
                     <div className={styles.metaLine} />
-                    <span>Spring Equinox</span>
+                    <span>{month.seasonLabel}</span>
                   </div>
-                  <h3 className={styles.dayTitle}>Thursday</h3>
-                  <div className={styles.dateSubtitle}>March 21st, 2024</div>
+                  <h3 className={styles.dayTitle}>{month.dayTitle}</h3>
+                  <div className={styles.dateSubtitle}>{month.dateSubtitle}</div>
                 </header>
 
                 <div className={styles.scheduleContainer}>
-                  <div className={styles.currentTimeIndicator} />
+                  <div className={styles.currentTimeIndicator} style={{ top: month.currentIndicatorTop }} />
 
                   {timeBlocks.map((time) => (
                     <div key={time} className={styles.timeBlock}>
@@ -75,20 +67,18 @@ export function PlannerShowcase() {
                     </div>
                   ))}
 
-                  <div className={styles.eventPrimary} style={{ top: 48, height: 70 }}>
-                    <span className={styles.eventTime}>09:00 - 10:30</span>
-                    Botanical Sourcing &amp; Vendor Calls
-                  </div>
-
-                  <div className={styles.eventMuted} style={{ top: 194, height: 40 }}>
-                    <span className={styles.eventTimeMuted}>11:50 - 12:30</span>
-                    Lunch Break
-                  </div>
-
-                  <div className={styles.eventPrimary} style={{ top: 312, height: 90 }}>
-                    <span className={styles.eventTime}>14:30 - 16:00</span>
-                    Review Q2 Floral Arrangements Design Mockups
-                  </div>
+                  {month.events.map((event) => (
+                    <div
+                      key={event.id}
+                      className={event.muted ? styles.eventMuted : styles.eventPrimary}
+                      style={{ top: event.top, height: event.height }}
+                    >
+                      <span className={event.muted ? styles.eventTimeMuted : styles.eventTime}>
+                        {event.timeLabel}
+                      </span>
+                      {event.title}
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -111,25 +101,12 @@ export function PlannerShowcase() {
                 <h3 className={styles.sectionTitle}>Priorities</h3>
 
                 <ul className={styles.taskList}>
-                  {taskState.map((task, index) => (
+                  {month.tasks.map((task) => (
                     <li
-                      key={task.text}
+                      key={task.id}
                       className={`${styles.taskItem} ${task.completed ? styles.taskItemCompleted : ""}`}
                     >
-                      <button
-                        type="button"
-                        className={styles.taskCheckbox}
-                        onClick={() =>
-                          setTaskState((current) =>
-                            current.map((entry, entryIndex) =>
-                              entryIndex === index
-                                ? { ...entry, completed: !entry.completed }
-                                : entry,
-                            ),
-                          )
-                        }
-                        aria-label={`Toggle task ${index + 1}`}
-                      />
+                      <div className={styles.taskCheckbox} aria-hidden="true" />
                       <div className={styles.taskContent}>
                         <div className={styles.taskText}>{task.text}</div>
                         {task.meta.length > 0 ? (
@@ -165,9 +142,7 @@ export function PlannerShowcase() {
                   ))}
 
                   <div className={styles.handwriting}>
-                    Remember to ask Sarah about the new ceramic vases...
-                    <br />
-                    The matte finish works beautifully with the soft pinks.
+                    {month.notes}
                   </div>
                 </div>
 

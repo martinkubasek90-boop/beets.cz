@@ -69,6 +69,7 @@ export default function TomasPernikPage() {
             <nav className={styles.nav}>
               <a href="#priority">Priority</a>
               <a href="#profil">Profil</a>
+              <a href="/tomas-pernik/admin">Admin</a>
               <a href="#kontakt">Kontakt</a>
             </nav>
           </header>

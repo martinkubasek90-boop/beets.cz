@@ -9,16 +9,16 @@
   --tp-text: #004494;
   --tp-text-soft: rgba(0, 68, 148, 0.76);
   --tp-shadow: 0 24px 60px rgba(3, 78, 162, 0.12);
-  --planner-paper-main: #fdfbf9;
-  --planner-paper-shadow: #e8e4df;
-  --planner-desk-bg: #eae6e1;
-  --planner-ink-dark: #171717;
-  --planner-ink-medium: #5a5652;
-  --planner-ink-light: #a39e99;
-  --planner-ink-faint: rgba(23, 23, 23, 0.08);
-  --planner-accent-rose: #ba6d73;
-  --planner-accent-blush: #f1baba;
-  --planner-accent-blush-faint: rgba(241, 186, 186, 0.3);
+  --planner-paper-main: #fcfeff;
+  --planner-paper-shadow: #dce8f4;
+  --planner-desk-bg: #eef4fb;
+  --planner-ink-dark: #12345f;
+  --planner-ink-medium: #4c6791;
+  --planner-ink-light: #8ca5c6;
+  --planner-ink-faint: rgba(18, 52, 95, 0.08);
+  --planner-accent-rose: #034ea2;
+  --planner-accent-blush: #a9cbf5;
+  --planner-accent-blush-faint: rgba(3, 78, 162, 0.12);
   --planner-ring-metal: linear-gradient(90deg, #d5d1cc 0%, #fcfbfa 30%, #b8b3ae 80%, #9e9a95 100%);
   --planner-ring-shadow: 0 3px 4px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
   color: var(--tp-text);
@@ -103,13 +103,16 @@
 }
 
 .brandLogo {
-  width: 88px;
+  width: 112px;
   height: auto;
   display: block;
+  filter: brightness(0) saturate(100%) invert(100%);
+  opacity: 0.98;
 }
 
 .brandText {
   font-size: 0.98rem;
+  font-weight: 700;
   color: var(--tp-primary-deep);
 }
 
@@ -213,6 +216,18 @@
   background: var(--tp-primary);
   color: #ffffff;
   box-shadow: 0 18px 36px rgba(3, 78, 162, 0.18);
+}
+
+.primaryButton,
+.primaryButton:visited,
+.primaryButton:hover,
+.primaryButton:active {
+  color: #ffffff;
+}
+
+.primaryButton svg {
+  color: #ffffff;
+  stroke: currentColor;
 }
 
 .secondaryButton {
@@ -368,7 +383,7 @@
   position: relative;
   padding: 4.5rem 4rem;
   background-color: var(--planner-desk-bg);
-  background-image: radial-gradient(circle at 50% 0%, #f5f2ef 0%, var(--planner-desk-bg) 100%);
+  background-image: radial-gradient(circle at 50% 0%, #f8fbff 0%, var(--planner-desk-bg) 100%);
   perspective: 2000px;
 }
 
@@ -435,7 +450,7 @@
   bottom: -4px;
   width: 100%;
   border-radius: 4px 12px 12px 4px;
-  background: linear-gradient(to right, transparent 98%, #eae5df 98%, #f2efea 99%, #dcd7d0 100%);
+  background: linear-gradient(to right, transparent 98%, #dde8f4 98%, #eef5fc 99%, #cfdcec 100%);
   box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
   z-index: -1;
 }
@@ -450,12 +465,12 @@
 
 .plannerPageLeft {
   border-radius: 4px 0 0 4px;
-  background: linear-gradient(to right, var(--planner-paper-main) 85%, #f4f1ed 95%, #ebe7e1 100%);
+  background: linear-gradient(to right, var(--planner-paper-main) 85%, #f1f7fd 95%, #e8f1fb 100%);
 }
 
 .plannerPageRight {
   border-radius: 0 12px 12px 0;
-  background: linear-gradient(to left, var(--planner-paper-main) 85%, #f4f1ed 95%, #ebe7e1 100%);
+  background: linear-gradient(to left, var(--planner-paper-main) 85%, #f1f7fd 95%, #e8f1fb 100%);
 }
 
 .dateHeader {

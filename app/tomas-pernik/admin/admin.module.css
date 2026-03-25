@@ -1,0 +1,222 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%);
+  color: #0d3f80;
+  padding: 2rem 0 4rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.shell {
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.kicker {
+  margin: 0 0 0.6rem;
+  color: #034ea2;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  line-height: 0.95;
+}
+
+.lead {
+  max-width: 64ch;
+  color: rgba(13, 63, 128, 0.78);
+  line-height: 1.7;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primaryButton,
+.secondaryButton,
+.smallButton,
+.removeButton,
+.monthTab {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 48px;
+  padding: 0.8rem 1.15rem;
+  font-weight: 700;
+}
+
+.primaryButton {
+  background: #034ea2;
+  color: #fff;
+}
+
+.secondaryButton {
+  background: #fff;
+  color: #034ea2;
+  border-color: rgba(3, 78, 162, 0.18);
+}
+
+.monthTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.monthTab {
+  min-width: 72px;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: #034ea2;
+  border-color: rgba(3, 78, 162, 0.14);
+  font-weight: 700;
+}
+
+.monthTabActive {
+  background: #034ea2;
+  color: #fff;
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  color: rgba(13, 63, 128, 0.74);
+  font-size: 0.95rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid rgba(3, 78, 162, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1.2rem;
+  box-shadow: 0 18px 40px rgba(3, 78, 162, 0.08);
+}
+
+.card h2 {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.field span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: rgba(13, 63, 128, 0.78);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(3, 78, 162, 0.16);
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  color: #0d3f80;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.inlineFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.subcard {
+  display: grid;
+  gap: 0.75rem;
+  border-radius: 16px;
+  background: #f6faff;
+  padding: 0.95rem;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #0d3f80;
+  font-size: 0.95rem;
+}
+
+.smallButton {
+  padding: 0.55rem 0.8rem;
+  background: rgba(3, 78, 162, 0.08);
+  color: #034ea2;
+  font-weight: 700;
+}
+
+.removeButton {
+  justify-self: start;
+  padding: 0.45rem 0.7rem;
+  background: rgba(3, 78, 162, 0.08);
+  color: #034ea2;
+}
+
+@media (max-width: 900px) {
+  .header,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    align-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .shell {
+    width: min(100% - 1rem, 1180px);
+  }
+
+  .inlineFields {
+    grid-template-columns: 1fr;
+  }
+}
