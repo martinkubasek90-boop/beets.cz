@@ -91,9 +91,17 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isYouTubeActive, setIsYouTubeActive] = useState(false);
+  const [youtubePosterIndex, setYouTubePosterIndex] = useState(0);
   const youtubeEmbedUrl = getYouTubeEmbedUrl(src);
   const youtubeVideoId = getYouTubeVideoId(src);
-  const youtubePoster = youtubeVideoId ? `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg` : null;
+  const youtubePosterCandidates = youtubeVideoId
+    ? [
+        `https://i.ytimg.com/vi/${youtubeVideoId}/maxresdefault.jpg`,
+        `https://i.ytimg.com/vi/${youtubeVideoId}/sddefault.jpg`,
+        `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg`,
+      ]
+    : [];
+  const youtubePoster = youtubePosterCandidates[youtubePosterIndex] ?? null;
 
   useEffect(() => {
     const media = window.matchMedia("(pointer: coarse)");
@@ -105,6 +113,10 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    setYouTubePosterIndex(0);
+  }, [src]);
 
   const queueHideControls = () => {
     if (isTouchDevice || !isPlaying) return;
@@ -205,6 +217,11 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
                   src={youtubePoster}
                   alt={title}
                   className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.01]"
+                  onError={() => {
+                    setYouTubePosterIndex((current) =>
+                      current < youtubePosterCandidates.length - 1 ? current + 1 : current,
+                    );
+                  }}
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-slate-950 text-white">
