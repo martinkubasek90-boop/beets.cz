@@ -24,6 +24,18 @@ export const metadata: Metadata = {
   title: "Tomáš Perník | Vimperk potřebuje energii, která zůstává doma",
   description:
     "Osobní web Tomáše Perníka pro komunální volby 2026 ve Vimperku. Priority, agenda, novinky i prostor pro přímý kontakt.",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      noarchive: true,
+      nosnippet: true,
+    },
+  },
 };
 
 export const dynamic = "force-dynamic";

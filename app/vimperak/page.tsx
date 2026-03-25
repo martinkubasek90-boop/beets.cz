@@ -29,6 +29,18 @@ export const metadata: Metadata = {
   title: "MůjVimperk | Digitální aplikace pro město, služby i komunitu",
   description:
     "Světlá produktová landing page pro aplikaci MůjVimperk. Živý zpravodaj, AI asistent, hlášení závad, adresář služeb a komunitní funkce na jednom místě.",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      noarchive: true,
+      nosnippet: true,
+    },
+  },
 };
 
 const mainFeatures = [

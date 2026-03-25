@@ -5,9 +5,41 @@ import { type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const host = request.headers.get("host")?.split(":")[0]?.toLowerCase() || "";
   const pathname = request.nextUrl.pathname;
+  const gateCookie = request.cookies.get("tp_gate")?.value || "";
+  const gateHash = "4c710d0d9f52599d60e5af2fae3072c21247f47947ed1bef513c3e16f6a4531f";
+  const isGateOk = gateCookie === gateHash;
+  const isGatePath = pathname === "/tomas-pernik/gate" || pathname === "/gate";
+  const isGateApi = pathname === "/api/tomas-pernik/gate";
+  const isTomasDomain = host === "tomaspernik.cz" || host === "www.tomaspernik.cz";
+  const isTomasSitePath =
+    pathname === "/vimperak" ||
+    pathname.startsWith("/tomas-pernik") ||
+    pathname.startsWith("/api/tomas-pernik/") ||
+    (isTomasDomain &&
+      (pathname === "/" || pathname === "/admin" || pathname === "/admin/news"));
 
-  if (host === "tomaspernik.cz" || host === "www.tomaspernik.cz") {
+  if (isTomasSitePath && !isGateOk && !isGatePath && !isGateApi) {
+    if (pathname.startsWith("/api/tomas-pernik/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const gateUrl = request.nextUrl.clone();
+    const nextTarget = pathname || "/";
+    if (host === "tomaspernik.cz" || host === "www.tomaspernik.cz") {
+      gateUrl.pathname = "/gate";
+    } else {
+      gateUrl.pathname = "/tomas-pernik/gate";
+    }
+    gateUrl.searchParams.set("next", nextTarget);
+    return NextResponse.redirect(gateUrl);
+  }
+
+  if (isTomasDomain) {
     const url = request.nextUrl.clone();
+
+    if (pathname === "/gate") {
+      url.pathname = "/tomas-pernik/gate";
+      return NextResponse.rewrite(url);
+    }
 
     if (pathname === "/tomas-pernik") {
       url.pathname = "/";
