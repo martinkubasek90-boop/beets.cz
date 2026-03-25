@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     "Profilová landing page pro Tomáše Perníka v light brandingu ODS s vlastním retrofuturistickým 3D pozadím.",
 };
 
+export const dynamic = "force-dynamic";
+
 const priorities = [
   {
     title: "Dostupná komunikace",
