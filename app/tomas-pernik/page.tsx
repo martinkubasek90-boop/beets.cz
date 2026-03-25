@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Lora, Raleway } from "next/font/google";
-import { ArrowRight, ChevronRight, Mail, MapPin, Users } from "lucide-react";
+import { ArrowRight, Mail, MapPin, Users } from "lucide-react";
 import { NewsSection } from "@/components/tomas-pernik/news-section";
 import { PlannerShowcase } from "@/components/tomas-pernik/planner-showcase";
 import { RetrofuturisticBackground } from "@/components/tomas-pernik/retrofuturistic-background";
@@ -47,13 +47,6 @@ const priorities = [
     title: "Šumava jako příležitost",
     text: "Vimperk má využít svou polohu i partnerství tak, aby z turismu a investic netěžila jen mapa, ale i místní lidé a podnikání.",
   },
-];
-
-const pillars = [
-  "Vimperák, který chce, aby mladí zůstali",
-  "pozitivní a konkrétní lokální politika",
-  "rychlý přístup k novinkám, agendě a kontaktu",
-  "obsah připravený pro kampaň do voleb 2026",
 ];
 
 export default function TomasPernikPage() {
@@ -116,30 +109,22 @@ export default function TomasPernikPage() {
                   <Mail size={16} />
                   novinky, agenda a kontakt na jednom místě
                 </li>
+                <li>
+                  <ArrowRight size={16} />
+                  Facebook a Instagram pro průběžnou komunikaci
+                </li>
               </ul>
             </div>
 
-            <aside className={styles.heroCard}>
-              <div className={styles.heroPortraitWrap}>
-                <div className={styles.heroPortrait}>
-                  <img className={styles.heroPortraitImage} src={portraitUrl} alt="Tomáš Perník" />
-                  <div className={styles.heroPortraitBadge}>Tom Pernik (@tompernik)</div>
+            <aside className={styles.heroVisual}>
+              <div className={styles.heroPortrait}>
+                <img className={styles.heroPortraitImage} src={portraitUrl} alt="Tomáš Perník" />
+                <div className={styles.heroPortraitBadge}>Tomáš Perník | Vimperk 2026</div>
+                <div className={styles.heroPortraitCaption}>
+                  <p className={styles.cardLabel}>Positioning</p>
+                  <p>Vimperák, který chce, aby mladí zůstali a město se posouvalo dál.</p>
                 </div>
               </div>
-              <p className={styles.cardLabel}>Positioning</p>
-              <h2>Vimperák, který chce, aby mladí zůstali a město se posouvalo dál</h2>
-              <p>
-                Nejde o politiku od stolu. Hlavní linka kampaně stojí na místní zkušenosti,
-                dostupném bydlení, živém centru, rozumné dopravě a lepším využití potenciálu Šumavy.
-              </p>
-              <ul className={styles.cardList}>
-                {pillars.map((item) => (
-                  <li key={item}>
-                    <ChevronRight size={16} />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
             </aside>
           </div>
         </div>
