@@ -9,6 +9,18 @@
   --tp-text: #004494;
   --tp-text-soft: rgba(0, 68, 148, 0.76);
   --tp-shadow: 0 24px 60px rgba(3, 78, 162, 0.12);
+  --planner-paper-main: #fdfbf9;
+  --planner-paper-shadow: #e8e4df;
+  --planner-desk-bg: #eae6e1;
+  --planner-ink-dark: #171717;
+  --planner-ink-medium: #5a5652;
+  --planner-ink-light: #a39e99;
+  --planner-ink-faint: rgba(23, 23, 23, 0.08);
+  --planner-accent-rose: #ba6d73;
+  --planner-accent-blush: #f1baba;
+  --planner-accent-blush-faint: rgba(241, 186, 186, 0.3);
+  --planner-ring-metal: linear-gradient(90deg, #d5d1cc 0%, #fcfbfa 30%, #b8b3ae 80%, #9e9a95 100%);
+  --planner-ring-shadow: 0 3px 4px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
   color: var(--tp-text);
   background:
     radial-gradient(circle at top left, rgba(95, 166, 255, 0.18), transparent 26%),
@@ -341,6 +353,477 @@
   border-radius: 22px;
 }
 
+.plannerSection {
+  position: relative;
+  padding: 2rem 0 5rem;
+}
+
+.plannerHost {
+  overflow: hidden;
+  border-radius: 28px;
+  box-shadow: 0 28px 70px rgba(73, 74, 76, 0.12);
+}
+
+.deskSurface {
+  position: relative;
+  padding: 4.5rem 4rem;
+  background-color: var(--planner-desk-bg);
+  background-image: radial-gradient(circle at 50% 0%, #f5f2ef 0%, var(--planner-desk-bg) 100%);
+  perspective: 2000px;
+}
+
+.plannerTabs {
+  position: absolute;
+  top: 6rem;
+  right: 1.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 1;
+}
+
+.plannerTab {
+  border: 1px solid var(--planner-paper-shadow);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  background: var(--planner-paper-main);
+  padding: 16px 10px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  color: var(--planner-ink-light);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.plannerTabActive {
+  background: #fff;
+  color: var(--planner-accent-rose);
+  font-weight: 600;
+  transform: translateX(4px);
+  box-shadow: 6px 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.plannerBook {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(100%, 1000px);
+  min-height: 700px;
+  margin: 0 auto;
+  border-radius: 4px 12px 12px 4px;
+  background: var(--planner-paper-main);
+  box-shadow:
+    -1px 0 2px rgba(0, 0, 0, 0.02),
+    1px 0 2px rgba(0, 0, 0, 0.02),
+    0 20px 40px rgba(0, 0, 0, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.04),
+    20px 20px 60px rgba(0, 0, 0, 0.05),
+    inset -2px 0 4px rgba(0, 0, 0, 0.02);
+  transform-style: preserve-3d;
+}
+
+.plannerBook::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: -6px;
+  bottom: -4px;
+  width: 100%;
+  border-radius: 4px 12px 12px 4px;
+  background: linear-gradient(to right, transparent 98%, #eae5df 98%, #f2efea 99%, #dcd7d0 100%);
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.05);
+  z-index: -1;
+}
+
+.plannerPage {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: var(--planner-paper-main);
+  padding: 48px 56px;
+}
+
+.plannerPageLeft {
+  border-radius: 4px 0 0 4px;
+  background: linear-gradient(to right, var(--planner-paper-main) 85%, #f4f1ed 95%, #ebe7e1 100%);
+}
+
+.plannerPageRight {
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(to left, var(--planner-paper-main) 85%, #f4f1ed 95%, #ebe7e1 100%);
+}
+
+.dateHeader {
+  margin-bottom: 32px;
+}
+
+.metaTop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  color: var(--planner-accent-rose);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.metaLine {
+  height: 1px;
+  flex: 1;
+  background: var(--planner-accent-blush-faint);
+}
+
+.dayTitle {
+  color: var(--planner-ink-dark);
+  font-family: var(--tp-font-serif), Georgia, serif;
+  font-size: 2.5rem;
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.dateSubtitle {
+  margin-top: 4px;
+  color: var(--planner-ink-medium);
+  font-family: var(--tp-font-serif), Georgia, serif;
+  font-size: 1.2rem;
+  font-style: italic;
+}
+
+.scheduleContainer {
+  position: relative;
+  margin-top: 24px;
+}
+
+.timeBlock {
+  position: relative;
+  display: flex;
+  height: 48px;
+}
+
+.timeLabel {
+  width: 50px;
+  transform: translateY(-8px);
+  padding-right: 16px;
+  text-align: right;
+  color: var(--planner-ink-light);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.75rem;
+}
+
+.timeLine {
+  flex: 1;
+  border-top: 1px solid var(--planner-ink-faint);
+}
+
+.eventPrimary,
+.eventMuted {
+  position: absolute;
+  left: 66px;
+  right: 20px;
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+  color: var(--planner-ink-dark);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.85rem;
+  box-shadow: 0 2px 5px rgba(186, 109, 115, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.eventPrimary {
+  border-left: 3px solid var(--planner-accent-rose);
+  background: var(--planner-accent-blush-faint);
+}
+
+.eventMuted {
+  border-left: 3px solid var(--planner-ink-light);
+  background: transparent;
+}
+
+.eventPrimary:hover,
+.eventMuted:hover {
+  transform: translateX(4px);
+}
+
+.eventTime,
+.eventTimeMuted {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.eventTime {
+  color: var(--planner-accent-rose);
+}
+
+.eventTimeMuted {
+  color: var(--planner-ink-medium);
+}
+
+.currentTimeIndicator {
+  position: absolute;
+  top: 130px;
+  left: 45px;
+  right: 0;
+  z-index: 10;
+  height: 1px;
+  background: var(--planner-accent-rose);
+}
+
+.currentTimeIndicator::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--planner-accent-rose);
+}
+
+.spine {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  height: 100%;
+  width: 30px;
+  transform: translateX(-50%);
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 40px 0;
+}
+
+.ringGroup {
+  position: relative;
+  height: 24px;
+  width: 100%;
+}
+
+.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  height: 8px;
+  width: 48px;
+  transform: translate(-50%, -50%);
+  border-radius: 4px;
+  background: var(--planner-ring-metal);
+  box-shadow: var(--planner-ring-shadow);
+}
+
+.hole {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  height: 14px;
+  width: 14px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--planner-desk-bg);
+  box-shadow: inset 2px 2px 4px rgba(0, 0, 0, 0.2), inset -1px -1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.holeLeft {
+  left: -18px;
+}
+
+.holeRight {
+  right: -18px;
+}
+
+.sectionTitle {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 20px;
+  color: var(--planner-ink-dark);
+  font-family: var(--tp-font-serif), Georgia, serif;
+  font-size: 1.4rem;
+}
+
+.sectionTitle::after {
+  content: "";
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  z-index: -1;
+  height: 8px;
+  width: 100%;
+  background: var(--planner-accent-blush-faint);
+}
+
+.taskList {
+  margin-bottom: 48px;
+  list-style: none;
+}
+
+.taskItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid var(--planner-ink-faint);
+  padding: 12px 0;
+}
+
+.taskCheckbox {
+  position: relative;
+  margin-top: 2px;
+  height: 18px;
+  width: 18px;
+  flex-shrink: 0;
+  border: 1px solid var(--planner-ink-light);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.taskCheckbox:hover {
+  border-color: var(--planner-accent-rose);
+}
+
+.taskItemCompleted .taskCheckbox {
+  border-color: var(--planner-accent-rose);
+  background: var(--planner-accent-rose);
+}
+
+.taskItemCompleted .taskCheckbox::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 7px;
+  height: 7px;
+  width: 3px;
+  transform: rotate(45deg);
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+}
+
+.taskContent {
+  flex: 1;
+}
+
+.taskText {
+  color: var(--planner-ink-dark);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.taskItemCompleted .taskText {
+  color: var(--planner-ink-light);
+  text-decoration: line-through;
+  text-decoration-color: var(--planner-accent-blush);
+}
+
+.taskMeta {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  color: var(--planner-ink-light);
+  font-family: var(--tp-font-sans), system-ui, sans-serif;
+  font-size: 0.7rem;
+}
+
+.tag {
+  border-radius: 10px;
+  background: var(--planner-desk-bg);
+  padding: 2px 8px;
+  font-size: 0.6rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.notesArea {
+  position: relative;
+  height: 250px;
+  padding-top: 8px;
+}
+
+.ruledLine {
+  height: 32px;
+  border-bottom: 1px dashed var(--planner-ink-faint);
+}
+
+.handwriting {
+  position: absolute;
+  top: 40px;
+  left: 10px;
+  color: var(--planner-ink-medium);
+  font-family: var(--tp-font-serif), Georgia, serif;
+  font-size: 1.1rem;
+  font-style: italic;
+  line-height: 32px;
+}
+
+.watermark {
+  pointer-events: none;
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  width: 250px;
+  transform: rotate(-15deg);
+  color: var(--planner-accent-rose);
+  opacity: 0.04;
+}
+
+.cornerDeco {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 4px;
+}
+
+.cornerDot {
+  height: 4px;
+  width: 4px;
+  border-radius: 50%;
+  background: var(--planner-accent-blush);
+}
+
+.cornerDotFaint {
+  opacity: 0.5;
+}
+
+.pageCurlTarget {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  height: 100px;
+  width: 100px;
+}
+
+.pageCurl {
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  width: 0;
+  border-top-left-radius: 10px;
+  background: linear-gradient(135deg, transparent 45%, #fff 50%, #e0dcd7 55%, transparent 60%);
+  box-shadow: -4px -4px 10px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.pageCurlTarget:hover + .pageCurl {
+  height: 60px;
+  width: 60px;
+}
+
 @media (max-width: 980px) {
   .hero {
     min-height: auto;
@@ -364,6 +847,26 @@
 
   .heroCopy {
     padding: 5.5rem 0 0;
+  }
+
+  .deskSurface {
+    padding: 3rem 1.5rem 4.5rem;
+  }
+
+  .plannerBook {
+    min-height: auto;
+    flex-direction: column;
+  }
+
+  .plannerBook::after,
+  .spine,
+  .plannerTabs {
+    display: none;
+  }
+
+  .plannerPageLeft,
+  .plannerPageRight {
+    border-radius: 12px;
   }
 }
 
@@ -402,5 +905,28 @@
   .heroCard {
     padding: 1.4rem;
     border-radius: 24px;
+  }
+
+  .deskSurface {
+    padding: 1.25rem;
+  }
+
+  .plannerPage {
+    padding: 28px 20px;
+  }
+
+  .dayTitle {
+    font-size: 2rem;
+  }
+
+  .timeLabel {
+    width: 42px;
+    padding-right: 10px;
+  }
+
+  .eventPrimary,
+  .eventMuted {
+    left: 54px;
+    right: 8px;
   }
 }

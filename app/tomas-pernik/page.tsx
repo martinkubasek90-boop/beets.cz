@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Lora, Raleway } from "next/font/google";
 import { ArrowRight, ChevronRight, Mail, MapPin, Users } from "lucide-react";
+import { PlannerShowcase } from "@/components/tomas-pernik/planner-showcase";
 import { RetrofuturisticBackground } from "@/components/tomas-pernik/retrofuturistic-background";
 import styles from "./tomas-pernik.module.css";
+
+const lora = Lora({
+  subsets: ["latin"],
+  variable: "--tp-font-serif",
+  weight: ["400", "500"],
+});
+
+const raleway = Raleway({
+  subsets: ["latin"],
+  variable: "--tp-font-sans",
+  weight: ["300", "400", "500", "600"],
+});
 
 export const metadata: Metadata = {
   title: "Tomáš Perník | Profilová landing page",
@@ -34,7 +48,7 @@ const pillars = [
 
 export default function TomasPernikPage() {
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${lora.variable} ${raleway.variable}`}>
       <section className={styles.hero}>
         <div className={styles.heroCanvas} aria-hidden="true">
           <RetrofuturisticBackground />
@@ -162,6 +176,8 @@ export default function TomasPernikPage() {
           </div>
         </div>
       </section>
+
+      <PlannerShowcase />
 
       <section id="kontakt" className={styles.section}>
         <div className={styles.shell}>
