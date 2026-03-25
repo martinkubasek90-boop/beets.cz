@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { ChevronDown } from 'lucide-react';
 import { defaultBessAdminConfig, type BessAdminConfig } from '@/lib/bess-admin-config';
 
 type IngestDiscoveryPayload = {
@@ -9,6 +10,125 @@ type IngestDiscoveryPayload = {
   urls?: string[];
   totalUrls?: number;
 };
+
+const utilizationProfiles = {
+  stable: { label: 'Stabilní výnos', fcrShare: 0.8 },
+  combined: { label: 'Kombinovaný', fcrShare: 0.5 },
+  arbitrage: { label: 'Dynamická arbitráž', fcrShare: 0.0 },
+} as const;
+
+function formatCurrency(value: number) {
+  if (!Number.isFinite(value)) return '—';
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} mil. Kč`;
+  return `${Math.round(value).toLocaleString('cs-CZ')} Kč`;
+}
+
+function formatNumber(value: number, digits = 1) {
+  return Number(value || 0).toLocaleString('cs-CZ', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function calculateAdminPreview(config: BessAdminConfig) {
+  const calc = config.calculatorDefaults;
+  const tuning = config.modelTuning;
+  const profile = utilizationProfiles[calc.utilizationType];
+  const capacityMWh = calc.capacity / 1000;
+  const powerMW = capacityMWh;
+  const batteryModules = capacityMWh * tuning.batteryCostPerMwh;
+  const pcs = powerMW * tuning.pcsCostPerMw;
+  const fixedCosts =
+    tuning.gridConnectionCost +
+    tuning.emsCost +
+    tuning.engineeringCost +
+    tuning.constructionCost +
+    tuning.fireSafetyCost;
+  const rawCapex = Math.round((batteryModules + pcs + fixedCosts) / 1000) * 1000;
+  const effectiveCapex = rawCapex * (1 - calc.subsidyPct / 100);
+
+  const fcrNetFactor = Math.max(0, 1 - tuning.aggregatorFeePercent / 100);
+  const fcrRevenue = powerMW * 1000 * profile.fcrShare * 12 * calc.advancedSettings.fcrPrice * fcrNetFactor;
+  const maxByConsumption = calc.annualConsumption * 1000 * 0.35;
+  const maxByCycles = calc.capacity * tuning.cyclesPerYear;
+  const usedEnergy = Math.min(maxByConsumption, maxByCycles);
+  const arbitrageRevenue = usedEnergy * calc.advancedSettings.spread * tuning.roundtripEfficiency;
+  const annualEnergyMWh = usedEnergy / 1000;
+  const actualSelfConsumption = Math.min(annualEnergyMWh * 0.25, calc.annualConsumption * 0.1);
+  const selfSavings = actualSelfConsumption * calc.electricityPrice * 1000;
+  const grossRevenue = fcrRevenue + arbitrageRevenue + selfSavings;
+
+  let annualLoanCost = 0;
+  if (calc.financing === 'bank' && calc.loanSharePct > 0) {
+    const loanAmount = rawCapex * (calc.loanSharePct / 100);
+    const r = calc.loanInterestRate / 100;
+    const n = calc.loanTermYears;
+    annualLoanCost = r === 0 ? loanAmount / n : (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  }
+
+  const omCost = rawCapex * (calc.advancedSettings.omCosts / 100);
+  const netRevenue = grossRevenue - omCost - annualLoanCost;
+  const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
+  const horizon = Math.max(1, Math.round(tuning.projectLifetimeYears));
+  const yearlyRevenues = Array.from({ length: horizon }, (_, i) => netRevenue * Math.pow(1 - calc.advancedSettings.degradation / 100, i));
+  const totalProfit = yearlyRevenues.reduce((sum, yearRevenue) => sum + yearRevenue, 0) - effectiveCapex;
+  const selfSavingsShare = grossRevenue > 0 ? (selfSavings / grossRevenue) * 100 : 0;
+  const electricityPricePlusOne = actualSelfConsumption * 1000;
+
+  return {
+    profile,
+    capacityMWh,
+    powerMW,
+    batteryModules,
+    pcs,
+    fixedCosts,
+    rawCapex,
+    effectiveCapex,
+    fcrRevenue,
+    maxByConsumption,
+    maxByCycles,
+    usedEnergy,
+    arbitrageRevenue,
+    actualSelfConsumption,
+    selfSavings,
+    grossRevenue,
+    annualLoanCost,
+    omCost,
+    netRevenue,
+    simplePayback,
+    yearlyRevenues,
+    totalProfit,
+    selfSavingsShare,
+    electricityPricePlusOne,
+  };
+}
+
+function AdminAccordionSection({
+  title,
+  description,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  description?: string;
+  defaultOpen?: boolean;
+  children: any;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 p-4">
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold text-slate-200">{title}</h2>
+          {description ? <p className="text-xs text-slate-400">{description}</p> : null}
+        </div>
+        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-400 transition-transform group-open:rotate-180">
+          <ChevronDown className="h-4 w-4" />
+        </span>
+      </summary>
+      <div className="border-t border-slate-800 p-4">{children}</div>
+    </details>
+  );
+}
 
 export default function KalkulackaAdminPage() {
   const [config, setConfig] = useState<BessAdminConfig>(defaultBessAdminConfig);
@@ -54,6 +174,7 @@ export default function KalkulackaAdminPage() {
     if (kbToken.trim()) headers.Authorization = `Bearer ${kbToken.trim()}`;
     return headers;
   }, [kbToken]);
+  const modelPreview = useMemo(() => calculateAdminPreview(config), [config]);
 
   const embedBaseUrl =
     typeof window !== 'undefined' ? `${window.location.origin}/kalkulacka` : 'https://beets.cz/kalkulacka';
@@ -433,8 +554,11 @@ export default function KalkulackaAdminPage() {
           </label>
         </div>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-200">Kalkulačka – výchozí hodnoty</h2>
+        <AdminAccordionSection
+          title="Kalkulačka – výchozí hodnoty"
+          description="Defaultní vstupy pro veřejnou kalkulačku."
+          defaultOpen
+        >
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               ['Kapacita kWh', 'capacity'],
@@ -526,10 +650,12 @@ export default function KalkulackaAdminPage() {
               </select>
             </div>
           </div>
-        </div>
+        </AdminAccordionSection>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-200">Python model tuning (výpočetní jádro)</h2>
+        <AdminAccordionSection
+          title="Python model tuning (výpočetní jádro)"
+          description="CAPEX, cykly, účinnost a další parametry napojené na model."
+        >
           <p className="text-xs text-slate-400">
             Tyto parametry jsou napojené na výpočet CAPEX/FCR/arbitráže v kalkulačce.
           </p>
@@ -567,10 +693,211 @@ export default function KalkulackaAdminPage() {
               </div>
             ))}
           </div>
-        </div>
+        </AdminAccordionSection>
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-200">Embed skript pro externí weby</h2>
+        <AdminAccordionSection
+          title="Jak kalkulačka přesně funguje"
+          description="Interní vysvětlení modelu a FAQ pro prezentaci ve firmě."
+        >
+          <div className="space-y-2">
+            <p className="text-sm text-slate-400">
+              Tohle je interní vysvětlení modelu pro prezentaci ve firmě. Vychází přímo z logiky v BESS kalkulačce a níže
+              je živý příklad z aktuální admin konfigurace.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-3">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-1">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Výchozí scénář</div>
+              <div className="text-lg font-semibold text-white">{utilizationProfiles[config.calculatorDefaults.utilizationType].label}</div>
+              <div className="text-sm text-slate-400">
+                {config.calculatorDefaults.capacity.toLocaleString('cs-CZ')} kWh • {config.calculatorDefaults.annualConsumption.toLocaleString('cs-CZ')} MWh/rok
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-1">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Roční čistý výnos</div>
+              <div className="text-lg font-semibold text-emerald-400">{formatCurrency(modelPreview.netRevenue)}</div>
+              <div className="text-sm text-slate-400">Po O&amp;M a po splátkách úvěru</div>
+            </div>
+            <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-1">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Prostá návratnost</div>
+              <div className="text-lg font-semibold text-blue-400">{formatNumber(modelPreview.simplePayback, 1)} let</div>
+              <div className="text-sm text-slate-400">Čistý CAPEX / čistý výnos roku 1</div>
+            </div>
+          </div>
+
+          <div className="grid xl:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-white">1. Jak se počítá investice</h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p>
+                  <span className="text-slate-500">Kapacita:</span> {formatNumber(modelPreview.capacityMWh, 2)} MWh
+                  <span className="text-slate-500"> | Výkon:</span> {formatNumber(modelPreview.powerMW, 2)} MW
+                </p>
+                <p>
+                  <span className="text-slate-500">Bateriové moduly:</span> {formatCurrency(modelPreview.batteryModules)}
+                </p>
+                <p>
+                  <span className="text-slate-500">PCS:</span> {formatCurrency(modelPreview.pcs)}
+                </p>
+                <p>
+                  <span className="text-slate-500">Fixní náklady:</span> {formatCurrency(modelPreview.fixedCosts)}
+                </p>
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3 text-xs text-slate-300">
+                  <div>Raw CAPEX = baterie + PCS + připojení + EMS + engineering + construction + fire safety</div>
+                  <div className="mt-1 text-slate-500">
+                    {formatCurrency(modelPreview.rawCapex)} = {formatCurrency(modelPreview.batteryModules)} + {formatCurrency(modelPreview.pcs)} + {formatCurrency(modelPreview.fixedCosts)}
+                  </div>
+                  <div className="mt-2">Čistý CAPEX po dotaci = Raw CAPEX × (1 − dotace)</div>
+                  <div className="mt-1 text-slate-500">
+                    {formatCurrency(modelPreview.effectiveCapex)} při dotaci {config.calculatorDefaults.subsidyPct} %
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-white">2. Jak se počítají roční výnosy</h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p>
+                  <span className="text-slate-500">FCR výnos:</span> {formatCurrency(modelPreview.fcrRevenue)}
+                </p>
+                <p>
+                  <span className="text-slate-500">Arbitráž:</span> {formatCurrency(modelPreview.arbitrageRevenue)}
+                </p>
+                <p>
+                  <span className="text-slate-500">Úspora z vlastní spotřeby:</span> {formatCurrency(modelPreview.selfSavings)}
+                </p>
+                <p>
+                  <span className="text-slate-500">Hrubý výnos celkem:</span> {formatCurrency(modelPreview.grossRevenue)}
+                </p>
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3 text-xs text-slate-300 space-y-1">
+                  <div>
+                    Využitelná energie = min(spotřeba × 35 %, kapacita × cykly/rok)
+                  </div>
+                  <div className="text-slate-500">
+                    min({formatNumber(modelPreview.maxByConsumption, 0)} kWh, {formatNumber(modelPreview.maxByCycles, 0)} kWh) = {formatNumber(modelPreview.usedEnergy, 0)} kWh/rok
+                  </div>
+                  <div className="pt-1">
+                    Úspora z ceny elektřiny se počítá jen z omezené části energie, ne z celého projektu.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid xl:grid-cols-2 gap-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-white">3. Co jde dolů z výnosu</h3>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">O&amp;M</div>
+                  <div className="mt-1 text-base font-semibold text-white">{formatCurrency(modelPreview.omCost)}</div>
+                  <div className="mt-1 text-xs text-slate-500">{config.calculatorDefaults.advancedSettings.omCosts} % z raw CAPEX</div>
+                </div>
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Splátka úvěru</div>
+                  <div className="mt-1 text-base font-semibold text-white">{formatCurrency(modelPreview.annualLoanCost)}</div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {config.calculatorDefaults.financing === 'bank'
+                      ? `${config.calculatorDefaults.loanSharePct} % úvěr, ${config.calculatorDefaults.loanInterestRate} % p.a., ${config.calculatorDefaults.loanTermYears} let`
+                      : 'Vlastní kapitál, bez úvěru'}
+                  </div>
+                </div>
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3">
+                  <div className="text-xs uppercase tracking-wide text-slate-500">Čistý výnos roku 1</div>
+                  <div className="mt-1 text-base font-semibold text-emerald-400">{formatCurrency(modelPreview.netRevenue)}</div>
+                  <div className="mt-1 text-xs text-slate-500">Hrubý výnos − O&amp;M − úvěr</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-white">4. Návratnost, degradace a dlouhodobý zisk</h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p>
+                  Prostá návratnost počítáme jako <span className="text-white">čistý CAPEX / čistý výnos roku 1</span>.
+                </p>
+                <p>
+                  Degradace se promítá do dalších let přes faktor <span className="text-white">(1 − degradace)^rok</span>, takže ovlivňuje IRR a kumulovaný zisk, ale
+                  ne přímo prostou návratnost.
+                </p>
+                <div className="rounded-lg bg-slate-900/80 border border-slate-800 p-3 text-xs text-slate-300 space-y-1">
+                  <div>Rok 1 cashflow: {formatCurrency(modelPreview.yearlyRevenues[0] || 0)}</div>
+                  <div>Rok 2 cashflow: {formatCurrency(modelPreview.yearlyRevenues[1] || 0)}</div>
+                  <div>Rok 3 cashflow: {formatCurrency(modelPreview.yearlyRevenues[2] || 0)}</div>
+                  <div className="pt-1 text-slate-500">
+                    12letý kumulovaný zisk modelu: {formatCurrency(modelPreview.totalProfit)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4">
+            <h3 className="text-sm font-semibold text-white mb-3">FAQ pro interní prezentaci</h3>
+            <div className="space-y-3">
+              <details className="group rounded-lg border border-slate-800 bg-slate-950/50 p-3" open>
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                  Proč se někdy skoro nemění doba návratnosti, když změním cenu elektřiny?
+                </summary>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Protože v tomhle modelu není hlavní driver návratnosti cena silové elektřiny, ale hlavně FCR a arbitráž.
+                  Úspora z ceny elektřiny vstupuje jen přes omezenou část energie určené pro vlastní spotřebu.
+                  V aktuálním nastavení tvoří tato složka jen {formatNumber(modelPreview.selfSavingsShare, 1)} % hrubého ročního výnosu.
+                  Změna ceny elektřiny o 1 Kč/kWh tedy přidá přibližně {formatCurrency(modelPreview.electricityPricePlusOne)} ročně, což nemusí být proti FCR a arbitráži zásadní.
+                </p>
+              </details>
+
+              <details className="group rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                  Co má na návratnost největší vliv?
+                </summary>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Typicky čistý CAPEX, dotace, využitelný roční throughput, spread arbitráže, FCR cena a struktura financování.
+                  Oproti tomu malé změny ceny elektřiny nebo drobné změny degradace se víc projeví v dlouhodobém zisku a IRR než v prosté návratnosti roku 1.
+                </p>
+              </details>
+
+              <details className="group rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                  Proč dotace zkracuje návratnost hned, ale úvěr ji může naopak zhoršit?
+                </summary>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Dotace snižuje jmenovatel investice přímo na vstupu, takže čistý CAPEX padá okamžitě.
+                  Úvěr naopak přidává roční anuitní splátku do cashflow roku 1, takže snižuje čistý výnos použitý pro výpočet návratnosti.
+                  Úvěr ale může současně zlepšit equity IRR investora, protože snižuje vlastní vložený kapitál.
+                </p>
+              </details>
+
+              <details className="group rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                  Proč degradace baterie neprodlouží prostou návratnost tolik, jak čekáme?
+                </summary>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Prostá návratnost v kalkulačce vychází z cashflow prvního roku. Degradace je aplikovaná až do dalších let,
+                  takže její dopad se víc propisuje do IRR a 12letého kumulovaného zisku než do headline čísla „návratnost“.
+                </p>
+              </details>
+
+              <details className="group rounded-lg border border-slate-800 bg-slate-950/50 p-3">
+                <summary className="cursor-pointer list-none text-sm font-medium text-slate-100">
+                  Co přesně znamená „investiční robustnost“ a „riziko“ ve veřejné kalkulačce?
+                </summary>
+                <p className="mt-2 text-sm text-slate-400 leading-6">
+                  Jsou to pomocné scoringové vrstvy pro rychlou orientaci. Riziko je odvozené hlavně z výsledné návratnosti.
+                  Robustnost je heuristika navázaná na návratnost, typ využití, dotaci, cenu elektřiny a případně negativní cashflow.
+                  Nejde o bankovní rating ani o plnohodnotný due diligence model.
+                </p>
+              </details>
+            </div>
+          </div>
+        </AdminAccordionSection>
+
+        <AdminAccordionSection
+          title="Embed skript pro externí weby"
+          description="WordPress URL, iframe a JS embed na externí weby."
+        >
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-3">
               <label className="text-xs text-slate-400">WordPress URL embed</label>
@@ -639,7 +966,7 @@ export default function KalkulackaAdminPage() {
               className="w-full rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-xs text-slate-300"
             />
           </div>
-        </div>
+        </AdminAccordionSection>
 
         <div className="flex items-center gap-3">
           <button
