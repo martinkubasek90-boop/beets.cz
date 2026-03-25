@@ -54,12 +54,23 @@ function getYouTubeEmbedUrl(src: string) {
     const url = new URL(src);
     if (url.hostname.includes("youtube.com")) {
       const id = url.searchParams.get("v");
-      if (id) return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
     }
     if (url.hostname.includes("youtu.be")) {
       const id = url.pathname.replace("/", "");
-      if (id) return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
     }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function getYouTubeVideoId(src: string) {
+  try {
+    const url = new URL(src);
+    if (url.hostname.includes("youtube.com")) return url.searchParams.get("v");
+    if (url.hostname.includes("youtu.be")) return url.pathname.replace("/", "");
   } catch {
     return null;
   }
@@ -79,7 +90,10 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
   const [duration, setDuration] = useState(0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [isYouTubeActive, setIsYouTubeActive] = useState(false);
   const youtubeEmbedUrl = getYouTubeEmbedUrl(src);
+  const youtubeVideoId = getYouTubeVideoId(src);
+  const youtubePoster = youtubeVideoId ? `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg` : null;
 
   useEffect(() => {
     const media = window.matchMedia("(pointer: coarse)");
@@ -163,24 +177,48 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
   if (youtubeEmbedUrl) {
     return (
       <motion.div
-        className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/20 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
+        className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#034EA2]/45 bg-white/65 shadow-[0_24px_80px_rgba(3,78,162,0.14)] backdrop-blur-sm"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="absolute left-4 top-4 z-10 rounded-full border border-white/15 bg-[#111111b8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
-          Video
-        </div>
         <div className="aspect-video w-full">
-          <iframe
-            className="h-full w-full"
-            src={youtubeEmbedUrl}
-            title={title}
-            loading="lazy"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
+          {isYouTubeActive ? (
+            <iframe
+              className="h-full w-full"
+              src={youtubeEmbedUrl}
+              title={title}
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          ) : (
+            <button
+              type="button"
+              aria-label={`Přehrát video: ${title}`}
+              onClick={() => setIsYouTubeActive(true)}
+              className="group relative h-full w-full overflow-hidden bg-slate-950"
+            >
+              {youtubePoster ? (
+                <img
+                  src={youtubePoster}
+                  alt={title}
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.01]"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-slate-950 text-white">
+                  {title}
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/28 to-transparent" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="flex h-20 w-20 items-center justify-center rounded-full bg-[#034EA2] text-white shadow-[0_18px_44px_rgba(3,78,162,0.38)] transition duration-300 group-hover:scale-105">
+                  <Play className="ml-1 h-9 w-9 fill-current" />
+                </span>
+              </div>
+            </button>
+          )}
         </div>
       </motion.div>
     );
@@ -188,7 +226,7 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
 
   return (
     <motion.div
-      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/20 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
+      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#034EA2]/45 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
