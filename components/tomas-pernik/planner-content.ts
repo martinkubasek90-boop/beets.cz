@@ -33,109 +33,110 @@ export type PlannerContent = {
   months: Record<string, PlannerMonth>;
 };
 
-export const PLANNER_STORAGE_KEY = "tomas-pernik-planner-v1";
-export const PLANNER_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May"] as const;
+export const PLANNER_STORAGE_KEY = "tomas-pernik-planner-v2";
+export const PLANNER_MONTHS = ["2024", "2025", "2026", "2027", "2028"] as const;
 
 export const defaultPlannerContent: PlannerContent = {
   months: {
-    Jan: {
-      id: "Jan",
-      tabLabel: "Jan",
-      weekLabel: "Týden 03",
-      seasonLabel: "Zimní agenda",
-      dayTitle: "Úterý",
-      dateSubtitle: "16. ledna 2026",
-      currentIndicatorTop: 164,
+    "2024": {
+      id: "2024",
+      tabLabel: "2024",
+      weekLabel: "Rok 2024",
+      seasonLabel: "Příprava kandidatury",
+      dayTitle: "2024",
+      dateSubtitle: "leden až prosinec",
+      currentIndicatorTop: 94,
       events: [
-        { id: "jan-1", title: "Schůzka k bytové situaci ve Vimperku", timeLabel: "09:00 - 10:00", top: 48, height: 52 },
-        { id: "jan-2", title: "Pracovní setkání k využití prázdných budov", timeLabel: "13:30 - 15:00", top: 286, height: 82 },
+        { id: "2024-1", title: "Sběr podnětů z Vimperka a mapování hlavních problémů", timeLabel: "LEDEN - BŘEZEN", top: 18, height: 88 },
+        { id: "2024-2", title: "První konkrétní návrhy k bydlení a centru města", timeLabel: "KVĚTEN - ČERVENEC", top: 214, height: 88 },
+        { id: "2024-3", title: "Ujasnění hlavní linky kampaně a lokálních témat", timeLabel: "ZÁŘÍ - LISTOPAD", top: 410, height: 88 },
       ],
       tasks: [
-        { id: "jan-t1", text: "Upřesnit priority k tématu dostupného bydlení.", meta: ["Kampaň"], completed: true },
-        { id: "jan-t2", text: "Doplnit argumenty k odlivu mladých rodin z města.", meta: ["Obsah", "Do 15:00"], completed: false },
-        { id: "jan-t3", text: "Připravit stručné body k rozhovoru pro lokální publikum.", meta: [], completed: false },
+        { id: "2024-t1", text: "Sjednotit, která témata lidé řeší nejčastěji v běžném životě.", meta: ["Terén"], completed: true },
+        { id: "2024-t2", text: "Převést lokální zkušenosti do srozumitelného programu.", meta: ["Program", "Jaro"], completed: false },
+        { id: "2024-t3", text: "Postavit komunikaci na důvěře, ne na negaci.", meta: [], completed: false },
       ],
-      notes: "Bydlení nesmí být abstraktní téma.\nJe potřeba mluvit jasně, konkrétně a srozumitelně pro místní rodiny.",
+      notes: "Rok přípravy má ukázat, že kandidatura nestojí na marketingové konstrukci.\nZáklad musí být ve znalosti města a v tématech, která lidé řeší každý měsíc.",
     },
-    Feb: {
-      id: "Feb",
-      tabLabel: "Feb",
-      weekLabel: "Týden 07",
-      seasonLabel: "Setkání ve městě",
-      dayTitle: "Středa",
-      dateSubtitle: "14. února 2026",
-      currentIndicatorTop: 222,
+    "2025": {
+      id: "2025",
+      tabLabel: "2025",
+      weekLabel: "Rok 2025",
+      seasonLabel: "Budování podpory",
+      dayTitle: "2025",
+      dateSubtitle: "leden až prosinec",
+      currentIndicatorTop: 190,
       events: [
-        { id: "feb-1", title: "Ranní setkání s podnikateli z centra", timeLabel: "08:30 - 09:30", top: 28, height: 58 },
-        { id: "feb-2", title: "Krátká pauza", timeLabel: "12:00 - 12:40", top: 194, height: 42, muted: true },
-        { id: "feb-3", title: "Příprava komunikace k oživení náměstí", timeLabel: "15:00 - 16:30", top: 334, height: 84 },
+        { id: "2025-1", title: "Setkávání s podnikateli, rodinami a lidmi z centra", timeLabel: "ÚNOR - DUBEN", top: 116, height: 88 },
+        { id: "2025-2", title: "Příprava veřejných výstupů k dopravě a bydlení", timeLabel: "ČERVEN - SRPEN", top: 312, height: 88 },
+        { id: "2025-3", title: "Rozšíření online komunikace a lokální viditelnosti", timeLabel: "ŘÍJEN - PROSINEC", top: 508, height: 88 },
       ],
       tasks: [
-        { id: "feb-t1", text: "Doplnit příklady, jak vrátit život do centra.", meta: ["Obsah"], completed: false },
-        { id: "feb-t2", text: "Potvrdit fotodokumentaci pro terénní výjezdy.", meta: ["Média"], completed: true },
-        { id: "feb-t3", text: "Připravit přehled místních akcí a osobních setkání.", meta: [], completed: false },
+        { id: "2025-t1", text: "Zesílit kontakt s lidmi, kteří ve městě zvažují, jestli zůstat.", meta: ["Komunita"], completed: false },
+        { id: "2025-t2", text: "Připravit jednoduché argumenty k centru, parkování a dostupnosti služeb.", meta: ["Obsah"], completed: true },
+        { id: "2025-t3", text: "Ladit vizuální a obsahový styl kampaně bez zbytečné obecnosti.", meta: [], completed: false },
       ],
-      notes: "Centrum je silné téma, protože ho lidé zažívají denně.\nJe potřeba mluvit o řešeních, ne jen o nostalgii.",
+      notes: "Rok 2025 je o tom, aby Tomáš Perník nebyl jen jméno na plakátu.\nMusí být jasné, co chce ve Vimperku změnit a proč to souvisí s každodenním životem lidí.",
     },
-    Mar: {
-      id: "Mar",
-      tabLabel: "Mar",
-      weekLabel: "Týden 12",
-      seasonLabel: "Jarní kampaň",
-      dayTitle: "Čtvrtek",
-      dateSubtitle: "21. března 2026",
-      currentIndicatorTop: 130,
+    "2026": {
+      id: "2026",
+      tabLabel: "2026",
+      weekLabel: "Rok 2026",
+      seasonLabel: "Komunální volby",
+      dayTitle: "2026",
+      dateSubtitle: "leden až prosinec",
+      currentIndicatorTop: 286,
       events: [
-        { id: "mar-1", title: "Jednání k dopravě a průjezdnosti centra", timeLabel: "09:00 - 10:30", top: 48, height: 70 },
-        { id: "mar-2", title: "Krátká pauza", timeLabel: "11:50 - 12:30", top: 194, height: 40, muted: true },
-        { id: "mar-3", title: "Příprava argumentů k parkování a cyklotrasám", timeLabel: "14:30 - 16:00", top: 312, height: 90 },
+        { id: "2026-1", title: "Viditelně otevřít témata dopravy, centra a bydlení", timeLabel: "LEDEN - BŘEZEN", top: 214, height: 88 },
+        { id: "2026-2", title: "Přetavit program do srozumitelných výstupů pro veřejnost", timeLabel: "KVĚTEN - ČERVENEC", top: 410, height: 88 },
+        { id: "2026-3", title: "Finální terénní i online kampaň před komunálními volbami", timeLabel: "ZÁŘÍ - LISTOPAD", top: 606, height: 88 },
       ],
       tasks: [
-        { id: "mar-t1", text: "Zpřesnit stanovisko k dopravě, parkování a průjezdnosti.", meta: ["Doprava"], completed: true },
-        { id: "mar-t2", text: "Převést strategický plán města do srozumitelných bodů pro veřejnost.", meta: ["Obsah", "Do 14:00"], completed: false },
-        { id: "mar-t3", text: "Připravit stručný text k tomu, co má být ve městě vidět už letos.", meta: [], completed: false },
+        { id: "2026-t1", text: "Zpřesnit stanovisko k dopravě, parkování a průjezdnosti.", meta: ["Doprava"], completed: true },
+        { id: "2026-t2", text: "Převést strategický plán města do konkrétních bodů pro obyvatele.", meta: ["Program", "Léto"], completed: false },
+        { id: "2026-t3", text: "Připravit silné finální sdělení, proč má smysl dát Vimperku novou energii.", meta: [], completed: false },
       ],
-      notes: "Doprava je každodenní bolest, ne technický detail.\nKomunikace musí stát na tom, jak změny pocítí lidé v běžném dni.",
+      notes: "Rok voleb musí stát na konkrétnosti. Nestačí mluvit o rozvoji obecně.\nKaždé sdělení má odpovídat na to, co bude v běžném životě lidí ve Vimperku jiné a lepší.",
     },
-    Apr: {
-      id: "Apr",
-      tabLabel: "Apr",
-      weekLabel: "Týden 16",
-      seasonLabel: "Jaro ve Vimperku",
-      dayTitle: "Pondělí",
-      dateSubtitle: "22. dubna 2026",
-      currentIndicatorTop: 176,
+    "2027": {
+      id: "2027",
+      tabLabel: "2027",
+      weekLabel: "Rok 2027",
+      seasonLabel: "První rok po volbách",
+      dayTitle: "2027",
+      dateSubtitle: "leden až prosinec",
+      currentIndicatorTop: 382,
       events: [
-        { id: "apr-1", title: "Vyhodnocení dosavadní odezvy kampaně", timeLabel: "08:45 - 09:30", top: 30, height: 52 },
-        { id: "apr-2", title: "Natáčení krátkých videí z města", timeLabel: "11:00 - 12:00", top: 144, height: 64 },
-        { id: "apr-3", title: "Příprava večerního setkání s občany", timeLabel: "16:00 - 17:00", top: 388, height: 60 },
+        { id: "2027-1", title: "Ukázat první výsledky a viditelné kroky pro město", timeLabel: "ÚNOR - DUBEN", top: 312, height: 88 },
+        { id: "2027-2", title: "Držet vysokou frekvenci komunikace s občany", timeLabel: "ČERVEN - SRPEN", top: 508, height: 88 },
+        { id: "2027-3", title: "Zpracovat zpětnou vazbu a upravit priority další práce", timeLabel: "ŘÍJEN - PROSINEC", top: 704, height: 88 },
       ],
       tasks: [
-        { id: "apr-t1", text: "Popsat, jak může Šumava přinést víc užitku i místním.", meta: ["Turismus"], completed: false },
-        { id: "apr-t2", text: "Připravit vizuály a krátké výstupy pro online komunikaci.", meta: ["Kampaň"], completed: false },
-        { id: "apr-t3", text: "Poslat briefing dobrovolníkům a podporovatelům.", meta: ["Tým"], completed: true },
+        { id: "2027-t1", text: "Ukázat, že politika může přinášet měřitelné drobné změny hned od začátku.", meta: ["Výsledky"], completed: false },
+        { id: "2027-t2", text: "Udržet důvěru průběžným vysvětlováním kroků a rozhodnutí.", meta: ["Komunikace"], completed: false },
+        { id: "2027-t3", text: "Sbírat témata, která je potřeba otevřít v další etapě práce.", meta: [], completed: true },
       ],
-      notes: "Šumava nesmí být jen kulisa na plakátu.\nJe potřeba ji přeložit do pracovních příležitostí, služeb a života ve městě.",
+      notes: "Po volbách nesmí web usnout. Má ukazovat, že slova pokračují v práci.\nLidé musí vidět, co se posouvá, co se připravuje a co vyžaduje delší čas.",
     },
-    May: {
-      id: "May",
-      tabLabel: "May",
-      weekLabel: "Týden 20",
-      seasonLabel: "Komunitní kampaň",
-      dayTitle: "Pátek",
-      dateSubtitle: "17. května 2026",
-      currentIndicatorTop: 250,
+    "2028": {
+      id: "2028",
+      tabLabel: "2028",
+      weekLabel: "Rok 2028",
+      seasonLabel: "Dlouhodobé priority",
+      dayTitle: "2028",
+      dateSubtitle: "leden až prosinec",
+      currentIndicatorTop: 478,
       events: [
-        { id: "may-1", title: "Koordinační porada s podporovateli", timeLabel: "10:00 - 11:00", top: 96, height: 62 },
-        { id: "may-2", title: "Krátká pauza", timeLabel: "12:30 - 13:10", top: 214, height: 42, muted: true },
-        { id: "may-3", title: "Otevřená debata s obyvateli Vimperka", timeLabel: "15:30 - 17:00", top: 360, height: 86 },
+        { id: "2028-1", title: "Vyhodnotit, co se podařilo opravdu změnit v praxi", timeLabel: "LEDEN - BŘEZEN", top: 410, height: 88 },
+        { id: "2028-2", title: "Posunout další projekty k bydlení, centru a kvalitě života", timeLabel: "KVĚTEN - SRPEN", top: 606, height: 102 },
+        { id: "2028-3", title: "Připravit další dlouhodobou vizi rozvoje Vimperka", timeLabel: "ŘÍJEN - PROSINEC", top: 802, height: 88 },
       ],
       tasks: [
-        { id: "may-t1", text: "Doplnit nejčastější otázky od lidí z terénu.", meta: ["Kontakt"], completed: false },
-        { id: "may-t2", text: "Potvrdit organizaci lokální akce a zázemí.", meta: ["Terén"], completed: true },
-        { id: "may-t3", text: "Připravit měsíční shrnutí a další krok kampaně.", meta: [], completed: false },
+        { id: "2028-t1", text: "Měřit dopad na každodenní život lidí, ne jen počet splněných bodů.", meta: ["Vyhodnocení"], completed: false },
+        { id: "2028-t2", text: "Připravit další srozumitelnou vizi pro budoucnost města.", meta: ["Strategie"], completed: false },
+        { id: "2028-t3", text: "Udržet politiku blízko lidem i mimo volební období.", meta: [], completed: true },
       ],
-      notes: "Osobní kontakt zůstává klíčový kanál.\nWeb má lidi přivést blíž, ne nahradit setkání v reálném městě.",
+      notes: "Dlouhodobý plán má být čitelný i bez politického slovníku.\nSmysl má jen tehdy, když lidé poznají, že město funguje lépe měsíc po měsíci.",
     },
   },
 };
@@ -155,9 +156,7 @@ function normalizeContent(raw: unknown): PlannerContent {
 
   for (const month of PLANNER_MONTHS) {
     const sourceMonth = candidate.months?.[month];
-    if (!sourceMonth) {
-      continue;
-    }
+    if (!sourceMonth) continue;
 
     fallback.months[month] = {
       ...fallback.months[month],
@@ -188,10 +187,7 @@ export function loadPlannerContent() {
 }
 
 export function savePlannerContent(content: PlannerContent) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
+  if (typeof window === "undefined") return;
   window.localStorage.setItem(PLANNER_STORAGE_KEY, JSON.stringify(content));
 }
 

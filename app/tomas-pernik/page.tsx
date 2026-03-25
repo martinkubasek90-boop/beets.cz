@@ -27,8 +27,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const portraitUrl =
-  "https://scontent-prg1-1.cdninstagram.com/v/t51.2885-19/129749715_378789590044541_2641727146362517518_n.jpg?stp=dst-jpg_s100x100_tt6&_nc_cat=101&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=ckzaHzklHycQ7kNvwGktL5H&_nc_oc=AdrveTy0p9X8wIvt01sdDrMSmDotMQ27jPUDhOC7HiztZCyORWl2zW_fiEWneMwTVVA&_nc_zt=24&_nc_ht=scontent-prg1-1.cdninstagram.com&_nc_ss=7a30f&oh=00_AfxRi2Z9NsJjsDZjd3qF872hjMTfXMUS9KSghH8jE_7nAw&oe=69C9D0D0";
+const portraitUrl = "/tomas-pernik/pernik-portrait.png";
 
 const priorities = [
   {
@@ -99,7 +98,7 @@ export default function TomasPernikPage() {
               <ul className={styles.inlineFacts}>
                 <li>
                   <Users size={16} />
-                  kandidát ODS pro komunální volby 2026
+                  Kandidát ODS pro komunální volby 2026
                 </li>
                 <li>
                   <MapPin size={16} />
@@ -107,7 +106,7 @@ export default function TomasPernikPage() {
                 </li>
                 <li>
                   <Mail size={16} />
-                  novinky, agenda a kontakt na jednom místě
+                  Novinky, agenda a kontakt na jednom místě
                 </li>
                 <li>
                   <ArrowRight size={16} />
@@ -119,11 +118,6 @@ export default function TomasPernikPage() {
             <aside className={styles.heroVisual}>
               <div className={styles.heroPortrait}>
                 <img className={styles.heroPortraitImage} src={portraitUrl} alt="Tomáš Perník" />
-                <div className={styles.heroPortraitBadge}>Tomáš Perník | Vimperk 2026</div>
-                <div className={styles.heroPortraitCaption}>
-                  <p className={styles.cardLabel}>Positioning</p>
-                  <p>Vimperák, který chce, aby mladí zůstali a město se posouvalo dál.</p>
-                </div>
               </div>
             </aside>
           </div>
@@ -136,7 +130,6 @@ export default function TomasPernikPage() {
         <div className={styles.shell}>
           <div className={styles.profileLayout}>
             <div className={styles.profileCard}>
-              <span className={styles.kicker}>Profil a positioning</span>
               <h2>Vimperk má dobrý základ. Teď potřebuje energii, která dotáhne důležité věci do výsledku.</h2>
               <p>
                 Tahle kampaň nestojí na tom, že je všechno špatně. Naopak: Vimperk je město
@@ -168,7 +161,6 @@ export default function TomasPernikPage() {
       <section id="priority" className={styles.section}>
         <div className={styles.shell}>
           <div className={styles.sectionHead}>
-            <span className={styles.kicker}>Hlavní sdělení</span>
             <h2>Čtyři témata, která mohou ve Vimperku rozhodnout důvěru i výsledek kampaně</h2>
           </div>
           <div className={styles.priorityGrid}>
@@ -188,7 +180,6 @@ export default function TomasPernikPage() {
         <div className={styles.shell}>
           <div className={styles.ctaCard}>
             <div>
-              <span className={styles.kicker}>Kontakt a zapojení</span>
               <h2>Máte podnět pro Vimperk, otázku nebo chuť pomoci? Ozvěte se napřímo.</h2>
               <p>
                 Kampaň stojí i na tom, že se politika vrací do normálního rozhovoru s lidmi.

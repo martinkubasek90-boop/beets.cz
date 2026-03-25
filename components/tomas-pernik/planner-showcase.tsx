@@ -9,17 +9,30 @@ import {
   loadPlannerContent,
 } from "@/components/tomas-pernik/planner-content";
 
-const timeBlocks = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+const timeBlocks = [
+  "Leden",
+  "Únor",
+  "Březen",
+  "Duben",
+  "Květen",
+  "Červen",
+  "Červenec",
+  "Srpen",
+  "Září",
+  "Říjen",
+  "Listopad",
+  "Prosinec",
+];
 
 export function PlannerShowcase() {
-  const [activeTab, setActiveTab] = useState("Mar");
+  const [activeTab, setActiveTab] = useState("2026");
   const [content, setContent] = useState<PlannerContent>(() => cloneDefaultPlannerContent());
 
   useEffect(() => {
     setContent(loadPlannerContent());
   }, []);
 
-  const month = useMemo(() => content.months[activeTab] ?? content.months.Mar, [activeTab, content]);
+  const month = useMemo(() => content.months[activeTab] ?? content.months["2026"], [activeTab, content]);
 
   return (
     <section className={styles.plannerSection} id="planner">
@@ -98,7 +111,7 @@ export function PlannerShowcase() {
                   <div className={`${styles.cornerDot} ${styles.cornerDotFaint}`} />
                 </div>
 
-                <h3 className={styles.sectionTitle}>Priorities</h3>
+                <h3 className={styles.sectionTitle}>Priority</h3>
 
                 <ul className={styles.taskList}>
                   {month.tasks.map((task) => (
@@ -123,7 +136,7 @@ export function PlannerShowcase() {
                   ))}
                 </ul>
 
-                <h3 className={styles.sectionTitle}>Journal &amp; Notes</h3>
+                <h3 className={styles.sectionTitle}>Poznámky</h3>
 
                 <div className={styles.notesArea}>
                   <svg

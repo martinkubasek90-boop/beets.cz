@@ -19,14 +19,14 @@ function createId(prefix: string) {
 
 export function PlannerAdmin() {
   const [content, setContent] = useState<PlannerContent>(() => cloneDefaultPlannerContent());
-  const [activeMonth, setActiveMonth] = useState("Mar");
+  const [activeMonth, setActiveMonth] = useState("2026");
   const [savedAt, setSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     setContent(loadPlannerContent());
   }, []);
 
-  const month = useMemo(() => content.months[activeMonth] ?? content.months.Mar, [activeMonth, content]);
+  const month = useMemo(() => content.months[activeMonth] ?? content.months["2026"], [activeMonth, content]);
 
   function patchMonth(patch: Partial<typeof month>) {
     setContent((current) => ({
@@ -101,36 +101,36 @@ export function PlannerAdmin() {
         </div>
 
         <div className={styles.statusRow}>
-          <span>Aktivní měsíc: {month.tabLabel}</span>
+          <span>Aktivní rok: {month.tabLabel}</span>
           <span>{savedAt ? `Uloženo v ${savedAt}` : "Změny ještě nejsou uložené."}</span>
         </div>
 
         <section className={styles.grid}>
           <article className={styles.card}>
-            <h2>Záhlaví a kalendář</h2>
+            <h2>Záhlaví a časová osa</h2>
 
             <label className={styles.field}>
-              <span>Week label</span>
+              <span>Horní štítek vlevo</span>
               <input value={month.weekLabel} onChange={(e) => patchMonth({ weekLabel: e.target.value })} />
             </label>
 
             <label className={styles.field}>
-              <span>Season label</span>
+              <span>Horní štítek vpravo</span>
               <input value={month.seasonLabel} onChange={(e) => patchMonth({ seasonLabel: e.target.value })} />
             </label>
 
             <label className={styles.field}>
-              <span>Day title</span>
+              <span>Hlavní nadpis</span>
               <input value={month.dayTitle} onChange={(e) => patchMonth({ dayTitle: e.target.value })} />
             </label>
 
             <label className={styles.field}>
-              <span>Date subtitle</span>
+              <span>Podnadpis</span>
               <input value={month.dateSubtitle} onChange={(e) => patchMonth({ dateSubtitle: e.target.value })} />
             </label>
 
             <label className={styles.field}>
-              <span>Current indicator top</span>
+              <span>Pozice zvýrazněné linky</span>
               <input
                 type="number"
                 value={month.currentIndicatorTop}
@@ -149,7 +149,7 @@ export function PlannerAdmin() {
                   patchMonth({
                     events: [
                       ...month.events,
-                      { id: createId("event"), title: "Nová událost", timeLabel: "09:00 - 10:00", top: 48, height: 60 },
+                      { id: createId("event"), title: "Nová etapa", timeLabel: "LEDEN - BŘEZEN", top: 48, height: 60 },
                     ],
                   })
                 }
@@ -166,7 +166,7 @@ export function PlannerAdmin() {
                     <input value={event.title} onChange={(e) => patchEvent(event.id, { title: e.target.value })} />
                   </label>
                   <label className={styles.field}>
-                    <span>Čas</span>
+                    <span>Období</span>
                     <input value={event.timeLabel} onChange={(e) => patchEvent(event.id, { timeLabel: e.target.value })} />
                   </label>
                   <div className={styles.inlineFields}>
@@ -267,7 +267,7 @@ export function PlannerAdmin() {
           <article className={styles.card}>
             <h2>Poznámky</h2>
             <label className={styles.field}>
-              <span>Journal &amp; Notes</span>
+              <span>Text v pravé spodní části</span>
               <textarea value={month.notes} onChange={(e) => patchMonth({ notes: e.target.value })} rows={8} />
             </label>
           </article>
