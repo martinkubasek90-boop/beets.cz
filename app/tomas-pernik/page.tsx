@@ -132,6 +132,8 @@ export default function TomasPernikPage() {
         </div>
       </section>
 
+      <PlannerShowcase />
+
       <section className={`${styles.section} ${styles.sectionAlt}`}>
         <div className={styles.shell}>
           <div className={styles.sectionHead}>
@@ -141,8 +143,6 @@ export default function TomasPernikPage() {
           <VideoPlayer src={campaignVideoUrl} poster={portraitUrl} title="Tomáš Perník | Kampaňové video" />
         </div>
       </section>
-
-      <PlannerShowcase />
 
       <section id="profil" className={`${styles.section} ${styles.sectionAlt}`}>
         <div className={styles.shell}>
@@ -197,14 +197,14 @@ export default function TomasPernikPage() {
       <section id="kontakt" className={styles.section}>
         <div className={styles.shell}>
           <div className={styles.ctaCard}>
-            <div>
+            <div className={styles.ctaCopy}>
               <h2>Máte podnět pro Vimperk, otázku nebo chuť pomoci? Ozvěte se napřímo.</h2>
               <p>
                 Kampaň stojí i na tom, že se politika vrací do normálního rozhovoru s lidmi.
                 Napište, co je podle vás potřeba ve Vimperku posunout, co funguje a co by mělo dostat větší prioritu.
               </p>
             </div>
-            <a className={styles.primaryButton} href="https://www.facebook.com/perniktom" target="_blank" rel="noreferrer">
+            <a className={styles.ctaButton} href="https://www.facebook.com/perniktom" target="_blank" rel="noreferrer">
               Facebook Tomáše Perníka
               <ArrowRight size={16} />
             </a>

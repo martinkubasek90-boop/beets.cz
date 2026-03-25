@@ -441,6 +441,43 @@
   border-radius: 22px;
 }
 
+.ctaCopy {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.ctaButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0.76rem 1rem;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  background: var(--tp-primary);
+  color: #ffffff !important;
+  box-shadow: 0 16px 32px rgba(3, 78, 162, 0.16);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.ctaButton,
+.ctaButton:visited,
+.ctaButton:hover,
+.ctaButton:active {
+  color: #ffffff;
+}
+
+.ctaButton svg {
+  color: #ffffff !important;
+  stroke: currentColor;
+}
+
 .plannerSection {
   position: relative;
   padding: 3.5rem 0 5.5rem;
@@ -1172,6 +1209,10 @@
     padding-top: 0;
   }
 
+  .heroLayout > .heroVisual {
+    order: -1;
+  }
+
   .heroCopy h1 {
     font-size: clamp(3.2rem, 17vw, 4.8rem);
     line-height: 0.9;
@@ -1209,17 +1250,22 @@
 
   .heroCopy {
     padding-top: 1.25rem;
+    text-align: center;
   }
 
   .lead {
     margin-top: 1.25rem;
     font-size: 1rem;
     line-height: 1.7;
+    max-width: 34ch;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .actions {
     display: grid;
     gap: 0.75rem;
+    width: 100%;
   }
 
   .primaryButton,
@@ -1235,7 +1281,9 @@
   }
 
   .inlineFacts li {
-    align-items: flex-start;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     gap: 0.7rem;
     border: 1px solid rgba(3, 78, 162, 0.12);
     border-radius: 16px;
@@ -1246,24 +1294,32 @@
 
   .heroVisual {
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
+    margin: 0 auto 0.25rem;
   }
 
   .heroPortrait {
-    width: min(82vw, 340px);
-    max-width: 340px;
-    aspect-ratio: 1;
-    border-radius: 999px;
-    overflow: hidden;
+    width: min(80vw, 320px);
+    max-width: 320px;
+    aspect-ratio: auto;
+    border-radius: 0;
+    overflow: visible;
+    margin: 0 auto;
   }
 
   .heroPortraitImage {
-    object-position: 50% 10%;
-    transform: scale(1.18);
+    width: 122%;
+    max-width: none;
+    margin-left: -9%;
+    object-position: center top;
+    transform: translate(4%, 4%) scale(1.08);
   }
 
   .sectionHead {
     margin-bottom: 1.35rem;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .priorityCard,
@@ -1271,6 +1327,7 @@
   .statPanel,
   .ctaCard {
     padding: 1.2rem;
+    text-align: center;
   }
 
   .priorityCard h3 {
@@ -1284,6 +1341,7 @@
 
   .statPanel {
     gap: 0.95rem;
+    justify-items: center;
   }
 
   .statItem strong {
@@ -1291,7 +1349,22 @@
   }
 
   .ctaCard {
-    align-items: stretch;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .ctaCopy {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .ctaButton {
+    min-height: 40px;
+    padding: 0.68rem 0.92rem;
+    font-size: 0.94rem;
+    box-shadow: 0 10px 22px rgba(3, 78, 162, 0.14);
   }
 
   .deskSurface {
@@ -1401,12 +1474,14 @@
   }
 
   .heroPortrait {
-    max-width: 300px;
+    max-width: 286px;
   }
 
   .heroPortraitImage {
-    object-position: 50% 9%;
-    transform: scale(1.22);
+    width: 126%;
+    margin-left: -11%;
+    object-position: center 8%;
+    transform: translate(5%, 5%) scale(1.1);
   }
 
   .plannerTabs {
