@@ -82,7 +82,13 @@ export default function TomasPernikPage() {
           <div className={styles.heroLayout}>
             <div className={styles.heroCopy}>
               <span className={styles.kicker}>Komunální volby 2026 | Vimperk</span>
-              <h1>Tomáš Perník</h1>
+              <h1 className={styles.heroTitle}>
+                <span className={styles.heroTitleFirst}>Tomáš</span>{" "}
+                <span className={styles.heroTitleLast}>
+                  Pe<span className={styles.heroRnFix}>rn</span>
+                  <span className={styles.heroAccentFix}>í</span>k
+                </span>
+              </h1>
               <p className={styles.lead}>
                 Vimperák, který chce, aby mladí ve městě zůstali, centrum znovu žilo a
                 rozvoj Vimperka nestál jen na plánech na papíře. Pozitivně, konkrétně a
