@@ -39,22 +39,36 @@
   overflow: clip;
   padding: 1.25rem 0 4.5rem;
   min-height: 100svh;
+  border-bottom: 1px solid rgba(3, 78, 162, 0.08);
 }
 
 .heroCanvas,
-.heroGlow {
+.heroGlow,
+.hero::after {
   position: absolute;
   inset: 0;
 }
 
 .heroCanvas {
-  opacity: 0.96;
+  opacity: 1;
 }
 
 .heroGlow {
   background:
-    radial-gradient(circle at 50% 38%, rgba(122, 179, 255, 0.22), transparent 18%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.82));
+    radial-gradient(circle at 70% 44%, rgba(83, 137, 223, 0.24), transparent 16%),
+    radial-gradient(circle at 57% 54%, rgba(137, 178, 240, 0.18), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.82));
+  pointer-events: none;
+}
+
+.hero::after {
+  content: "";
+  background-image:
+    radial-gradient(circle, rgba(4, 78, 162, 0.16) 0.7px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  background-size: 30px 30px, 100% 100%;
+  mix-blend-mode: multiply;
+  opacity: 0.36;
   pointer-events: none;
 }
 
@@ -99,14 +113,15 @@
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.9fr);
-  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.78fr);
+  gap: 1.25rem;
   align-items: end;
-  padding-top: 5vh;
+  padding-top: 10vh;
 }
 
 .heroCopy {
-  max-width: 720px;
+  max-width: 780px;
+  padding: 12rem 0 6rem;
 }
 
 .kicker {
@@ -126,9 +141,9 @@
 .ctaCard h2,
 .heroCard h2 {
   margin: 0;
-  font-size: clamp(3.8rem, 9vw, 7.4rem);
-  line-height: 0.92;
-  letter-spacing: -0.05em;
+  font-size: clamp(4.7rem, 10vw, 8.2rem);
+  line-height: 0.88;
+  letter-spacing: -0.07em;
   color: var(--tp-primary-deep);
 }
 
@@ -153,7 +168,8 @@
 
 .lead {
   max-width: 58ch;
-  margin: 1.5rem 0 0;
+  margin: 1.7rem 0 0;
+  font-size: 1.15rem;
 }
 
 .actions {
@@ -228,8 +244,11 @@
 }
 
 .heroCard {
-  padding: 1.5rem;
-  border-radius: 20px;
+  padding: 2rem;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(3, 78, 162, 0.12);
+  align-self: center;
 }
 
 .cardLabel {
@@ -243,12 +262,16 @@
 
 .cardList {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
   margin: 1.25rem 0 0;
-  padding: 1rem 0 0;
+  padding: 1.4rem 0 0;
   list-style: none;
   border-top: 1px solid var(--tp-line);
   color: var(--tp-primary-deep);
+}
+
+.cardList li {
+  font-size: 1.05rem;
 }
 
 .section {
@@ -334,6 +357,14 @@
   .ctaCard {
     align-items: start;
   }
+
+  .heroLayout {
+    padding-top: 3rem;
+  }
+
+  .heroCopy {
+    padding: 5.5rem 0 0;
+  }
 }
 
 @media (max-width: 720px) {
@@ -350,11 +381,11 @@
   }
 
   .heroLayout {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
   }
 
   .heroCopy h1 {
-    font-size: clamp(3rem, 18vw, 4.4rem);
+    font-size: clamp(3.4rem, 18vw, 5rem);
   }
 
   .heroCard h2,
@@ -366,5 +397,10 @@
 
   .inlineFacts {
     display: grid;
+  }
+
+  .heroCard {
+    padding: 1.4rem;
+    border-radius: 24px;
   }
 }
