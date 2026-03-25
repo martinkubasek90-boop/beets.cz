@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Lora, Raleway } from "next/font/google";
 import { ArrowRight, ChevronRight, Mail, MapPin, Users } from "lucide-react";
+import { NewsSection } from "@/components/tomas-pernik/news-section";
 import { PlannerShowcase } from "@/components/tomas-pernik/planner-showcase";
 import { RetrofuturisticBackground } from "@/components/tomas-pernik/retrofuturistic-background";
 import styles from "./tomas-pernik.module.css";
@@ -70,6 +71,7 @@ export default function TomasPernikPage() {
               <a href="#priority">Priority</a>
               <a href="#profil">Profil</a>
               <a href="/tomas-pernik/admin">Admin</a>
+              <a href="#novinky">Novinky</a>
               <a href="#kontakt">Kontakt</a>
             </nav>
           </header>
@@ -179,6 +181,7 @@ export default function TomasPernikPage() {
       </section>
 
       <PlannerShowcase />
+      <NewsSection />
 
       <section id="kontakt" className={styles.section}>
         <div className={styles.shell}>
