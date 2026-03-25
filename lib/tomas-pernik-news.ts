@@ -34,6 +34,7 @@ function sanitizeNewsContent(raw: unknown): NewsContent {
         sourceTitle: typeof item.sourceTitle === "string" ? item.sourceTitle.trim() : "",
         sourceDate: typeof item.sourceDate === "string" ? item.sourceDate.trim() : "",
         sourceExcerpt: typeof item.sourceExcerpt === "string" ? item.sourceExcerpt.trim() : "",
+        imageUrl: typeof item.imageUrl === "string" ? item.imageUrl.trim() : "",
         rewrittenTitle: typeof item.rewrittenTitle === "string" ? item.rewrittenTitle.trim() : "",
         rewrittenExcerpt: typeof item.rewrittenExcerpt === "string" ? item.rewrittenExcerpt.trim() : "",
         rewrittenBody: typeof item.rewrittenBody === "string" ? item.rewrittenBody.trim() : "",

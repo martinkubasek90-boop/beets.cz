@@ -7,7 +7,16 @@ type OdsFeedItem = {
   link: string;
   date: string;
   excerpt: string;
+  imageUrl: string;
 };
+
+function absolutizeUrl(value: string) {
+  if (!value) return "";
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  if (value.startsWith("//")) return `https:${value}`;
+  if (value.startsWith("/")) return `https://www.ods.cz${value}`;
+  return `https://www.ods.cz/${value.replace(/^\.?\//, "")}`;
+}
 
 function decodeHtml(value: string) {
   return value
@@ -31,19 +40,25 @@ function extractCardItems(html: string): OdsFeedItem[] {
 
   return cards
     .map((match) => {
+      const card = match[0];
       const block = match[1];
       const linkMatch = block.match(/<h4 class="card-title mb-0">[\s\S]*?<a href="([^"]+)">([\s\S]*?)<\/a>/i);
       const dateMatch = block.match(/<small>[\s\S]*?<\/i>&nbsp;\s*([\s\S]*?)\s*<\/small>/i);
+      const imageMatch = card.match(/class="image card-img-top rounded-2"[\s\S]*?background-image:\s*url\(([^)]+)\)/i);
 
       const title = linkMatch?.[2] ? decodeHtml(linkMatch[2]) : "";
-      const link = linkMatch?.[1]?.trim() || "";
+      const link = linkMatch?.[1]?.trim() ? absolutizeUrl(linkMatch[1].trim()) : "";
       const date = dateMatch?.[1] ? decodeHtml(dateMatch[1]) : "";
+      const imageUrl = imageMatch?.[1]
+        ? absolutizeUrl(imageMatch[1].trim().replace(/^['"]|['"]$/g, ""))
+        : "";
 
       return {
         title,
         link,
         date,
         excerpt: "",
+        imageUrl,
       };
     })
     .filter((item) => item.title && item.link);

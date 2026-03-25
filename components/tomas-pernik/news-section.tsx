@@ -22,6 +22,11 @@ export async function NewsSection() {
           <div className={styles.newsGrid}>
             {published.map((item) => (
               <article key={item.id} className={styles.newsCard}>
+                {item.imageUrl ? (
+                  <div className={styles.newsCardImageWrap}>
+                    <img className={styles.newsCardImage} src={item.imageUrl} alt={item.rewrittenTitle || item.sourceTitle} />
+                  </div>
+                ) : null}
                 <p className={styles.newsMeta}>{item.sourceDate}</p>
                 <h3>{item.rewrittenTitle || item.sourceTitle}</h3>
                 <p>{item.rewrittenExcerpt || item.sourceExcerpt}</p>

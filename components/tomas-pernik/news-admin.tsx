@@ -13,6 +13,7 @@ type OdsItem = {
   link: string;
   date: string;
   excerpt: string;
+  imageUrl: string;
 };
 
 function createId(prefix: string) {
@@ -94,6 +95,7 @@ export function NewsAdmin() {
           sourceTitle: source.title,
           sourceDate: source.date,
           sourceExcerpt: source.excerpt,
+          imageUrl: source.imageUrl,
           rewrittenTitle: source.title,
           rewrittenExcerpt: source.excerpt,
           rewrittenBody: source.excerpt,
@@ -189,9 +191,19 @@ export function NewsAdmin() {
             <div className={styles.stack}>
               {drafts.map((item) => (
                 <div key={item.id} className={styles.subcard}>
+                  {item.imageUrl ? (
+                    <img className={styles.previewImage} src={item.imageUrl} alt={item.sourceTitle} />
+                  ) : null}
                   <label className={styles.field}>
                     <span>Zdrojový titulek</span>
                     <input value={item.sourceTitle} readOnly />
+                  </label>
+                  <label className={styles.field}>
+                    <span>URL obrázku</span>
+                    <input
+                      value={item.imageUrl}
+                      onChange={(e) => patchItem(item.id, { imageUrl: e.target.value })}
+                    />
                   </label>
                   <label className={styles.field}>
                     <span>Přepsaný titulek</span>
@@ -260,6 +272,9 @@ export function NewsAdmin() {
             <div className={styles.stack}>
               {published.map((item) => (
                 <div key={item.id} className={styles.subcard}>
+                  {item.imageUrl ? (
+                    <img className={styles.previewImage} src={item.imageUrl} alt={item.rewrittenTitle} />
+                  ) : null}
                   <strong>{item.rewrittenTitle}</strong>
                   <p>{item.rewrittenExcerpt}</p>
                   <div className={styles.actions}>

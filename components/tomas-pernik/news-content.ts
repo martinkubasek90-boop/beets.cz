@@ -4,6 +4,7 @@ export type ImportedNewsItem = {
   sourceTitle: string;
   sourceDate: string;
   sourceExcerpt: string;
+  imageUrl: string;
   rewrittenTitle: string;
   rewrittenExcerpt: string;
   rewrittenBody: string;
