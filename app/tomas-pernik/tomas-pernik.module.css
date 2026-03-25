@@ -1207,7 +1207,8 @@
   }
 
   .topbar {
-    padding-bottom: 0.75rem;
+    justify-content: center;
+    padding-bottom: 0.5rem;
   }
 
   .nav {
@@ -1241,7 +1242,8 @@
   }
 
   .brand {
-    gap: 0.65rem;
+    justify-content: center;
+    gap: 0;
   }
 
   .brandLogo {
@@ -1249,7 +1251,7 @@
   }
 
   .brandText {
-    font-size: 0.9rem;
+    display: none;
   }
 
   .kicker {
@@ -1305,12 +1307,12 @@
   .heroVisual {
     min-height: 0;
     overflow: visible;
-    margin: 0 auto 0.25rem;
+    margin: 0 auto 2.5rem;
   }
 
   .heroPortrait {
-    width: min(80vw, 320px);
-    max-width: 320px;
+    width: min(52vw, 208px);
+    max-width: 208px;
     aspect-ratio: auto;
     border-radius: 0;
     overflow: visible;
@@ -1318,11 +1320,11 @@
   }
 
   .heroPortraitImage {
-    width: 122%;
+    width: 118%;
     max-width: none;
-    margin-left: -9%;
+    margin-left: -7%;
     object-position: center top;
-    transform: translate(4%, 4%) scale(1.08);
+    transform: translate(4%, 2%) scale(1.03);
   }
 
   .sectionHead {
@@ -1484,14 +1486,14 @@
   }
 
   .heroPortrait {
-    max-width: 286px;
+    max-width: 196px;
   }
 
   .heroPortraitImage {
-    width: 126%;
-    margin-left: -11%;
+    width: 116%;
+    margin-left: -6%;
     object-position: center 8%;
-    transform: translate(5%, 5%) scale(1.1);
+    transform: translate(4%, 1%) scale(1.02);
   }
 
   .plannerTabs {
