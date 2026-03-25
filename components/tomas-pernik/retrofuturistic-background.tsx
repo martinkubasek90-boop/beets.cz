@@ -1,13 +1,9 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
+import { useMemo } from "react";
+import { Canvas } from "@react-three/fiber";
 
 function FloatingPanels() {
-  const groupRef = useRef<THREE.Group>(null);
-  const sparkleRef = useRef<THREE.Points>(null);
-
   const sparklePositions = useMemo(() => {
     const positions = new Float32Array(520 * 3);
 
@@ -20,21 +16,6 @@ function FloatingPanels() {
 
     return positions;
   }, []);
-
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-
-    if (groupRef.current) {
-      groupRef.current.rotation.z = -0.58 + Math.sin(t * 0.18) * 0.015;
-      groupRef.current.position.x = Math.sin(t * 0.22) * 0.12;
-      groupRef.current.position.y = Math.cos(t * 0.17) * 0.08;
-    }
-
-    if (sparkleRef.current) {
-      sparkleRef.current.rotation.z = t * 0.012;
-      sparkleRef.current.rotation.y = t * 0.015;
-    }
-  });
 
   const bars = [
     { x: -5.6, y: -2.4, width: 1.25, height: 10.8, color: "#c9dfff", glow: "#5b92e9" },
@@ -54,7 +35,7 @@ function FloatingPanels() {
       <pointLight position={[4, 3, 7]} intensity={36} color="#d9e8ff" />
       <pointLight position={[8, 2, 4]} intensity={22} color="#4d8fe7" />
 
-      <group ref={groupRef} position={[3.1, -0.25, -1.3]}>
+      <group position={[3.1, -0.25, -1.3]} rotation={[0, 0, -0.58]}>
         {bars.map((bar) => (
           <group key={`${bar.x}-${bar.width}`} position={[bar.x, bar.y, 0]}>
             <mesh position={[0.22, 0.3, -0.45]}>
@@ -92,7 +73,7 @@ function FloatingPanels() {
         <meshBasicMaterial color="#fefefe" transparent opacity={0.62} />
       </mesh>
 
-      <points ref={sparkleRef}>
+      <points rotation={[0, 0.1, 0.06]}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
@@ -117,6 +98,7 @@ export function RetrofuturisticBackground() {
   return (
     <Canvas
       dpr={[1, 1.75]}
+      frameloop="demand"
       camera={{ position: [0, 0, 11.5], fov: 32 }}
       gl={{ antialias: true, alpha: true }}
     >
