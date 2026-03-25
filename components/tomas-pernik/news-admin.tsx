@@ -5,8 +5,6 @@ import {
   type ImportedNewsItem,
   type NewsContent,
   cloneDefaultNewsContent,
-  loadNewsContent,
-  saveNewsContent,
 } from "@/components/tomas-pernik/news-content";
 import styles from "@/app/tomas-pernik/admin/admin.module.css";
 
@@ -26,9 +24,10 @@ export function NewsAdmin() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [rewritingId, setRewritingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setContent(loadNewsContent());
+    void loadContent();
   }, []);
 
   const drafts = useMemo(() => content.items.filter((item) => item.status === "draft"), [content]);
@@ -40,9 +39,38 @@ export function NewsAdmin() {
     }));
   }
 
-  function persist(next: NewsContent) {
-    setContent(next);
-    saveNewsContent(next);
+  async function loadContent() {
+    try {
+      const response = await fetch("/api/tomas-pernik/news-content", { cache: "no-store" });
+      const payload = (await response.json()) as { content?: NewsContent; error?: string };
+      if (!response.ok || !payload.content) {
+        throw new Error(payload.error || "Načtení novinek selhalo.");
+      }
+      setContent(payload.content);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Načtení novinek selhalo.");
+    }
+  }
+
+  async function persist(next: NewsContent, successMessage?: string) {
+    setSaving(true);
+    try {
+      const response = await fetch("/api/tomas-pernik/news-content", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: next }),
+      });
+      const payload = (await response.json()) as { content?: NewsContent; error?: string };
+      if (!response.ok || !payload.content) {
+        throw new Error(payload.error || "Uložení novinek selhalo.");
+      }
+      setContent(payload.content);
+      setStatus(successMessage || "Novinky uloženy.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Uložení novinek selhalo.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function importFromOds() {
@@ -73,8 +101,7 @@ export function NewsAdmin() {
         });
       }
 
-      persist({ items: merged });
-      setStatus(`Import hotový. Načteno ${payload.items.length} položek.`);
+      await persist({ items: merged }, `Import hotový. Načteno ${payload.items.length} položek.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Import selhal.");
     } finally {
@@ -107,12 +134,19 @@ export function NewsAdmin() {
         throw new Error(payload.error || "AI přepis selhal.");
       }
 
-      patchItem(item.id, {
-        rewrittenTitle: payload.title || item.rewrittenTitle,
-        rewrittenExcerpt: payload.excerpt || item.rewrittenExcerpt,
-        rewrittenBody: payload.body || item.rewrittenBody,
-      });
-      setStatus(`Článek „${item.sourceTitle}“ byl přepsán.`);
+      const next = {
+        items: content.items.map((row) =>
+          row.id === item.id
+            ? {
+                ...row,
+                rewrittenTitle: payload.title || item.rewrittenTitle,
+                rewrittenExcerpt: payload.excerpt || item.rewrittenExcerpt,
+                rewrittenBody: payload.body || item.rewrittenBody,
+              }
+            : row,
+        ),
+      };
+      await persist(next, `Článek „${item.sourceTitle}“ byl přepsán.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "AI přepis selhal.");
     } finally {
@@ -129,11 +163,15 @@ export function NewsAdmin() {
             <h1>Tomáš Perník News Admin</h1>
             <p className={styles.lead}>
               Import novinek z ODS, AI přepis do požadovaného stylu a publikace na
-              veřejnou stránku <strong>/tomas-pernik</strong>.
+              veřejnou stránku <strong>/tomas-pernik</strong>. Tohle už se ukládá
+              centrálně do Supabase, ne jen do localStorage.
             </p>
           </div>
 
           <div className={styles.actions}>
+            <button type="button" className={styles.smallButton} onClick={() => void loadContent()}>
+              Obnovit data
+            </button>
             <button type="button" className={styles.secondaryButton} onClick={importFromOds} disabled={loading}>
               {loading ? "Načítám..." : "Načíst z ODS"}
             </button>
@@ -190,14 +228,21 @@ export function NewsAdmin() {
                     <button
                       type="button"
                       className={styles.primaryButton}
-                      onClick={() => persist({ items: content.items.map((row) => row.id === item.id ? { ...row, status: "published" } : row) })}
+                      onClick={() =>
+                        void persist(
+                          { items: content.items.map((row) => row.id === item.id ? { ...row, status: "published" } : row) },
+                          "Článek publikován.",
+                        )
+                      }
+                      disabled={saving}
                     >
                       Publikovat
                     </button>
                     <button
                       type="button"
                       className={styles.removeButton}
-                      onClick={() => persist({ items: content.items.filter((row) => row.id !== item.id) })}
+                      onClick={() => void persist({ items: content.items.filter((row) => row.id !== item.id) }, "Článek smazán.")}
+                      disabled={saving}
                     >
                       Smazat
                     </button>
@@ -221,7 +266,13 @@ export function NewsAdmin() {
                     <button
                       type="button"
                       className={styles.secondaryButton}
-                      onClick={() => persist({ items: content.items.map((row) => row.id === item.id ? { ...row, status: "draft" } : row) })}
+                      onClick={() =>
+                        void persist(
+                          { items: content.items.map((row) => row.id === item.id ? { ...row, status: "draft" } : row) },
+                          "Článek vrácen do draftu.",
+                        )
+                      }
+                      disabled={saving}
                     >
                       Vrátit do draftu
                     </button>

@@ -1,20 +1,9 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
 import styles from "@/app/tomas-pernik/tomas-pernik.module.css";
-import { type NewsContent, loadNewsContent } from "@/components/tomas-pernik/news-content";
+import { getTomasPernikNewsContent } from "@/lib/tomas-pernik-news";
 
-export function NewsSection() {
-  const [content, setContent] = useState<NewsContent>({ items: [] });
-
-  useEffect(() => {
-    setContent(loadNewsContent());
-  }, []);
-
-  const published = useMemo(
-    () => content.items.filter((item) => item.status === "published"),
-    [content],
-  );
+export async function NewsSection() {
+  const content = await getTomasPernikNewsContent();
+  const published = content.items.filter((item) => item.status === "published");
 
   return (
     <section className={`${styles.section} ${styles.newsSection}`} id="novinky">
