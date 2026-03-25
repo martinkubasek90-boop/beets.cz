@@ -61,7 +61,7 @@ export default function TomasPernikPage() {
           <header className={styles.topbar}>
             <Link href="/" className={styles.brand}>
               <img
-                src="https://www.ods.cz/img/logo/ods.svg"
+                src="https://www.ods.cz/img/logo/ods-logo-plna-barva.jpg"
                 alt="Logo ODS"
                 className={styles.brandLogo}
               />
