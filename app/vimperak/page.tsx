@@ -154,7 +154,12 @@ export default function VimperakPage() {
               </p>
 
               <div className={styles.heroActions}>
-                <a href="#screeny" className={styles.primaryButton}>
+                <a
+                  href="https://vimperk-app.vercel.app/"
+                  className={styles.primaryButton}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Prohlédnout aplikaci
                   <ArrowRight size={18} />
                 </a>
