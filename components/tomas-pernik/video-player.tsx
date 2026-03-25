@@ -49,6 +49,23 @@ type VideoPlayerProps = {
   title?: string;
 };
 
+function getYouTubeEmbedUrl(src: string) {
+  try {
+    const url = new URL(src);
+    if (url.hostname.includes("youtube.com")) {
+      const id = url.searchParams.get("v");
+      if (id) return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+    }
+    if (url.hostname.includes("youtu.be")) {
+      const id = url.pathname.replace("/", "");
+      if (id) return `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1`;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function VideoPlayer({ src, poster, title = "Kampaňové video" }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideControlsRef = useRef<number | null>(null);
@@ -62,6 +79,7 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
   const [duration, setDuration] = useState(0);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(src);
 
   useEffect(() => {
     const media = window.matchMedia("(pointer: coarse)");
@@ -141,6 +159,32 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
     setPlaybackSpeed(speed);
     revealControls();
   };
+
+  if (youtubeEmbedUrl) {
+    return (
+      <motion.div
+        className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/20 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="absolute left-4 top-4 z-10 rounded-full border border-white/15 bg-[#111111b8] px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white backdrop-blur-md">
+          Video
+        </div>
+        <div className="aspect-video w-full">
+          <iframe
+            className="h-full w-full"
+            src={youtubeEmbedUrl}
+            title={title}
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div

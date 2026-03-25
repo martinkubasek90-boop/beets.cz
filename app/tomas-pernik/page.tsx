@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 const portraitUrl = "/tomas-pernik/pernik-portrait.png";
-const campaignVideoUrl = "/tomas-pernik/kampan.mp4";
+const campaignVideoUrl = "https://www.youtube.com/watch?v=6dl1X7ujk1c";
 
 const priorities = [
   {

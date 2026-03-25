@@ -278,52 +278,62 @@
 .heroVisual {
   position: relative;
   align-self: end;
-  min-height: 760px;
+  min-height: 700px;
 }
 
 .heroPortrait {
   position: absolute;
-  right: -2.5rem;
-  bottom: -4rem;
-  overflow: visible;
-  width: min(41vw, 590px);
+  right: 0;
+  bottom: -1.5rem;
+  overflow: hidden;
+  width: min(38vw, 520px);
+  aspect-ratio: 0.78;
   min-height: 0;
-  border-radius: 0;
-  border: 0;
-  box-shadow: none;
-  background: transparent;
+  border-radius: 280px 280px 42px 42px;
+  border: 1px solid rgba(3, 78, 162, 0.12);
+  box-shadow: 0 30px 60px rgba(3, 78, 162, 0.14);
+  background:
+    radial-gradient(circle at 48% 18%, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.54) 34%, rgba(216, 231, 249, 0.76) 58%, rgba(170, 201, 241, 0.35) 76%, transparent 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(230, 240, 251, 0.86) 100%);
   isolation: isolate;
 }
 
 .heroPortrait::after {
-  content: none;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0) 48%, rgba(235, 244, 255, 0.32) 70%, rgba(226, 238, 252, 0.76) 100%),
+    radial-gradient(circle at 52% 10%, rgba(255, 255, 255, 0.72), transparent 34%);
+  pointer-events: none;
 }
 
 .heroPortrait::before {
   content: "";
   position: absolute;
-  inset: 4% 10% 12% 14%;
+  inset: -10% -10% 10% 20%;
   z-index: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.28) 52%, transparent 70%),
-    radial-gradient(circle at 56% 58%, rgba(3, 78, 162, 0.15), transparent 62%);
-  filter: blur(10px);
+    radial-gradient(circle at 50% 22%, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.18) 46%, transparent 66%),
+    radial-gradient(circle at 56% 58%, rgba(3, 78, 162, 0.18), transparent 62%);
+  filter: blur(20px);
 }
 
 .heroPortraitImage {
-  position: relative;
+  position: absolute;
+  inset: 0;
   display: block;
-  z-index: 1;
-  width: 128%;
-  height: auto;
-  max-height: none;
-  margin-left: -14%;
-  object-fit: contain;
-  object-position: center top;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  margin-left: 0;
+  object-fit: cover;
+  object-position: 52% 14%;
   mix-blend-mode: multiply;
-  transform: scale(1.1);
-  transform-origin: center bottom;
+  transform: scale(1.04);
+  transform-origin: center center;
   filter:
     contrast(1.04)
     saturate(0.96)
@@ -1054,7 +1064,7 @@
 
   .heroVisual {
     max-width: 520px;
-    min-height: 0;
+    min-height: 560px;
     margin: 0 auto;
   }
 
@@ -1062,14 +1072,13 @@
     position: relative;
     right: auto;
     bottom: auto;
-    width: min(100%, 520px);
+    width: min(100%, 460px);
     margin: 0 auto;
   }
 
   .heroPortraitImage {
-    width: 118%;
-    margin-left: -9%;
-    transform: scale(1.04);
+    object-position: 52% 12%;
+    transform: scale(1.06);
   }
 
   .profileCard,
@@ -1229,18 +1238,19 @@
   }
 
   .heroPortrait {
-    width: 100%;
-    max-width: 430px;
+    width: min(82vw, 340px);
+    max-width: 340px;
+    aspect-ratio: 1;
+    border-radius: 999px;
   }
 
   .heroPortrait::before {
-    inset: 6% 10% 12% 10%;
+    inset: -8% -8% 12% -8%;
   }
 
   .heroPortraitImage {
-    width: 132%;
-    margin-left: -18%;
-    transform: scale(1.08);
+    object-position: 50% 10%;
+    transform: scale(1.18);
   }
 
   .sectionHead {
@@ -1382,13 +1392,12 @@
   }
 
   .heroPortrait {
-    max-width: 360px;
+    max-width: 300px;
   }
 
   .heroPortraitImage {
-    width: 138%;
-    margin-left: -22%;
-    transform: scale(1.1);
+    object-position: 50% 9%;
+    transform: scale(1.22);
   }
 
   .plannerTabs {
