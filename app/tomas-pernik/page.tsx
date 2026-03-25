@@ -20,33 +20,40 @@ const raleway = Raleway({
 });
 
 export const metadata: Metadata = {
-  title: "Tomáš Perník | Profilová landing page",
+  title: "Tomáš Perník | Vimperk potřebuje energii, která zůstává doma",
   description:
-    "Profilová landing page pro Tomáše Perníka v light brandingu ODS s vlastním retrofuturistickým 3D pozadím.",
+    "Osobní web Tomáše Perníka pro komunální volby 2026 ve Vimperku. Priority, agenda, novinky i prostor pro přímý kontakt.",
 };
 
 export const dynamic = "force-dynamic";
 
+const portraitUrl =
+  "https://scontent-prg1-1.cdninstagram.com/v/t51.2885-19/129749715_378789590044541_2641727146362517518_n.jpg?stp=dst-jpg_s100x100_tt6&_nc_cat=101&ccb=7-5&_nc_sid=bf7eb4&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=ckzaHzklHycQ7kNvwGktL5H&_nc_oc=AdrveTy0p9X8wIvt01sdDrMSmDotMQ27jPUDhOC7HiztZCyORWl2zW_fiEWneMwTVVA&_nc_zt=24&_nc_ht=scontent-prg1-1.cdninstagram.com&_nc_ss=7a30f&oh=00_AfxRi2Z9NsJjsDZjd3qF872hjMTfXMUS9KSghH8jE_7nAw&oe=69C9D0D0";
+
 const priorities = [
   {
-    title: "Dostupná komunikace",
-    text: "Jasně strukturovaný obsah, přehledné kontaktní body a jednoduché CTA pro dotazy i zapojení.",
+    title: "Bydlení pro mladé Vimperáky",
+    text: "Podpora dostupného bydlení, práce s brownfieldy a využití prázdných budov tak, aby mladí lidé nemuseli hledat budoucnost jinde.",
   },
   {
-    title: "Moderní vizuál",
-    text: "Vlastní 3D scéna navazuje na referenční styl, ale drží se čistého modrobílého brandingu.",
+    title: "Živé centrum města",
+    text: "Lepší podmínky pro malé podnikatele, služby a podnikání v centru, které má znovu fungovat jako přirozené srdce Vimperka.",
   },
   {
-    title: "Důvěryhodná prezentace",
-    text: "Landing page je připravená jako silný osobní profil bez vizuálního chaosu a bez závislosti na Spline.",
+    title: "Doprava, která neotravuje den",
+    text: "Parkování, průjezdnost a bezpečný pohyb po městě nesmí zůstávat jen tématem strategií, ale musí se proměnit v konkrétní kroky.",
+  },
+  {
+    title: "Šumava jako příležitost",
+    text: "Vimperk má využít svou polohu i partnerství tak, aby z turismu a investic netěžila jen mapa, ale i místní lidé a podnikání.",
   },
 ];
 
 const pillars = [
-  "Osobní profil a stručné představení",
-  "Sekce s prioritami a tématy",
-  "Prostor pro aktuality, program nebo reference",
-  "Výzva ke kontaktu a zapojení",
+  "Vimperák, který chce, aby mladí zůstali",
+  "pozitivní a konkrétní lokální politika",
+  "rychlý přístup k novinkám, agendě a kontaktu",
+  "obsah připravený pro kampaň do voleb 2026",
 ];
 
 export default function TomasPernikPage() {
@@ -70,9 +77,9 @@ export default function TomasPernikPage() {
               <span className={styles.brandText}>Tomáš Perník</span>
             </Link>
             <nav className={styles.nav}>
-              <a href="#priority">Priority</a>
+              <a href="#planner">Agenda</a>
               <a href="#profil">Profil</a>
-              <a href="/tomas-pernik/admin">Admin</a>
+              <a href="#priority">Priority</a>
               <a href="#novinky">Novinky</a>
               <a href="#kontakt">Kontakt</a>
             </nav>
@@ -80,45 +87,50 @@ export default function TomasPernikPage() {
 
           <div className={styles.heroLayout}>
             <div className={styles.heroCopy}>
-              <span className={styles.kicker}>Profilová landing page</span>
+              <span className={styles.kicker}>Komunální volby 2026 | Vimperk</span>
               <h1>Tomáš Perník</h1>
               <p className={styles.lead}>
-                Návrh samostatné stránky pro URL <strong>beets.cz/tomas-pernik</strong>.
-                Vizuál drží zadaný ODS branding, ale používá vlastní WebGL scénu místo
-                externího Spline embedu.
+                Vimperák, který chce, aby mladí ve městě zůstali, centrum znovu žilo a
+                rozvoj Vimperka nestál jen na plánech na papíře. Pozitivně, konkrétně a
+                s respektem k tomu, co už se ve městě podařilo.
               </p>
               <div className={styles.actions}>
                 <a className={styles.primaryButton} href="#kontakt">
-                  Kontaktovat tým
+                  Napsat a spojit se
                   <ArrowRight size={16} />
                 </a>
-                <a className={styles.secondaryButton} href="#profil">
-                  Zobrazit strukturu
+                <a className={styles.secondaryButton} href="#planner">
+                  Zobrazit aktuální agendu
                 </a>
               </div>
               <ul className={styles.inlineFacts}>
                 <li>
                   <Users size={16} />
-                  připraveno pro osobní profil
+                  kandidát ODS pro komunální volby 2026
                 </li>
                 <li>
                   <MapPin size={16} />
-                  vhodné pro lokální i krajskou komunikaci
+                  Vimperk a lokální témata v první linii
                 </li>
                 <li>
                   <Mail size={16} />
-                  snadno doplnitelné o formulář a novinky
+                  novinky, agenda a kontakt na jednom místě
                 </li>
               </ul>
             </div>
 
             <aside className={styles.heroCard}>
-              <p className={styles.cardLabel}>Aktuální stav</p>
-              <h2>Hotový designový základ pro nasazení</h2>
+              <div className={styles.heroPortraitWrap}>
+                <div className={styles.heroPortrait}>
+                  <img className={styles.heroPortraitImage} src={portraitUrl} alt="Tomáš Perník" />
+                  <div className={styles.heroPortraitBadge}>Tom Pernik (@tompernik)</div>
+                </div>
+              </div>
+              <p className={styles.cardLabel}>Positioning</p>
+              <h2>Vimperák, který chce, aby mladí zůstali a město se posouvalo dál</h2>
               <p>
-                Tahle verze je záměrně postavená jako čistý prototyp. Struktura, CTA a
-                vizuální hierarchie jsou připravené, finální texty a fakta o kandidátovi
-                se dají doplnit bez zásahu do layoutu.
+                Nejde o politiku od stolu. Hlavní linka kampaně stojí na místní zkušenosti,
+                dostupném bydlení, živém centru, rozumné dopravě a lepším využití potenciálu Šumavy.
               </p>
               <ul className={styles.cardList}>
                 {pillars.map((item) => (
@@ -133,11 +145,46 @@ export default function TomasPernikPage() {
         </div>
       </section>
 
+      <PlannerShowcase />
+
+      <section id="profil" className={`${styles.section} ${styles.sectionAlt}`}>
+        <div className={styles.shell}>
+          <div className={styles.profileLayout}>
+            <div className={styles.profileCard}>
+              <span className={styles.kicker}>Profil a positioning</span>
+              <h2>Vimperk má dobrý základ. Teď potřebuje energii, která dotáhne důležité věci do výsledku.</h2>
+              <p>
+                Tahle kampaň nestojí na tom, že je všechno špatně. Naopak: Vimperk je město
+                s potenciálem i konkrétním zlepšením v kvalitě života. O to důležitější je
+                řešit to, co lidé cítí denně: odchod mladých, bydlení, prázdnější centrum
+                i dopravní omezení, která komplikují běžný den.
+              </p>
+            </div>
+
+            <div className={styles.statPanel}>
+              <p className={styles.cardLabel}>Vimperk v číslech</p>
+              <div className={styles.statItem}>
+                <strong>7 464</strong>
+                <span>obyvatel města k 1. 1. 2025</span>
+              </div>
+              <div className={styles.statItem}>
+                <strong>43 let</strong>
+                <span>průměrný věk v širším krajském kontextu ukazuje, proč je důležité udržet mladé rodiny ve městě</span>
+              </div>
+              <div className={styles.statItem}>
+                <strong>900+</strong>
+                <span>pracovních míst u největšího zaměstnavatele Rohde &amp; Schwarz potvrzuje, že Vimperk má na čem stavět</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="priority" className={styles.section}>
         <div className={styles.shell}>
           <div className={styles.sectionHead}>
-            <span className={styles.kicker}>Co je na stránce připravené</span>
-            <h2>Retrofuturistická estetika převedená do čistého politického brandingu</h2>
+            <span className={styles.kicker}>Hlavní sdělení</span>
+            <h2>Čtyři témata, která mohou ve Vimperku rozhodnout důvěru i výsledek kampaně</h2>
           </div>
           <div className={styles.priorityGrid}>
             {priorities.map((item) => (
@@ -150,54 +197,21 @@ export default function TomasPernikPage() {
         </div>
       </section>
 
-      <section id="profil" className={`${styles.section} ${styles.sectionAlt}`}>
-        <div className={styles.shell}>
-          <div className={styles.profileLayout}>
-            <div className={styles.profileCard}>
-              <span className={styles.kicker}>Doplnitelný obsah</span>
-              <h2>Místo pro finální bio, priority a lokální témata</h2>
-              <p>
-                Tahle část je připravená pro ostrý obsah. Můžete sem doplnit krátký
-                medailon, konkrétní priority, reference, výsledky práce nebo lokální
-                témata podle města či regionu.
-              </p>
-            </div>
-
-            <div className={styles.statPanel}>
-              <p className={styles.cardLabel}>Doporučená skladba</p>
-              <div className={styles.statItem}>
-                <strong>01</strong>
-                <span>Silný hero s osobním positioningem</span>
-              </div>
-              <div className={styles.statItem}>
-                <strong>02</strong>
-                <span>Krátký profil a 3 až 4 nosná témata</span>
-              </div>
-              <div className={styles.statItem}>
-                <strong>03</strong>
-                <span>Jasný kontakt nebo formulář pro zájemce</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <PlannerShowcase />
       <NewsSection />
 
       <section id="kontakt" className={styles.section}>
         <div className={styles.shell}>
           <div className={styles.ctaCard}>
             <div>
-              <span className={styles.kicker}>Další krok</span>
-              <h2>Pošlete finální texty a kontakty, nasazení už je připravené</h2>
+              <span className={styles.kicker}>Kontakt a zapojení</span>
+              <h2>Máte podnět pro Vimperk, otázku nebo chuť pomoci? Ozvěte se napřímo.</h2>
               <p>
-                Pokud chcete, navážu rovnou druhým krokem: doplnění reálného obsahu,
-                fotky kandidáta, kontaktního formuláře a případně novinkové sekce.
+                Kampaň stojí i na tom, že se politika vrací do normálního rozhovoru s lidmi.
+                Napište, co je podle vás potřeba ve Vimperku posunout, co funguje a co by mělo dostat větší prioritu.
               </p>
             </div>
-            <a className={styles.primaryButton} href="mailto:info@beets.cz">
-              info@beets.cz
+            <a className={styles.primaryButton} href="https://www.facebook.com/perniktom" target="_blank" rel="noreferrer">
+              Facebook Tomáše Perníka
               <ArrowRight size={16} />
             </a>
           </div>

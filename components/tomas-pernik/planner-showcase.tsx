@@ -25,8 +25,8 @@ export function PlannerShowcase() {
     <section className={styles.plannerSection} id="planner">
       <div className={styles.shell}>
         <div className={styles.sectionHead}>
-          <span className={styles.kicker}>Designový element</span>
-          <h2>Bespoke planner blok vložený přímo do landing page</h2>
+          <span className={styles.kicker}>Na čem aktuálně pracuje</span>
+          <h2>Přehled priorit, termínů a témat, která mají být vidět hned po úvodu</h2>
         </div>
 
         <div className={styles.plannerHost}>
