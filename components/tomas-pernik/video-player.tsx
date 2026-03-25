@@ -189,7 +189,7 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
   if (youtubeEmbedUrl) {
     return (
       <motion.div
-        className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#034EA2]/45 bg-white/65 shadow-[0_24px_80px_rgba(3,78,162,0.14)] backdrop-blur-sm"
+        className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border-2 border-[#034EA2]/70 bg-white/65 shadow-[0_24px_80px_rgba(3,78,162,0.14)] backdrop-blur-sm"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -243,7 +243,7 @@ export default function VideoPlayer({ src, poster, title = "Kampaňové video" }
 
   return (
     <motion.div
-      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border border-[#034EA2]/45 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
+      className="relative mx-auto w-full max-w-5xl overflow-hidden rounded-[28px] border-2 border-[#034EA2]/70 bg-[#11111198] shadow-[0_24px_80px_rgba(3,78,162,0.18)] backdrop-blur-sm"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
