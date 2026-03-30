@@ -3,32 +3,50 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { TrendingUp, Clock, Wallet, Shield, FileText, ArrowRight, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Factory, Wallet, TrendingUp, SunMedium, FileText, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ResultsPanelProps = {
   calculations: {
-    netRevenue: number;
+    annualProduction: number;
+    annualSavings: number;
+    annualExportRevenue: number;
+    annualBenefit: number;
     simplePayback: number;
-    irr: number;
-    totalProfit: number;
     riskLevel: 'low' | 'medium' | 'high';
     confidenceScore: number;
-    capex: number;
+    grossCapex: number;
+    subsidyAmount: number;
+    equityNeeded: number;
   };
   onRequestAnalysis: () => void;
   onDownloadPdf: () => void;
 };
 
+function formatCurrency(value: number) {
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(2)} mil. Kč`;
+  return `${Math.round(value).toLocaleString('cs-CZ')} Kč`;
+}
+
 export default function ResultsPanel({ calculations, onRequestAnalysis, onDownloadPdf }: ResultsPanelProps) {
-  const { netRevenue, simplePayback, irr, totalProfit, riskLevel, confidenceScore } = calculations;
+  const {
+    annualProduction,
+    annualSavings,
+    annualExportRevenue,
+    annualBenefit,
+    simplePayback,
+    riskLevel,
+    confidenceScore,
+    grossCapex,
+    subsidyAmount,
+    equityNeeded,
+  } = calculations;
 
   const getStatusConfig = () => {
-    if (simplePayback <= 7) return { color: 'emerald', label: 'Ekonomicky stabilní energetická investice', icon: CheckCircle2 };
-    if (simplePayback <= 10) return { color: 'blue', label: 'Perspektivní investiční příležitost', icon: TrendingUp };
-    if (simplePayback <= 12) return { color: 'amber', label: 'Projekt vyžaduje optimalizaci', icon: AlertTriangle };
-    return { color: 'red', label: 'Doporučujeme individuální posouzení', icon: Info };
+    if (simplePayback <= 7) return { color: 'emerald', label: 'Velmi silná ekonomika projektu', icon: CheckCircle2 };
+    if (simplePayback <= 10) return { color: 'blue', label: 'Projekt dává ekonomický smysl', icon: TrendingUp };
+    if (simplePayback <= 13) return { color: 'amber', label: 'Projekt je citlivý na vstupy', icon: Info };
+    return { color: 'red', label: 'Doporučujeme upravit parametry projektu', icon: Info };
   };
 
   const status = getStatusConfig();
@@ -37,10 +55,8 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
     medium: { label: 'Střední', color: 'text-amber-400', bg: 'bg-amber-500/20' },
     high: { label: 'Vyšší', color: 'text-red-400', bg: 'bg-red-500/20' },
   };
-  const confidenceColor = confidenceScore >= 75 ? 'emerald' : confidenceScore >= 60 ? 'amber' : 'orange';
-  const formatCurrency = (v: number) =>
-    v >= 1000000 ? `${(v / 1000000).toFixed(1)} mil. Kč` : `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
 
+  const confidenceColor = confidenceScore >= 75 ? 'emerald' : confidenceScore >= 60 ? 'amber' : 'orange';
   const statusTextClass =
     status.color === 'emerald'
       ? 'text-emerald-400'
@@ -54,9 +70,10 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
     <div className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 overflow-hidden">
       <div className="px-5 pt-5 pb-3 text-center sm:text-left">
         <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700/50 text-xs text-slate-400">
-          C&amp;I projekty v ČR se typicky pohybují mezi 5–9 lety návratnosti
+          Model odpovídá dodanému CSV: investice, dotace, výroba, úspora, přetoky, návratnost
         </span>
       </div>
+
       <div className="px-4 sm:px-5 pb-5">
         <div
           className={cn(
@@ -72,7 +89,7 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
             <span className={cn('text-xs sm:text-sm font-medium leading-snug', statusTextClass)}>{status.label}</span>
           </div>
           <div className="text-center">
-            <p className="text-slate-400 text-sm mb-2">Prostá návratnost</p>
+            <p className="text-slate-400 text-sm mb-2">Návratnost investice</p>
             <motion.div
               key={simplePayback}
               initial={{ scale: 0.9, opacity: 0 }}
@@ -87,59 +104,39 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
       </div>
 
       <div className="px-4 sm:px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Wallet className="w-4 h-4 text-emerald-400" />
-            <span className="text-xs text-slate-400">Roční čistý výnos</span>
+        {[
+          { label: 'Očekávaná roční výroba', value: `${Math.round(annualProduction).toLocaleString('cs-CZ')} kWh`, icon: SunMedium, accent: 'text-yellow-400' },
+          { label: 'Roční úspora z vlastní spotřeby', value: formatCurrency(annualSavings), icon: Wallet, accent: 'text-emerald-400' },
+          { label: 'Roční výnos z prodeje', value: formatCurrency(annualExportRevenue), icon: Factory, accent: 'text-blue-400' },
+          { label: 'Celkový roční výnos', value: formatCurrency(annualBenefit), icon: TrendingUp, accent: 'text-emerald-400' },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={cn('w-4 h-4', accent)} />
+              <span className="text-xs text-slate-400">{label}</span>
+            </div>
+            <p className="text-xl font-semibold text-white">{value}</p>
           </div>
-          <p className="text-xl font-semibold text-white">{formatCurrency(netRevenue)}</p>
-        </div>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30 cursor-help">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="w-4 h-4 text-blue-400" />
-                  <span className="text-xs text-slate-400">Roční zhodnocení (IRR)</span>
-                  <Info className="w-3 h-3 text-slate-500" />
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <p className="text-xl font-semibold text-white">{irr.toFixed(1)}</p>
-                  <span className="text-sm text-slate-400">%</span>
-                </div>
-                {irr > 25 && <p className="text-[10px] text-amber-400 mt-1">Výsledek vychází z aktuálních tržních podmínek.</p>}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="max-w-xs">
-              <p>IRR vyjadřuje průměrné roční procentní zhodnocení při modelových parametrech ČR 2025.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-purple-400" />
-            <span className="text-xs text-slate-400">12letý kum. zisk</span>
+        ))}
+      </div>
+
+      <div className="px-4 sm:px-5 pb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { label: 'Investiční náklady', value: formatCurrency(grossCapex), accent: 'text-blue-400' },
+          { label: 'Dotace', value: formatCurrency(subsidyAmount), accent: 'text-emerald-400' },
+          { label: 'Vlastní zdroje', value: formatCurrency(equityNeeded), accent: 'text-amber-400' },
+        ].map(({ label, value, accent }) => (
+          <div key={label} className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/30">
+            <div className="text-xs text-slate-400 mb-2">{label}</div>
+            <div className={cn('text-lg font-semibold', accent)}>{value}</div>
           </div>
-          <p className={cn('text-xl font-semibold', totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400')}>
-            {totalProfit >= 0 ? '+' : ''}
-            {formatCurrency(totalProfit)}
-          </p>
-        </div>
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
-          <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-4 h-4 text-slate-400" />
-            <span className="text-xs text-slate-400">Index rizika</span>
-          </div>
-          <div className={cn('inline-flex px-2.5 py-1 rounded-lg text-sm font-medium', riskConfig[riskLevel].bg, riskConfig[riskLevel].color)}>
-            {riskConfig[riskLevel].label}
-          </div>
-        </div>
+        ))}
       </div>
 
       <div className="px-4 sm:px-5 pb-5">
         <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-slate-400">Investiční robustnost</span>
+            <span className="text-sm text-slate-400">Robustnost scénáře</span>
             <span
               className={cn(
                 'text-lg font-semibold',
@@ -157,20 +154,25 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
                 'h-full rounded-full',
                 confidenceColor === 'emerald' && 'bg-emerald-500',
                 confidenceColor === 'amber' && 'bg-amber-500',
-                confidenceColor === 'orange' && 'bg-orange-500',
+                confidenceColor === 'orange' && 'bg-orange-400',
               )}
               initial={{ width: 0 }}
               animate={{ width: `${confidenceScore}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             />
           </div>
+          <div className="mt-3 inline-flex px-2.5 py-1 rounded-lg text-sm font-medium bg-slate-900/70 border border-slate-700/50">
+            <span className={cn(riskConfig[riskLevel].bg, riskConfig[riskLevel].color, 'px-2.5 py-1 rounded-lg')}>
+              Index rizika: {riskConfig[riskLevel].label}
+            </span>
+          </div>
         </div>
       </div>
 
       <div className="px-4 sm:px-5 pb-5">
         <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-          {['Model zahrnuje degradaci baterie', 'Zohledňuje provozní náklady', '12letý investiční horizont'].map((text, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-xs text-slate-400">
+          {['Zahrnuje vlastní spotřebu', 'Zahrnuje přetoky do sítě', 'Počítá s dotační podporou'].map((text) => (
+            <div key={text} className="flex items-center gap-1.5 text-xs text-slate-400">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
               <span>{text}</span>
             </div>
@@ -189,11 +191,10 @@ export default function ResultsPanel({ calculations, onRequestAnalysis, onDownlo
           onClick={onRequestAnalysis}
           className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
         >
-          <span className="text-sm sm:hidden">Získat nezávazné posouzení zdarma</span>
+          <span className="text-sm sm:hidden">Získat posouzení zdarma</span>
           <span className="hidden sm:inline text-base">Získat nezávazné investiční posouzení zdarma</span>
           <ArrowRight className="w-4 h-4 ml-2 shrink-0" />
         </Button>
-        <p className="text-center text-xs text-slate-500">Nezávazná konzultace • Model na míru • Reálná data z ČR</p>
       </div>
     </div>
   );

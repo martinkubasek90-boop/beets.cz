@@ -16,7 +16,7 @@ type LeadCaptureModalProps = {
     irr: number;
   };
   inputs: {
-    capacity: number;
+    systemSizeKw: number;
   };
   onClose: () => void;
 };
@@ -98,20 +98,20 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
               <p className="text-xs text-slate-400 mb-3">Shrnutí vašeho projektu</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
                 <div>
-                  <span className="text-slate-400">Kapacita:</span>
-                  <span className="text-white ml-2">{inputs.capacity.toLocaleString('cs-CZ')} kWh</span>
+                  <span className="text-slate-400">Velikost FVE:</span>
+                  <span className="text-white ml-2">{inputs.systemSizeKw.toLocaleString('cs-CZ')} kWp</span>
                 </div>
                 <div>
                   <span className="text-slate-400">Návratnost:</span>
                   <span className="text-white ml-2">{calculations.simplePayback.toFixed(1)} let</span>
                 </div>
                 <div>
-                  <span className="text-slate-400">Roční výnos:</span>
+                  <span className="text-slate-400">Roční přínos:</span>
                   <span className="text-white ml-2">{formatCurrency(calculations.netRevenue)}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400">IRR:</span>
-                  <span className="text-white ml-2">{calculations.irr.toFixed(1)}%</span>
+                  <span className="text-slate-400">Model:</span>
+                  <span className="text-white ml-2">FVE návratnost</span>
                 </div>
               </div>
             </div>

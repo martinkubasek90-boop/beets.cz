@@ -13,12 +13,12 @@ type SensitivityChartProps = {
 
 export default function SensitivityChart({
   data,
-  title = 'Citlivost návratnosti na vývoj trhu',
-  subtitle = 'Vliv změny spreadu arbitráže',
-  tooltipLabel = 'Změna spreadu',
+  title = 'Citlivost návratnosti',
+  subtitle = 'Vliv změny vstupního parametru',
+  tooltipLabel = 'Změna parametru',
 }: SensitivityChartProps) {
-  const getBarColor = (p: number) => (p <= 7 ? '#10b981' : p <= 10 ? '#3b82f6' : p <= 12 ? '#f59e0b' : '#ef4444');
-  const isStable = data.every((d) => d.payback <= 12);
+  const getBarColor = (p: number) => (p <= 7 ? '#10b981' : p <= 10 ? '#3b82f6' : p <= 13 ? '#f59e0b' : '#ef4444');
+  const isStable = data.every((d) => d.payback <= 13);
 
   const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
     if (active && payload?.length)
@@ -56,7 +56,7 @@ export default function SensitivityChart({
               tickFormatter={(v) => `${v}r`}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-            <ReferenceLine y={12} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.5} />
+            <ReferenceLine y={13} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.5} />
             <Bar dataKey="payback" radius={[4, 4, 0, 0]} maxBarSize={40}>
               {data.map((entry, i) => (
                 <Cell key={i} fill={getBarColor(entry.payback)} />
@@ -68,15 +68,15 @@ export default function SensitivityChart({
       {isStable && (
         <div className="mt-3 flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 rounded-lg px-3 py-2">
           <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></span>
-          Projekt zůstává investičně smysluplný i při méně příznivém vývoji trhu.
+          Projekt zůstává smysluplný i při méně příznivé variantě sledovaného vstupu.
         </div>
       )}
       <div className="mt-3 flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
         {[
           ['bg-emerald-500', '< 7 let'],
           ['bg-blue-500', '7-10 let'],
-          ['bg-amber-500', '10-12 let'],
-          ['bg-red-500', '> 12 let'],
+          ['bg-amber-500', '10-13 let'],
+          ['bg-red-500', '> 13 let'],
         ].map(([cls, lbl]) => (
           <div key={lbl} className="flex items-center gap-1.5">
             <div className={`w-2 h-2 rounded-sm ${cls}`}></div>
