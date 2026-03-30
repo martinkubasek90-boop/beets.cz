@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 type LeadPayload = {
+  calculatorType?: 'bess' | 'fve';
   type?: 'pdf' | 'analysis';
   name?: string;
   email?: string;
@@ -17,6 +18,7 @@ type LeadPayload = {
   };
   inputs?: {
     capacity?: number;
+    systemSizeKw?: number;
   };
 };
 
@@ -114,8 +116,10 @@ async function createDeal(token: string, payload: LeadPayload, contactId: string
   }
 
   const summary = buildDealSummary(payload);
+  const calculatorType = payload.calculatorType === 'fve' ? 'fve' : 'bess';
 
-  const dealName = `${payload.type === 'pdf' ? 'PDF lead' : 'BESS lead'} - ${payload.company?.trim() || payload.name?.trim() || payload.email}`;
+  const dealPrefix = payload.type === 'pdf' ? 'PDF lead' : calculatorType === 'fve' ? 'FVE lead' : 'BESS lead';
+  const dealName = `${dealPrefix} - ${payload.company?.trim() || payload.name?.trim() || payload.email}`;
 
   const deal = await hubspotRequest<{ id: string }>(token, '/crm/v3/objects/deals', {
     method: 'POST',
@@ -178,16 +182,26 @@ async function createDealNote(token: string, dealId: string, contactId: string, 
 
 function buildDealSummary(payload: LeadPayload) {
   const capacity = toNumber(payload.inputs?.capacity);
+  const systemSizeKw = toNumber(payload.inputs?.systemSizeKw);
   const payback = toNumber(payload.calculations?.simplePayback);
   const irr = toNumber(payload.calculations?.irr);
   const revenue = toNumber(payload.calculations?.netRevenue);
+  const calculatorType = payload.calculatorType === 'fve' ? 'fve' : 'bess';
 
   return [
-    `Zdroj: BESS kalkulačka (${payload.type === 'pdf' ? 'PDF' : 'Analýza'})`,
-    capacity !== undefined ? `Kapacita: ${Math.round(capacity)} kWh` : null,
+    `Zdroj: ${calculatorType === 'fve' ? 'FVE kalkulačka' : 'BESS kalkulačka'} (${payload.type === 'pdf' ? 'PDF' : 'Analýza'})`,
+    calculatorType === 'fve'
+      ? systemSizeKw !== undefined
+        ? `Velikost FVE: ${Math.round(systemSizeKw)} kWp`
+        : null
+      : capacity !== undefined
+        ? `Kapacita: ${Math.round(capacity)} kWh`
+        : null,
     payback !== undefined ? `Návratnost: ${payback.toFixed(1)} let` : null,
-    irr !== undefined ? `IRR: ${irr.toFixed(1)} %` : null,
-    revenue !== undefined ? `Roční čistý výnos: ${Math.round(revenue).toLocaleString('cs-CZ')} Kč` : null,
+    calculatorType === 'bess' && irr !== undefined ? `IRR: ${irr.toFixed(1)} %` : null,
+    revenue !== undefined
+      ? `${calculatorType === 'fve' ? 'Roční přínos' : 'Roční čistý výnos'}: ${Math.round(revenue).toLocaleString('cs-CZ')} Kč`
+      : null,
     payload.message?.trim() ? `Poznámka klienta: ${payload.message.trim()}` : null,
     payload.sourceUrl?.trim() ? `URL: ${payload.sourceUrl.trim()}` : null,
   ]

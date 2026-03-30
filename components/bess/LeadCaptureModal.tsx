@@ -38,6 +38,7 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          calculatorType: 'bess',
           type,
           ...formData,
           calculations,
