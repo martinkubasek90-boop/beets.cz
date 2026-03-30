@@ -1,175 +1,93 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { GitCompare, ChevronDown, ChevronUp } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 
-type ScenarioInputs = {
-  capacity: number;
-  utilizationType: 'stable' | 'combined' | 'arbitrage';
-  annualConsumption: number;
-  electricityPrice: number;
-  financing: 'own' | 'bank';
-  loanInterestRate: number;
-  loanTermYears: number;
-  loanSharePct: number;
+function calculateSolarProject(inputs: {
+  systemSizeKw: number;
+  annualProductionPerKw: number;
+  selfConsumptionPct: number;
+  powerPrice: number;
+  distributionPrice: number;
+  sellPrice: number;
   subsidyPct: number;
-  spread: number;
-  fcrPrice: number;
-  degradation: number;
-  omCosts: number;
-};
-
-type ScenarioResult = {
-  simplePayback: number;
-  irr: number;
-  netRevenue: number;
-  totalProfit: number;
-  effectiveCapex: number;
-  rawCapex: number;
-};
-
-function calcScenario(
-  inputs: ScenarioInputs,
-  profiles: Record<string, { fcrShare: number }>,
-  capexMultiplier = 1,
-): ScenarioResult {
-  const {
-    capacity,
-    utilizationType,
-    annualConsumption,
-    electricityPrice,
-    financing,
-    loanInterestRate,
-    loanTermYears,
-    loanSharePct,
-    subsidyPct,
-    spread,
-    fcrPrice,
-    degradation,
-    omCosts,
-  } = inputs;
-  const profile = profiles[utilizationType];
-  const deg = degradation / 100;
-  const omRate = omCosts / 100;
-  const capacityMWh = capacity / 1000;
-  const powerMW = capacityMWh;
-  const batteryModules = capacityMWh * 6_000_000;
-  const pcs = powerMW * 2_000_000;
-  const fixedCosts = 4_000_000 + 1_500_000 + 1_500_000 + 2_000_000 + 1_000_000;
-  const rawCapex = Math.round((batteryModules + pcs + fixedCosts) * capexMultiplier / 1000) * 1000;
-  const effectiveCapex = rawCapex * (1 - subsidyPct / 100);
-  const power = capacity;
-  const fcrRevenue = power * profile.fcrShare * 12 * fcrPrice * 0.85;
-  const maxByConsumption = annualConsumption * 1000 * 0.35;
-  const maxByCycles = capacity * 300;
-  const usedEnergy = Math.min(maxByConsumption, maxByCycles);
-  const arbitrageRevenue = usedEnergy * spread;
-  const annualEnergyMWh = usedEnergy / 1000;
-  const actualSelfConsumption = Math.min(annualEnergyMWh * 0.25, annualConsumption * 0.1);
-  const selfSavings = actualSelfConsumption * electricityPrice * 1000;
-  const grossRevenue = fcrRevenue + arbitrageRevenue + selfSavings;
-
-  let annualLoanCost = 0;
-  if (financing === 'bank' && loanSharePct > 0) {
-    const loanAmount = rawCapex * (loanSharePct / 100);
-    const r = loanInterestRate / 100;
-    const n = loanTermYears;
-    annualLoanCost = r === 0 ? loanAmount / n : (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  }
-
-  const omCostVal = rawCapex * omRate;
-  const netRevenue = grossRevenue - omCostVal - annualLoanCost;
-  const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
-  const yearlyRevenues = Array.from({ length: 12 }, (_, i) => netRevenue * Math.pow(1 - deg, i));
-  const equityInvestment = financing === 'bank' ? effectiveCapex * (1 - loanSharePct / 100) : effectiveCapex;
-
-  const calculateIRR = (cashFlows: number[], inv: number) => {
-    if (inv <= 0) return 0;
-    let irr = 0.1;
-    for (let i = 0; i < 200; i += 1) {
-      let npv = -inv;
-      let dnpv = 0;
-      for (let t = 0; t < cashFlows.length; t += 1) {
-        npv += cashFlows[t] / Math.pow(1 + irr, t + 1);
-        dnpv -= (t + 1) * cashFlows[t] / Math.pow(1 + irr, t + 2);
-      }
-      if (Math.abs(dnpv) < 1e-10) break;
-      const ni = irr - npv / dnpv;
-      if (Math.abs(ni - irr) < 0.00001) break;
-      irr = ni;
-    }
-    return Math.max(0, Math.min(irr * 100, 80));
+  advancedSettings: {
+    capexPerKw: number;
+    additionalCosts: number;
   };
+}) {
+  const annualProduction = inputs.systemSizeKw * inputs.annualProductionPerKw;
+  const selfConsumedEnergy = annualProduction * (inputs.selfConsumptionPct / 100);
+  const exportedEnergy = annualProduction - selfConsumedEnergy;
+  const purchasePrice = inputs.powerPrice + inputs.distributionPrice;
+  const grossCapex = inputs.systemSizeKw * inputs.advancedSettings.capexPerKw + inputs.advancedSettings.additionalCosts;
+  const subsidyAmount = grossCapex * (inputs.subsidyPct / 100);
+  const equityNeeded = grossCapex - subsidyAmount;
+  const annualSavings = selfConsumedEnergy * purchasePrice;
+  const annualExportRevenue = exportedEnergy * inputs.sellPrice;
+  const annualBenefit = annualSavings + annualExportRevenue;
+  const simplePayback = annualBenefit > 0 ? equityNeeded / annualBenefit : 99;
 
-  const irr = calculateIRR(yearlyRevenues, equityInvestment);
-  const totalProfit = yearlyRevenues.reduce((s, r) => s + r, 0) - effectiveCapex;
-  return { simplePayback, irr, netRevenue, totalProfit, effectiveCapex, rawCapex };
+  return {
+    grossCapex,
+    equityNeeded,
+    annualBenefit,
+    simplePayback,
+  };
 }
 
-const profiles = {
-  stable: { fcrShare: 0.8 },
-  combined: { fcrShare: 0.5 },
-  arbitrage: { fcrShare: 0.0 },
-};
-
-const utilizationLabels = { stable: 'Stabilní', combined: 'Kombinovaný', arbitrage: 'Arbitráž' };
-const financingLabels = { own: 'Vlastní kapitál', bank: 'Bankovní úvěr' };
+type ScenarioResult = ReturnType<typeof calculateSolarProject>;
 
 type ComparePanelProps = {
   scenarioA: {
-    capacity?: number;
-    financingType?: 'own' | 'bank';
-    loanSharePct?: number;
-    subsidyPct?: number;
+    systemSizeKw: number;
+    selfConsumptionPct: number;
+    subsidyPct: number;
+    capexPerKw: number;
+    annualBenefit: number;
     simplePayback: number;
-    irr: number;
-    netRevenue: number;
-    totalProfit: number;
-    effectiveCapex?: number;
-    capex?: number;
+    grossCapex: number;
+    equityNeeded: number;
   };
 };
 
 export default function ComparePanel({ scenarioA }: ComparePanelProps) {
   const [open, setOpen] = useState(false);
-  const [scenarioB, setScenarioB] = useState<ScenarioInputs>({
-    capacity: 500,
-    utilizationType: 'combined',
-    annualConsumption: 3000,
-    electricityPrice: 4.5,
-    financing: 'bank',
-    loanInterestRate: 6,
-    loanTermYears: 8,
-    loanSharePct: 50,
+  const [scenarioB, setScenarioB] = useState({
+    systemSizeKw: 120,
+    annualProductionPerKw: 1000,
+    selfConsumptionPct: 60,
+    powerPrice: 3,
+    distributionPrice: 1,
+    sellPrice: 1.6,
     subsidyPct: 20,
-    spread: 1.2,
-    fcrPrice: 1900,
-    degradation: 2,
-    omCosts: 2.5,
+    advancedSettings: {
+      capexPerKw: 25000,
+      additionalCosts: 0,
+    },
   });
 
-  const resultB = useMemo(() => calcScenario(scenarioB, profiles), [scenarioB]);
-  const resultA = scenarioA;
+  const resultB: ScenarioResult = useMemo(() => calculateSolarProject(scenarioB), [scenarioB]);
 
-  const formatCurrency = (v: number) =>
-    v >= 1000000 ? `${(v / 1000000).toFixed(1)} mil. Kč` : `${Math.round(v).toLocaleString('cs-CZ')} Kč`;
-  const paybackColor = (p: number) => (p <= 7 ? 'text-emerald-400' : p <= 10 ? 'text-blue-400' : p <= 12 ? 'text-amber-400' : 'text-red-400');
+  const formatCurrency = (value: number) =>
+    Math.abs(value) >= 1_000_000 ? `${(value / 1_000_000).toFixed(2)} mil. Kč` : `${Math.round(value).toLocaleString('cs-CZ')} Kč`;
+
+  const paybackColor = (value: number) => (value <= 7 ? 'text-emerald-400' : value <= 10 ? 'text-blue-400' : value <= 13 ? 'text-amber-400' : 'text-red-400');
 
   const metrics = [
-    { label: 'Čistý CAPEX', a: formatCurrency(resultA.effectiveCapex || resultA.capex || 0), b: formatCurrency(resultB.effectiveCapex) },
-    { label: 'Roční výnos (rok 1)', a: formatCurrency(resultA.netRevenue), b: formatCurrency(resultB.netRevenue) },
+    { label: 'Investiční náklady', a: formatCurrency(scenarioA.grossCapex), b: formatCurrency(resultB.grossCapex) },
+    { label: 'Vlastní zdroje', a: formatCurrency(scenarioA.equityNeeded), b: formatCurrency(resultB.equityNeeded) },
+    { label: 'Roční výnos', a: formatCurrency(scenarioA.annualBenefit), b: formatCurrency(resultB.annualBenefit) },
     {
       label: 'Prostá návratnost',
-      a: `${resultA.simplePayback.toFixed(1)} let`,
+      a: `${scenarioA.simplePayback.toFixed(1)} let`,
       b: `${resultB.simplePayback.toFixed(1)} let`,
-      colorA: paybackColor(resultA.simplePayback),
+      colorA: paybackColor(scenarioA.simplePayback),
       colorB: paybackColor(resultB.simplePayback),
     },
-    { label: 'IRR', a: `${resultA.irr.toFixed(1)} %`, b: `${resultB.irr.toFixed(1)} %` },
-    { label: '12letý zisk', a: formatCurrency(resultA.totalProfit), b: formatCurrency(resultB.totalProfit) },
   ];
 
   return (
@@ -184,7 +102,7 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
           </div>
           <div className="text-left">
             <div className="text-sm font-semibold text-white">Porovnání scénářů</div>
-            <div className="text-xs text-slate-400">Porovnejte dvě konfigurace vedle sebe</div>
+            <div className="text-xs text-slate-400">Vedle sebe porovnáte dvě varianty FVE</div>
           </div>
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -200,18 +118,16 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
               </div>
               <div className="space-y-1 text-xs text-slate-400">
                 <div>
-                  Kapacita: <span className="text-slate-200">{scenarioA.capacity?.toLocaleString('cs-CZ') || '—'} kWh</span>
+                  Velikost: <span className="text-slate-200">{scenarioA.systemSizeKw.toLocaleString('cs-CZ')} kWp</span>
                 </div>
                 <div>
-                  Financování:{' '}
-                  <span className="text-slate-200">
-                    {scenarioA.financingType === 'bank'
-                      ? `${scenarioA.loanSharePct || 50}% úvěr`
-                      : financingLabels[scenarioA.financingType || 'own'] || '—'}
-                  </span>
+                  Vlastní spotřeba: <span className="text-slate-200">{scenarioA.selfConsumptionPct} %</span>
                 </div>
                 <div>
-                  Dotace: <span className="text-slate-200">{scenarioA.subsidyPct || 0} %</span>
+                  Dotace: <span className="text-slate-200">{scenarioA.subsidyPct} %</span>
+                </div>
+                <div>
+                  CAPEX / kWp: <span className="text-slate-200">{scenarioA.capexPerKw.toLocaleString('cs-CZ')} Kč</span>
                 </div>
               </div>
             </div>
@@ -222,21 +138,21 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
                 <span className="text-sm font-semibold text-white">Scénář B (upravte)</span>
               </div>
               {[
-                { key: 'capacity', label: 'Kapacita', suffix: ' kWh', min: 200, max: 5000, step: 100, fmt: (v: number) => v.toLocaleString('cs-CZ') },
-                { key: 'annualConsumption', label: 'Spotřeba', suffix: ' MWh', min: 100, max: 20000, step: 100, fmt: (v: number) => v.toLocaleString('cs-CZ') },
-                { key: 'subsidyPct', label: 'Dotace', suffix: ' %', min: 0, max: 50, step: 5, fmt: (v: number) => v },
+                { key: 'systemSizeKw', label: 'Velikost FVE', suffix: ' kWp', min: 50, max: 1000, step: 10, fmt: (v: number) => Math.round(v).toLocaleString('cs-CZ') },
+                { key: 'selfConsumptionPct', label: 'Vlastní spotřeba', suffix: ' %', min: 0, max: 100, step: 1, fmt: (v: number) => Math.round(v) },
+                { key: 'subsidyPct', label: 'Dotace', suffix: ' %', min: 0, max: 80, step: 1, fmt: (v: number) => Math.round(v) },
               ].map(({ key, label, suffix, min, max, step, fmt }) => (
                 <div key={key} className="space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="text-slate-400">{label}</span>
-                    <span className={key === 'subsidyPct' && (scenarioB.subsidyPct as number) > 0 ? 'text-emerald-400' : 'text-slate-200'}>
-                      {fmt(scenarioB[key as keyof ScenarioInputs] as number)}
+                    <span className="text-slate-200">
+                      {fmt(scenarioB[key as keyof typeof scenarioB] as number)}
                       {suffix}
                     </span>
                   </div>
                   <Slider
-                    value={[scenarioB[key as keyof ScenarioInputs] as number]}
-                    onValueChange={([v]) => setScenarioB((p) => ({ ...p, [key]: v }))}
+                    value={[scenarioB[key as keyof typeof scenarioB] as number]}
+                    onValueChange={([v]) => setScenarioB((prev) => ({ ...prev, [key]: v }))}
                     min={min}
                     max={max}
                     step={step}
@@ -244,83 +160,46 @@ export default function ComparePanel({ scenarioA }: ComparePanelProps) {
                 </div>
               ))}
               <div className="space-y-1">
-                <span className="text-xs text-slate-400">Typ využití</span>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1">
-                  {Object.entries(utilizationLabels).map(([id, label]) => (
-                    <button
-                      key={id}
-                      onClick={() => setScenarioB((p) => ({ ...p, utilizationType: id as ScenarioInputs['utilizationType'] }))}
-                      className={cn(
-                        'text-xs py-1.5 rounded-lg border transition-colors',
-                        scenarioB.utilizationType === id
-                          ? 'border-purple-500/50 bg-purple-500/10 text-purple-400'
-                          : 'border-slate-700/50 text-slate-400 hover:border-slate-600',
-                      )}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">CAPEX / kWp</span>
+                  <span className="text-slate-200">{Math.round(scenarioB.advancedSettings.capexPerKw).toLocaleString('cs-CZ')} Kč</span>
                 </div>
+                <Slider
+                  value={[scenarioB.advancedSettings.capexPerKw]}
+                  onValueChange={([v]) =>
+                    setScenarioB((prev) => ({
+                      ...prev,
+                      advancedSettings: { ...prev.advancedSettings, capexPerKw: v },
+                    }))
+                  }
+                  min={15000}
+                  max={40000}
+                  step={500}
+                />
               </div>
-              <div className="space-y-1">
-                <span className="text-xs text-slate-400">Financování</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                  {[
-                    { id: 'own', label: 'Vlastní' },
-                    { id: 'bank', label: '50% úvěr' },
-                  ].map((o) => (
-                    <button
-                      key={o.id}
-                      onClick={() => setScenarioB((p) => ({ ...p, financing: o.id as ScenarioInputs['financing'] }))}
-                      className={cn(
-                        'text-xs py-1.5 rounded-lg border transition-colors',
-                        scenarioB.financing === o.id
-                          ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
-                          : 'border-slate-700/50 text-slate-400 hover:border-slate-600',
-                      )}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {scenarioB.financing === 'bank' ? (
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-400">Podíl úvěru</span>
-                    <span className="text-slate-200">{scenarioB.loanSharePct} %</span>
-                  </div>
-                  <Slider
-                    value={[scenarioB.loanSharePct]}
-                    onValueChange={([v]) => setScenarioB((p) => ({ ...p, loanSharePct: Math.round(v) }))}
-                    min={10}
-                    max={90}
-                    step={5}
-                  />
-                </div>
-              ) : null}
             </div>
           </div>
 
           <div className="px-4 sm:px-5 pb-5">
-            <div className="bg-slate-800/20 rounded-xl border border-slate-700/30 overflow-x-auto">
-              <div className="min-w-[560px]">
-                <div className="grid grid-cols-3 text-xs font-semibold text-slate-400 bg-slate-800/50 px-4 py-2.5">
-                  <span>Metrika</span>
-                  <span className="text-center text-emerald-400">Scénář A</span>
-                  <span className="text-center text-purple-400">Scénář B</span>
-                </div>
-                {metrics.map((m, i) => (
-                  <div
-                    key={i}
-                    className={cn('grid grid-cols-3 px-4 py-2.5 border-t border-slate-800/50', i % 2 === 0 && 'bg-slate-800/10')}
-                  >
-                    <span className="text-slate-400 text-xs">{m.label}</span>
-                    <span className={cn('text-center font-medium text-xs', m.colorA || 'text-slate-200')}>{m.a}</span>
-                    <span className={cn('text-center font-medium text-xs', m.colorB || 'text-slate-200')}>{m.b}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="overflow-hidden rounded-xl border border-slate-800/70">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-900/70 text-slate-400">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium">Metrika</th>
+                    <th className="text-right px-4 py-3 font-medium">Scénář A</th>
+                    <th className="text-right px-4 py-3 font-medium">Scénář B</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-900/30">
+                  {metrics.map((metric) => (
+                    <tr key={metric.label}>
+                      <td className="px-4 py-3 text-slate-300">{metric.label}</td>
+                      <td className={cn('px-4 py-3 text-right text-white', metric.colorA)}>{metric.a}</td>
+                      <td className={cn('px-4 py-3 text-right text-white', metric.colorB)}>{metric.b}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </motion.div>
