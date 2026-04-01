@@ -76,17 +76,34 @@ export default function FveAdminPage() {
 
   const modelPreview = useMemo(() => {
     const result = calculateSolarProject(config.calculatorDefaults);
+    const tuning = config.modelTuning;
     const confidenceScore = Math.max(
-      35,
+      tuning.confidenceMin,
       Math.min(
-        95,
+        tuning.confidenceMax,
         Math.round(
-          55 +
-            (config.calculatorDefaults.selfConsumptionPct >= 65 ? 16 : config.calculatorDefaults.selfConsumptionPct >= 45 ? 10 : 4) +
-            (config.calculatorDefaults.subsidyPct >= 20 ? 10 : config.calculatorDefaults.subsidyPct > 0 ? 5 : 0) +
-            (config.calculatorDefaults.powerPrice + config.calculatorDefaults.distributionPrice >= 5 ? 8 : 0) +
-            (config.calculatorDefaults.advancedSettings.capexPerKw <= 25000 ? 7 : 0) -
-            (result.simplePayback > 12 ? 20 : result.simplePayback > 9 ? 10 : 0),
+          tuning.confidenceBaseScore +
+            (config.calculatorDefaults.selfConsumptionPct >= tuning.confidenceSelfConsumptionHighThreshold
+              ? tuning.confidenceSelfConsumptionHighBonus
+              : config.calculatorDefaults.selfConsumptionPct >= tuning.confidenceSelfConsumptionMediumThreshold
+                ? tuning.confidenceSelfConsumptionMediumBonus
+                : tuning.confidenceSelfConsumptionLowBonus) +
+            (config.calculatorDefaults.subsidyPct >= tuning.confidenceSubsidyHighThreshold
+              ? tuning.confidenceSubsidyHighBonus
+              : config.calculatorDefaults.subsidyPct > 0
+                ? tuning.confidenceSubsidyLowBonus
+                : 0) +
+            (config.calculatorDefaults.powerPrice + config.calculatorDefaults.distributionPrice >= tuning.confidencePurchasePriceThreshold
+              ? tuning.confidencePurchasePriceBonus
+              : 0) +
+            (config.calculatorDefaults.advancedSettings.capexPerKw <= tuning.confidenceCapexThreshold
+              ? tuning.confidenceCapexBonus
+              : 0) -
+            (result.simplePayback > tuning.confidencePaybackHighPenaltyThreshold
+              ? tuning.confidencePaybackHighPenalty
+              : result.simplePayback > tuning.confidencePaybackMediumPenaltyThreshold
+                ? tuning.confidencePaybackMediumPenalty
+                : 0),
         ),
       ),
     );
@@ -307,6 +324,141 @@ export default function FveAdminPage() {
                 />
               </div>
             ))}
+          </div>
+        </AdminAccordionSection>
+
+        <AdminAccordionSection
+          title="Model tuning"
+          description="Interní koeficienty a prahy modelu, podobně jako editovatelné parametry ve standalone python skriptu."
+          defaultOpen
+        >
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              ['riskPaybackLowYears', 'Nízké riziko do (let)'],
+              ['riskPaybackMediumYears', 'Střední riziko do (let)'],
+              ['confidenceBaseScore', 'Base confidence'],
+              ['confidenceSelfConsumptionMediumThreshold', 'Self-consumption medium threshold'],
+              ['confidenceSelfConsumptionHighThreshold', 'Self-consumption high threshold'],
+              ['confidenceSelfConsumptionMediumBonus', 'Self-consumption medium bonus'],
+              ['confidenceSelfConsumptionHighBonus', 'Self-consumption high bonus'],
+              ['confidenceSelfConsumptionLowBonus', 'Self-consumption low bonus'],
+              ['confidenceSubsidyLowBonus', 'Subsidy low bonus'],
+              ['confidenceSubsidyHighThreshold', 'Subsidy high threshold'],
+              ['confidenceSubsidyHighBonus', 'Subsidy high bonus'],
+              ['confidencePurchasePriceThreshold', 'Purchase price threshold'],
+              ['confidencePurchasePriceBonus', 'Purchase price bonus'],
+              ['confidenceCapexThreshold', 'CAPEX threshold'],
+              ['confidenceCapexBonus', 'CAPEX bonus'],
+              ['confidencePaybackMediumPenaltyThreshold', 'Payback medium penalty threshold'],
+              ['confidencePaybackHighPenaltyThreshold', 'Payback high penalty threshold'],
+              ['confidencePaybackMediumPenalty', 'Payback medium penalty'],
+              ['confidencePaybackHighPenalty', 'Payback high penalty'],
+              ['confidenceMin', 'Confidence min'],
+              ['confidenceMax', 'Confidence max'],
+              ['lowSelfConsumptionHintThreshold', 'Hint low self-consumption threshold'],
+              ['highCapexHintThreshold', 'Hint high CAPEX threshold'],
+              ['highAdditionalCostsHintThreshold', 'Hint additional costs threshold'],
+            ].map(([key, label]) => (
+              <div key={key}>
+                <label className="block text-xs text-slate-400 mb-1">{label}</label>
+                <input
+                  type="number"
+                  value={config.modelTuning[key as keyof FveAdminConfig['modelTuning']] as number}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      modelTuning: {
+                        ...prev.modelTuning,
+                        [key]: Number(e.target.value),
+                      },
+                    }))
+                  }
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 border-t border-slate-800 pt-5">
+            <h3 className="text-sm font-semibold text-slate-200 mb-3">Defaulty porovnávacího scénáře B</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[
+                ['systemSizeKw', 'Velikost FVE B'],
+                ['annualProductionPerKw', 'Roční výroba B'],
+                ['selfConsumptionPct', 'Vlastní spotřeba B'],
+                ['powerPrice', 'Silová cena B'],
+                ['distributionPrice', 'Distribuce B'],
+                ['sellPrice', 'Výkupní cena B'],
+                ['subsidyPct', 'Dotace B'],
+              ].map(([key, label]) => (
+                <div key={key}>
+                  <label className="block text-xs text-slate-400 mb-1">{label}</label>
+                  <input
+                    type="number"
+                    value={config.modelTuning.compareDefaults[key as keyof FveAdminConfig['modelTuning']['compareDefaults']] as number}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        modelTuning: {
+                          ...prev.modelTuning,
+                          compareDefaults: {
+                            ...prev.modelTuning.compareDefaults,
+                            [key]: Number(e.target.value),
+                          },
+                        },
+                      }))
+                    }
+                    className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                  />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">CAPEX / kWp B</label>
+                <input
+                  type="number"
+                  value={config.modelTuning.compareDefaults.advancedSettings.capexPerKw}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      modelTuning: {
+                        ...prev.modelTuning,
+                        compareDefaults: {
+                          ...prev.modelTuning.compareDefaults,
+                          advancedSettings: {
+                            ...prev.modelTuning.compareDefaults.advancedSettings,
+                            capexPerKw: Number(e.target.value),
+                          },
+                        },
+                      },
+                    }))
+                  }
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Dodatečné náklady B</label>
+                <input
+                  type="number"
+                  value={config.modelTuning.compareDefaults.advancedSettings.additionalCosts}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      modelTuning: {
+                        ...prev.modelTuning,
+                        compareDefaults: {
+                          ...prev.modelTuning.compareDefaults,
+                          advancedSettings: {
+                            ...prev.modelTuning.compareDefaults.advancedSettings,
+                            additionalCosts: Number(e.target.value),
+                          },
+                        },
+                      },
+                    }))
+                  }
+                  className="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
           </div>
         </AdminAccordionSection>
 

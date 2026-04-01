@@ -12,6 +12,45 @@
       "additionalCosts": 0
     }
   },
+  "modelTuning": {
+    "riskPaybackLowYears": 7,
+    "riskPaybackMediumYears": 10,
+    "confidenceBaseScore": 55,
+    "confidenceSelfConsumptionMediumThreshold": 45,
+    "confidenceSelfConsumptionHighThreshold": 65,
+    "confidenceSelfConsumptionMediumBonus": 10,
+    "confidenceSelfConsumptionHighBonus": 16,
+    "confidenceSelfConsumptionLowBonus": 4,
+    "confidenceSubsidyLowBonus": 5,
+    "confidenceSubsidyHighThreshold": 20,
+    "confidenceSubsidyHighBonus": 10,
+    "confidencePurchasePriceThreshold": 5,
+    "confidencePurchasePriceBonus": 8,
+    "confidenceCapexThreshold": 25000,
+    "confidenceCapexBonus": 7,
+    "confidencePaybackMediumPenaltyThreshold": 9,
+    "confidencePaybackHighPenaltyThreshold": 12,
+    "confidencePaybackMediumPenalty": 10,
+    "confidencePaybackHighPenalty": 20,
+    "confidenceMin": 35,
+    "confidenceMax": 95,
+    "lowSelfConsumptionHintThreshold": 30,
+    "highCapexHintThreshold": 30000,
+    "highAdditionalCostsHintThreshold": 500000,
+    "compareDefaults": {
+      "systemSizeKw": 120,
+      "annualProductionPerKw": 1000,
+      "selfConsumptionPct": 60,
+      "powerPrice": 3,
+      "distributionPrice": 1,
+      "sellPrice": 1.6,
+      "subsidyPct": 20,
+      "advancedSettings": {
+        "capexPerKw": 25000,
+        "additionalCosts": 0
+      }
+    }
+  },
   "leadCapture": {
     "pdfTitle": "Stáhnout investiční shrnutí",
     "pdfSubtitle": "Pošleme vám PDF na email",

@@ -50,23 +50,28 @@ type ComparePanelProps = {
     grossCapex: number;
     equityNeeded: number;
   };
+  defaults: {
+    systemSizeKw: number;
+    annualProductionPerKw: number;
+    selfConsumptionPct: number;
+    powerPrice: number;
+    distributionPrice: number;
+    sellPrice: number;
+    subsidyPct: number;
+    advancedSettings: {
+      capexPerKw: number;
+      additionalCosts: number;
+    };
+  };
 };
 
-export default function ComparePanel({ scenarioA }: ComparePanelProps) {
+export default function ComparePanel({ scenarioA, defaults }: ComparePanelProps) {
   const [open, setOpen] = useState(false);
-  const [scenarioB, setScenarioB] = useState({
-    systemSizeKw: 120,
-    annualProductionPerKw: 1000,
-    selfConsumptionPct: 60,
-    powerPrice: 3,
-    distributionPrice: 1,
-    sellPrice: 1.6,
-    subsidyPct: 20,
-    advancedSettings: {
-      capexPerKw: 25000,
-      additionalCosts: 0,
-    },
-  });
+  const [scenarioB, setScenarioB] = useState(defaults);
+
+  React.useEffect(() => {
+    setScenarioB(defaults);
+  }, [defaults]);
 
   const resultB = useMemo(() => calculateSolarProject(scenarioB), [scenarioB]);
 

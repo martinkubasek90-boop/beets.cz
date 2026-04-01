@@ -125,26 +125,36 @@ export default function FveCalculator() {
       advancedSettings,
     });
 
+    const tuning = adminConfig.modelTuning;
     const riskLevel: 'low' | 'medium' | 'high' =
-      base.simplePayback <= 7 ? 'low' : base.simplePayback <= 10 ? 'medium' : 'high';
+      base.simplePayback <= tuning.riskPaybackLowYears
+        ? 'low'
+        : base.simplePayback <= tuning.riskPaybackMediumYears
+          ? 'medium'
+          : 'high';
 
-    let confidenceScore = 55;
-    if (selfConsumptionPct >= 65) confidenceScore += 16;
-    else if (selfConsumptionPct >= 45) confidenceScore += 10;
-    else confidenceScore += 4;
-    if (subsidyPct >= 20) confidenceScore += 10;
-    else if (subsidyPct > 0) confidenceScore += 5;
-    if (powerPrice + distributionPrice >= 5) confidenceScore += 8;
-    if (advancedSettings.capexPerKw <= 25000) confidenceScore += 7;
-    if (base.simplePayback > 12) confidenceScore -= 20;
-    else if (base.simplePayback > 9) confidenceScore -= 10;
+    let confidenceScore = tuning.confidenceBaseScore;
+    if (selfConsumptionPct >= tuning.confidenceSelfConsumptionHighThreshold) {
+      confidenceScore += tuning.confidenceSelfConsumptionHighBonus;
+    } else if (selfConsumptionPct >= tuning.confidenceSelfConsumptionMediumThreshold) {
+      confidenceScore += tuning.confidenceSelfConsumptionMediumBonus;
+    } else {
+      confidenceScore += tuning.confidenceSelfConsumptionLowBonus;
+    }
+    if (subsidyPct >= tuning.confidenceSubsidyHighThreshold) confidenceScore += tuning.confidenceSubsidyHighBonus;
+    else if (subsidyPct > 0) confidenceScore += tuning.confidenceSubsidyLowBonus;
+    if (powerPrice + distributionPrice >= tuning.confidencePurchasePriceThreshold) confidenceScore += tuning.confidencePurchasePriceBonus;
+    if (advancedSettings.capexPerKw <= tuning.confidenceCapexThreshold) confidenceScore += tuning.confidenceCapexBonus;
+    if (base.simplePayback > tuning.confidencePaybackHighPenaltyThreshold) confidenceScore -= tuning.confidencePaybackHighPenalty;
+    else if (base.simplePayback > tuning.confidencePaybackMediumPenaltyThreshold) confidenceScore -= tuning.confidencePaybackMediumPenalty;
 
     return {
       ...base,
       riskLevel,
-      confidenceScore: clamp(Math.round(confidenceScore), 35, 95),
+      confidenceScore: clamp(Math.round(confidenceScore), tuning.confidenceMin, tuning.confidenceMax),
     };
   }, [
+    adminConfig.modelTuning,
     systemSizeKw,
     annualProductionPerKw,
     selfConsumptionPct,
@@ -215,21 +225,31 @@ export default function FveCalculator() {
   const validationHints = useMemo(() => {
     const hints: string[] = [];
 
-    if (selfConsumptionPct < 30) {
+    if (selfConsumptionPct < adminConfig.modelTuning.lowSelfConsumptionHintThreshold) {
       hints.push('Nízký podíl vlastní spotřeby posouvá ekonomiku projektu více do závislosti na výkupní ceně.');
     }
     if (sellPrice > powerPrice + distributionPrice) {
       hints.push('Výkupní cena je vyšší než celková nákupní cena. Ověřte, zda vstup odpovídá reálné smlouvě.');
     }
-    if (advancedSettings.capexPerKw > 30000) {
+    if (advancedSettings.capexPerKw > adminConfig.modelTuning.highCapexHintThreshold) {
       hints.push('Vyšší CAPEX na kWp výrazně zhoršuje prostou návratnost menších instalací.');
     }
-    if (advancedSettings.additionalCosts > 500000) {
+    if (advancedSettings.additionalCosts > adminConfig.modelTuning.highAdditionalCostsHintThreshold) {
       hints.push('Dodatečné náklady mají u menších FVE výrazný dopad na celkovou investici.');
     }
 
     return hints;
-  }, [selfConsumptionPct, sellPrice, powerPrice, distributionPrice, advancedSettings.capexPerKw, advancedSettings.additionalCosts]);
+  }, [
+    adminConfig.modelTuning.highAdditionalCostsHintThreshold,
+    adminConfig.modelTuning.highCapexHintThreshold,
+    adminConfig.modelTuning.lowSelfConsumptionHintThreshold,
+    selfConsumptionPct,
+    sellPrice,
+    powerPrice,
+    distributionPrice,
+    advancedSettings.capexPerKw,
+    advancedSettings.additionalCosts,
+  ]);
 
   return (
     <div className="relative overflow-x-hidden w-full min-w-0 max-w-full">
@@ -310,6 +330,7 @@ export default function FveCalculator() {
                 grossCapex: calculations.grossCapex,
                 equityNeeded: calculations.equityNeeded,
               }}
+              defaults={adminConfig.modelTuning.compareDefaults}
             />
           </div>
 
