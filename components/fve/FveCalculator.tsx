@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import InputPanel from '@/components/fve/InputPanel';
 import ResultsPanel from '@/components/fve/ResultsPanel';
@@ -9,6 +9,7 @@ import FinancingSection from '@/components/fve/FinancingSection';
 import ComparePanel from '@/components/fve/ComparePanel';
 import SocialProof from '@/components/fve/SocialProof';
 import LeadCaptureModal from '@/components/fve/LeadCaptureModal';
+import { defaultFveAdminConfig, type FveAdminConfig } from '@/lib/fve-admin-config';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -68,18 +69,49 @@ export function calculateSolarProject(inputs: SolarCalculationInput) {
 }
 
 export default function FveCalculator() {
-  const [systemSizeKw, setSystemSizeKw] = useState(100);
-  const [annualProductionPerKw, setAnnualProductionPerKw] = useState(1000);
-  const [selfConsumptionPct, setSelfConsumptionPct] = useState(50);
-  const [powerPrice, setPowerPrice] = useState(3);
-  const [distributionPrice, setDistributionPrice] = useState(1);
-  const [sellPrice, setSellPrice] = useState(1.6);
-  const [subsidyPct, setSubsidyPct] = useState(0);
+  const [adminConfig, setAdminConfig] = useState<FveAdminConfig>(defaultFveAdminConfig);
+  const [systemSizeKw, setSystemSizeKw] = useState(defaultFveAdminConfig.calculatorDefaults.systemSizeKw);
+  const [annualProductionPerKw, setAnnualProductionPerKw] = useState(defaultFveAdminConfig.calculatorDefaults.annualProductionPerKw);
+  const [selfConsumptionPct, setSelfConsumptionPct] = useState(defaultFveAdminConfig.calculatorDefaults.selfConsumptionPct);
+  const [powerPrice, setPowerPrice] = useState(defaultFveAdminConfig.calculatorDefaults.powerPrice);
+  const [distributionPrice, setDistributionPrice] = useState(defaultFveAdminConfig.calculatorDefaults.distributionPrice);
+  const [sellPrice, setSellPrice] = useState(defaultFveAdminConfig.calculatorDefaults.sellPrice);
+  const [subsidyPct, setSubsidyPct] = useState(defaultFveAdminConfig.calculatorDefaults.subsidyPct);
   const [advancedSettings, setAdvancedSettings] = useState<AdvancedSettings>({
-    capexPerKw: 25000,
-    additionalCosts: 0,
+    capexPerKw: defaultFveAdminConfig.calculatorDefaults.advancedSettings.capexPerKw,
+    additionalCosts: defaultFveAdminConfig.calculatorDefaults.advancedSettings.additionalCosts,
   });
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/fve-kalkulacka/admin-config', { cache: 'no-store' });
+        const payload = (await response.json().catch(() => ({}))) as { config?: FveAdminConfig };
+        if (!active || !response.ok || !payload.config) return;
+
+        const next = payload.config;
+        setAdminConfig(next);
+        setSystemSizeKw(next.calculatorDefaults.systemSizeKw);
+        setAnnualProductionPerKw(next.calculatorDefaults.annualProductionPerKw);
+        setSelfConsumptionPct(next.calculatorDefaults.selfConsumptionPct);
+        setPowerPrice(next.calculatorDefaults.powerPrice);
+        setDistributionPrice(next.calculatorDefaults.distributionPrice);
+        setSellPrice(next.calculatorDefaults.sellPrice);
+        setSubsidyPct(next.calculatorDefaults.subsidyPct);
+        setAdvancedSettings(next.calculatorDefaults.advancedSettings);
+      } catch {
+        // Keep local defaults when config endpoint is unavailable.
+      }
+    };
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const calculations = useMemo(() => {
     const base = calculateSolarProject({
@@ -314,6 +346,7 @@ export default function FveCalculator() {
             irr: 0,
           }}
           inputs={{ systemSizeKw }}
+          leadCaptureConfig={adminConfig.leadCapture}
           onClose={() => setModalType(null)}
         />
       )}

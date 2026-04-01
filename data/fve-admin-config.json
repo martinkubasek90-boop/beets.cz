@@ -1,0 +1,26 @@
+{
+  "calculatorDefaults": {
+    "systemSizeKw": 100,
+    "annualProductionPerKw": 1000,
+    "selfConsumptionPct": 50,
+    "powerPrice": 3,
+    "distributionPrice": 1,
+    "sellPrice": 1.6,
+    "subsidyPct": 0,
+    "advancedSettings": {
+      "capexPerKw": 25000,
+      "additionalCosts": 0
+    }
+  },
+  "leadCapture": {
+    "pdfTitle": "Stáhnout investiční shrnutí",
+    "pdfSubtitle": "Pošleme vám PDF na email",
+    "analysisTitle": "Požádat o investiční posouzení",
+    "analysisSubtitle": "Ozveme se vám do 24 hodin",
+    "pdfSuccessTitle": "PDF bylo odesláno!",
+    "pdfSuccessMessage": "Zkontrolujte prosím svou emailovou schránku.",
+    "analysisSuccessTitle": "Děkujeme za váš zájem!",
+    "analysisSuccessMessage": "Ozveme se vám do 24 hodin s detailní analýzou.",
+    "consentNote": "Odesláním souhlasíte se zpracováním osobních údajů pro účely komunikace."
+  }
+}

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, FileText, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react';
+import type { FveAdminConfig } from '@/lib/fve-admin-config';
 
 type LeadCaptureModalProps = {
   type: 'pdf' | 'analysis';
@@ -18,15 +19,20 @@ type LeadCaptureModalProps = {
   inputs: {
     systemSizeKw: number;
   };
+  leadCaptureConfig: FveAdminConfig['leadCapture'];
   onClose: () => void;
 };
 
-export default function LeadCaptureModal({ type, calculations, inputs, onClose }: LeadCaptureModalProps) {
+export default function LeadCaptureModal({ type, calculations, inputs, leadCaptureConfig, onClose }: LeadCaptureModalProps) {
   const [formData, setFormData] = useState({ email: '', name: '', company: '', phone: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const isPdf = type === 'pdf';
+  const modalTitle = isPdf ? leadCaptureConfig.pdfTitle : leadCaptureConfig.analysisTitle;
+  const modalSubtitle = isPdf ? leadCaptureConfig.pdfSubtitle : leadCaptureConfig.analysisSubtitle;
+  const successTitle = isPdf ? leadCaptureConfig.pdfSuccessTitle : leadCaptureConfig.analysisSuccessTitle;
+  const successMessage = isPdf ? leadCaptureConfig.pdfSuccessMessage : leadCaptureConfig.analysisSuccessMessage;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -86,8 +92,8 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
                   {isPdf ? <FileText className="w-5 h-5 text-blue-400" /> : <MessageSquare className="w-5 h-5 text-emerald-400" />}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-white">{isPdf ? 'Stáhnout investiční shrnutí' : 'Požádat o investiční posouzení'}</h3>
-                  <p className="text-sm text-slate-400">{isPdf ? 'Pošleme vám PDF na email' : 'Ozveme se vám do 24 hodin'}</p>
+                  <h3 className="font-semibold text-white">{modalTitle}</h3>
+                  <p className="text-sm text-slate-400">{modalSubtitle}</p>
                 </div>
               </div>
               <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
@@ -203,9 +209,7 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
                 )}
               </Button>
               {submitError ? <p className="text-xs text-red-400 text-center">{submitError}</p> : null}
-              <p className="text-xs text-center text-slate-500">
-                Odesláním souhlasíte se zpracováním osobních údajů pro účely komunikace.
-              </p>
+              <p className="text-xs text-center text-slate-500">{leadCaptureConfig.consentNote}</p>
             </form>
           </>
         ) : (
@@ -213,10 +217,8 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">{isPdf ? 'PDF bylo odesláno!' : 'Děkujeme za váš zájem!'}</h3>
-            <p className="text-slate-400 mb-6">
-              {isPdf ? 'Zkontrolujte prosím svou emailovou schránku.' : 'Ozveme se vám do 24 hodin s detailní analýzou.'}
-            </p>
+            <h3 className="text-xl font-semibold text-white mb-2">{successTitle}</h3>
+            <p className="text-slate-400 mb-6">{successMessage}</p>
             <Button onClick={onClose} variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
               Zavřít
             </Button>
