@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { X, FileText, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react';
-import type { FveAdminConfig } from '@/lib/fve-admin-config';
+import type { FveAdminConfig } from '@/lib/fve-admin-config-shared';
 
 type LeadCaptureModalProps = {
   type: 'pdf' | 'analysis';

@@ -9,7 +9,7 @@ import FinancingSection from '@/components/fve/FinancingSection';
 import ComparePanel from '@/components/fve/ComparePanel';
 import SocialProof from '@/components/fve/SocialProof';
 import LeadCaptureModal from '@/components/fve/LeadCaptureModal';
-import { defaultFveAdminConfig, type FveAdminConfig } from '@/lib/fve-admin-config';
+import { defaultFveAdminConfig, type FveAdminConfig } from '@/lib/fve-admin-config-shared';
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getFveAdminConfig, mergeFveAdminConfig, saveFveAdminConfig } from '@/lib/fve-admin-config';
+import { getFveAdminConfig, saveFveAdminConfig } from '@/lib/fve-admin-config';
+import { mergeFveAdminConfig } from '@/lib/fve-admin-config-shared';
 
 export const runtime = 'nodejs';
 
@@ -39,4 +40,3 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error?.message || 'Failed to save config.' }, { status: 500 });
   }
 }
-

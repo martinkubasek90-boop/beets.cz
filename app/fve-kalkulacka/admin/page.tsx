@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { calculateSolarProject } from '@/components/fve/FveCalculator';
-import { defaultFveAdminConfig, type FveAdminConfig } from '@/lib/fve-admin-config';
+import { defaultFveAdminConfig, type FveAdminConfig } from '@/lib/fve-admin-config-shared';
 
 function formatCurrency(value: number) {
   if (!Number.isFinite(value)) return '—';
