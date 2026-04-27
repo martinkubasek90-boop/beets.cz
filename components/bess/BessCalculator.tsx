@@ -23,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
 
 type BatteryScenario = 'Peak shaving' | 'Zvýšení vlastní spotřeby z FVE' | 'Ochrana proti volatilním cenám';
 type VoltageLevel = 'NN' | 'VN/VVN';
@@ -323,7 +324,15 @@ function SelectField<T extends string>({
   );
 }
 
-function ResultCard({ calculations }: { calculations: ReturnType<typeof calculateProject> }) {
+function ResultCard({
+  calculations,
+  onRequestAnalysis,
+  onDownloadPdf,
+}: {
+  calculations: ReturnType<typeof calculateProject>;
+  onRequestAnalysis: () => void;
+  onDownloadPdf: () => void;
+}) {
   const statusConfig =
     calculations.simplePayback <= 5
       ? { color: 'emerald', label: 'Ekonomicky silný FVE + bateriový scénář', icon: CheckCircle2 }
@@ -454,10 +463,17 @@ function ResultCard({ calculations }: { calculations: ReturnType<typeof calculat
       </div>
 
       <div className="p-4 sm:p-5 bg-slate-800/30 border-t border-slate-700/30 space-y-3">
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700/50 transition-colors text-sm">
+        <button
+          type="button"
+          onClick={onDownloadPdf}
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700/50 transition-colors text-sm"
+        >
           <FileText className="w-4 h-4" />Stáhnout investiční shrnutí (PDF)
         </button>
-        <Button className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+        <Button
+          onClick={onRequestAnalysis}
+          className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20"
+        >
           <span className="text-sm sm:hidden">Získat posouzení zdarma</span>
           <span className="hidden sm:inline text-base">Získat nezávazné investiční posouzení zdarma</span>
           <ArrowRight className="w-4 h-4 ml-2 shrink-0" />
@@ -478,6 +494,7 @@ function LineItem({ label, value }: { label: string; value: string }) {
 
 export default function BessCalculator() {
   const [model, setModel] = useState<ModelState>(DEFAULTS);
+  const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
   const calculations = useMemo(() => calculateProject(model), [model]);
 
   const setValue = <K extends keyof ModelState>(key: K, value: ModelState[K]) => {
@@ -745,7 +762,11 @@ export default function BessCalculator() {
           </div>
 
           <div className="space-y-6 min-w-0 rounded-3xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3 sm:p-4">
-            <ResultCard calculations={calculations} />
+            <ResultCard
+              calculations={calculations}
+              onRequestAnalysis={() => setModalType('analysis')}
+              onDownloadPdf={() => setModalType('pdf')}
+            />
             <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6">
               <div className="flex items-center gap-3 pb-4 border-b border-slate-800/50">
                 <LineChart className="w-5 h-5 text-emerald-400" />
@@ -784,6 +805,23 @@ export default function BessCalculator() {
           </div>
         </div>
       </div>
+
+      {modalType ? (
+        <LeadCaptureModal
+          type={modalType}
+          calculatorType="fve"
+          calculations={{
+            simplePayback: calculations.simplePayback,
+            netRevenue: calculations.annualBenefit,
+            irr: calculations.irr,
+          }}
+          inputs={{
+            capacity: model.batteryCapacityKwh,
+            systemSizeKw: model.pvSizeKwp,
+          }}
+          onClose={() => setModalType(null)}
+        />
+      ) : null}
     </div>
   );
 }

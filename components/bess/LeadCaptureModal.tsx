@@ -10,6 +10,7 @@ import { X, FileText, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react'
 
 type LeadCaptureModalProps = {
   type: 'pdf' | 'analysis';
+  calculatorType?: 'bess' | 'fve';
   calculations: {
     simplePayback: number;
     netRevenue: number;
@@ -17,11 +18,12 @@ type LeadCaptureModalProps = {
   };
   inputs: {
     capacity: number;
+    systemSizeKw?: number;
   };
   onClose: () => void;
 };
 
-export default function LeadCaptureModal({ type, calculations, inputs, onClose }: LeadCaptureModalProps) {
+export default function LeadCaptureModal({ type, calculatorType = 'bess', calculations, inputs, onClose }: LeadCaptureModalProps) {
   const [formData, setFormData] = useState({ email: '', name: '', company: '', phone: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -38,7 +40,7 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          calculatorType: 'bess',
+          calculatorType,
           type,
           ...formData,
           calculations,
@@ -99,8 +101,12 @@ export default function LeadCaptureModal({ type, calculations, inputs, onClose }
               <p className="text-xs text-slate-400 mb-3">Shrnutí vašeho projektu</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-sm">
                 <div>
-                  <span className="text-slate-400">Kapacita:</span>
-                  <span className="text-white ml-2">{inputs.capacity.toLocaleString('cs-CZ')} kWh</span>
+                  <span className="text-slate-400">{calculatorType === 'fve' ? 'FVE:' : 'Kapacita:'}</span>
+                  <span className="text-white ml-2">
+                    {calculatorType === 'fve' && inputs.systemSizeKw
+                      ? `${inputs.systemSizeKw.toLocaleString('cs-CZ')} kWp`
+                      : `${inputs.capacity.toLocaleString('cs-CZ')} kWh`}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-400">Návratnost:</span>
