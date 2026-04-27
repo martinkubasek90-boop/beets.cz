@@ -1,392 +1,488 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import InputPanel from '@/components/bess/InputPanel';
-import ResultsPanel from '@/components/bess/ResultsPanel';
-import SensitivityChart from '@/components/bess/SensitivityChart';
-import FinancingSection from '@/components/bess/FinancingSection';
-import ComparePanel from '@/components/bess/ComparePanel';
-import SocialProof from '@/components/bess/SocialProof';
-import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
-import BessAssistant from '@/components/bess/BessAssistant';
 import {
-  defaultBessAdminConfig,
-  type BessAdminConfig,
-  type BessModelTuning,
-} from '@/lib/bess-admin-config';
+  Activity,
+  ArrowRight,
+  BatteryCharging,
+  CheckCircle2,
+  FileText,
+  Gauge,
+  Info,
+  LineChart,
+  Receipt,
+  RefreshCcw,
+  Shield,
+  SlidersHorizontal,
+  SunMedium,
+  TrendingUp,
+  Wallet,
+  Zap,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import { cn } from '@/lib/utils';
 
-const profiles = {
-  stable: { fcrShare: 0.8, spread: 1.0, fcrPrice: 1900, degradation: 2 },
-  combined: { fcrShare: 0.5, spread: 1.2, fcrPrice: 1900, degradation: 2 },
-  arbitrage: { fcrShare: 0.0, spread: 1.5, fcrPrice: 1700, degradation: 2.2 },
+type BatteryScenario = 'Peak shaving' | 'Zvýšení vlastní spotřeby z FVE' | 'Ochrana proti volatilním cenám';
+type VoltageLevel = 'NN' | 'VN/VVN';
+type PeakFrequency = 'Pravidelně' | 'Výjimečně';
+
+type ModelState = {
+  pvSizeKwp: number;
+  annualYieldKwhPerKwp: number;
+  baseSelfConsumptionPct: number;
+  useBattery: boolean;
+  annualConsumptionMwh: number;
+  batteryScenario: BatteryScenario;
+  voltageLevel: VoltageLevel;
+  batteryCapacityKwh: number;
+  batteryPowerKw: number;
+  peakFrequency: PeakFrequency;
+  highestPeakKw: number;
+  reservedCapacityKw: number;
+  volatilitySpreadKwh: number;
+  pvCapexKwp: number;
+  batteryCapex: number;
+  otherCosts: number;
+  powerPriceKwh: number;
+  distributionPriceKwh: number;
+  feedInPriceKwh: number;
+  subsidyPct: number;
 };
 
-const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-type UtilizationType = keyof typeof profiles;
-type InvestmentMode = 'conservative' | 'realistic' | 'dynamic';
-type FinancingType = 'own' | 'bank';
+const DEFAULTS: ModelState = {
+  pvSizeKwp: 100,
+  annualYieldKwhPerKwp: 1000,
+  baseSelfConsumptionPct: 50,
+  useBattery: true,
+  annualConsumptionMwh: 120,
+  batteryScenario: 'Peak shaving',
+  voltageLevel: 'VN/VVN',
+  batteryCapacityKwh: 120,
+  batteryPowerKw: 60,
+  peakFrequency: 'Pravidelně',
+  highestPeakKw: 220,
+  reservedCapacityKw: 180,
+  volatilitySpreadKwh: 1.8,
+  pvCapexKwp: 25000,
+  batteryCapex: 1200000,
+  otherCosts: 0,
+  powerPriceKwh: 3,
+  distributionPriceKwh: 1,
+  feedInPriceKwh: 1.6,
+  subsidyPct: 0,
+};
 
-type AssistantPatch = Partial<{
-  capacity: number;
-  utilizationType: UtilizationType;
-  annualConsumption: number;
-  electricityPrice: number;
-  investmentMode: InvestmentMode;
-  financing: FinancingType;
-  subsidyPct: number;
-  loanInterestRate: number;
-  loanTermYears: number;
-  loanSharePct: number;
-  spread: number;
-  fcrPrice: number;
-  degradation: number;
-  omCosts: number;
-}>;
+const MODEL_ASSUMPTIONS = {
+  batteryEfficiency: 0.9,
+  selfConsumptionCycles: 220,
+  volatilityCycles: 180,
+  arbitrageConsumptionShare: 0.35,
+  peakShavingValueKwMonth: 1800,
+  regularPeakMonths: 12,
+  occasionalPeakMonths: 3,
+  nnPeakRelevance: 0.15,
+  projectLifetimeYears: 12,
+};
 
-const calculateProject = (inputs: {
-  capacity: number;
-  utilizationType: keyof typeof profiles;
-  annualConsumption: number;
-  electricityPrice: number;
-  financing: 'own' | 'bank';
-  loanInterestRate: number;
-  loanTermYears: number;
-  loanSharePct: number;
-  subsidyPct: number;
-  spread: number;
-  fcrPrice: number;
-  degradation: number;
-  omCosts: number;
-  capexMultiplier?: number;
-  modelTuning: BessModelTuning;
-}) => {
-  const {
-    capacity,
-    utilizationType,
-    annualConsumption,
-    electricityPrice,
-    financing,
-    loanInterestRate,
-    loanTermYears,
-    loanSharePct,
-    subsidyPct,
-    spread,
-    fcrPrice,
-    degradation,
-    omCosts,
-    capexMultiplier = 1,
-    modelTuning,
-  } = inputs;
-  const profile = profiles[utilizationType];
-  const deg = degradation / 100;
-  const omRate = omCosts / 100;
-  const capacityMWh = capacity / 1000;
-  const powerMW = capacityMWh;
-  const batteryModules = capacityMWh * modelTuning.batteryCostPerMwh;
-  const pcs = powerMW * modelTuning.pcsCostPerMw;
-  const fixedCosts =
-    modelTuning.gridConnectionCost +
-    modelTuning.emsCost +
-    modelTuning.engineeringCost +
-    modelTuning.constructionCost +
-    modelTuning.fireSafetyCost;
-  const rawCapex = Math.round((batteryModules + pcs + fixedCosts) * capexMultiplier / 1000) * 1000;
-  const effectiveCapex = rawCapex * (1 - subsidyPct / 100);
-  const fcrNetFactor = Math.max(0, 1 - modelTuning.aggregatorFeePercent / 100);
-  const fcrRevenue = powerMW * 1000 * profile.fcrShare * 12 * fcrPrice * fcrNetFactor;
-  const maxByConsumption = annualConsumption * 1000 * 0.35;
-  const maxByCycles = capacity * modelTuning.cyclesPerYear;
-  const usedEnergy = Math.min(maxByConsumption, maxByCycles);
-  const arbitrageRevenue = usedEnergy * spread * modelTuning.roundtripEfficiency;
-  const annualEnergyMWh = usedEnergy / 1000;
-  const actualSelfConsumption = Math.min(annualEnergyMWh * 0.25, annualConsumption * 0.1);
-  const selfSavings = actualSelfConsumption * electricityPrice * 1000;
-  const grossRevenue = fcrRevenue + arbitrageRevenue + selfSavings;
+const scenarioCards: Array<{
+  id: BatteryScenario;
+  label: string;
+  sublabel: string;
+  icon: typeof Shield;
+  color: 'blue' | 'emerald' | 'amber';
+}> = [
+  {
+    id: 'Peak shaving',
+    label: 'Peak shaving',
+    sublabel: 'Seříznutí 15min špiček',
+    icon: Shield,
+    color: 'blue',
+  },
+  {
+    id: 'Zvýšení vlastní spotřeby z FVE',
+    label: 'Vlastní spotřeba',
+    sublabel: 'Uložení přetoků z FVE',
+    icon: BatteryCharging,
+    color: 'emerald',
+  },
+  {
+    id: 'Ochrana proti volatilním cenám',
+    label: 'Volatilita',
+    sublabel: 'Arbitráž cen elektřiny',
+    icon: Activity,
+    color: 'amber',
+  },
+];
 
-  let annualLoanCost = 0;
-  if (financing === 'bank' && loanSharePct > 0) {
-    const loanAmount = rawCapex * (loanSharePct / 100);
-    const r = loanInterestRate / 100;
-    const n = loanTermYears;
-    annualLoanCost = r === 0 ? loanAmount / n : (loanAmount * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  }
+const colorClasses = {
+  blue: 'border-blue-500/50 bg-blue-500/10 text-blue-400',
+  emerald: 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400',
+  amber: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+};
 
-  const omCostVal = rawCapex * omRate;
-  const netRevenue = grossRevenue - omCostVal - annualLoanCost;
-  const simplePayback = netRevenue > 0 ? effectiveCapex / netRevenue : 99;
-  const horizon = Math.max(1, Math.round(modelTuning.projectLifetimeYears));
-  const yearlyRevenues = Array.from({ length: horizon }, (_, i) => netRevenue * Math.pow(1 - deg, i));
-  const equityInvestment = financing === 'bank' ? effectiveCapex * (1 - loanSharePct / 100) : effectiveCapex;
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
 
-  const calculateIRR = (cashFlows: number[], inv: number) => {
-    if (inv <= 0) return 0;
-    let irr = 0.1;
-    for (let i = 0; i < 200; i += 1) {
-      let npv = -inv;
-      let dnpv = 0;
-      for (let t = 0; t < cashFlows.length; t += 1) {
-        npv += cashFlows[t] / Math.pow(1 + irr, t + 1);
-        dnpv -= (t + 1) * cashFlows[t] / Math.pow(1 + irr, t + 2);
-      }
-      if (Math.abs(dnpv) < 1e-10) break;
-      const ni = irr - npv / dnpv;
-      if (Math.abs(ni - irr) < 0.00001) break;
-      irr = ni;
-    }
-    return Math.max(0, Math.min(irr * 100, 80));
+function formatCurrency(value: number) {
+  if (Math.abs(value) >= 1_000_000) return `${(value / 1_000_000).toFixed(2).replace('.', ',')} mil. Kč`;
+  return `${Math.round(value).toLocaleString('cs-CZ')} Kč`;
+}
+
+function formatNumber(value: number, digits = 0) {
+  return value.toLocaleString('cs-CZ', { maximumFractionDigits: digits });
+}
+
+function calculateProject(input: ModelState) {
+  const annualConsumptionKwh = input.annualConsumptionMwh * 1000;
+  const annualProduction = input.pvSizeKwp * input.annualYieldKwhPerKwp;
+  const selfConsumedEnergy = Math.min(annualConsumptionKwh, annualProduction * (input.baseSelfConsumptionPct / 100));
+  const exportedEnergy = Math.max(0, annualProduction - selfConsumedEnergy);
+  const purchasePrice = input.powerPriceKwh + input.distributionPriceKwh;
+  const grossCapex = input.pvSizeKwp * input.pvCapexKwp + (input.useBattery ? input.batteryCapex : 0) + input.otherCosts;
+  const subsidyAmount = grossCapex * (input.subsidyPct / 100);
+  const equityNeeded = grossCapex - subsidyAmount;
+  const annualSavings = selfConsumedEnergy * purchasePrice;
+  const annualExportRevenue = exportedEnergy * input.feedInPriceKwh;
+  const neededPeakCutKw = Math.max(0, input.highestPeakKw - input.reservedCapacityKw);
+  const achievablePeakCutKw = Math.min(input.batteryPowerKw, neededPeakCutKw);
+  const shiftedSelfConsumptionKwh = Math.min(
+    exportedEnergy,
+    input.batteryCapacityKwh * MODEL_ASSUMPTIONS.batteryEfficiency * MODEL_ASSUMPTIONS.selfConsumptionCycles,
+  );
+  const shiftedVolatilityKwh = Math.min(
+    annualConsumptionKwh * MODEL_ASSUMPTIONS.arbitrageConsumptionShare,
+    input.batteryCapacityKwh * MODEL_ASSUMPTIONS.batteryEfficiency * MODEL_ASSUMPTIONS.volatilityCycles,
+  );
+  const peakMonths =
+    input.peakFrequency === 'Pravidelně'
+      ? MODEL_ASSUMPTIONS.regularPeakMonths
+      : MODEL_ASSUMPTIONS.occasionalPeakMonths;
+  const voltageCoefficient = input.voltageLevel === 'VN/VVN' ? 1 : MODEL_ASSUMPTIONS.nnPeakRelevance;
+  const scenarioBenefits: Record<BatteryScenario, number> = {
+    'Peak shaving':
+      achievablePeakCutKw * MODEL_ASSUMPTIONS.peakShavingValueKwMonth * peakMonths * voltageCoefficient,
+    'Zvýšení vlastní spotřeby z FVE': shiftedSelfConsumptionKwh * (purchasePrice - input.feedInPriceKwh),
+    'Ochrana proti volatilním cenám': shiftedVolatilityKwh * input.volatilitySpreadKwh,
+  };
+  const batteryBenefit = input.useBattery ? scenarioBenefits[input.batteryScenario] : 0;
+  const annualBenefit = annualSavings + annualExportRevenue + batteryBenefit;
+  const simplePayback = annualBenefit > 0 ? equityNeeded / annualBenefit : 99;
+  const totalProfit = annualBenefit * MODEL_ASSUMPTIONS.projectLifetimeYears - equityNeeded;
+  const irr = equityNeeded > 0 ? Math.min(80, Math.max(0, (annualBenefit / equityNeeded) * 100)) : 0;
+  const riskLevel: 'low' | 'medium' | 'high' = simplePayback <= 5 ? 'low' : simplePayback <= 8 ? 'medium' : 'high';
+  const confidenceScore = clamp(
+    Math.round(90 - simplePayback * 5 + (input.useBattery ? 5 : 0) + (input.subsidyPct > 0 ? 5 : 0)),
+    35,
+    95,
+  );
+
+  return {
+    annualConsumptionKwh,
+    annualProduction,
+    selfConsumedEnergy,
+    exportedEnergy,
+    purchasePrice,
+    grossCapex,
+    subsidyAmount,
+    equityNeeded,
+    annualSavings,
+    annualExportRevenue,
+    batteryBenefit,
+    annualBenefit,
+    simplePayback,
+    totalProfit,
+    irr,
+    riskLevel,
+    confidenceScore,
+    neededPeakCutKw,
+    achievablePeakCutKw,
+    shiftedSelfConsumptionKwh,
+    shiftedVolatilityKwh,
+    selfConsumptionIncrease: annualProduction > 0 ? shiftedSelfConsumptionKwh / annualProduction : 0,
+    scenarioBenefits,
+  };
+}
+
+function FieldLabel({ text, hint }: { text: string; hint: string }) {
+  return (
+    <div className="inline-flex items-center gap-1.5">
+      <label className="text-sm font-medium text-slate-300">{text}</label>
+      <span className="group relative cursor-help">
+        <Info className="w-3.5 h-3.5 text-slate-500" />
+        <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-64 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950 p-2 text-xs text-slate-300 shadow-xl group-hover:block">
+          {hint}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function SliderField({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+        <FieldLabel text={label} hint={hint} />
+        <span className="px-3 py-1 rounded-lg bg-slate-800 text-white font-semibold text-sm self-start sm:self-auto">
+          {formatNumber(value, step < 1 ? 1 : 0)} {unit}
+        </span>
+      </div>
+      <Slider value={[value]} onValueChange={([val]) => onChange(val)} min={min} max={max} step={step} className="py-2" />
+      <div className="flex gap-3">
+        <input
+          className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white outline-none focus:border-emerald-500"
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => onChange(clamp(Number(event.target.value || 0), min, max))}
+        />
+        <span className="w-24 pt-2 text-right text-xs text-slate-500">
+          {formatNumber(min, step < 1 ? 1 : 0)}-{formatNumber(max, step < 1 ? 1 : 0)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function NumberField({
+  label,
+  value,
+  unit,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  unit: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-medium text-slate-300">
+      {label}
+      <div className="flex overflow-hidden rounded-lg border border-slate-700 bg-slate-900">
+        <input
+          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-white outline-none focus:bg-slate-800"
+          type="number"
+          min={0}
+          value={value}
+          onChange={(event) => onChange(Math.max(0, Number(event.target.value || 0)))}
+        />
+        <span className="flex items-center border-l border-slate-700 bg-slate-800 px-3 text-xs text-slate-400">{unit}</span>
+      </div>
+    </label>
+  );
+}
+
+function SelectField<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: T[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-medium text-slate-300">
+      {label}
+      <select
+        className="h-10 rounded-lg border border-slate-700 bg-slate-900 px-3 text-sm text-white outline-none focus:border-emerald-500"
+        value={value}
+        onChange={(event) => onChange(event.target.value as T)}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ResultCard({ calculations }: { calculations: ReturnType<typeof calculateProject> }) {
+  const statusConfig =
+    calculations.simplePayback <= 5
+      ? { color: 'emerald', label: 'Ekonomicky silný FVE + bateriový scénář', icon: CheckCircle2 }
+      : calculations.simplePayback <= 8
+        ? { color: 'blue', label: 'Projekt dává ekonomický smysl', icon: TrendingUp }
+        : { color: 'amber', label: 'Projekt je citlivý na vstupní parametry', icon: Info };
+  const statusTextClass =
+    statusConfig.color === 'emerald'
+      ? 'text-emerald-400'
+      : statusConfig.color === 'blue'
+        ? 'text-blue-400'
+        : 'text-amber-400';
+  const confidenceColor =
+    calculations.confidenceScore >= 75 ? 'emerald' : calculations.confidenceScore >= 60 ? 'amber' : 'orange';
+  const riskConfig = {
+    low: { label: 'Nízké', color: 'text-emerald-400', bg: 'bg-emerald-500/20' },
+    medium: { label: 'Střední', color: 'text-amber-400', bg: 'bg-amber-500/20' },
+    high: { label: 'Vyšší', color: 'text-red-400', bg: 'bg-red-500/20' },
   };
 
-  const irr = calculateIRR(yearlyRevenues, equityInvestment);
-  const totalProfit = yearlyRevenues.reduce((s, r) => s + r, 0) - effectiveCapex;
-  return { simplePayback, irr, netRevenue, totalProfit, capex: effectiveCapex, rawCapex };
-};
+  return (
+    <div className="w-full min-w-0 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 rounded-2xl border border-slate-700/50 overflow-hidden">
+      <div className="px-5 pt-5 pb-3 text-center sm:text-left">
+        <span className="px-2 py-1 rounded-md bg-slate-800 border border-slate-700/50 text-xs text-slate-400">
+          Model odpovídá dodanému XLSX: FVE, baterie, peak shaving, přetoky, dotace
+        </span>
+      </div>
+      <div className="px-4 sm:px-5 pb-5">
+        <div
+          className={cn(
+            'p-4 sm:p-6 rounded-xl border-2',
+            statusConfig.color === 'emerald' && 'bg-emerald-500/5 border-emerald-500/30',
+            statusConfig.color === 'blue' && 'bg-blue-500/5 border-blue-500/30',
+            statusConfig.color === 'amber' && 'bg-amber-500/5 border-amber-500/30',
+          )}
+        >
+          <div className="flex items-center justify-center sm:justify-start gap-2 mb-4">
+            <statusConfig.icon className={cn('w-5 h-5', statusTextClass)} />
+            <span className={cn('text-xs sm:text-sm font-medium leading-snug', statusTextClass)}>
+              {statusConfig.label}
+            </span>
+          </div>
+          <div className="text-center">
+            <p className="text-slate-400 text-sm mb-2">Návratnost investice</p>
+            <motion.div
+              key={calculations.simplePayback}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-4xl sm:text-6xl font-bold text-white tracking-tight"
+            >
+              {calculations.simplePayback.toFixed(1).replace('.', ',')}
+              <span className="text-xl sm:text-3xl font-normal text-slate-400 ml-2">let</span>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-4 sm:px-5 pb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[
+          { label: 'Celkový roční přínos', value: formatCurrency(calculations.annualBenefit), icon: Wallet, accent: 'text-emerald-400' },
+          { label: 'Roční výroba FVE', value: `${formatNumber(calculations.annualProduction)} kWh`, icon: SunMedium, accent: 'text-yellow-400' },
+          { label: 'Přínos baterie', value: formatCurrency(calculations.batteryBenefit), icon: BatteryCharging, accent: 'text-blue-400' },
+          { label: '12letý kum. výsledek', value: formatCurrency(calculations.totalProfit), icon: TrendingUp, accent: calculations.totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400' },
+        ].map(({ label, value, icon: Icon, accent }) => (
+          <div key={label} className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Icon className={cn('w-4 h-4', accent)} />
+              <span className="text-xs text-slate-400">{label}</span>
+            </div>
+            <p className="text-xl font-semibold text-white">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="px-4 sm:px-5 pb-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {[
+          { label: 'Investiční náklady', value: formatCurrency(calculations.grossCapex), accent: 'text-blue-400' },
+          { label: 'Dotace', value: formatCurrency(calculations.subsidyAmount), accent: 'text-emerald-400' },
+          { label: 'Vlastní zdroje', value: formatCurrency(calculations.equityNeeded), accent: 'text-amber-400' },
+        ].map(({ label, value, accent }) => (
+          <div key={label} className="bg-slate-800/40 rounded-xl p-4 border border-slate-700/30">
+            <div className="text-xs text-slate-400 mb-2">{label}</div>
+            <div className={cn('text-lg font-semibold', accent)}>{value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="px-4 sm:px-5 pb-5">
+        <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-slate-400">Investiční robustnost</span>
+            <span
+              className={cn(
+                'text-lg font-semibold',
+                confidenceColor === 'emerald' && 'text-emerald-400',
+                confidenceColor === 'amber' && 'text-amber-400',
+                confidenceColor === 'orange' && 'text-orange-400',
+              )}
+            >
+              {calculations.confidenceScore}%
+            </span>
+          </div>
+          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+            <motion.div
+              className={cn(
+                'h-full rounded-full',
+                confidenceColor === 'emerald' && 'bg-emerald-500',
+                confidenceColor === 'amber' && 'bg-amber-500',
+                confidenceColor === 'orange' && 'bg-orange-500',
+              )}
+              initial={{ width: 0 }}
+              animate={{ width: `${calculations.confidenceScore}%` }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            />
+          </div>
+          <div className="mt-3 inline-flex px-2.5 py-1 rounded-lg text-sm font-medium bg-slate-900/70 border border-slate-700/50">
+            <span
+              className={cn(
+                riskConfig[calculations.riskLevel].bg,
+                riskConfig[calculations.riskLevel].color,
+                'px-2.5 py-1 rounded-lg',
+              )}
+            >
+              Index rizika: {riskConfig[calculations.riskLevel].label}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-5 bg-slate-800/30 border-t border-slate-700/30 space-y-3">
+        <button className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-600 text-slate-300 hover:bg-slate-700/50 transition-colors text-sm">
+          <FileText className="w-4 h-4" />Stáhnout investiční shrnutí (PDF)
+        </button>
+        <Button className="w-full h-12 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/20">
+          <span className="text-sm sm:hidden">Získat posouzení zdarma</span>
+          <span className="hidden sm:inline text-base">Získat nezávazné investiční posouzení zdarma</span>
+          <ArrowRight className="w-4 h-4 ml-2 shrink-0" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function LineItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-slate-800 py-2.5 last:border-0">
+      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-right text-sm font-medium tabular-nums text-white">{value}</span>
+    </div>
+  );
+}
 
 export default function BessCalculator() {
-  const [adminConfig, setAdminConfig] = useState<BessAdminConfig>(defaultBessAdminConfig);
-  const [capacity, setCapacity] = useState(defaultBessAdminConfig.calculatorDefaults.capacity);
-  const [utilizationType, setUtilizationType] = useState<UtilizationType>(
-    defaultBessAdminConfig.calculatorDefaults.utilizationType,
-  );
-  const [annualConsumption, setAnnualConsumption] = useState(
-    defaultBessAdminConfig.calculatorDefaults.annualConsumption,
-  );
-  const [electricityPrice, setElectricityPrice] = useState(
-    defaultBessAdminConfig.calculatorDefaults.electricityPrice,
-  );
-  const [investmentMode, setInvestmentMode] = useState<InvestmentMode>(
-    defaultBessAdminConfig.calculatorDefaults.investmentMode,
-  );
-  const [financing, setFinancing] = useState<FinancingType>(defaultBessAdminConfig.calculatorDefaults.financing);
-  const [subsidyPct, setSubsidyPct] = useState(defaultBessAdminConfig.calculatorDefaults.subsidyPct);
-  const [loanInterestRate, setLoanInterestRate] = useState(
-    defaultBessAdminConfig.calculatorDefaults.loanInterestRate,
-  );
-  const [loanTermYears, setLoanTermYears] = useState(defaultBessAdminConfig.calculatorDefaults.loanTermYears);
-  const [loanSharePct, setLoanSharePct] = useState(defaultBessAdminConfig.calculatorDefaults.loanSharePct);
-  const [advancedSettings, setAdvancedSettings] = useState({
-    spread: defaultBessAdminConfig.calculatorDefaults.advancedSettings.spread,
-    fcrPrice: defaultBessAdminConfig.calculatorDefaults.advancedSettings.fcrPrice,
-    degradation: defaultBessAdminConfig.calculatorDefaults.advancedSettings.degradation,
-    omCosts: defaultBessAdminConfig.calculatorDefaults.advancedSettings.omCosts,
-    discountRate: defaultBessAdminConfig.calculatorDefaults.advancedSettings.discountRate,
-  });
-  const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
+  const [model, setModel] = useState<ModelState>(DEFAULTS);
+  const calculations = useMemo(() => calculateProject(model), [model]);
 
-  useEffect(() => {
-    let active = true;
-    const loadConfig = async () => {
-      try {
-        const response = await fetch('/api/kalkulacka/admin-config', { cache: 'no-store' });
-        if (!response.ok) return;
-        const payload = (await response.json().catch(() => ({}))) as { config?: BessAdminConfig };
-        if (!active || !payload.config) return;
-        const next = payload.config;
-        setAdminConfig(next);
-        setCapacity(next.calculatorDefaults.capacity);
-        setUtilizationType(next.calculatorDefaults.utilizationType);
-        setAnnualConsumption(next.calculatorDefaults.annualConsumption);
-        setElectricityPrice(next.calculatorDefaults.electricityPrice);
-        setInvestmentMode(next.calculatorDefaults.investmentMode);
-        setFinancing(next.calculatorDefaults.financing);
-        setSubsidyPct(next.calculatorDefaults.subsidyPct);
-        setLoanInterestRate(next.calculatorDefaults.loanInterestRate);
-        setLoanTermYears(next.calculatorDefaults.loanTermYears);
-        setLoanSharePct(next.calculatorDefaults.loanSharePct);
-        setAdvancedSettings(next.calculatorDefaults.advancedSettings);
-      } catch {
-        // keep defaults when config API is unavailable
-      }
-    };
-    void loadConfig();
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const handleCapacityChange = (value: number) =>
-    setCapacity(clamp(Math.round(value / 100) * 100, 200, 5000));
-  const handleUtilizationTypeChange = (value: UtilizationType) => setUtilizationType(value);
-  const handleAnnualConsumptionChange = (value: number) =>
-    setAnnualConsumption(clamp(Math.round(value / 100) * 100, 100, 20000));
-  const handleElectricityPriceChange = (value: number) =>
-    setElectricityPrice(clamp(Number(value.toFixed(1)), 3, 8));
-  const handleInvestmentModeChange = (value: InvestmentMode) => setInvestmentMode(value);
-  const handleFinancingChange = (value: FinancingType) => setFinancing(value);
-  const handleSubsidyChange = (value: number) => setSubsidyPct(clamp(Math.round(value / 5) * 5, 0, 50));
-  const handleLoanInterestRateChange = (value: number) =>
-    setLoanInterestRate(clamp(Number(value.toFixed(1)), 3, 10));
-  const handleLoanTermYearsChange = (value: number) => setLoanTermYears(clamp(Math.round(value), 5, 12));
-  const handleLoanSharePctChange = (value: number) => setLoanSharePct(clamp(Math.round(value), 10, 90));
-
-  const applyAssistantPatch = (patch: AssistantPatch) => {
-    if (patch.capacity !== undefined) setCapacity(clamp(Math.round(patch.capacity / 100) * 100, 200, 5000));
-    if (patch.utilizationType) setUtilizationType(patch.utilizationType);
-    if (patch.annualConsumption !== undefined) setAnnualConsumption(clamp(Math.round(patch.annualConsumption / 100) * 100, 100, 20000));
-    if (patch.electricityPrice !== undefined) setElectricityPrice(clamp(patch.electricityPrice, 3, 8));
-    if (patch.investmentMode) setInvestmentMode(patch.investmentMode);
-    if (patch.financing) setFinancing(patch.financing);
-    if (patch.subsidyPct !== undefined) setSubsidyPct(clamp(Math.round(patch.subsidyPct / 5) * 5, 0, 50));
-    if (patch.loanInterestRate !== undefined) setLoanInterestRate(clamp(patch.loanInterestRate, 3, 10));
-    if (patch.loanTermYears !== undefined) setLoanTermYears(clamp(Math.round(patch.loanTermYears), 5, 12));
-    if (patch.loanSharePct !== undefined) setLoanSharePct(clamp(Math.round(patch.loanSharePct), 10, 90));
-    if (
-      patch.spread !== undefined ||
-      patch.fcrPrice !== undefined ||
-      patch.degradation !== undefined ||
-      patch.omCosts !== undefined
-    ) {
-      setAdvancedSettings((prev) => ({
-        ...prev,
-        ...(patch.spread !== undefined ? { spread: clamp(patch.spread, 0.8, 2) } : {}),
-        ...(patch.fcrPrice !== undefined ? { fcrPrice: clamp(Math.round(patch.fcrPrice / 50) * 50, 1500, 3000) } : {}),
-        ...(patch.degradation !== undefined ? { degradation: clamp(patch.degradation, 1, 3) } : {}),
-        ...(patch.omCosts !== undefined ? { omCosts: clamp(patch.omCosts, 2, 3) } : {}),
-      }));
-    }
+  const setValue = <K extends keyof ModelState>(key: K, value: ModelState[K]) => {
+    setModel((current) => ({ ...current, [key]: value }));
   };
-
-  const calculations = useMemo(() => {
-    const base = calculateProject({
-      capacity,
-      utilizationType,
-      annualConsumption,
-      electricityPrice,
-      financing,
-      loanInterestRate,
-      loanTermYears,
-      loanSharePct,
-      subsidyPct,
-      spread: advancedSettings.spread,
-      fcrPrice: advancedSettings.fcrPrice,
-      degradation: advancedSettings.degradation,
-      omCosts: advancedSettings.omCosts,
-      modelTuning: adminConfig.modelTuning,
-    });
-
-    const riskLevel: 'low' | 'medium' | 'high' =
-      base.simplePayback <= 7 ? 'low' : base.simplePayback <= 10 ? 'medium' : 'high';
-    let confidenceScore = 90 - base.simplePayback * 4;
-    if (utilizationType === 'stable') confidenceScore += 6;
-    if (subsidyPct > 0) confidenceScore += 4;
-    if (electricityPrice >= 6) confidenceScore += 3;
-    if (base.netRevenue <= 0) confidenceScore -= 20;
-    confidenceScore = clamp(Math.round(confidenceScore), 40, 95);
-
-    return { ...base, riskLevel, confidenceScore };
-  }, [
-    capacity,
-    utilizationType,
-    annualConsumption,
-    electricityPrice,
-    financing,
-    loanInterestRate,
-    loanTermYears,
-    loanSharePct,
-    subsidyPct,
-    advancedSettings,
-    adminConfig.modelTuning,
-  ]);
-
-  const sensitivityData = useMemo(() => {
-    const deltas = [-0.4, -0.2, 0, 0.2, 0.4];
-    return deltas.map((delta) => {
-      const scenario = calculateProject({
-        capacity,
-        utilizationType,
-        annualConsumption,
-        electricityPrice,
-        financing,
-        loanInterestRate,
-        loanTermYears,
-        loanSharePct,
-        subsidyPct,
-        spread: Math.max(0.6, advancedSettings.spread + delta),
-        fcrPrice: advancedSettings.fcrPrice,
-        degradation: advancedSettings.degradation,
-        omCosts: advancedSettings.omCosts,
-        modelTuning: adminConfig.modelTuning,
-      });
-      const label = delta === 0 ? '0' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)}`.replace('.', ',');
-      return { delta: label, payback: scenario.simplePayback };
-    });
-  }, [
-    capacity,
-    utilizationType,
-    annualConsumption,
-    electricityPrice,
-    financing,
-    loanInterestRate,
-    loanTermYears,
-    loanSharePct,
-    subsidyPct,
-    advancedSettings,
-    adminConfig.modelTuning,
-  ]);
-
-  const capexSensitivityData = useMemo(() => {
-    const deltas = [-0.2, -0.1, 0, 0.1, 0.2];
-    return deltas.map((delta) => {
-      const scenario = calculateProject({
-        capacity,
-        utilizationType,
-        annualConsumption,
-        electricityPrice,
-        financing,
-        loanInterestRate,
-        loanTermYears,
-        loanSharePct,
-        subsidyPct,
-        spread: advancedSettings.spread,
-        fcrPrice: advancedSettings.fcrPrice,
-        degradation: advancedSettings.degradation,
-        omCosts: advancedSettings.omCosts,
-        capexMultiplier: 1 + delta,
-        modelTuning: adminConfig.modelTuning,
-      });
-      const label = `${delta > 0 ? '+' : ''}${Math.round(delta * 100)}%`;
-      return { delta: label, payback: scenario.simplePayback };
-    });
-  }, [
-    capacity,
-    utilizationType,
-    annualConsumption,
-    electricityPrice,
-    financing,
-    loanInterestRate,
-    loanTermYears,
-    loanSharePct,
-    subsidyPct,
-    advancedSettings,
-    adminConfig.modelTuning,
-  ]);
-
-  const scenarioA = {
-    ...calculations,
-    capacity,
-    financingType: financing,
-    subsidyPct,
-    loanSharePct,
-  };
-
-  const validationHints = useMemo(() => {
-    const hints: string[] = [];
-    const maxArbitrageByConsumption = annualConsumption * 1000 * 0.35;
-    const maxArbitrageByCycles = capacity * adminConfig.modelTuning.cyclesPerYear;
-    if (maxArbitrageByConsumption < maxArbitrageByCycles * 0.55) {
-      hints.push('Nízká spotřeba vůči kapacitě může snižovat reálně využitelnou arbitráž.');
-    }
-    if (financing === 'bank' && loanInterestRate >= 8) {
-      hints.push('Vyšší úrok významně zatěžuje roční cashflow projektu.');
-    }
-    if (financing === 'bank' && loanSharePct >= 75) {
-      hints.push('Vysoký podíl úvěru zvyšuje citlivost projektu na změny tržních podmínek.');
-    }
-    if (utilizationType === 'arbitrage' && advancedSettings.spread < 1.1) {
-      hints.push('U čisté arbitráže je nízký spread citlivý na volatilitu trhu.');
-    }
-    return hints;
-  }, [annualConsumption, capacity, financing, loanInterestRate, loanSharePct, utilizationType, advancedSettings.spread, adminConfig.modelTuning.cyclesPerYear]);
 
   return (
     <div className="relative overflow-x-hidden w-full min-w-0 max-w-full">
@@ -406,113 +502,288 @@ export default function BessCalculator() {
             animate={{ opacity: 1, y: 0 }}
             className="text-2xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight"
           >
-            Ekonomický model pro bateriové úložiště energie
+            Ekonomický model FVE + bateriového úložiště
           </motion.h1>
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto sm:mx-0">
-            Nastavte parametry projektu a během pár vteřin získáte modelované cash-flow, návratnost
-            a investiční robustnost pro C&amp;I projekty v ČR.
+            Původní kalkulačka zůstává ve stejném rozhraní. Výpočty jsou upravené podle dodaného
+            XLSX modelu návratnosti pro FVE, baterii, peak shaving a volatilitu.
           </p>
         </div>
 
         <div className="mt-8 grid lg:grid-cols-[1.1fr_0.9fr] gap-6 w-full min-w-0">
           <div className="space-y-6 min-w-0 rounded-3xl border border-blue-500/15 bg-blue-500/[0.03] p-3 sm:p-4">
-            <InputPanel
-              capacity={capacity}
-              setCapacity={handleCapacityChange}
-              utilizationType={utilizationType}
-              setUtilizationType={handleUtilizationTypeChange}
-              annualConsumption={annualConsumption}
-              setAnnualConsumption={handleAnnualConsumptionChange}
-              electricityPrice={electricityPrice}
-              setElectricityPrice={handleElectricityPriceChange}
-              investmentMode={investmentMode}
-              setInvestmentMode={handleInvestmentModeChange}
-              advancedSettings={advancedSettings}
-              setAdvancedSettings={setAdvancedSettings}
-              profiles={profiles}
-            />
+            <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6 space-y-6">
+              <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-emerald-500 flex items-center justify-center">
+                    <SunMedium className="w-5 h-5 text-slate-950" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Parametry FVE a baterie</h2>
+                    <p className="text-xs text-slate-400">Vstupy podle dodaného modelu návratnosti</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setModel(DEFAULTS)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
+                >
+                  <RefreshCcw className="h-3.5 w-3.5" />
+                  Reset
+                </button>
+              </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6">
-              <FinancingSection
-                financing={financing}
-                setFinancing={handleFinancingChange}
-                subsidyPct={subsidyPct}
-                setSubsidyPct={handleSubsidyChange}
-                loanInterestRate={loanInterestRate}
-                setLoanInterestRate={handleLoanInterestRateChange}
-                loanTermYears={loanTermYears}
-                setLoanTermYears={handleLoanTermYearsChange}
-                loanSharePct={loanSharePct}
-                setLoanSharePct={handleLoanSharePctChange}
+              <SliderField
+                label="Velikost FVE"
+                hint="Instalovaný výkon fotovoltaické elektrárny v kWp."
+                value={model.pvSizeKwp}
+                min={50}
+                max={1000}
+                step={10}
+                unit="kWp"
+                onChange={(value) => setValue('pvSizeKwp', value)}
+              />
+              <SliderField
+                label="Roční výroba v ČR"
+                hint="Předpokládaná výroba na 1 kWp. Excel default: 1 000 kWh/kWp/rok."
+                value={model.annualYieldKwhPerKwp}
+                min={700}
+                max={1300}
+                step={25}
+                unit="kWh/kWp"
+                onChange={(value) => setValue('annualYieldKwhPerKwp', value)}
+              />
+              <SliderField
+                label="Podíl vlastní spotřeby bez baterie"
+                hint="Část výroby FVE spotřebovaná přímo v objektu bez baterie."
+                value={model.baseSelfConsumptionPct}
+                min={0}
+                max={100}
+                step={1}
+                unit="%"
+                onChange={(value) => setValue('baseSelfConsumptionPct', value)}
+              />
+              <SliderField
+                label="Roční spotřeba objektu"
+                hint="Roční spotřeba slouží pro limity vlastní spotřeby a arbitráže."
+                value={model.annualConsumptionMwh}
+                min={10}
+                max={2000}
+                step={10}
+                unit="MWh"
+                onChange={(value) => setValue('annualConsumptionMwh', value)}
               />
             </div>
 
-            {validationHints.length > 0 ? (
-              <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-300 mb-2">Kontrola vstupů</p>
-                <div className="space-y-1.5">
-                  {validationHints.map((hint) => (
-                    <p key={hint} className="text-xs text-amber-100/90">
-                      • {hint}
-                    </p>
-                  ))}
+            <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6 space-y-6">
+              <div className="flex items-center justify-between gap-3 pb-4 border-b border-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
+                    <BatteryCharging className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-white">Bateriový scénář</h2>
+                    <p className="text-xs text-slate-400">Vždy se počítá jeden aktivní scénář</p>
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300">
+                  <input
+                    checked={model.useBattery}
+                    className="h-4 w-4 accent-emerald-500"
+                    type="checkbox"
+                    onChange={(event) => setValue('useBattery', event.target.checked)}
+                  />
+                  Použít baterii
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                {scenarioCards.map((type) => {
+                  const Icon = type.icon;
+                  const isSelected = model.batteryScenario === type.id;
+                  return (
+                    <motion.button
+                      key={type.id}
+                      whileTap={{ scale: 0.98 }}
+                      type="button"
+                      onClick={() => setValue('batteryScenario', type.id)}
+                      className={cn(
+                        'relative p-3 rounded-xl border-2 transition-all text-left',
+                        isSelected
+                          ? colorClasses[type.color]
+                          : 'border-slate-700/50 bg-slate-800/30 text-slate-400 hover:border-slate-600',
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <Icon className={cn('w-5 h-5', isSelected ? 'text-current' : 'text-slate-500')} />
+                          <div>
+                            <div className="font-medium text-sm">{type.label}</div>
+                            <div className="text-xs opacity-70">{type.sublabel}</div>
+                          </div>
+                        </div>
+                        <span className="text-sm font-semibold">{formatCurrency(calculations.scenarioBenefits[type.id])}</span>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <SelectField
+                  label="Napěťová hladina"
+                  value={model.voltageLevel}
+                  options={['VN/VVN', 'NN']}
+                  onChange={(value) => setValue('voltageLevel', value)}
+                />
+                <SelectField
+                  label="Frekvence špiček"
+                  value={model.peakFrequency}
+                  options={['Pravidelně', 'Výjimečně']}
+                  onChange={(value) => setValue('peakFrequency', value)}
+                />
+              </div>
+              <SliderField
+                label="Kapacita baterie"
+                hint="Kapacita baterie v kWh."
+                value={model.batteryCapacityKwh}
+                min={50}
+                max={2000}
+                step={10}
+                unit="kWh"
+                onChange={(value) => setValue('batteryCapacityKwh', value)}
+              />
+              <SliderField
+                label="Výkon baterie"
+                hint="Výkon baterie v kW, pro peak shaving omezuje reálně seříznutelnou špičku."
+                value={model.batteryPowerKw}
+                min={25}
+                max={4000}
+                step={25}
+                unit="kW"
+                onChange={(value) => setValue('batteryPowerKw', value)}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <NumberField
+                  label="Nejvyšší 15min špička"
+                  value={model.highestPeakKw}
+                  unit="kW"
+                  onChange={(value) => setValue('highestPeakKw', value)}
+                />
+                <NumberField
+                  label="Rezervovaný příkon"
+                  value={model.reservedCapacityKw}
+                  unit="kW"
+                  onChange={(value) => setValue('reservedCapacityKw', value)}
+                />
+              </div>
+            </div>
+
+            <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6 space-y-6">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-800/50">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
+                  <SlidersHorizontal className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Ekonomika projektu</h2>
+                  <p className="text-xs text-slate-400">CAPEX, ceny elektřiny a dotace</p>
                 </div>
               </div>
-            ) : null}
-
-            <ComparePanel scenarioA={scenarioA} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <NumberField label="CAPEX FVE" value={model.pvCapexKwp} unit="Kč/kWp" onChange={(value) => setValue('pvCapexKwp', value)} />
+                <NumberField label="Dodatečný CAPEX baterie" value={model.batteryCapex} unit="Kč" onChange={(value) => setValue('batteryCapex', value)} />
+                <NumberField label="Další dodatečné náklady" value={model.otherCosts} unit="Kč" onChange={(value) => setValue('otherCosts', value)} />
+                <SliderField label="Dotace" hint="Podíl dotace z celkových investičních nákladů." value={model.subsidyPct} min={0} max={100} step={5} unit="%" onChange={(value) => setValue('subsidyPct', value)} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    label: 'Silová část',
+                    value: model.powerPriceKwh,
+                    setter: (value: number) => setValue('powerPriceKwh', value),
+                    icon: Wallet,
+                    max: 8,
+                  },
+                  {
+                    label: 'Distribuce',
+                    value: model.distributionPriceKwh,
+                    setter: (value: number) => setValue('distributionPriceKwh', value),
+                    icon: Receipt,
+                    max: 4,
+                  },
+                  {
+                    label: 'Výkupní cena',
+                    value: model.feedInPriceKwh,
+                    setter: (value: number) => setValue('feedInPriceKwh', value),
+                    icon: Zap,
+                    max: 5,
+                  },
+                ].map(({ label, value, setter, icon: Icon, max }) => (
+                  <div key={label} className="rounded-xl border border-slate-800/60 bg-slate-900/60 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm font-medium text-slate-300">{label}</span>
+                    </div>
+                    <div className="text-xl font-semibold text-white">
+                      {value.toFixed(1).replace('.', ',')} <span className="text-sm text-slate-400">Kč/kWh</span>
+                    </div>
+                    <Slider value={[value]} onValueChange={([val]) => setter(val)} min={0} max={max} step={0.1} />
+                  </div>
+                ))}
+              </div>
+              <SliderField
+                label="Cenový spread / volatilita"
+                hint="Používá se pro scénář ochrany proti volatilním cenám."
+                value={model.volatilitySpreadKwh}
+                min={0}
+                max={8}
+                step={0.1}
+                unit="Kč/kWh"
+                onChange={(value) => setValue('volatilitySpreadKwh', value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-6 min-w-0 rounded-3xl border border-emerald-500/15 bg-emerald-500/[0.03] p-3 sm:p-4">
-            <ResultsPanel
-              calculations={calculations}
-              onRequestAnalysis={() => setModalType('analysis')}
-              onDownloadPdf={() => setModalType('pdf')}
-            />
-            <SensitivityChart data={sensitivityData} />
-            <SensitivityChart
-              data={capexSensitivityData}
-              title="Citlivost návratnosti na CAPEX"
-              subtitle="Vliv změny investičních nákladů ±20 %"
-              tooltipLabel="Změna CAPEX"
-            />
+            <ResultCard calculations={calculations} />
+            <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-800/50">
+                <LineChart className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Výstup modelu</h2>
+                  <p className="text-xs text-slate-400">Hodnoty odpovídající XLSX tabulce</p>
+                </div>
+              </div>
+              <div className="pt-3">
+                <LineItem label="Roční úspora z přímé spotřeby FVE" value={formatCurrency(calculations.annualSavings)} />
+                <LineItem label="Roční výnosy z přetoků FVE" value={formatCurrency(calculations.annualExportRevenue)} />
+                <LineItem label="Roční přínos baterie dle scénáře" value={formatCurrency(calculations.batteryBenefit)} />
+                <LineItem label="Celkový roční přínos" value={formatCurrency(calculations.annualBenefit)} />
+                <LineItem label="Očekávané vlastní zdroje" value={formatCurrency(calculations.equityNeeded)} />
+              </div>
+            </div>
+            <div className="w-full min-w-0 bg-slate-900/50 backdrop-blur-sm rounded-2xl border border-slate-800/50 p-5 sm:p-6">
+              <div className="flex items-center gap-3 pb-4 border-b border-slate-800/50">
+                <Gauge className="w-5 h-5 text-blue-400" />
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Pomocné výpočty</h2>
+                  <p className="text-xs text-slate-400">Kontrolní hodnoty modelu</p>
+                </div>
+              </div>
+              <div className="pt-3">
+                <LineItem label="Roční spotřeba" value={`${formatNumber(calculations.annualConsumptionKwh)} kWh`} />
+                <LineItem label="Základní vlastní spotřeba FVE" value={`${formatNumber(calculations.selfConsumedEnergy)} kWh`} />
+                <LineItem label="Přetoky FVE bez baterie" value={`${formatNumber(calculations.exportedEnergy)} kWh`} />
+                <LineItem label="Potřebné seříznutí špičky" value={`${formatNumber(calculations.neededPeakCutKw)} kW`} />
+                <LineItem label="Reálně seříznutelné špičky baterií" value={`${formatNumber(calculations.achievablePeakCutKw)} kW`} />
+                <LineItem label="Energie posunutá baterií - self-consumption" value={`${formatNumber(calculations.shiftedSelfConsumptionKwh)} kWh`} />
+                <LineItem label="Energie posunutá baterií - volatilita" value={`${formatNumber(calculations.shiftedVolatilityKwh)} kWh`} />
+                <LineItem label="Zvýšení vlastní spotřeby díky baterii" value={`${formatNumber(calculations.selfConsumptionIncrease * 100, 1)} %`} />
+              </div>
+            </div>
           </div>
         </div>
-
-        <SocialProof />
       </div>
-
-      {modalType && (
-        <LeadCaptureModal
-          type={modalType}
-          calculations={calculations}
-          inputs={{ capacity }}
-          onClose={() => setModalType(null)}
-        />
-      )}
-
-      <BessAssistant
-        context={{
-          capacity,
-          utilizationType,
-          annualConsumption,
-          electricityPrice,
-          investmentMode,
-          financing,
-          subsidyPct,
-          loanInterestRate,
-          loanTermYears,
-          loanSharePct,
-          spread: advancedSettings.spread,
-          fcrPrice: advancedSettings.fcrPrice,
-          degradation: advancedSettings.degradation,
-          omCosts: advancedSettings.omCosts,
-        }}
-        applyPatch={applyAssistantPatch}
-        welcomeMessage={adminConfig.assistant.welcomeMessage}
-        quickActions={adminConfig.assistant.quickActions}
-        defaultSitemapUrl={adminConfig.knowledge.sitemapUrl}
-      />
     </div>
   );
 }
