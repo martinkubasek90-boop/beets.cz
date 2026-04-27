@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Activity,
@@ -24,68 +24,17 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import LeadCaptureModal from '@/components/bess/LeadCaptureModal';
+import {
+  defaultBessAdminConfig,
+  type BatteryScenario,
+  type BessAdminConfig,
+  type BessModelTuning,
+  type FveBessCalculatorDefaults,
+} from '@/lib/bess-admin-config';
 
-type BatteryScenario = 'Peak shaving' | 'Zvýšení vlastní spotřeby z FVE' | 'Ochrana proti volatilním cenám';
-type VoltageLevel = 'NN' | 'VN/VVN';
-type PeakFrequency = 'Pravidelně' | 'Výjimečně';
+type ModelState = FveBessCalculatorDefaults;
 
-type ModelState = {
-  pvSizeKwp: number;
-  annualYieldKwhPerKwp: number;
-  baseSelfConsumptionPct: number;
-  useBattery: boolean;
-  annualConsumptionMwh: number;
-  batteryScenario: BatteryScenario;
-  voltageLevel: VoltageLevel;
-  batteryCapacityKwh: number;
-  batteryPowerKw: number;
-  peakFrequency: PeakFrequency;
-  highestPeakKw: number;
-  reservedCapacityKw: number;
-  volatilitySpreadKwh: number;
-  pvCapexKwp: number;
-  batteryCapex: number;
-  otherCosts: number;
-  powerPriceKwh: number;
-  distributionPriceKwh: number;
-  feedInPriceKwh: number;
-  subsidyPct: number;
-};
-
-const DEFAULTS: ModelState = {
-  pvSizeKwp: 100,
-  annualYieldKwhPerKwp: 1000,
-  baseSelfConsumptionPct: 50,
-  useBattery: true,
-  annualConsumptionMwh: 120,
-  batteryScenario: 'Peak shaving',
-  voltageLevel: 'VN/VVN',
-  batteryCapacityKwh: 120,
-  batteryPowerKw: 60,
-  peakFrequency: 'Pravidelně',
-  highestPeakKw: 220,
-  reservedCapacityKw: 180,
-  volatilitySpreadKwh: 1.8,
-  pvCapexKwp: 25000,
-  batteryCapex: 1200000,
-  otherCosts: 0,
-  powerPriceKwh: 3,
-  distributionPriceKwh: 1,
-  feedInPriceKwh: 1.6,
-  subsidyPct: 0,
-};
-
-const MODEL_ASSUMPTIONS = {
-  batteryEfficiency: 0.9,
-  selfConsumptionCycles: 220,
-  volatilityCycles: 180,
-  arbitrageConsumptionShare: 0.35,
-  peakShavingValueKwMonth: 1800,
-  regularPeakMonths: 12,
-  occasionalPeakMonths: 3,
-  nnPeakRelevance: 0.15,
-  projectLifetimeYears: 12,
-};
+const DEFAULTS: ModelState = defaultBessAdminConfig.calculatorDefaults;
 
 const scenarioCards: Array<{
   id: BatteryScenario;
@@ -136,7 +85,7 @@ function formatNumber(value: number, digits = 0) {
   return value.toLocaleString('cs-CZ', { maximumFractionDigits: digits });
 }
 
-function calculateProject(input: ModelState) {
+function calculateProject(input: ModelState, assumptions: BessModelTuning) {
   const annualConsumptionKwh = input.annualConsumptionMwh * 1000;
   const annualProduction = input.pvSizeKwp * input.annualYieldKwhPerKwp;
   const selfConsumedEnergy = Math.min(annualConsumptionKwh, annualProduction * (input.baseSelfConsumptionPct / 100));
@@ -151,27 +100,27 @@ function calculateProject(input: ModelState) {
   const achievablePeakCutKw = Math.min(input.batteryPowerKw, neededPeakCutKw);
   const shiftedSelfConsumptionKwh = Math.min(
     exportedEnergy,
-    input.batteryCapacityKwh * MODEL_ASSUMPTIONS.batteryEfficiency * MODEL_ASSUMPTIONS.selfConsumptionCycles,
+    input.batteryCapacityKwh * assumptions.batteryEfficiency * assumptions.selfConsumptionCycles,
   );
   const shiftedVolatilityKwh = Math.min(
-    annualConsumptionKwh * MODEL_ASSUMPTIONS.arbitrageConsumptionShare,
-    input.batteryCapacityKwh * MODEL_ASSUMPTIONS.batteryEfficiency * MODEL_ASSUMPTIONS.volatilityCycles,
+    annualConsumptionKwh * assumptions.arbitrageConsumptionShare,
+    input.batteryCapacityKwh * assumptions.batteryEfficiency * assumptions.volatilityCycles,
   );
   const peakMonths =
     input.peakFrequency === 'Pravidelně'
-      ? MODEL_ASSUMPTIONS.regularPeakMonths
-      : MODEL_ASSUMPTIONS.occasionalPeakMonths;
-  const voltageCoefficient = input.voltageLevel === 'VN/VVN' ? 1 : MODEL_ASSUMPTIONS.nnPeakRelevance;
+      ? assumptions.regularPeakMonths
+      : assumptions.occasionalPeakMonths;
+  const voltageCoefficient = input.voltageLevel === 'VN/VVN' ? 1 : assumptions.nnPeakRelevance;
   const scenarioBenefits: Record<BatteryScenario, number> = {
     'Peak shaving':
-      achievablePeakCutKw * MODEL_ASSUMPTIONS.peakShavingValueKwMonth * peakMonths * voltageCoefficient,
+      achievablePeakCutKw * assumptions.peakShavingValueKwMonth * peakMonths * voltageCoefficient,
     'Zvýšení vlastní spotřeby z FVE': shiftedSelfConsumptionKwh * (purchasePrice - input.feedInPriceKwh),
     'Ochrana proti volatilním cenám': shiftedVolatilityKwh * input.volatilitySpreadKwh,
   };
   const batteryBenefit = input.useBattery ? scenarioBenefits[input.batteryScenario] : 0;
   const annualBenefit = annualSavings + annualExportRevenue + batteryBenefit;
   const simplePayback = annualBenefit > 0 ? equityNeeded / annualBenefit : 99;
-  const totalProfit = annualBenefit * MODEL_ASSUMPTIONS.projectLifetimeYears - equityNeeded;
+  const totalProfit = annualBenefit * assumptions.projectLifetimeYears - equityNeeded;
   const irr = equityNeeded > 0 ? Math.min(80, Math.max(0, (annualBenefit / equityNeeded) * 100)) : 0;
   const riskLevel: 'low' | 'medium' | 'high' = simplePayback <= 5 ? 'low' : simplePayback <= 8 ? 'medium' : 'high';
   const confidenceScore = clamp(
@@ -494,8 +443,29 @@ function LineItem({ label, value }: { label: string; value: string }) {
 
 export default function BessCalculator() {
   const [model, setModel] = useState<ModelState>(DEFAULTS);
+  const [adminConfig, setAdminConfig] = useState<BessAdminConfig>(defaultBessAdminConfig);
   const [modalType, setModalType] = useState<'pdf' | 'analysis' | null>(null);
-  const calculations = useMemo(() => calculateProject(model), [model]);
+  const calculations = useMemo(() => calculateProject(model, adminConfig.modelTuning), [model, adminConfig.modelTuning]);
+
+  useEffect(() => {
+    let active = true;
+    const loadConfig = async () => {
+      try {
+        const response = await fetch('/api/kalkulacka/admin-config', { cache: 'no-store' });
+        const payload = (await response.json().catch(() => ({}))) as { config?: BessAdminConfig };
+        if (!active || !response.ok || !payload.config) return;
+        setAdminConfig(payload.config);
+        setModel(payload.config.calculatorDefaults);
+      } catch {
+        // Keep bundled defaults when admin config is unavailable.
+      }
+    };
+
+    void loadConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const setValue = <K extends keyof ModelState>(key: K, value: ModelState[K]) => {
     setModel((current) => ({ ...current, [key]: value }));
@@ -542,7 +512,7 @@ export default function BessCalculator() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setModel(DEFAULTS)}
+                  onClick={() => setModel(adminConfig.calculatorDefaults)}
                   className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:bg-slate-800"
                 >
                   <RefreshCcw className="h-3.5 w-3.5" />

@@ -1,42 +1,49 @@
 import { createClient } from '@supabase/supabase-js';
 
-export type UtilizationType = 'stable' | 'combined' | 'arbitrage';
-export type InvestmentMode = 'conservative' | 'realistic' | 'dynamic';
-export type FinancingType = 'own' | 'bank';
+export type BatteryScenario =
+  | 'Peak shaving'
+  | 'Zvýšení vlastní spotřeby z FVE'
+  | 'Ochrana proti volatilním cenám';
+export type VoltageLevel = 'NN' | 'VN/VVN';
+export type PeakFrequency = 'Pravidelně' | 'Výjimečně';
+
+export type FveBessCalculatorDefaults = {
+  pvSizeKwp: number;
+  annualYieldKwhPerKwp: number;
+  baseSelfConsumptionPct: number;
+  useBattery: boolean;
+  annualConsumptionMwh: number;
+  batteryScenario: BatteryScenario;
+  voltageLevel: VoltageLevel;
+  batteryCapacityKwh: number;
+  batteryPowerKw: number;
+  peakFrequency: PeakFrequency;
+  highestPeakKw: number;
+  reservedCapacityKw: number;
+  volatilitySpreadKwh: number;
+  pvCapexKwp: number;
+  batteryCapex: number;
+  otherCosts: number;
+  powerPriceKwh: number;
+  distributionPriceKwh: number;
+  feedInPriceKwh: number;
+  subsidyPct: number;
+};
+
 export type BessModelTuning = {
-  batteryCostPerMwh: number;
-  pcsCostPerMw: number;
-  gridConnectionCost: number;
-  emsCost: number;
-  engineeringCost: number;
-  constructionCost: number;
-  fireSafetyCost: number;
-  cyclesPerYear: number;
-  roundtripEfficiency: number;
-  aggregatorFeePercent: number;
+  batteryEfficiency: number;
+  selfConsumptionCycles: number;
+  volatilityCycles: number;
+  arbitrageConsumptionShare: number;
+  peakShavingValueKwMonth: number;
+  regularPeakMonths: number;
+  occasionalPeakMonths: number;
+  nnPeakRelevance: number;
   projectLifetimeYears: number;
 };
 
 export type BessAdminConfig = {
-  calculatorDefaults: {
-    capacity: number;
-    utilizationType: UtilizationType;
-    annualConsumption: number;
-    electricityPrice: number;
-    investmentMode: InvestmentMode;
-    financing: FinancingType;
-    subsidyPct: number;
-    loanInterestRate: number;
-    loanTermYears: number;
-    loanSharePct: number;
-    advancedSettings: {
-      spread: number;
-      fcrPrice: number;
-      degradation: number;
-      omCosts: number;
-      discountRate: number;
-    };
-  };
+  calculatorDefaults: FveBessCalculatorDefaults;
   assistant: {
     welcomeMessage: string;
     quickActions: string[];
@@ -52,57 +59,58 @@ export type BessAdminConfig = {
 
 export const defaultBessAdminConfig: BessAdminConfig = {
   calculatorDefaults: {
-    capacity: 500,
-    utilizationType: 'combined',
-    annualConsumption: 3000,
-    electricityPrice: 4.5,
-    investmentMode: 'realistic',
-    financing: 'own',
+    pvSizeKwp: 100,
+    annualYieldKwhPerKwp: 1000,
+    baseSelfConsumptionPct: 50,
+    useBattery: true,
+    annualConsumptionMwh: 120,
+    batteryScenario: 'Peak shaving',
+    voltageLevel: 'VN/VVN',
+    batteryCapacityKwh: 120,
+    batteryPowerKw: 60,
+    peakFrequency: 'Pravidelně',
+    highestPeakKw: 220,
+    reservedCapacityKw: 180,
+    volatilitySpreadKwh: 1.8,
+    pvCapexKwp: 25000,
+    batteryCapex: 1200000,
+    otherCosts: 0,
+    powerPriceKwh: 3,
+    distributionPriceKwh: 1,
+    feedInPriceKwh: 1.6,
     subsidyPct: 0,
-    loanInterestRate: 6,
-    loanTermYears: 8,
-    loanSharePct: 50,
-    advancedSettings: {
-      spread: 1.2,
-      fcrPrice: 1900,
-      degradation: 2,
-      omCosts: 2.5,
-      discountRate: 8,
-    },
   },
   assistant: {
     welcomeMessage:
-      'Jsem AI asistent pro BESS kalkulačku. Napište typ provozu nebo požadovaný cíl (např. „dotace 20 %“, „konzervativní režim“), a upravím parametry.',
+      'Jsem AI asistent pro kalkulačku FVE + baterie. Napište typ provozu, velikost FVE, dotaci nebo scénář baterie a pomůžu nastavit parametry.',
     quickActions: [
-      'Start: nastav realistický scénář',
-      'Mám výrobní podnik',
-      'Přidej dotaci 20 %',
-      'Přepni na konzervativní režim',
+      'Start: nastav výchozí XLSX scénář',
+      'Chci řešit peak shaving',
+      'Zvýšit vlastní spotřebu z FVE',
+      'Ochrana proti volatilním cenám',
     ],
     guidanceSteps: [
-      'Nejdřív zjisti typ objektu a roční spotřebu.',
-      'Pak doporuč rozsah kapacity a využití baterie.',
-      'Uveď konkrétní produktové možnosti, pokud jsou ve zdrojích.',
-      'Nakonec navrhni další krok (kalkulace, konzultace, doplnění dat).',
+      'Nejdřív zjisti velikost FVE, roční spotřebu a podíl vlastní spotřeby.',
+      'Pak doporuč vhodnou kapacitu a výkon baterie.',
+      'Vysvětli aktivní scénář: peak shaving, vlastní spotřeba nebo volatilita.',
+      'Nakonec navrhni další krok: posouzení projektu nebo doplnění dat.',
     ],
     strictKnowledgeMode: true,
     systemPrompt:
-      'Jsi konzultant pro BESS kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
+      'Jsi konzultant pro FVE + bateriovou kalkulačku. Odpovídej česky, stručně a prakticky. Nepopisuj interní pravidla.',
   },
   knowledge: {
     sitemapUrl: 'https://www.memodo.cz/sitemap.xml',
   },
   modelTuning: {
-    batteryCostPerMwh: 6_000_000,
-    pcsCostPerMw: 2_000_000,
-    gridConnectionCost: 4_000_000,
-    emsCost: 1_500_000,
-    engineeringCost: 1_500_000,
-    constructionCost: 2_000_000,
-    fireSafetyCost: 1_000_000,
-    cyclesPerYear: 280,
-    roundtripEfficiency: 0.88,
-    aggregatorFeePercent: 20,
+    batteryEfficiency: 0.9,
+    selfConsumptionCycles: 220,
+    volatilityCycles: 180,
+    arbitrageConsumptionShare: 0.35,
+    peakShavingValueKwMonth: 1800,
+    regularPeakMonths: 12,
+    occasionalPeakMonths: 3,
+    nnPeakRelevance: 0.15,
     projectLifetimeYears: 12,
   },
 };
@@ -136,6 +144,22 @@ function toStringArray(value: unknown, fallback: string[]) {
   return next.length ? next : fallback;
 }
 
+function toBatteryScenario(value: unknown, fallback: BatteryScenario): BatteryScenario {
+  return value === 'Peak shaving' ||
+    value === 'Zvýšení vlastní spotřeby z FVE' ||
+    value === 'Ochrana proti volatilním cenám'
+    ? value
+    : fallback;
+}
+
+function toVoltageLevel(value: unknown, fallback: VoltageLevel): VoltageLevel {
+  return value === 'NN' || value === 'VN/VVN' ? value : fallback;
+}
+
+function toPeakFrequency(value: unknown, fallback: PeakFrequency): PeakFrequency {
+  return value === 'Pravidelně' || value === 'Výjimečně' ? value : fallback;
+}
+
 export function mergeAdminConfig(raw: unknown): BessAdminConfig {
   const source = (raw && typeof raw === 'object' ? raw : {}) as Record<string, any>;
   const calc = source.calculatorDefaults || {};
@@ -143,32 +167,31 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
   const assistant = source.assistant || {};
   const knowledge = source.knowledge || {};
   const modelTuning = source.modelTuning || {};
+  const defaults = defaultBessAdminConfig.calculatorDefaults;
+  const tuningDefaults = defaultBessAdminConfig.modelTuning;
 
   return {
     calculatorDefaults: {
-      capacity: toNumber(calc.capacity, defaultBessAdminConfig.calculatorDefaults.capacity),
-      utilizationType:
-        calc.utilizationType === 'stable' || calc.utilizationType === 'combined' || calc.utilizationType === 'arbitrage'
-          ? calc.utilizationType
-          : defaultBessAdminConfig.calculatorDefaults.utilizationType,
-      annualConsumption: toNumber(calc.annualConsumption, defaultBessAdminConfig.calculatorDefaults.annualConsumption),
-      electricityPrice: toNumber(calc.electricityPrice, defaultBessAdminConfig.calculatorDefaults.electricityPrice),
-      investmentMode:
-        calc.investmentMode === 'conservative' || calc.investmentMode === 'realistic' || calc.investmentMode === 'dynamic'
-          ? calc.investmentMode
-          : defaultBessAdminConfig.calculatorDefaults.investmentMode,
-      financing: calc.financing === 'own' || calc.financing === 'bank' ? calc.financing : defaultBessAdminConfig.calculatorDefaults.financing,
-      subsidyPct: toNumber(calc.subsidyPct, defaultBessAdminConfig.calculatorDefaults.subsidyPct),
-      loanInterestRate: toNumber(calc.loanInterestRate, defaultBessAdminConfig.calculatorDefaults.loanInterestRate),
-      loanTermYears: toNumber(calc.loanTermYears, defaultBessAdminConfig.calculatorDefaults.loanTermYears),
-      loanSharePct: toNumber(calc.loanSharePct, defaultBessAdminConfig.calculatorDefaults.loanSharePct),
-      advancedSettings: {
-        spread: toNumber(advanced.spread, defaultBessAdminConfig.calculatorDefaults.advancedSettings.spread),
-        fcrPrice: toNumber(advanced.fcrPrice, defaultBessAdminConfig.calculatorDefaults.advancedSettings.fcrPrice),
-        degradation: toNumber(advanced.degradation, defaultBessAdminConfig.calculatorDefaults.advancedSettings.degradation),
-        omCosts: toNumber(advanced.omCosts, defaultBessAdminConfig.calculatorDefaults.advancedSettings.omCosts),
-        discountRate: toNumber(advanced.discountRate, defaultBessAdminConfig.calculatorDefaults.advancedSettings.discountRate),
-      },
+      pvSizeKwp: toNumber(calc.pvSizeKwp ?? calc.systemSizeKw, defaults.pvSizeKwp),
+      annualYieldKwhPerKwp: toNumber(calc.annualYieldKwhPerKwp ?? calc.annualProductionPerKw, defaults.annualYieldKwhPerKwp),
+      baseSelfConsumptionPct: toNumber(calc.baseSelfConsumptionPct ?? calc.selfConsumptionPct, defaults.baseSelfConsumptionPct),
+      useBattery: toBoolean(calc.useBattery, defaults.useBattery),
+      annualConsumptionMwh: toNumber(calc.annualConsumptionMwh ?? calc.annualConsumption, defaults.annualConsumptionMwh),
+      batteryScenario: toBatteryScenario(calc.batteryScenario, defaults.batteryScenario),
+      voltageLevel: toVoltageLevel(calc.voltageLevel, defaults.voltageLevel),
+      batteryCapacityKwh: toNumber(calc.batteryCapacityKwh ?? calc.capacity, defaults.batteryCapacityKwh),
+      batteryPowerKw: toNumber(calc.batteryPowerKw, defaults.batteryPowerKw),
+      peakFrequency: toPeakFrequency(calc.peakFrequency, defaults.peakFrequency),
+      highestPeakKw: toNumber(calc.highestPeakKw, defaults.highestPeakKw),
+      reservedCapacityKw: toNumber(calc.reservedCapacityKw, defaults.reservedCapacityKw),
+      volatilitySpreadKwh: toNumber(calc.volatilitySpreadKwh ?? advanced.spread, defaults.volatilitySpreadKwh),
+      pvCapexKwp: toNumber(calc.pvCapexKwp ?? advanced.capexPerKw, defaults.pvCapexKwp),
+      batteryCapex: toNumber(calc.batteryCapex, defaults.batteryCapex),
+      otherCosts: toNumber(calc.otherCosts ?? advanced.additionalCosts, defaults.otherCosts),
+      powerPriceKwh: toNumber(calc.powerPriceKwh ?? calc.powerPrice, defaults.powerPriceKwh),
+      distributionPriceKwh: toNumber(calc.distributionPriceKwh ?? calc.distributionPrice, defaults.distributionPriceKwh),
+      feedInPriceKwh: toNumber(calc.feedInPriceKwh ?? calc.sellPrice, defaults.feedInPriceKwh),
+      subsidyPct: toNumber(calc.subsidyPct, defaults.subsidyPct),
     },
     assistant: {
       welcomeMessage: toString(assistant.welcomeMessage, defaultBessAdminConfig.assistant.welcomeMessage),
@@ -181,17 +204,15 @@ export function mergeAdminConfig(raw: unknown): BessAdminConfig {
       sitemapUrl: toString(knowledge.sitemapUrl, defaultBessAdminConfig.knowledge.sitemapUrl),
     },
     modelTuning: {
-      batteryCostPerMwh: toNumber(modelTuning.batteryCostPerMwh, defaultBessAdminConfig.modelTuning.batteryCostPerMwh),
-      pcsCostPerMw: toNumber(modelTuning.pcsCostPerMw, defaultBessAdminConfig.modelTuning.pcsCostPerMw),
-      gridConnectionCost: toNumber(modelTuning.gridConnectionCost, defaultBessAdminConfig.modelTuning.gridConnectionCost),
-      emsCost: toNumber(modelTuning.emsCost, defaultBessAdminConfig.modelTuning.emsCost),
-      engineeringCost: toNumber(modelTuning.engineeringCost, defaultBessAdminConfig.modelTuning.engineeringCost),
-      constructionCost: toNumber(modelTuning.constructionCost, defaultBessAdminConfig.modelTuning.constructionCost),
-      fireSafetyCost: toNumber(modelTuning.fireSafetyCost, defaultBessAdminConfig.modelTuning.fireSafetyCost),
-      cyclesPerYear: toNumber(modelTuning.cyclesPerYear, defaultBessAdminConfig.modelTuning.cyclesPerYear),
-      roundtripEfficiency: toNumber(modelTuning.roundtripEfficiency, defaultBessAdminConfig.modelTuning.roundtripEfficiency),
-      aggregatorFeePercent: toNumber(modelTuning.aggregatorFeePercent, defaultBessAdminConfig.modelTuning.aggregatorFeePercent),
-      projectLifetimeYears: toNumber(modelTuning.projectLifetimeYears, defaultBessAdminConfig.modelTuning.projectLifetimeYears),
+      batteryEfficiency: toNumber(modelTuning.batteryEfficiency ?? modelTuning.roundtripEfficiency, tuningDefaults.batteryEfficiency),
+      selfConsumptionCycles: toNumber(modelTuning.selfConsumptionCycles, tuningDefaults.selfConsumptionCycles),
+      volatilityCycles: toNumber(modelTuning.volatilityCycles ?? modelTuning.cyclesPerYear, tuningDefaults.volatilityCycles),
+      arbitrageConsumptionShare: toNumber(modelTuning.arbitrageConsumptionShare, tuningDefaults.arbitrageConsumptionShare),
+      peakShavingValueKwMonth: toNumber(modelTuning.peakShavingValueKwMonth, tuningDefaults.peakShavingValueKwMonth),
+      regularPeakMonths: toNumber(modelTuning.regularPeakMonths, tuningDefaults.regularPeakMonths),
+      occasionalPeakMonths: toNumber(modelTuning.occasionalPeakMonths, tuningDefaults.occasionalPeakMonths),
+      nnPeakRelevance: toNumber(modelTuning.nnPeakRelevance, tuningDefaults.nnPeakRelevance),
+      projectLifetimeYears: toNumber(modelTuning.projectLifetimeYears, tuningDefaults.projectLifetimeYears),
     },
   };
 }
