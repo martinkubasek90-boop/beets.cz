@@ -6,12 +6,17 @@ type SendEmailPayload = {
   text: string;
   html?: string;
   from?: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+  }>;
 };
 
 /**
  * Minimal email sender with two backends:
  * 1) SMTP (preferred) – configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE (optional), NOTIFY_EMAIL_FROM
- * 2) Webhook fallback – NOTIFY_EMAIL_WEBHOOK/EMAIL_WEBHOOK_URL accepting {to,subject,text,html,from}
+ * 2) Webhook fallback – NOTIFY_EMAIL_WEBHOOK/EMAIL_WEBHOOK_URL accepting {to,subject,text,html,from,attachments}
  */
 export async function sendEmail(payload: SendEmailPayload) {
   const from = payload.from || process.env.NOTIFY_EMAIL_FROM || 'notifications@mpc.local';
@@ -34,6 +39,7 @@ export async function sendEmail(payload: SendEmailPayload) {
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
+      attachments: payload.attachments,
     });
     return { ok: Boolean(info?.messageId), status: info?.response };
   }
@@ -52,6 +58,14 @@ export async function sendEmail(payload: SendEmailPayload) {
       subject: payload.subject,
       text: payload.text,
       html: payload.html,
+      attachments: payload.attachments?.map((attachment) => ({
+        filename: attachment.filename,
+        contentType: attachment.contentType,
+        content: Buffer.isBuffer(attachment.content)
+          ? attachment.content.toString('base64')
+          : Buffer.from(attachment.content).toString('base64'),
+        encoding: 'base64',
+      })),
     }),
   });
 
