@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { sendEmail } from '@/lib/email';
 import { buildKalkulackaPdf } from '@/lib/kalkulacka-pdf';
 
 export const runtime = 'nodejs';
@@ -62,15 +61,6 @@ function splitName(name: string) {
 
 function toNumber(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
 }
 
 async function hubspotRequest<T>(token: string, path: string, init: RequestInit): Promise<T> {
@@ -250,72 +240,6 @@ function buildDealSummary(payload: LeadPayload) {
     .join('\n');
 }
 
-function buildLeadEmail(payload: LeadPayload) {
-  const calculatorLabel = payload.calculatorType === 'fve' ? 'FVE + baterie' : 'BESS';
-  const c = payload.calculations || {};
-  const payback = toNumber(c.simplePayback);
-  const benefit = toNumber(c.netRevenue ?? c.annualBenefit);
-  const salutation = payload.name ? `, ${payload.name}` : '';
-  const htmlSalutation = payload.name ? `, ${escapeHtml(payload.name)}` : '';
-
-  const htmlRows = [
-    ['Kalkulačka', calculatorLabel],
-    ['Návratnost', payback !== undefined ? `${payback.toFixed(1).replace('.', ',')} let` : undefined],
-    ['Roční přínos', benefit !== undefined ? `${Math.round(benefit).toLocaleString('cs-CZ')} Kč` : undefined],
-    ['Velikost FVE', toNumber(payload.inputs?.systemSizeKw) !== undefined ? `${payload.inputs!.systemSizeKw} kWp` : undefined],
-    ['Kapacita baterie', toNumber(payload.inputs?.capacity) !== undefined ? `${payload.inputs!.capacity} kWh` : undefined],
-  ].filter((row): row is [string, string] => Boolean(row[1]));
-
-  return {
-    subject: `BEETS kalkulačka - investiční shrnutí PDF`,
-    text: [
-      `Dobrý den${salutation},`,
-      '',
-      'v příloze posíláme PDF shrnutí z kalkulačky BEETS.',
-      '',
-      ...htmlRows.map(([label, value]) => `${label}: ${value}`),
-      '',
-      'Berete to prosím jako orientační model. Pro finální návrh je potřeba projít profil spotřeby, technické možnosti objektu a aktuální ceny technologie.',
-      '',
-      'Tým BEETS',
-    ].join('\n'),
-    html: [
-      `<p>Dobrý den${htmlSalutation},</p>`,
-      '<p>v příloze posíláme PDF shrnutí z kalkulačky BEETS.</p>',
-      '<table cellpadding="6" cellspacing="0" style="border-collapse:collapse">',
-      ...htmlRows.map(
-        ([label, value]) =>
-          `<tr><td style="color:#475569">${escapeHtml(label)}</td><td><strong>${escapeHtml(value)}</strong></td></tr>`,
-      ),
-      '</table>',
-      '<p>Berete to prosím jako orientační model. Pro finální návrh je potřeba projít profil spotřeby, technické možnosti objektu a aktuální ceny technologie.</p>',
-      '<p>Tým BEETS</p>',
-    ].join(''),
-  };
-}
-
-async function sendPdfEmail(payload: LeadPayload) {
-  const pdf = buildKalkulackaPdf(payload);
-  const email = buildLeadEmail(payload);
-  const result = await sendEmail({
-    to: payload.email!.trim().toLowerCase(),
-    subject: email.subject,
-    text: email.text,
-    html: email.html,
-    attachments: [
-      {
-        filename: 'beets-investicni-shrnuti.pdf',
-        content: pdf,
-        contentType: 'application/pdf',
-      },
-    ],
-  });
-
-  if (!result.ok) {
-    throw new Error('PDF email se nepodařilo odeslat.');
-  }
-}
-
 export async function POST(request: Request) {
   const token = process.env.HUBSPOT_PRIVATE_APP_TOKEN;
   if (!token) {
@@ -340,7 +264,17 @@ export async function POST(request: Request) {
     }
 
     if (payload.type === 'pdf') {
-      await sendPdfEmail(payload);
+      const pdf = buildKalkulackaPdf(payload);
+      return NextResponse.json({
+        ok: true,
+        contactId,
+        dealId: dealId || null,
+        pdf: {
+          filename: 'beets-investicni-shrnuti.pdf',
+          contentType: 'application/pdf',
+          contentBase64: pdf.toString('base64'),
+        },
+      });
     }
 
     return NextResponse.json({ ok: true, contactId, dealId: dealId || null });

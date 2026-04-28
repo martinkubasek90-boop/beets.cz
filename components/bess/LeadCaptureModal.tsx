@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { X, FileText, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, FileText, MessageSquare, CheckCircle2, Loader2, Download } from 'lucide-react';
 
 type LeadCaptureModalProps = {
   type: 'pdf' | 'analysis';
@@ -47,11 +47,37 @@ type LeadCaptureModalProps = {
   onClose: () => void;
 };
 
+type PdfResponse = {
+  filename: string;
+  contentType: string;
+  contentBase64: string;
+};
+
+function downloadPdf(pdf: PdfResponse) {
+  const binary = window.atob(pdf.contentBase64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  const blob = new Blob([bytes], { type: pdf.contentType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = pdf.filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 export default function LeadCaptureModal({ type, calculatorType = 'bess', calculations, inputs, onClose }: LeadCaptureModalProps) {
   const [formData, setFormData] = useState({ email: '', name: '', company: '', phone: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [downloadedPdf, setDownloadedPdf] = useState<PdfResponse | null>(null);
   const isPdf = type === 'pdf';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -73,9 +99,15 @@ export default function LeadCaptureModal({ type, calculatorType = 'bess', calcul
         }),
       });
 
-      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; pdf?: PdfResponse };
       if (!response.ok) {
         throw new Error(payload.error || 'Odeslání do CRM selhalo.');
+      }
+
+      if (isPdf) {
+        if (!payload.pdf) throw new Error('PDF se nepodařilo vytvořit.');
+        setDownloadedPdf(payload.pdf);
+        downloadPdf(payload.pdf);
       }
 
       setIsSubmitted(true);
@@ -113,7 +145,7 @@ export default function LeadCaptureModal({ type, calculatorType = 'bess', calcul
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-white">{isPdf ? 'Stáhnout investiční shrnutí' : 'Požádat o investiční posouzení'}</h3>
-                  <p className="text-sm text-slate-400">{isPdf ? 'Pošleme vám PDF na email' : 'Ozveme se vám do 24 hodin'}</p>
+                  <p className="text-sm text-slate-400">{isPdf ? 'PDF se stáhne po vyplnění formuláře' : 'Ozveme se vám do 24 hodin'}</p>
                 </div>
               </div>
               <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800 transition-colors">
@@ -227,7 +259,7 @@ export default function LeadCaptureModal({ type, calculatorType = 'bess', calcul
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />Odesílám...
                   </>
                 ) : isPdf ? (
-                  'Odeslat PDF na email'
+                  'Vygenerovat a stáhnout PDF'
                 ) : (
                   'Odeslat žádost'
                 )}
@@ -243,10 +275,19 @@ export default function LeadCaptureModal({ type, calculatorType = 'bess', calcul
             <div className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8 text-emerald-400" />
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">{isPdf ? 'PDF bylo odesláno!' : 'Děkujeme za váš zájem!'}</h3>
+            <h3 className="text-xl font-semibold text-white mb-2">{isPdf ? 'PDF je připravené' : 'Děkujeme za váš zájem!'}</h3>
             <p className="text-slate-400 mb-6">
-              {isPdf ? 'Zkontrolujte prosím svou emailovou schránku.' : 'Ozveme se vám do 24 hodin s detailní analýzou.'}
+              {isPdf ? 'Stažení se spustilo automaticky. Pokud ne, použijte tlačítko níže.' : 'Ozveme se vám do 24 hodin s detailní analýzou.'}
             </p>
+            {isPdf && downloadedPdf ? (
+              <Button
+                onClick={() => downloadPdf(downloadedPdf)}
+                className="mb-3 w-full bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 text-white"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Stáhnout PDF
+              </Button>
+            ) : null}
             <Button onClick={onClose} variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800">
               Zavřít
             </Button>
